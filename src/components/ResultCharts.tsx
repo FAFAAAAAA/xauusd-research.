@@ -178,3 +178,152 @@ function PeriodBars({ rows }: { rows: Row[] }) {
     </svg>
   );
 }
+
+/* ------------------------------------------------------------------ PnL calendar */
+type CalTab = 'day' | 'week' | 'month';
+type Metric = 'pnl' | 'wl' | 'count';
+interface Cell { pnl: number; wins: number; losses: number; trades: number }
+const DOW = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+const MONTHS_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const compact = (n: number) => {
+  const a = Math.abs(n);
+  const v = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : a >= 100 ? a.toFixed(0) : a.toFixed(1);
+  return `${n > 0 ? '+' : n < 0 ? '−' : ''}$${v}`;
+};
+
+export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string }) {
+  const [tab, setTab] = useState<CalTab>('day');
+  const [metric, setMetric] = useState<Metric>('pnl');
+  const [sel, setSel] = useState<string | null>(null);
+
+  // aggregate by local day / Monday-week / month (entry time, display timezone)
+  const agg = useMemo(() => {
+    const day = new Map<string, Cell>(), week = new Map<string, Cell>(), month = new Map<string, Cell>();
+    const add = (m: Map<string, Cell>, k: string, t: ClosedTrade) => {
+      const c = m.get(k) ?? { pnl: 0, wins: 0, losses: 0, trades: 0 };
+      c.pnl += t.pnl; c.trades++; if (t.pnl > 0) c.wins++; else if (t.pnl < 0) c.losses++;
+      m.set(k, c);
+    };
+    for (const t of trades) {
+      const d = wall(t.entry, tz);
+      const Y = d.getUTCFullYear(), M = d.getUTCMonth(), D = d.getUTCDate();
+      add(day, `${Y}-${M}-${D}`, t);
+      add(week, String(Date.UTC(Y, M, D - ((d.getUTCDay() + 6) % 7))), t);
+      add(month, `${Y}-${M}`, t);
+    }
+    return { day, week, month };
+  }, [trades, tz]);
+
+  const months = useMemo(() => [...agg.month.keys()].map((k) => k.split('-').map(Number) as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1]), [agg]);
+  const years = useMemo(() => [...new Set(months.map((m) => m[0]))], [months]);
+  const last = months[months.length - 1] ?? [new Date().getUTCFullYear(), new Date().getUTCMonth()];
+  const [ym, setYm] = useState<[number, number] | null>(null);
+  const [Y, M] = ym ?? last;
+  const mi = months.findIndex((m) => m[0] === Y && m[1] === M);
+  const yi = years.indexOf(Y);
+
+  const shift = (dir: -1 | 1) => {
+    setSel(null);
+    if (tab === 'day') { const n = months[mi + dir]; if (n) setYm(n); }
+    else { const y = years[yi + dir]; if (y !== undefined) setYm([y, months.filter((m) => m[0] === y).slice(-1)[0][1]]); }
+  };
+  const canPrev = tab === 'day' ? mi > 0 : yi > 0;
+  const canNext = tab === 'day' ? mi >= 0 && mi < months.length - 1 : yi >= 0 && yi < years.length - 1;
+
+  const value = (c: Cell | undefined) => {
+    if (!c) return null;
+    if (metric === 'pnl') return compact(c.pnl);
+    if (metric === 'count') return `${c.trades} trade`;
+    return <><span className="pos">{c.wins}</span>/<span className="neg">{c.losses}</span></>;
+  };
+  const tone = (c: Cell | undefined) => (!c ? 'empty' : c.pnl > 0 ? 'up' : c.pnl < 0 ? 'down' : 'flat');
+
+  // cells for the current view
+  type V = { key: string; title: string; label: string; cell?: Cell; blank?: boolean };
+  let view: V[] = [];
+  let periodCells: Cell[] = [];
+  if (tab === 'day') {
+    const first = new Date(Date.UTC(Y, M, 1));
+    const lead = (first.getUTCDay() + 6) % 7;
+    const days = new Date(Date.UTC(Y, M + 1, 0)).getUTCDate();
+    view = Array.from({ length: lead }, (_, i) => ({ key: `b${i}`, title: '', label: '', blank: true }));
+    for (let d = 1; d <= days; d++) {
+      const k = `${Y}-${M}-${d}`;
+      const dow = DAYS[new Date(Date.UTC(Y, M, d)).getUTCDay()];
+      view.push({ key: k, title: String(d), label: `${dow}, ${d} ${MONTHS_FULL[M]} ${Y}`, cell: agg.day.get(k) });
+    }
+  } else if (tab === 'week') {
+    const start = Date.UTC(Y, 0, 1), end = Date.UTC(Y + 1, 0, 1);
+    let w = start - (((new Date(start).getUTCDay() + 6) % 7) * 86_400_000);
+    let n = 1;
+    for (; w < end; w += 7 * 86_400_000, n++) {
+      const d = new Date(w);
+      view.push({ key: String(w), title: `M${n}`, label: `Minggu ${n} · mulai ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, cell: agg.week.get(String(w)) });
+    }
+  } else {
+    for (let m = 0; m < 12; m++) view.push({ key: `${Y}-${m}`, title: MONTHS[m], label: `${MONTHS_FULL[m]} ${Y}`, cell: agg.month.get(`${Y}-${m}`) });
+  }
+  periodCells = view.map((v) => v.cell).filter((c): c is Cell => !!c);
+  const tot = periodCells.reduce((a, c) => ({ pnl: a.pnl + c.pnl, wins: a.wins + c.wins, losses: a.losses + c.losses, trades: a.trades + c.trades }), { pnl: 0, wins: 0, losses: 0, trades: 0 });
+  const upN = periodCells.filter((c) => c.pnl > 0).length, downN = periodCells.filter((c) => c.pnl < 0).length;
+  const unit = tab === 'day' ? 'hari' : tab === 'week' ? 'minggu' : 'bulan';
+  const selected = view.find((v) => v.key === sel);
+  const heading = tab === 'day' ? `${MONTHS_FULL[M]} ${Y}` : String(Y);
+
+  if (!trades.length) return <p className="mute">Belum ada trade yang selesai.</p>;
+  return (
+    <div className="stack">
+      <div className="tabs" role="tablist">
+        {([['day', 'PnL Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const).map(([k, l]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setSel(null); }}>{l}</button>
+        ))}
+      </div>
+
+      <div className="row between">
+        <div className="row" style={{ gap: 4 }}>
+          <button className="btn sm" onClick={() => shift(-1)} disabled={!canPrev} aria-label="Sebelumnya">‹</button>
+          {tab === 'day' ? (
+            <select value={`${Y}-${M}`} onChange={(e) => { const [a, b] = e.target.value.split('-').map(Number); setYm([a, b]); setSel(null); }} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px', fontWeight: 700 }} aria-label="Bulan">
+              {months.map(([a, b]) => <option key={`${a}-${b}`} value={`${a}-${b}`}>{MONTHS[b]} {a}</option>)}
+            </select>
+          ) : (
+            <select value={Y} onChange={(e) => { const y = Number(e.target.value); setYm([y, months.filter((m) => m[0] === y).slice(-1)[0][1]]); setSel(null); }} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px', fontWeight: 700 }} aria-label="Tahun">
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          )}
+          <button className="btn sm" onClick={() => shift(1)} disabled={!canNext} aria-label="Berikutnya">›</button>
+        </div>
+        <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px' }} aria-label="Tampilkan">
+          <option value="pnl">PnL</option>
+          <option value="wl">Menang/Kalah</option>
+          <option value="count">Jumlah trade</option>
+        </select>
+      </div>
+
+      <p className="small">
+        <strong>{heading}:</strong> <span className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : ''} style={{ fontWeight: 700 }}>{money(tot.pnl)}</span>
+        {' '}· {tot.trades} trade · <span className="pos">{tot.wins} menang</span> · <span className="neg">{tot.losses} kalah</span>
+        {' '}· {upN} {unit} untung, {downN} {unit} rugi
+      </p>
+
+      {tab === 'day' ? <div className="cal dow">{DOW.map((d) => <span key={d}>{d}</span>)}</div> : null}
+      <div className={`cal ${tab}`}>
+        {view.map((v) => v.blank ? <span key={v.key} /> : (
+          <button key={v.key} className={`cell ${tone(v.cell)}`} aria-pressed={sel === v.key} onClick={() => setSel(sel === v.key ? null : v.key)} aria-label={v.label}>
+            <span className="n">{v.title}</span>
+            <span className="v">{value(v.cell) ?? ''}</span>
+          </button>
+        ))}
+      </div>
+
+      {selected ? (
+        <div className="notice">
+          <strong>{selected.label}</strong><br />
+          {selected.cell
+            ? <>{selected.cell.trades} trade · <span className="pos">{selected.cell.wins} menang</span> · <span className="neg">{selected.cell.losses} kalah</span> · <strong className={selected.cell.pnl >= 0 ? 'pos' : 'neg'}>{money(selected.cell.pnl)}</strong></>
+            : 'Tidak ada trade.'}
+        </div>
+      ) : <p className="mute small">Tekan kotak untuk melihat rinciannya. Hijau = untung, merah = rugi, abu-abu = tidak ada trade.</p>}
+    </div>
+  );
+}

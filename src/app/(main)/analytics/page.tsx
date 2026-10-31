@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
-import { EquityChart, PeriodBreakdown, closedTrades } from '@/components/ResultCharts';
+import { EquityChart, PeriodBreakdown, PnlCalendar, closedTrades } from '@/components/ResultCharts';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: false });
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -90,6 +90,10 @@ export default function Analytics() {
               <section className="group">
                 <h2>Grafik saldo</h2>
                 <EquityChart trades={closedTrades(d.trades)} tz={tz} />
+              </section>
+
+              <section className="group">
+                <PnlCalendar trades={closedTrades(d.trades)} tz={tz} />
               </section>
 
               <section className="group">
