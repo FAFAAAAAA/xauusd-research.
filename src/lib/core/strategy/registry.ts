@@ -2,6 +2,7 @@ import type { StrategyAdapter, StrategyEventDraft } from './adapter';
 import type { EventType } from '../types';
 import { snrAdapter } from './snr';
 import { breakoutAdapter } from './breakout';
+import { snrSndAdapter } from './snrsnd';
 
 /**
  * Placeholder for the owner's SNR strategy. It is intentionally empty:
@@ -67,6 +68,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [testZoneProximityAdapter.key]: testZoneProximityAdapter,
   [snrAdapter.key]: snrAdapter,
   [breakoutAdapter.key]: breakoutAdapter,
+  [snrSndAdapter.key]: snrSndAdapter,
 };
 
 export function getAdapter(key: string | null | undefined): StrategyAdapter {

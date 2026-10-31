@@ -211,6 +211,11 @@ export async function ensureBuiltinStrategies(db: Db) {
      values ('breakout', 'v0.2', 'breakout_v02', 'active', false,
        'v0.2 hasil riset 2018-2026: breakout H1 (40 candle) + breakout sesi London & New York, hanya searah tren H4 & D1, BUY dan SELL. SL ATR/range, TP sesuai RR.')
      on conflict (strategy_key, version) do nothing returning id`);
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('snr_snd_tv', 'v1', 'snr_snd_mtf_v1', 'active', false,
+       'Indikator TradingView pemilik: tren H4 EMA50/200, SNR pivot H4, zona supply/demand H4 & H1, entry rejection M15, SL luar zona + 0.15 ATR, TP 2x.')
+     on conflict (strategy_key, version) do nothing returning id`);
 }
 export async function defaultStrategyVersion(db: Db): Promise<StrategyVersionRow | null> {
   const r = await db.query<StrategyVersionRow>(

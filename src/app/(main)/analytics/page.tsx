@@ -144,7 +144,9 @@ export default function Analytics() {
                 {fresh ? <>
                 <ReportButton filename={`backtest-xauusd-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: String(cfgSel ?? '').startsWith('breakout')
+                  rules: String(cfgSel ?? '').startsWith('snr_snd_tv')
+                    ? 'Entry: rejection M15 di zona supply/demand H4/H1 dekat SNR H4, searah EMA50/200 H4 · SL: luar zona + 0,15×ATR M15'
+                    : String(cfgSel ?? '').startsWith('breakout')
                     ? 'Entry: open M15 berikutnya setelah breakout H1/London/New York/M30 searah tren H4 & D1 · SL: ATR atau sisi lain range'
                     : 'Entry: open M15 berikutnya setelah harga menyentuh zona SNR · SL: luar zona + 0,5×ATR(14) M15',
                   rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
@@ -341,7 +343,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       </div>
       {strategies.length ? (
         <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>
-          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (disarankan)' : s.adapter_key === 'snr_h4h1_m15' ? 'SNR v0.1 (sentuh zona)' : `${s.strategy_key} ${s.version}`}</option>)}
+          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (disarankan)' : s.adapter_key === 'snr_h4h1_m15' ? 'SNR v0.1 (sentuh zona)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'Indikator TradingView kamu (SNR + SND)' : `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : null}
       {isBreakout ? (
@@ -524,6 +526,7 @@ function configKey(s: any) {
 }
 function configLabel(s: any) {
   const strat = String(s.strategy ?? 'strategi');
+  if (strat === 'snr_snd_tv v1') return 'Indikator TradingView kamu (SNR + SND)';
   if (!strat.startsWith('breakout')) return strat === 'snr h4h1m15-v0.1' ? 'SNR v0.1 (sentuh zona)' : strat;
   const p = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowBuy: true, allowSell: true, ...paramsOf(s) };
   const parts = Object.entries(PART).filter(([k]) => (p as any)[k]).map(([, v]) => v).join(' + ');

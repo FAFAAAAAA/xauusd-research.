@@ -104,3 +104,23 @@ test('guard: unclosed higher-timeframe candles are removed before the strategy s
     news: { archiveAvailable: false, items: [], upcoming: [] }, htf: { H4: h4 }, params: {}, state: {} });
   assert.equal(seen.length, 2);
 });
+
+test('snr+snd (owner TradingView indicator): registered, no look-ahead, signals carry a valid stop', async () => {
+  const { snrSndAdapter, htfLevels, SNRSND_DEFAULTS } = await import('../src/lib/core/strategy/snrsnd');
+  assert.equal(getAdapter('snr_snd_mtf_v1'), snrSndAdapter);
+  const m15 = zigzag(192 * 12, 1);
+  const h1 = aggregateCandles(m15, 'M15', 'H1', 'utc', false), h4 = aggregateCandles(m15, 'M15', 'H4', 'utc', false);
+  const L = htfLevels(h4, SNRSND_DEFAULTS);
+  assert.ok(L.emaFast > L.emaSlow, 'uptrend → EMA50 above EMA200');
+  const state: Record<string, unknown> = {};
+  for (let i = 0; i < m15.length; i++) {
+    const now = m15[i].time + M15;
+    const res = runStrategyGuarded(snrSndAdapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+      news: { archiveAvailable: false, items: [], upcoming: [] }, htf: { H1: h1.filter((c) => c.time + 3_600_000 <= now), H4: h4.filter((c) => c.time + 14_400_000 <= now) }, params: {}, state });
+    assert.deepEqual(res.violations, []);
+    for (const e of res.events) {
+      const sl = e.details!.stop_loss as number;
+      assert.ok(e.details!.side === 'long' ? sl < e.price : sl > e.price);
+    }
+  }
+});
