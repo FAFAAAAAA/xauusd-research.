@@ -23,8 +23,11 @@ export interface BreakoutParams {
   swingTrend: boolean;
   /** Also require D1 close vs EMA50(D1) in the trade direction. */
   d1Filter: boolean;
+  /** Optional M15 Donchian part (20 candles, or 10 with m15Fast), SL 2.5 × ATR14(M15). Research only. */
+  donchianM15: boolean;
+  m15Fast: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -124,6 +127,16 @@ export const breakoutAdapter: StrategyAdapter = {
         if (last.close > hh) emit('M30', 'long', bar.close - 2.5 * a, 'M30 tembus high 10 candle');
         if (last.close < ll) emit('M30', 'short', bar.close + 2.5 * a, 'M30 tembus low 10 candle');
       }
+    }
+
+    // ---- E (optional): M15 Donchian
+    if (p.donchianM15 && m.length > 25) {
+      const n = p.m15Fast ? 10 : 20;
+      const prev = m.slice(-(n + 1), -1);
+      const hh = Math.max(...prev.map((c) => c.high)), ll = Math.min(...prev.map((c) => c.low));
+      const a = atrLastEwm(m.slice(-200), 14);
+      if (bar.close > hh) emit('M15', 'long', bar.close - 2.5 * a, `M15 tembus high ${n} candle`);
+      if (bar.close < ll) emit('M15', 'short', bar.close + 2.5 * a, `M15 tembus low ${n} candle`);
     }
 
     // ---- B/C: session range breakouts (first break per side per UTC day)
