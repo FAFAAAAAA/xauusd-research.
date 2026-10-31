@@ -15,7 +15,7 @@ let pool: Db | null = null;
 
 export async function getDb(): Promise<Db> {
   if (pool) return pool;
-  const url = process.env.DATABASE_URL;
+  const url = buildDatabaseUrl(process.env.DATABASE_URL, process.env.DATABASE_PASSWORD);
   if (!url) throw new ConfigError('DATABASE_URL belum diatur. Lihat README → Supabase.');
   const mod: any = await import('pg');
   const Pool = (mod.default ?? mod).Pool;
@@ -33,6 +33,21 @@ export async function getDb(): Promise<Db> {
     },
   };
   return pool;
+}
+
+/**
+ * Accepts the Supabase URL exactly as copied (with "[YOUR-PASSWORD]") plus a separate
+ * DATABASE_PASSWORD, so nobody has to hand-edit or percent-encode the URL.
+ */
+export function buildDatabaseUrl(rawUrl: string | undefined, password: string | undefined): string | null {
+  const raw = rawUrl?.trim().replace(/^["']|["']$/g, '');
+  if (!raw) return null;
+  const pw = password?.trim();
+  if (!pw) return raw;
+  const enc = encodeURIComponent(pw);
+  if (raw.includes('[YOUR-PASSWORD]')) return raw.replace('[YOUR-PASSWORD]', enc);
+  // Replace whatever password is present (or insert one) in postgresql://user[:pass]@host
+  return raw.replace(/^(postgres(?:ql)?:\/\/)([^:@/]+)(?::[^@]*)?@/, `$1$2:${enc}@`);
 }
 
 /** For tests only. */
