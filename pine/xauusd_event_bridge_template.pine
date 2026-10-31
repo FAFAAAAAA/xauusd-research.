@@ -1,0 +1,62 @@
+//@version=5
+// XAUUSD Research — Event Bridge TEMPLATE
+// ---------------------------------------------------------------------------
+// This script contains NO trading strategy. It only shows how to send events to
+// the website's webhook in the agreed JSON contract. Replace the placeholder
+// conditions with your own SNR rules once they are specified.
+//
+// Anti-repaint rules used here (keep them when you add logic):
+//  * Events fire only on CONFIRMED bars (barstate.isconfirmed).
+//  * No request.security() with lookahead_on, no future pivots.
+//  * timestamp = bar CLOSE time (time_close), same convention as the backtest engine.
+//
+// Alert setup: Create Alert → Condition: this indicator → "Any alert() function call"
+// → Webhook URL: https://<your-app>/api/webhooks/tradingview
+// The JSON below includes the shared secret; keep the alert private.
+// ---------------------------------------------------------------------------
+indicator("XAUUSD Research — Event Bridge (template)", overlay = true)
+
+secret          = input.string("CHANGE_ME", "Webhook secret (TRADINGVIEW_WEBHOOK_SECRET)")
+strategyVersion = input.string("snr-dev", "Strategy version label")
+// Zone supplied by YOU (manual input for now; later from your SNR indicator)
+zoneLow   = input.float(0.0, "Zone low")
+zoneHigh  = input.float(0.0, "Zone high")
+zoneKind  = input.string("support", "Zone kind", options = ["support", "resistance", "unknown"])
+
+hasZone = zoneLow > 0 and zoneHigh >= zoneLow
+plot(hasZone ? zoneLow : na, "Zone low", color.new(color.gray, 0), style = plot.style_linebr)
+plot(hasZone ? zoneHigh : na, "Zone high", color.new(color.gray, 0), style = plot.style_linebr)
+
+// ---- PLACEHOLDERS: define these with your SNR rules (currently always false) ----
+bool evNear        = false
+bool evTouch       = false
+bool evBreakout    = false
+bool evRetest      = false
+bool evConfirmed   = false
+bool evInvalidated = false
+// ---------------------------------------------------------------------------------
+
+tfLabel() =>
+    timeframe.isdaily ? "D1" : timeframe.multiplier == 240 ? "H4" : timeframe.multiplier == 60 ? "H1" :
+     timeframe.multiplier == 30 ? "M30" : timeframe.multiplier == 15 ? "M15" : timeframe.multiplier == 5 ? "M5" : "M1"
+
+payload(string evType) =>
+    eid = syminfo.ticker + "-" + tfLabel() + "-" + str.tostring(time_close) + "-" + evType
+    '{"secret":"' + secret + '","event_id":"' + eid + '","symbol":"' + syminfo.prefix + ":" + syminfo.ticker +
+     '","timeframe":"' + tfLabel() + '","event_type":"' + evType + '","timestamp":' + str.tostring(time_close) +
+     ',"price":' + str.tostring(close) + ',"zone":{"low":' + str.tostring(zoneLow) + ',"high":' + str.tostring(zoneHigh) +
+     ',"kind":"' + zoneKind + '"},"strategy_version":"' + strategyVersion + '","source":"tradingview","mode":"LIVE"}'
+
+if barstate.isconfirmed and hasZone
+    if evNear
+        alert(payload("SNR_NEAR"), alert.freq_once_per_bar_close)
+    if evTouch
+        alert(payload("SNR_TOUCH"), alert.freq_once_per_bar_close)
+    if evBreakout
+        alert(payload("SNR_BREAKOUT"), alert.freq_once_per_bar_close)
+    if evRetest
+        alert(payload("SNR_RETEST"), alert.freq_once_per_bar_close)
+    if evConfirmed
+        alert(payload("SETUP_CONFIRMED"), alert.freq_once_per_bar_close)
+    if evInvalidated
+        alert(payload("SETUP_INVALIDATED"), alert.freq_once_per_bar_close)

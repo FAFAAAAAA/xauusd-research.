@@ -1,0 +1,35 @@
+import { api, reqUuid } from '@/lib/server/api';
+import { HttpError, toNum } from '@/lib/server/db';
+import * as repo from '@/lib/server/repo';
+import { loadNewsWindow, snapshotAt } from '@/lib/server/news-service';
+import { isTimeframe, TIMEFRAME_MS } from '@/lib/core/types';
+
+export const dynamic = 'force-dynamic';
+
+/** Trade review: chart around entry, setup reason, news known AT ENTRY, outcome. */
+export async function GET(_: Request, { params }: { params: { id: string } }) {
+  return api(async (db) => {
+    const id = reqUuid(params.id, 'id');
+    const r = await db.query<Record<string, unknown>>(
+      `select t.*, extract(epoch from t.entry_time)*1000 as entry_ms, extract(epoch from t.exit_time)*1000 as exit_ms,
+              t.entry_price::float8 as entry_px, t.exit_price::float8 as exit_px, t.stop_loss::float8 as sl, t.take_profit::float8 as tp,
+              t.pnl::float8 as pnl_f, b.source_id
+       from simulated_trades t left join backtest_sessions b on b.id = t.backtest_session_id where t.id = $1`, [id]);
+    const t = r[0];
+    if (!t) throw new HttpError(404, 'Trade tidak ditemukan');
+    const entry = Number(t.entry_ms);
+    const exit = toNum(t.exit_ms);
+    const tf = isTimeframe(t.timeframe) ? t.timeframe : 'H1';
+    let candles: Awaited<ReturnType<typeof repo.candlesUpTo>> = [];
+    if (t.source_id) {
+      const end = (exit ?? entry) + 20 * TIMEFRAME_MS[tf];
+      candles = await repo.candlesUpTo(db, String(t.source_id), tf, end, 300);
+    }
+    const news = snapshotAt(await loadNewsWindow(db, entry, entry), entry);
+    return {
+      trade: { id, side: t.side, timeframe: tf, entry, exit, entryPrice: t.entry_px, exitPrice: t.exit_px, stopLoss: t.sl, takeProfit: t.tp,
+        pnl: t.pnl_f, exitReason: t.exit_reason, setupReason: t.setup_reason, origin: t.origin, isTest: t.is_test },
+      candles, newsAtEntry: news,
+    };
+  });
+}

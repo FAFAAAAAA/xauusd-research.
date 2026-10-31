@@ -1,0 +1,13 @@
+{
+  "secret": "<TRADINGVIEW_WEBHOOK_SECRET>",
+  "event_id": "TEST-manual-0001",
+  "symbol": "OANDA:XAUUSD",
+  "timeframe": "60",
+  "event_type": "SNR_NEAR",
+  "timestamp": "<ISO time within the last 15 minutes, e.g. 2026-10-31T01:00:00Z>",
+  "price": 2000.00,
+  "zone": { "low": 1995.00, "high": 1998.00, "kind": "support" },
+  "strategy_version": "snr-dev",
+  "source": "tradingview-TEST",
+  "mode": "LIVE"
+}

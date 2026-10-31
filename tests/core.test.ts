@@ -1,0 +1,220 @@
+// Unit tests for framework-free core logic. All fixtures here are synthetic TEST data,
+// not market history.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { formatInTz, normalizeTimeframe, parseTimestamp, sessionOf, tzOffsetMinutes, zonedWallTimeToUtc } from '../src/lib/core/time';
+import { parseOhlcCsv } from '../src/lib/core/csv';
+import { aggregateCandles, bucketStart } from '../src/lib/core/timeframes';
+import { runStrategyGuarded, type StrategyAdapter, type StrategyContext } from '../src/lib/core/strategy/adapter';
+import { notConfiguredAdapter, testZoneProximityAdapter } from '../src/lib/core/strategy/registry';
+import { eventAsOf, surpriseSentiment, type EconomicEventRecord } from '../src/lib/core/news';
+import { validateWebhookPayload, safeEqual, SlidingWindowLimiter } from '../src/lib/core/webhook';
+import { computeMetrics } from '../src/lib/core/metrics';
+import { simulateTrade, DEFAULT_COSTS } from '../src/lib/core/tradesim';
+import { buildEventMessage } from '../src/lib/core/telegram-format';
+import { encryptSecret, decryptSecret, maskToken, signSession, verifySession } from '../src/lib/core/crypto';
+import type { Candle } from '../src/lib/core/types';
+
+const H = 3_600_000;
+const T0 = Date.UTC(2030, 0, 7, 0, 0); // synthetic date, deliberately not a real market period
+
+test('time: New York DST offsets are correct', () => {
+  assert.equal(tzOffsetMinutes(Date.UTC(2019, 0, 15, 12), 'America/New_York'), -300); // EST
+  assert.equal(tzOffsetMinutes(Date.UTC(2019, 6, 15, 12), 'America/New_York'), -240); // EDT
+  assert.equal(tzOffsetMinutes(Date.UTC(2019, 6, 15, 12), 'Asia/Seoul'), 540);
+  assert.equal(formatInTz(Date.UTC(2019, 6, 15, 14, 30), 'America/New_York'), '2019-07-15 10:30');
+});
+
+test('time: wall clock → UTC handles DST and fixed offsets', () => {
+  assert.equal(zonedWallTimeToUtc(2019, 7, 15, 10, 0, 0, 'America/New_York'), Date.UTC(2019, 6, 15, 14));
+  assert.equal(zonedWallTimeToUtc(2019, 1, 15, 10, 0, 0, 'America/New_York'), Date.UTC(2019, 0, 15, 15));
+  assert.equal(zonedWallTimeToUtc(2019, 7, 15, 10, 0, 0, 'UTC+3'), Date.UTC(2019, 6, 15, 7));
+  // fall-back overlap 2019-11-03 01:30 NY → earlier instant (EDT)
+  assert.equal(zonedWallTimeToUtc(2019, 11, 3, 1, 30, 0, 'America/New_York'), Date.UTC(2019, 10, 3, 5, 30));
+});
+
+test('time: sessions and TradingView interval normalization', () => {
+  assert.equal(sessionOf(Date.UTC(2019, 6, 15, 14)), 'new_york');
+  assert.equal(sessionOf(Date.UTC(2019, 6, 15, 9)), 'london');
+  assert.equal(sessionOf(Date.UTC(2019, 6, 15, 2)), 'asia');
+  assert.equal(normalizeTimeframe('60'), 'H1');
+  assert.equal(normalizeTimeframe('240'), 'H4');
+  assert.equal(normalizeTimeframe('D'), 'D1');
+  assert.equal(normalizeTimeframe('7'), null);
+  assert.equal(parseTimestamp('2019-07-15T10:00:00'), null, 'ISO without zone must be rejected');
+  assert.equal(parseTimestamp('2019-07-15T10:00:00Z'), Date.UTC(2019, 6, 15, 10));
+  assert.equal(parseTimestamp(1563184800), 1563184800000);
+});
+
+test('csv: TradingView, MetaTrader and Dukascopy formats', () => {
+  const tv = parseOhlcCsv('time,open,high,low,close,Volume\n1893974400,10,12,9,11,5\n1893978000,11,13,10,12,6\n', { fileTimezone: 'UTC' });
+  assert.equal(tv.candles.length, 2);
+  assert.equal(tv.candles[0].time, 1893974400000);
+
+  const mt = parseOhlcCsv('2030.01.07,00:00,10,12,9,11,5\n2030.01.07,01:00,11,13,10,12,6', { fileTimezone: 'UTC+2' });
+  assert.equal(mt.candles[0].time, Date.UTC(2030, 0, 6, 22));
+
+  const duk = parseOhlcCsv('Gmt time,Open,High,Low,Close,Volume\n07.01.2030 00:00:00.000,10,12,9,11,5', { fileTimezone: 'UTC' });
+  assert.equal(duk.candles[0].time, T0);
+});
+
+test('csv: invalid rows are reported, not fixed; duplicates removed', () => {
+  const r = parseOhlcCsv('time,open,high,low,close\n2030-01-07T00:00:00Z,10,9,8,9\n2030-01-07T01:00:00Z,abc,1,1,1\n2030-01-07T02:00:00Z,10,11,9,10\n2030-01-07T02:00:00Z,10,11,9,10', { fileTimezone: 'UTC' });
+  assert.equal(r.candles.length, 1);
+  assert.equal(r.issues.length, 3);
+});
+
+test('timeframes: aggregation keeps only complete buckets', () => {
+  const m: Candle[] = [];
+  for (let i = 0; i < 90; i++) m.push({ time: T0 + i * 60_000, open: 100 + i, high: 101 + i, low: 99 + i, close: 100.5 + i });
+  const h1 = aggregateCandles(m, 'M1', 'H1');
+  assert.equal(h1.length, 1, 'second hour is incomplete and must be dropped');
+  assert.deepEqual([h1[0].open, h1[0].high, h1[0].low, h1[0].close], [100, 160, 99, 159.5]);
+  // NY-close daily alignment: 17:00 New York (EDT → 21:00 UTC)
+  assert.equal(bucketStart(Date.UTC(2019, 6, 16, 10), 'D1', 'ny_close'), Date.UTC(2019, 6, 15, 21));
+});
+
+function ctx(candles: Candle[], extra: Partial<StrategyContext> = {}): StrategyContext {
+  const last = candles[candles.length - 1];
+  return {
+    mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'H1', candles, now: last.time + H, zones: [],
+    news: { archiveAvailable: false, items: [], upcoming: [] }, params: {}, state: {}, ...extra,
+  };
+}
+
+test('strategy: not-configured adapter never emits events', () => {
+  const c: Candle[] = [{ time: T0, open: 10, high: 11, low: 9, close: 10 }];
+  assert.equal(notConfiguredAdapter.configured, false);
+  assert.deepEqual(runStrategyGuarded(notConfiguredAdapter, ctx(c)).events, []);
+});
+
+test('strategy guard: future zones/news hidden and look-ahead output dropped', () => {
+  let seenZones = -1, seenNews = -1;
+  const cheater: StrategyAdapter = {
+    key: 'x', name: 'x', configured: true, testOnly: true, warmupCandles: 0,
+    evaluate(c) {
+      seenZones = c.zones.length; seenNews = c.news.items.length;
+      return [{ type: 'SNR_NEAR', candleTime: c.candles[c.candles.length - 1].time + H, price: 1 }];
+    },
+  };
+  const c: Candle[] = [{ time: T0, open: 10, high: 11, low: 9, close: 10 }];
+  const r = runStrategyGuarded(cheater, ctx(c, {
+    zones: [{ kind: 'support', low: 9, high: 9.5, validFrom: T0 + 10 * H, origin: 'test' }],
+    news: { archiveAvailable: true, upcoming: [], items: [{ kind: 'article', id: 'a', title: 't', category: 'OTHER', availableAt: T0 + 5 * H }] },
+  }));
+  assert.equal(seenZones, 0);
+  assert.equal(seenNews, 0);
+  assert.equal(r.events.length, 0);
+  assert.equal(r.violations.length, 1);
+});
+
+test('TEST adapter is edge-triggered (no repeat while state unchanged)', () => {
+  const zone = { id: 'z1', kind: 'support' as const, low: 95, high: 96, validFrom: 0, origin: 'test' as const };
+  const state = {};
+  const mk = (i: number, low: number, close: number): Candle => ({ time: T0 + i * H, open: close, high: close + 0.5, low, close });
+  const seq = [mk(0, 99, 100), mk(1, 96.8, 97), mk(2, 96.6, 96.9), mk(3, 95.5, 96.2), mk(4, 99, 100)];
+  const out: string[] = [];
+  const hist: Candle[] = [];
+  for (const c of seq) {
+    hist.push(c);
+    const r = runStrategyGuarded(testZoneProximityAdapter, ctx(hist, { zones: [zone], params: { near_distance: 1.5 }, state }));
+    out.push(...r.events.map((e) => e.type));
+  }
+  assert.deepEqual(out, ['SNR_NEAR', 'SNR_TOUCH']);
+});
+
+test('news: actual hidden until available; sentiment rule', () => {
+  const e: EconomicEventRecord = {
+    id: 'e', title: 'TEST CPI', category: 'US_CPI', currency: 'USD', impact: 'high', scheduledAt: T0 + 12 * H,
+    scheduleAvailableAt: T0 - 48 * H, forecast: 2.0, previous: 1.9, actual: 2.3, actualAvailableAt: T0 + 12 * H + 60_000,
+    sourceUrl: null, provider: 'TEST',
+  };
+  assert.equal(eventAsOf(e, T0 - 72 * H), null, 'schedule unknown → hidden');
+  assert.equal(eventAsOf(e, T0 + 12 * H)!.actual, null, 'at release minute, actual not yet available');
+  assert.equal(eventAsOf(e, T0 + 13 * H)!.actual, 2.3);
+  assert.equal(surpriseSentiment(e).label, 'Bearish');
+  assert.equal(surpriseSentiment({ ...e, category: 'UNEMPLOYMENT' }).label, 'Bullish');
+  assert.equal(surpriseSentiment({ ...e, category: 'FOMC' }).label, 'Unknown');
+  assert.equal(surpriseSentiment({ ...e, forecast: null }).label, 'Unknown');
+  assert.ok(surpriseSentiment(e).confidence! <= 0.6);
+});
+
+test('webhook: validation, freshness, secret compare, limiter', () => {
+  const now = Date.UTC(2030, 0, 7, 12);
+  const good = {
+    secret: 's', event_id: 'tv-1', symbol: 'OANDA:XAUUSD', timeframe: '60', event_type: 'SNR_NEAR', timestamp: new Date(now - 60_000).toISOString(),
+    price: 2000.5, zone: { low: 1995, high: 1998, kind: 'support' }, strategy_version: 'snr-dev', source: 'tradingview', mode: 'LIVE',
+  };
+  const ok = validateWebhookPayload(good, now);
+  assert.equal(ok.ok, true);
+  if (ok.ok) assert.equal(ok.value.timeframe, 'H1');
+  const bad = validateWebhookPayload({ ...good, mode: 'BACKTEST', symbol: 'EURUSD', zone: { low: 3, high: 2 } }, now);
+  assert.equal(bad.ok, false);
+  const old = validateWebhookPayload({ ...good, timestamp: '2019-07-15T10:00:00Z' }, now);
+  assert.equal(old.ok, false, 'historical timestamps are not accepted on the live webhook');
+  assert.equal(safeEqual('abc', 'abc'), true);
+  assert.equal(safeEqual('abc', 'abd'), false);
+  const lim = new SlidingWindowLimiter(2, 1000);
+  assert.deepEqual([lim.allow('a', 0), lim.allow('a', 1), lim.allow('a', 2), lim.allow('a', 1500)], [true, true, false, true]);
+});
+
+test('metrics: empty → null, computed values correct', () => {
+  assert.equal(computeMetrics([]), null);
+  const mk = (i: number, pnl: number, r: number) => ({ id: String(i), entryTime: i, exitTime: i + 1, pnl, pnlR: r, plannedRr: 2, timeframe: 'H1', session: null, newsConfirmed: null, zoneOutcome: null });
+  const m = computeMetrics([mk(1, 200, 2), mk(2, -100, -1), mk(3, -100, -1), mk(4, 200, 2)])!;
+  assert.equal(m.totalTrades, 4);
+  assert.equal(m.winRate, 0.5);
+  assert.equal(m.totalPnl, 200);
+  assert.equal(m.profitFactor, 2);
+  assert.equal(m.expectancy, 50);
+  assert.equal(m.expectancyR, 0.5);
+  assert.equal(m.maxDrawdown, 200);
+  assert.equal(m.maxConsecutiveLosses, 2);
+});
+
+test('tradesim: costs and ambiguous TP/SL policy', () => {
+  const c: Candle[] = [
+    { time: T0, open: 100, high: 100.5, low: 99.5, close: 100 },
+    { time: T0 + H, open: 100, high: 103, low: 98, close: 100 }, // both SL and TP inside
+  ];
+  const costs = { ...DEFAULT_COSTS, spread: 0.2, slippage: 0.1, commissionPerUnit: 7, contractSize: 100 };
+  const intent = { side: 'long' as const, entryBarIndex: 0, stopLoss: 98.5, takeProfit: 102.5, size: 1 };
+  const worst = simulateTrade(c, intent, { ...costs, ambiguityPolicy: 'worst' });
+  assert.equal(worst.entryPrice, 100.3);
+  assert.equal(worst.exitReason, 'ambiguous_worst');
+  assert.ok(worst.pnl! < 0);
+  assert.equal(simulateTrade(c, intent, { ...costs, ambiguityPolicy: 'skip' }).pnl, null);
+  assert.ok(simulateTrade(c, intent, { ...costs, ambiguityPolicy: 'best' }).pnl! > 0);
+});
+
+test('telegram format: BACKTEST label is unmistakable and HTML is escaped', () => {
+  const m = buildEventMessage({
+    mode: 'BACKTEST', eventType: 'SNR_NEAR', timeframe: 'H1', eventTime: Date.UTC(2019, 6, 15, 14), price: 1412.3, zoneLow: 1405, zoneHigh: 1408,
+    zoneKind: 'support', confirmations: { news: '<b>x</b>' }, status: 'TEST', displayTimezone: 'America/New_York', replaySessionId: 'abc',
+    strategyLabel: 'test', isTest: true, linkUrl: 'http://localhost:3000',
+  });
+  assert.match(m.text, /BACKTEST 2019/);
+  assert.match(m.text, /SIMULASI HISTORIS — BUKAN SINYAL LIVE/);
+  assert.match(m.text, /Tanggal pasar:<\/b> 15\.07\.2019/);
+  assert.match(m.text, /Waktu pasar:<\/b> 10:00/);
+  assert.match(m.text, /&lt;b&gt;x&lt;\/b&gt;/);
+  assert.match(m.text, /Trend: Not configured/);
+  assert.equal(m.button, undefined, 'non-https links are not attached');
+  const live = buildEventMessage({ mode: 'LIVE', eventType: 'SNR_TOUCH', timeframe: 'H4', eventTime: 0, price: 1, zoneLow: 1, zoneHigh: 2, zoneKind: 'resistance', confirmations: {}, status: 's', displayTimezone: 'UTC', strategyLabel: 'v', linkUrl: 'https://x.y' });
+  assert.match(live.text, /XAUUSD — LIVE/);
+  assert.doesNotMatch(live.text, /BACKTEST/);
+  assert.equal(live.button?.text, 'Buka Chart');
+});
+
+test('crypto: secret encryption round-trip, masking, sessions', async () => {
+  const key = btoa(String.fromCharCode(...new Uint8Array(32).map((_, i) => i)));
+  const blob = await encryptSecret('123456:ABCDEF-secret', key);
+  assert.ok(!blob.includes('ABCDEF'));
+  assert.equal(await decryptSecret(blob, key), '123456:ABCDEF-secret');
+  assert.equal(maskToken('123456789:AAEabcdefghijklmnop'), '1234…mnop');
+  const tok = await signSession(Date.now() + 1000, 'sec');
+  assert.equal(await verifySession(tok, 'sec', Date.now()), true);
+  assert.equal(await verifySession(tok, 'other', Date.now()), false);
+  assert.equal(await verifySession(tok.replace(/.$/, 'x'), 'sec', Date.now()), false);
+  assert.equal(await verifySession(tok, 'sec', Date.now() + 5000), false);
+});
