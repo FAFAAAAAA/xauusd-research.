@@ -124,6 +124,22 @@ export async function candlesUpTo(db: Db, sourceId: string, tf: Timeframe, upToI
   return r.map(mapCandle);
 }
 
+/** Candles with open_time in [from, to) ascending (backtest loader; caller bounds the range). */
+export async function candlesBetween(db: Db, sourceId: string, tf: Timeframe, from: number, toExclusive: number, limit = 400_000): Promise<Candle[]> {
+  const r = await db.query<Record<string, unknown>>(
+    `select ${CANDLE_COLS} from historical_candles
+     where source_id = $1 and timeframe = $2 and open_time >= $3::timestamptz and open_time < $4::timestamptz
+     order by open_time asc limit $5`,
+    [sourceId, tf, iso(from), iso(toExclusive), limit],
+  );
+  return r.map(mapCandle);
+}
+
+export async function hasCandles(db: Db, sourceId: string, tf: Timeframe): Promise<boolean> {
+  const r = await db.query<{ x: number }>('select 1 as x from historical_candles where source_id=$1 and timeframe=$2 limit 1', [sourceId, tf]);
+  return r.length > 0;
+}
+
 export async function lastCandleBefore(db: Db, sourceId: string, tf: Timeframe, beforeExclusive: number): Promise<number | null> {
   const r = await db.query<{ t: unknown }>(
     `select extract(epoch from max(open_time))*1000 as t from historical_candles where source_id=$1 and timeframe=$2 and open_time < $3::timestamptz`,
@@ -182,6 +198,14 @@ export async function getStrategyVersion(db: Db, id: string | null): Promise<Str
   if (!id) return null;
   const r = await db.query<StrategyVersionRow>('select id, strategy_key, version, adapter_key, status, is_test, description from strategy_versions where id=$1', [id]);
   return r[0] ?? null;
+}
+/** Strategies implemented in code that must exist in the DB (idempotent; also shipped as a migration). */
+export async function ensureBuiltinStrategies(db: Db) {
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('snr', 'h4h1m15-v0.1', 'snr_h4h1_m15', 'active', false,
+       'DRAF v0.1: tren H4 (struktur swing), zona SNR H4+H1, entry M15 saat sentuh zona, SL luar zona + 0.5 ATR(14) M15, TP diuji RR 1/2/3. Belum terbukti profit.')
+     on conflict (strategy_key, version) do nothing returning id`);
 }
 export async function defaultStrategyVersion(db: Db): Promise<StrategyVersionRow | null> {
   const r = await db.query<StrategyVersionRow>(
@@ -265,18 +289,42 @@ export interface NewEvent {
   eventTime: number; price: number; zoneLow: number | null; zoneHigh: number | null; zoneKind: string | null; zoneId: string | null;
   strategyVersionId: string | null; strategyLabel: string; source: 'tradingview_webhook' | 'replay_engine' | 'tradingview_csv';
   replaySessionId: string | null; runNumber: number | null; confirmations: Record<string, unknown>; payload: Record<string, unknown>; isTest: boolean;
+  backtestSessionId?: string | null;
 }
 /** Returns the id when inserted, null when the dedupe key already existed. */
 export async function insertEvent(db: Db, e: NewEvent): Promise<string | null> {
   const r = await db.query<{ id: string }>(
     `insert into market_events (mode, event_uid, dedupe_key, instrument_id, timeframe, event_type, event_time, price, zone_low, zone_high, zone_kind,
-       zone_id, strategy_version_id, strategy_version_label, source, replay_session_id, run_number, confirmations, payload, is_test)
-     values ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::jsonb,$19::jsonb,$20)
+       zone_id, strategy_version_id, strategy_version_label, source, replay_session_id, run_number, confirmations, payload, is_test, backtest_session_id)
+     values ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::jsonb,$19::jsonb,$20,$21)
      on conflict (dedupe_key) do nothing returning id`,
     [e.mode, e.eventUid, e.dedupeKey, e.instrumentId, e.timeframe, e.eventType, iso(e.eventTime), e.price, e.zoneLow, e.zoneHigh,
       e.zoneKind, e.zoneId, e.strategyVersionId, e.strategyLabel, e.source, e.replaySessionId, e.runNumber,
-      JSON.stringify(e.confirmations), JSON.stringify(e.payload), e.isTest]);
+      JSON.stringify(e.confirmations), JSON.stringify(e.payload), e.isTest, e.backtestSessionId ?? null]);
   return r[0]?.id ?? null;
+}
+
+/** Bulk insert (chunks of 200). Returns dedupe_key → id for rows actually inserted. */
+export async function insertEventsBulk(db: Db, events: NewEvent[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (let i = 0; i < events.length; i += 200) {
+    const chunk = events.slice(i, i + 200);
+    const params: unknown[] = [];
+    const rows = chunk.map((e) => {
+      const b = params.length;
+      params.push(e.mode, e.eventUid, e.dedupeKey, e.instrumentId, e.timeframe, e.eventType, iso(e.eventTime), e.price, e.zoneLow, e.zoneHigh,
+        e.zoneKind, e.zoneId, e.strategyVersionId, e.strategyLabel, e.source, e.replaySessionId, e.runNumber,
+        JSON.stringify(e.confirmations), JSON.stringify(e.payload), e.isTest, e.backtestSessionId ?? null);
+      const p = (k: number) => `$${b + k}`;
+      return `(${p(1)},${p(2)},${p(3)},${p(4)},${p(5)},${p(6)},${p(7)}::timestamptz,${p(8)},${p(9)},${p(10)},${p(11)},${p(12)}::uuid,${p(13)}::uuid,${p(14)},${p(15)},${p(16)}::uuid,${p(17)}::int,${p(18)}::jsonb,${p(19)}::jsonb,${p(20)}::boolean,${p(21)}::uuid)`;
+    });
+    const r = await db.query<{ id: string; dedupe_key: string }>(
+      `insert into market_events (mode, event_uid, dedupe_key, instrument_id, timeframe, event_type, event_time, price, zone_low, zone_high, zone_kind,
+         zone_id, strategy_version_id, strategy_version_label, source, replay_session_id, run_number, confirmations, payload, is_test, backtest_session_id)
+       values ${rows.join(',')} on conflict (dedupe_key) do nothing returning id, dedupe_key`, params);
+    for (const x of r) out.set(x.dedupe_key, x.id);
+  }
+  return out;
 }
 
 export interface EventRow {
@@ -518,6 +566,32 @@ export async function insertTrade(db: Db, t: Record<string, unknown>) {
     `insert into simulated_trades (${cols.join(',')}) values (${cols.map((c, i) => (/_time$/.test(c) ? `$${i + 1}::timestamptz` : /(reason|costs)$/.test(c) && c !== 'exit_reason' ? `$${i + 1}::jsonb` : `$${i + 1}`)).join(',')}) returning id`,
     cols.map((c) => (/_time$/.test(c) ? iso(t[c] as number) : (c === 'setup_reason' || c === 'costs') ? JSON.stringify(t[c]) : t[c])));
   return r[0].id;
+}
+const TRADE_COLS = ['backtest_session_id', 'strategy_version_id', 'entry_event_id', 'origin', 'side', 'timeframe', 'entry_time', 'entry_price',
+  'stop_loss', 'take_profit', 'exit_time', 'exit_price', 'exit_reason', 'pnl', 'pnl_r', 'planned_rr', 'session_label', 'news_confirmed',
+  'sentiment_confirmed', 'zone_outcome', 'setup_reason', 'costs', 'is_test'] as const;
+const TRADE_CAST: Record<string, string> = { entry_time: '::timestamptz', exit_time: '::timestamptz', setup_reason: '::jsonb', costs: '::jsonb',
+  backtest_session_id: '::uuid', strategy_version_id: '::uuid', entry_event_id: '::uuid', news_confirmed: '::boolean', sentiment_confirmed: '::boolean', is_test: '::boolean',
+  entry_price: '::numeric', stop_loss: '::numeric', take_profit: '::numeric', exit_price: '::numeric', pnl: '::numeric', pnl_r: '::numeric', planned_rr: '::numeric' };
+export type TradeInsert = { [K in (typeof TRADE_COLS)[number]]: unknown };
+export async function insertTradesBulk(db: Db, trades: TradeInsert[]) {
+  let n = 0;
+  for (let i = 0; i < trades.length; i += 200) {
+    const chunk = trades.slice(i, i + 200);
+    const params: unknown[] = [];
+    const rows = chunk.map((t) => `(${TRADE_COLS.map((c) => {
+      const v = t[c];
+      params.push(c.endsWith('_time') ? iso(v as number | null) : (c === 'setup_reason' || c === 'costs') ? JSON.stringify(v ?? {}) : v ?? null);
+      return `$${params.length}${TRADE_CAST[c] ?? ''}`;
+    }).join(',')})`);
+    await db.query(`insert into simulated_trades (${TRADE_COLS.join(',')}) values ${rows.join(',')} returning id`, params);
+    n += chunk.length;
+  }
+  return n;
+}
+export async function finishBacktestSession(db: Db, id: string, v: { periodStart: number; periodEnd: number; status: 'completed' | 'failed'; notes?: string | null }) {
+  await db.query(`update backtest_sessions set period_start=$2::timestamptz, period_end=$3::timestamptz, status=$4, completed_at=now(),
+    notes = coalesce($5, notes) where id=$1 returning id`, [id, iso(v.periodStart), iso(v.periodEnd), v.status, v.notes ?? null]);
 }
 export async function createBacktestSession(db: Db, v: { name: string; strategyVersionId: string | null; sourceId: string | null; instrumentId: string; timeframe: string | null; profile: string; costConfig: unknown; isTest: boolean; notes: string | null }) {
   const r = await db.query<{ id: string }>(

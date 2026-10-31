@@ -1,0 +1,180 @@
+//@version=5
+// XAUUSD Research — SNR H4/H1 -> M15  (v0.1, DRAFT)
+// ---------------------------------------------------------------------------
+// STATUS: NOT COMPILED / NOT VERIFIED in TradingView (written outside TradingView).
+// If the editor shows an error, send the error text and it will be fixed.
+// This is an INDICATOR (alerts only). It never places orders.
+//
+// Same rules as the website engine (src/lib/core/strategy/snr.ts):
+//  TREND H4   last 2 confirmed pivot highs AND lows: HH+HL = bullish (BUY only), LH+LL = bearish (SELL only), else neutral.
+//  ZONES      every confirmed pivot H4 (n=2) / H1 (n=3) -> pivot price +/- 0.25 x ATR14 of that TF; overlapping zones merged.
+//  NEAR       first time an aligned zone is within 1.0 x ATR14(M15)        -> alert SNR_NEAR
+//  ENTRY      first time an aligned zone is touched by the M15 candle      -> alert SETUP_CONFIRMED (enter next M15 open)
+//  SL         BUY: zone low - 0.5 x ATR14(M15) ; SELL: zone high + 0.5 x ATR14(M15). TP: test RR 1:1 / 1:2 / 1:3.
+//
+// Known differences vs the website engine (check them when comparing results):
+//  * Pivot lookback is time-based here (bars x TF length); the engine counts candles.
+//  * The trend uses the last two pivots of all history (ta.valuewhen); the engine only those inside the H4 lookback.
+//  * ta.pivothigh/pivotlow tie handling may differ from the engine on equal highs/lows.
+//  * TradingView builds H4 candles from its own session; the website derives H4 from your CSV (UTC buckets).
+//
+// Anti-repaint: request.security(... expr[1] ..., lookahead_on) = values of the last CLOSED H4/H1 candle only;
+// alerts fire on confirmed M15 bars only. Use on an M15 chart.
+// Alert: Create Alert -> Condition: this indicator -> "Any alert() function call" -> Webhook URL: https://<app>/api/webhooks/tradingview
+// ---------------------------------------------------------------------------
+indicator("XAUUSD SNR H4/H1 -> M15 (v0.1 draft)", overlay = true, max_lines_count = 200)
+
+secret   = input.string("CHANGE_ME", "Webhook secret (TRADINGVIEW_WEBHOOK_SECRET)")
+verLabel = input.string("snr h4h1m15-v0.1", "Strategy version label")
+h4n      = input.int(2, "H4 pivot n", minval = 1)
+h1n      = input.int(3, "H1 pivot n", minval = 1)
+atrLen   = input.int(14, "ATR length", minval = 1)
+halfW    = input.float(0.25, "Zone half-width (x ATR)")
+h4Look   = input.int(120, "H4 lookback (candles)")
+h1Look   = input.int(240, "H1 lookback (candles)")
+nearAtr  = input.float(1.0, "Near distance (x ATR M15)")
+slBuf    = input.float(0.5, "SL buffer (x ATR M15)")
+showN    = input.int(6, "Zones drawn (nearest)")
+
+// ---- higher-timeframe pivots (values of the last CLOSED HTF candle) ----
+htfPivots(n, len) =>
+    ph = ta.pivothigh(high, n, n)
+    pl = ta.pivotlow(low, n, n)
+    a  = ta.atr(len)[n]
+    hi1 = ta.valuewhen(not na(ph), ph, 0)
+    hi0 = ta.valuewhen(not na(ph), ph, 1)
+    lo1 = ta.valuewhen(not na(pl), pl, 0)
+    lo0 = ta.valuewhen(not na(pl), pl, 1)
+    tr = hi1 > hi0 and lo1 > lo0 ? 1 : hi1 < hi0 and lo1 < lo0 ? -1 : 0
+    [ph[1], pl[1], a[1], time[1], tr[1]]
+
+[h4ph, h4pl, h4a, h4t, h4trend] = request.security(syminfo.tickerid, "240", htfPivots(h4n, atrLen), lookahead = barmerge.lookahead_on)
+[h1ph, h1pl, h1a, h1t, h1trendUnused] = request.security(syminfo.tickerid, "60", htfPivots(h1n, atrLen), lookahead = barmerge.lookahead_on)
+
+var zLow  = array.new_float()
+var zHigh = array.new_float()
+var zTime = array.new_int()
+var zSpan = array.new_int()   // lookback in ms for this zone's TF
+
+addZone(p, a, spanMs) =>
+    if not na(p) and not na(a)
+        array.push(zLow, p - halfW * a)
+        array.push(zHigh, p + halfW * a)
+        array.push(zTime, time)
+        array.push(zSpan, spanMs)
+
+newH4 = ta.change(h4t) != 0
+newH1 = ta.change(h1t) != 0
+if newH4
+    addZone(h4ph, h4a, h4Look * 4 * 3600000)
+    addZone(h4pl, h4a, h4Look * 4 * 3600000)
+if newH1
+    addZone(h1ph, h1a, h1Look * 3600000)
+    addZone(h1pl, h1a, h1Look * 3600000)
+// expire old zones
+i = array.size(zTime) - 1
+while i >= 0
+    if time - array.get(zTime, i) > array.get(zSpan, i)
+        array.remove(zLow, i)
+        array.remove(zHigh, i)
+        array.remove(zTime, i)
+        array.remove(zSpan, i)
+    i -= 1
+
+// ---- merge overlapping zones ----
+mLow  = array.new_float()
+mHigh = array.new_float()
+if array.size(zLow) > 0
+    idx = array.sort_indices(zLow, order.ascending)
+    cl = array.get(zLow, array.get(idx, 0))
+    ch = array.get(zHigh, array.get(idx, 0))
+    for k = 1 to array.size(idx) - 1
+        if k < array.size(idx)
+            lo = array.get(zLow, array.get(idx, k))
+            hi = array.get(zHigh, array.get(idx, k))
+            if lo <= ch
+                ch := math.max(ch, hi)
+            else
+                array.push(mLow, cl)
+                array.push(mHigh, ch)
+                cl := lo
+                ch := hi
+    array.push(mLow, cl)
+    array.push(mHigh, ch)
+
+// ---- edge-triggered state, matched by overlap (0 away, 1 near, 2 touch) ----
+var sLow   = array.new_float()
+var sHigh  = array.new_float()
+var sState = array.new_int()
+atr15 = ta.atr(atrLen)
+bull = h4trend == 1
+bear = h4trend == -1
+
+stateOf(lo, hi) =>
+    best = 0
+    if array.size(sLow) > 0
+        for k = 0 to array.size(sLow) - 1
+            if array.get(sLow, k) <= hi and array.get(sHigh, k) >= lo
+                best := math.max(best, array.get(sState, k))
+    best
+
+tfLabel() =>
+    timeframe.multiplier == 15 ? "M15" : timeframe.multiplier == 5 ? "M5" : timeframe.multiplier == 60 ? "H1" : "M1"
+
+payload(string evType, float lo, float hi, string kind, string trendTxt) =>
+    eid = syminfo.ticker + "-" + tfLabel() + "-" + str.tostring(time_close) + "-" + evType + "-" + str.tostring(math.round(lo * 10))
+    '{"secret":"' + secret + '","event_id":"' + eid + '","symbol":"' + syminfo.prefix + ":" + syminfo.ticker +
+     '","timeframe":"' + tfLabel() + '","event_type":"' + evType + '","timestamp":' + str.tostring(time_close) +
+     ',"price":' + str.tostring(close) + ',"zone":{"low":' + str.tostring(lo, "#.##") + ',"high":' + str.tostring(hi, "#.##") +
+     ',"kind":"' + kind + '"},"strategy_version":"' + verLabel + '","source":"tradingview","mode":"LIVE","confirmations":{"trend":"' + trendTxt + '"}}'
+
+if barstate.isconfirmed
+    nLow = array.new_float()
+    nHigh = array.new_float()
+    nState = array.new_int()
+    if (bull or bear) and not na(atr15) and array.size(mLow) > 0
+        for k = 0 to array.size(mLow) - 1
+            lo = array.get(mLow, k)
+            hi = array.get(mHigh, k)
+            mid = (lo + hi) / 2
+            aligned = bull ? mid <= close[1] : mid >= close[1]
+            was = stateOf(lo, hi)
+            touching = low <= hi and high >= lo
+            dist = close > hi ? close - hi : close < lo ? lo - close : 0.0
+            nowS = touching ? 2 : dist <= nearAtr * atr15 ? 1 : 0
+            stored = was == 2 and nowS != 0 ? 2 : nowS
+            if (aligned or was > 0) and stored > 0
+                array.push(nLow, lo)
+                array.push(nHigh, hi)
+                array.push(nState, stored)
+            if aligned
+                kind = bull ? "support" : "resistance"
+                if nowS == 2 and was != 2
+                    sl = bull ? lo - slBuf * atr15 : hi + slBuf * atr15
+                    txt = (bull ? "Bullish H4 BUY" : "Bearish H4 SELL") + " SL " + str.tostring(sl, "#.##")
+                    alert(payload("SETUP_CONFIRMED", lo, hi, kind, txt), alert.freq_once_per_bar_close)
+                    label.new(bar_index, bull ? low : high, bull ? "BUY" : "SELL", style = bull ? label.style_label_up : label.style_label_down, color = color.new(color.white, 0), textcolor = color.black, size = size.tiny)
+                else if nowS == 1 and was == 0
+                    alert(payload("SNR_NEAR", lo, hi, kind, bull ? "Bullish H4" : "Bearish H4"), alert.freq_once_per_bar_close)
+    sLow := nLow
+    sHigh := nHigh
+    sState := nState
+
+// ---- drawing: nearest zones + trend background ----
+var line[] drawn = array.new_line()
+if barstate.islast
+    for l in drawn
+        line.delete(l)
+    array.clear(drawn)
+    n = array.size(mLow)
+    if n > 0
+        dists = array.new_float()
+        for k = 0 to n - 1
+            array.push(dists, math.abs((array.get(mLow, k) + array.get(mHigh, k)) / 2 - close))
+        ord = array.sort_indices(dists, order.ascending)
+        for k = 0 to math.min(showN, n) - 1
+            j = array.get(ord, k)
+            col = (array.get(mLow, j) + array.get(mHigh, j)) / 2 <= close ? color.new(color.gray, 0) : color.new(color.silver, 0)
+            array.push(drawn, line.new(bar_index - 100, array.get(mHigh, j), bar_index + 5, array.get(mHigh, j), color = col, style = line.style_dashed))
+            array.push(drawn, line.new(bar_index - 100, array.get(mLow, j), bar_index + 5, array.get(mLow, j), color = col, style = line.style_dashed))
+bgcolor(bull ? color.new(color.white, 95) : bear ? color.new(color.gray, 92) : na)

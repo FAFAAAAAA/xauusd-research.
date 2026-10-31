@@ -45,6 +45,8 @@ export default function Analytics() {
         </div>
       </div>
 
+      <RunBacktest onDone={(id) => { setSession(id); load(); }} />
+
       {!d.hasData ? (
         <div className="notice"><strong>Belum ada hasil backtest.</strong> Statistik akan muncul setelah strategi SNR dikonfigurasi dan dijalankan, atau setelah Anda mengimpor laporan “List of trades” dari TradingView Strategy Tester (Settings → Impor).</div>
       ) : (
@@ -137,6 +139,69 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
             : <span className="small">Tidak ada rilis 24 jam sebelumnya.</span>}
         </div>
       </div>
+    </section>
+  );
+}
+
+function RunBacktest({ onDone }: { onDone: (sessionId: string) => void }) {
+  const [sources, setSources] = useState<any[]>([]);
+  const [strategies, setStrategies] = useState<any[]>([]);
+  const [f, setF] = useState({ source: '', strategy: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', size: '0.01', ambiguity: 'worst' });
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    call<any[]>('/api/sources').then((s) => { setSources(s); if (s[0]) setF((x) => ({ ...x, source: x.source || s.find((y: any) => !y.is_test)?.id || s[0].id })); }).catch(() => {});
+    call<any[]>('/api/strategies').then((s) => {
+      const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active');
+      setStrategies(usable);
+      if (usable.length) setF((x) => ({ ...x, strategy: x.strategy || usable[usable.length - 1].id }));
+    }).catch(() => {});
+  }, []);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const run = async () => {
+    setBusy(true); setErr(null); setRes(null);
+    try {
+      const r = await call<any>('/api/backtest/run', { method: 'POST', json: {
+        source_id: f.source, strategy_version_id: f.strategy || null, from: `${f.from}T00:00:00Z`, to: `${f.to}T00:00:00Z`, rr: [1, 2, 3],
+        size: Number(f.size), costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
+      } });
+      setRes(r);
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <section className="panel">
+      <h2>Jalankan backtest SNR</h2>
+      <p className="mute small">Tren H4 → zona H4/H1 → entry M15 saat sentuh zona, di open candle M15 berikutnya. SL di luar zona + 0,5×ATR M15. Diuji 3 versi: RR 1:1, 1:2, 1:3 (masing-masing jadi satu sesi). Butuh data M15 + H1 + H4 di sumber yang sama. Maks ±1 tahun per run.</p>
+      <div className="grid">
+        <label>Sumber data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (TEST)' : ''}</option>)}</select></label>
+        <label>Strategi<select value={f.strategy} onChange={set('strategy')}>{strategies.map((s) => <option key={s.id} value={s.id}>{s.strategy_key} {s.version}</option>)}</select></label>
+        <label>Mulai (UTC)<input type="date" value={f.from} onChange={set('from')} /></label>
+        <label>Selesai (UTC, tidak termasuk)<input type="date" value={f.to} onChange={set('to')} /></label>
+        <label>Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
+        <label>Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
+        <label>Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
+        <label>Lot<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
+        <label>TP & SL di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Anggap SL (konservatif)</option><option value="best">Anggap TP</option><option value="skip">Lewati</option></select></label>
+      </div>
+      <div className="row" style={{ marginTop: 12 }}>
+        <button className="btn primary" onClick={run} disabled={busy || !f.source || !f.strategy}>{busy ? 'Menghitung… (bisa ±1 menit)' : 'Jalankan backtest'}</button>
+        {!strategies.length && <span className="mute small">Strategi SNR belum terdaftar — muat ulang halaman.</span>}
+      </div>
+      {err && <div className="notice" style={{ marginTop: 12 }}>{err}</div>}
+      {res && (
+        <div style={{ marginTop: 12 }}>
+          <p className="small">{res.candlesProcessed} candle M15 diproses · {res.setups} setup · {res.nearEvents} kali mendekati zona · arsip berita: {res.newsArchive ? 'ada' : 'TIDAK ADA (konfirmasi berita = data tidak tersedia)'}{res.guardViolations ? ` · ⚠ ${res.guardViolations} pelanggaran look-ahead dibuang` : ''}</p>
+          <div className="tablewrap"><table><thead><tr><th>RR</th><th>Trade</th><th>Dilewati</th><th></th></tr></thead><tbody>
+            {res.sessions.map((s: any) => (
+              <tr key={s.backtestSessionId}><td>1:{s.rr}</td><td>{s.trades}</td>
+                <td className="small">{Object.entries(s.skipped).filter(([, n]) => (n as number) > 0).map(([k, n]) => `${k.replace(/_/g, ' ')}: ${n}`).join(', ') || '—'}</td>
+                <td><button className="btn" onClick={() => onDone(s.backtestSessionId)}>Lihat hasil</button></td></tr>
+            ))}
+          </tbody></table></div>
+          <p className="mute small">{res.note}</p>
+        </div>
+      )}
     </section>
   );
 }

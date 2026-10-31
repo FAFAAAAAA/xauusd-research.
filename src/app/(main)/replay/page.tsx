@@ -60,7 +60,8 @@ function Setup({ boot, tz, onCreated }: { boot: any; tz: string; onCreated: (id:
   }, [range]);
   const [year, setYear] = useState<number | null>(null);
   const [dt, setDt] = useState('');
-  const realDefault = boot.strategies.find((s: any) => s.status === 'active' && !s.is_test);
+  const realDefault = [...boot.strategies].reverse().find((s: any) => s.status === 'active' && !s.is_test && s.configured)
+    ?? boot.strategies.find((s: any) => s.status === 'active' && !s.is_test);
   const [strategyId, setStrategyId] = useState<string>(realDefault?.id ?? '');
   const [near, setNear] = useState('');
   const [resend, setResend] = useState<'never' | 'new_run'>('never');
@@ -167,6 +168,7 @@ function Player({ id, tz, strategies, onClose }: { id: string; tz: string; strat
   const [events, setEvents] = useState<any[]>([]);
   const [zones, setZones] = useState<any[]>([]);
   const [news, setNews] = useState<any | null>(null);
+  const [snr, setSnr] = useState<any | null>(null);
   const [showSnr, setShowSnr] = useState(true);
   const [showNews, setShowNews] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -187,6 +189,7 @@ function Player({ id, tz, strategies, onClose }: { id: string; tz: string; strat
       ]);
       setS(c.session); setCandles(c.candles); setEvents(ev); setZones(z);
       setNews(await call<any>(`/api/replay/${id}/news`));
+      call<any>(`/api/replay/${id}/snr`).then(setSnr).catch(() => {});
     } catch (e) { setErr((e as Error).message); }
   }, [id]);
   useEffect(() => { reloadAll(); return () => { if (timer.current) clearTimeout(timer.current); }; }, [reloadAll]);
@@ -207,7 +210,7 @@ function Player({ id, tz, strategies, onClose }: { id: string; tz: string; strat
         const failed = r.events.filter((e: any) => e.telegram?.status === 'failed');
         if (failed.length) setTgNote(`Telegram gagal: ${failed[0].telegram.error}`);
       }
-      if (Date.now() - lastNews.current > 1500) { lastNews.current = Date.now(); call<any>(`/api/replay/${id}/news`).then(setNews).catch(() => {}); }
+      if (Date.now() - lastNews.current > 1500) { lastNews.current = Date.now(); call<any>(`/api/replay/${id}/news`).then(setNews).catch(() => {}); call<any>(`/api/replay/${id}/snr`).then(setSnr).catch(() => {}); }
       return r;
     } finally { inflight.current = false; }
   }, [id, reloadAll]);
@@ -242,7 +245,11 @@ function Player({ id, tz, strategies, onClose }: { id: string; tz: string; strat
   const visibleZones: ChartZone[] = useMemo(() => !showSnr || marketTime == null ? [] : zones
     .filter((z) => z.mode === 'BACKTEST' && Date.parse(z.valid_from) <= marketTime && (!z.valid_until || Date.parse(z.valid_until) > marketTime)
       && (!z.replay_session_id || z.replay_session_id === id))
-    .map((z) => ({ id: z.id, low: z.low, high: z.high, kind: z.kind })), [zones, showSnr, marketTime, id]);
+    .map((z) => ({ id: z.id, low: z.low, high: z.high, kind: z.kind }))
+    .concat(snr?.available && snr.price != null ? [...snr.zones]
+      .sort((a: any, b: any) => Math.abs(a.mid - snr.price) - Math.abs(b.mid - snr.price)).slice(0, 6)
+      .map((z: any) => ({ id: `snr-${z.key}`, low: z.low, high: z.high, kind: z.mid <= snr.price ? 'support' : 'resistance' })) : []),
+  [zones, showSnr, marketTime, id, snr]);
 
   const markers: ChartMarker[] = useMemo(() => {
     if (!s) return [];
@@ -277,6 +284,16 @@ function Player({ id, tz, strategies, onClose }: { id: string; tz: string; strat
 
       {strategy && !strategy.configured ? <div className="notice"><strong>Strategy Not Configured.</strong> Candle diputar, tetapi tidak ada event dan tidak ada sinyal BUY/SELL.</div> : null}
       {strategy?.testOnly ? <div className="notice"><strong>Fixture TEST aktif.</strong> Event berasal dari aturan uji teknis terhadap zona manual, bukan strategi trading.</div> : null}
+
+      {snr?.available ? (
+        <section className="panel">
+          <div className="row between">
+            <strong>Tren H4: {snr.trend === 'bullish' ? 'BULLISH → hanya BUY' : snr.trend === 'bearish' ? 'BEARISH → hanya SELL' : 'NETRAL → tidak ada entry'}</strong>
+            <span className="mute small">{snr.trendDetail} · {snr.zones.length} zona H4/H1</span>
+          </div>
+          <p className="mute small" style={{ marginBottom: 0 }}>Chart menampilkan 6 zona terdekat. Dihitung hanya dari candle H4/H1 yang sudah tutup pada waktu replay.</p>
+        </section>
+      ) : null}
 
       <div className="chartbox">
         {candles.length ? <CandleChart candles={candles} zones={visibleZones} markers={markers} timezone={tz} fitKey={`${id}-${s.run_number}`} />

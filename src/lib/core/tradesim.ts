@@ -45,12 +45,17 @@ export interface TradeResult {
   costs: { spread: number; slippage: number; commission: number };
 }
 
+/** Fill price of a market entry at `open`: longs pay the ask (+spread) and slippage, shorts sell the bid minus slippage. */
+export function fillPrice(side: 'long' | 'short', open: number, cost: CostConfig): number {
+  return side === 'long' ? open + cost.spread + cost.slippage : open - cost.slippage;
+}
+
 export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, cost: CostConfig): TradeResult {
   const entryBar = candles[intent.entryBarIndex];
   if (!entryBar) throw new Error('entryBarIndex di luar data');
   const long = intent.side === 'long';
   // Long buys at ASK (+spread), short sells at BID; both pay slippage.
-  const entryPrice = long ? entryBar.open + cost.spread + cost.slippage : entryBar.open - cost.slippage;
+  const entryPrice = fillPrice(intent.side, entryBar.open, cost);
   const risk = Math.abs(entryPrice - intent.stopLoss);
   if (risk <= 0) throw new Error('Stop loss harus berbeda dari harga entry');
   if (long ? intent.stopLoss >= entryPrice || intent.takeProfit <= entryPrice

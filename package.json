@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/core.test.ts",
+    "test": "tsx --test tests/core.test.ts tests/snr.test.ts",
     "test:e2e": "tsx --test tests/e2e.test.ts",
     "db:migrate": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f supabase/migrations/20261031000000_init.sql"
   },

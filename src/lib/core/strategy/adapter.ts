@@ -1,4 +1,4 @@
-import type { Candle, ConfirmationStatus, EventType, Mode, SnrZone, Timeframe } from '../types';
+import { TIMEFRAME_MS, type Candle, type ConfirmationStatus, type EventType, type Mode, type SnrZone, type Timeframe } from '../types';
 
 /**
  * Context handed to a strategy on every closed candle.
@@ -18,6 +18,8 @@ export interface StrategyContext {
   now: number;
   zones: readonly SnrZone[];
   news: NewsSnapshot;
+  /** Higher-timeframe candles (only when the adapter lists them in requiredTimeframes). The guard keeps CLOSED candles only. */
+  htf?: Partial<Record<Timeframe, readonly Candle[]>>;
   params: Readonly<Record<string, unknown>>;
   /** State carried between calls within one replay run (e.g. last zone state for edge-triggering). */
   state: Record<string, unknown>;
@@ -58,6 +60,8 @@ export interface StrategyAdapter {
   testOnly: boolean;
   /** Minimum history the strategy needs before it can evaluate. */
   warmupCandles: number;
+  /** Extra timeframes the strategy reads (must exist in the same data source). */
+  requiredTimeframes?: Timeframe[];
   evaluate(ctx: StrategyContext): StrategyEventDraft[];
 }
 
@@ -79,6 +83,13 @@ export function runStrategyGuarded(adapter: StrategyAdapter, ctx: StrategyContex
       ...ctx.news,
       items: ctx.news.items.filter((n) => n.availableAt <= ctx.now),
     },
+    htf: ctx.htf
+      ? (Object.fromEntries(
+          Object.entries(ctx.htf).map(([tf, arr]) => [
+            tf, Object.freeze((arr ?? []).filter((c) => c.time + TIMEFRAME_MS[tf as Timeframe] <= ctx.now)),
+          ]),
+        ) as StrategyContext['htf'])
+      : undefined,
   };
   let raw: StrategyEventDraft[] = [];
   try {

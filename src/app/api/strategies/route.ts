@@ -5,8 +5,8 @@ import { getAdapter } from '@/lib/core/strategy/registry';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  return api(async (db) => (await repo.listStrategyVersions(db)).map((s) => {
+  return api(async (db) => { await repo.ensureBuiltinStrategies(db); return (await repo.listStrategyVersions(db)).map((s) => {
     const a = getAdapter(s.adapter_key);
-    return { ...s, configured: a.configured, testOnly: a.testOnly, adapterName: a.name };
-  }));
+    return { ...s, configured: a.configured, testOnly: a.testOnly, adapterName: a.name, requiredTimeframes: a.requiredTimeframes ?? [] };
+  }); });
 }

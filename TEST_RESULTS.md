@@ -67,3 +67,15 @@ ok 25 - 10. analytics: empty until real trades exist; TradingView report import
 6. Klasifikasi sentimen otomatis hanya heuristik untuk 4 kategori; kategori lain tetap Unknown sampai ada analisis manual.
 7. Klasifikasi sesi Asia/London/New York memakai konvensi jam di `src/lib/core/time.ts`; sesuaikan bila Anda memakai definisi lain.
 8. Mesin trade simulasi siap, tetapi belum ada trade karena strategi belum ditentukan — analitik menampilkan empty state.
+
+## Update 2026-10-31 — SNR H4/H1 → M15 v0.1 + backtest runner
+
+Run in the sandbox against a real PostgreSQL 16 with the migrations applied:
+
+- `npm test` (core + snr unit tests): **24 passed, 0 failed**
+- `npm run test:e2e`: **11 passed, 0 failed** — includes #11: M15 import → derive H1/H4 → backtest RR 1/2/3, every trade checked
+  (BUY only in bullish H4, SL below zone, TP = RR × risk, entry at the signal-candle close, no overlapping trades),
+  causality (shorter run = identical trades for the shared period) and replay engine = backtest runner for the same setups.
+
+All test candles are SYNTHETIC (2030 zigzag). They prove the mechanics, not profitability.
+Not verified here: Next.js build/UI rendering (npm registry blocked), the Pine file (not compiled in TradingView), real 2019 data.

@@ -7,10 +7,12 @@ import { sendTelegram, type FetchLike, type SendResult } from './telegram';
 import { getAdapter } from '../core/strategy/registry';
 import { runStrategyGuarded } from '../core/strategy/adapter';
 import { buildEventMessage } from '../core/telegram-format';
+import { SNR_KEY, computeSnrView, readParams } from '../core/strategy/snr';
 import { NOT_CONFIGURED, TIMEFRAME_MS, type Candle, type Timeframe } from '../core/types';
 
 export const MAX_STEP = 50;
 const HISTORY_WINDOW = 500;
+const HTF_WINDOW = 400;
 
 export async function createReplaySession(db: Db, v: {
   sourceId: string; timeframe: Timeframe; startTime: number; strategyVersionId?: string | null;
@@ -22,7 +24,14 @@ export async function createReplaySession(db: Db, v: {
   if (!source) throw new HttpError(404, 'Sumber data tidak ditemukan');
   const first = await repo.candlesAfter(db, v.sourceId, v.timeframe, v.startTime - 1, 1);
   if (!first.length) throw new HttpError(422, 'Tidak ada candle pada/ setelah waktu mulai untuk sumber & timeframe ini');
+  await repo.ensureBuiltinStrategies(db);
   const sv = v.strategyVersionId ? await repo.getStrategyVersion(db, v.strategyVersionId) : await repo.defaultStrategyVersion(db);
+  const adapter = getAdapter(sv?.adapter_key);
+  for (const t of adapter.requiredTimeframes ?? []) {
+    if (!(await repo.hasCandles(db, v.sourceId, t))) {
+      throw new HttpError(422, `Strategi ini butuh data ${t}. Buka Pengaturan → pilih TF M15 → tekan "Bentuk TF lebih tinggi (UTC)" dulu.`);
+    }
+  }
   // Candles strictly before the start are history (visible, not processed). Processing begins at the start candle.
   const initialCursor = await repo.lastCandleBefore(db, v.sourceId, v.timeframe, v.startTime);
   return repo.insertReplay(db, {
@@ -79,6 +88,10 @@ export async function stepReplay(db: Db, sessionId: string, opts: { count: numbe
   const cfg = getConfig();
   const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
 
+  const htfList = adapter.requiredTimeframes ?? [];
+  const htfAll: Partial<Record<Timeframe, Candle[]>> = {};
+  for (const t of htfList) htfAll[t] = await repo.candlesUpTo(db, s.source_id, t, lastClose - 1, HTF_WINDOW + 50);
+
   const state = { ...s.strategy_state };
   const violations: string[] = [];
   const window: Candle[] = history.slice();
@@ -91,9 +104,17 @@ export async function stepReplay(db: Db, sessionId: string, opts: { count: numbe
     if (!adapter.configured || window.length < adapter.warmupCandles) continue;
     const zones = await repo.zonesAsOf(db, s.instrument_id, 'BACKTEST', now, s.id);
     const snap = snapshotAt(news, now);
+    let htf: Partial<Record<Timeframe, readonly Candle[]>> | undefined;
+    if (htfList.length) {
+      htf = {};
+      for (const t of htfList) {
+        const closed = htfAll[t]!.filter((h) => h.time + TIMEFRAME_MS[t] <= now);
+        htf[t] = closed.slice(-HTF_WINDOW);
+      }
+    }
     const res = runStrategyGuarded(adapter, {
       mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: s.timeframe, candles: window, now, zones, news: snap,
-      params: s.strategy_params, state,
+      htf, params: s.strategy_params, state,
     });
     violations.push(...res.violations);
     const newsSummary = summarizeNews(snap);
@@ -166,4 +187,19 @@ export async function visibleCandles(db: Db, id: string, limit = 1500) {
   if (!s) throw new HttpError(404, 'Replay session tidak ditemukan');
   if (s.cursor_time == null) return { session: s, candles: [] as Candle[] };
   return { session: s, candles: await repo.candlesUpTo(db, s.source_id, s.timeframe, s.cursor_time, Math.min(limit, 5000)) };
+}
+
+/** Current SNR picture (H4 trend + zones) as of the replay cursor — closed candles only. */
+export async function replaySnrView(db: Db, id: string) {
+  const s = await repo.getReplay(db, id);
+  if (!s) throw new HttpError(404, 'Replay session tidak ditemukan');
+  const sv = await repo.getStrategyVersion(db, s.strategy_version_id);
+  if (sv?.adapter_key !== SNR_KEY) return { available: false as const, reason: 'Strategi replay ini bukan SNR H4/H1' };
+  if (s.cursor_time == null) return { available: false as const, reason: 'Belum ada candle yang dibuka' };
+  const now = s.cursor_time + TIMEFRAME_MS[s.timeframe];
+  const closed = async (t: Timeframe) => (await repo.candlesUpTo(db, s.source_id, t, now - 1, HTF_WINDOW + 50))
+    .filter((c) => c.time + TIMEFRAME_MS[t] <= now).slice(-HTF_WINDOW);
+  const view = computeSnrView(await closed('H4'), await closed('H1'), readParams(s.strategy_params));
+  const price = (await repo.candlesUpTo(db, s.source_id, s.timeframe, s.cursor_time, 1))[0]?.close ?? null;
+  return { available: true as const, asOf: now, price, ...view };
 }

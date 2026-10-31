@@ -14,6 +14,8 @@ import { loadNewsWindow, snapshotAt } from '../src/lib/server/news-service';
 import { sendTelegram, type FetchLike } from '../src/lib/server/telegram';
 import { analytics } from '../src/lib/server/analytics-service';
 import { HttpError } from '../src/lib/server/db';
+import { runBacktest } from '../src/lib/server/backtest-service';
+import { zigzag } from './helpers/zigzag';
 
 const conn = { host: process.env.PGHOST ?? '/var/tmp', port: Number(process.env.PGPORT ?? 54329), user: process.env.PGUSER ?? 'postgres', db: 'xau_e2e' };
 const admin = psqlDb({ ...conn, db: 'postgres' });
@@ -119,7 +121,8 @@ test('3. news import with anti-lookahead (TEST calendar)', async () => {
 });
 
 test('4. replay with unconfigured strategy produces no events', async () => {
-  const s = await createReplaySession(db, { sourceId, timeframe: 'H1', startTime: T0 + 5 * H });
+  const nc = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'not_configured')!;
+  const s = await createReplaySession(db, { sourceId, timeframe: 'H1', startTime: T0 + 5 * H, strategyVersionId: nc.id });
   assert.equal(s.cursor_time, T0 + 4 * H, 'history before start is visible; processing starts at start candle');
   await repo.updateReplayControls(db, s.id, { status: 'playing' });
   const out = await stepReplay(db, s.id, { count: 10, manual: false, fetchImpl: fakeFetch });
@@ -284,4 +287,76 @@ test('10. analytics: empty until real trades exist; TradingView report import', 
   assert.equal(a.overall!.totalPnl, 100);
   assert.equal(a.overall!.winRate, 0.5);
   assert.equal(a.comparison.find((c) => c.profile === 'snr_news')!.metrics, null, 'comparison slots stay empty until such a run exists');
+});
+
+test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overlapping trades; replay agrees', async () => {
+  const src = await repo.createSource(db, {
+    name: 'TEST SNR zigzag', provider: 'TEST (synthetic)', kind: 'csv_import', broker_symbol: null, file_timezone: 'UTC',
+    price_basis: 'bid', spread_spec: {}, notes: 'Synthetic zigzag for strategy tests', is_test: true,
+  });
+  const m15 = zigzag(192 * 12, 1);
+  const csv = ['time,open,high,low,close,volume', ...m15.map((c) => `${new Date(c.time).toISOString()},${c.open},${c.high},${c.low},${c.close},1`)].join('\n');
+  assert.equal((await importOhlcChunk(db, { sourceId: src.id, timeframe: 'M15', text: csv })).inserted, m15.length);
+  // Without H1/H4 the run is refused with a clear message
+  await assert.rejects(runBacktest(db, { sourceId: src.id, from: m15[0].time, to: m15[100].time }), (e: HttpError) => e.status === 422 && /H1/.test(e.message));
+  await deriveTimeframes(db, src.id, 'M15', ['H1', 'H4'], 'utc');
+
+  const from = m15[0].time + 5 * 86_400_000, to = m15[m15.length - 1].time - 2 * 86_400_000;
+  const r = await runBacktest(db, { sourceId: src.id, from, to, costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 }, size: 0.01 });
+  assert.equal(r.strategy, 'snr h4h1m15-v0.1');
+  assert.equal(r.sessions.length, 3);
+  assert.equal(r.guardViolations, 0);
+  assert.ok(r.setups > 0, 'synthetic uptrend must produce setups');
+  console.log('# TEST backtest summary', JSON.stringify({ setups: r.setups, near: r.nearEvents, sessions: r.sessions.map((x) => [x.rr, x.trades, x.skipped]) }));
+
+  const events = await db.query<{ et: number; bs: string; zl: number; zh: number; type: string }>(
+    `select extract(epoch from event_time)*1000 as et, backtest_session_id as bs, zone_low::float8 as zl, zone_high::float8 as zh, event_type as type
+     from market_events where backtest_session_id is not null`);
+  for (const ses of r.sessions) {
+    const trades = await repo.listTrades(db, ses.backtestSessionId);
+    assert.equal(trades.length, ses.trades);
+    assert.ok(trades.length > 0);
+    let lastExit = -Infinity;
+    for (const t of trades) {
+      const entry = Number(t.entry_ms), sl = Number(t.stop_loss), tp = Number(t.take_profit), ep = Number(t.entry_price);
+      assert.equal(t.side, 'long', 'bullish H4 → BUY only');
+      assert.ok(sl < ep && tp > ep);
+      assert.ok(Math.abs((tp - ep) / (ep - sl) - ses.rr) < 1e-3, 'TP = entry + RR × risk');
+      assert.equal(Number(t.planned_rr), ses.rr);
+      assert.ok(entry > lastExit, 'no overlapping trades within one RR session');
+      lastExit = t.exit_ms == null ? Infinity : Number(t.exit_ms);
+      assert.ok(entry >= from && entry <= to + 15 * 60_000);
+      // the entry candle opens exactly when the signal candle closed
+      const ev = events.find((e) => e.bs === ses.backtestSessionId && Number(e.et) === entry);
+      assert.ok(ev, 'each trade has its SETUP_CONFIRMED event at the entry time');
+      assert.equal(ev!.type, 'SETUP_CONFIRMED');
+      assert.ok(sl < Number(ev!.zl), 'SL is outside (below) the support zone');
+      if (!r.newsArchive) assert.equal(t.news_confirmed, null, 'no archive → unknown, not "false"');
+      else assert.equal(typeof t.news_confirmed, 'boolean');
+    }
+  }
+
+  // Causality: a shorter run gives the same trades for the shared period
+  const shortTo = from + 5 * 86_400_000;
+  const r2 = await runBacktest(db, { sourceId: src.id, from, to: shortTo, rrList: [2], costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 }, size: 0.01 });
+  const long2 = (await repo.listTrades(db, r.sessions.find((x) => x.rr === 2)!.backtestSessionId)).filter((t) => Number(t.entry_ms) <= shortTo);
+  const short2 = await repo.listTrades(db, r2.sessions[0].backtestSessionId);
+  const key = (t: Record<string, unknown>) => `${t.entry_ms}|${t.entry_price}|${t.stop_loss}|${t.exit_ms}|${t.exit_reason}`;
+  assert.deepEqual(short2.map(key), long2.map(key));
+
+  // The step-by-step replay engine produces the same setups as the backtest runner
+  const sv = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'snr_h4h1_m15')!;
+  const rp = await createReplaySession(db, { sourceId: src.id, timeframe: 'M15', startTime: from, strategyVersionId: sv.id });
+  const replaySetups: number[] = [];
+  for (let k = 0; k < 6; k++) {
+    const out = await stepReplay(db, rp.id, { count: 50, manual: true, fetchImpl: fakeFetch });
+    assert.deepEqual(out.violations, []);
+    replaySetups.push(...out.events.filter((e) => e.event_type === 'SETUP_CONFIRMED').map((e) => e.event_time));
+  }
+  const until = from + 300 * 15 * 60_000;
+  const btSetups = [...new Set(events.filter((e) => e.type === 'SETUP_CONFIRMED' && Number(e.et) <= until).map((e) => Number(e.et)))].sort((a, b) => a - b);
+  assert.ok(btSetups.length > 0, 'comparison window must contain setups');
+  assert.deepEqual(replaySetups, btSetups);
+  const a = await analytics(db, r.sessions[0].backtestSessionId);
+  assert.equal(a.overall!.totalTrades, r.sessions[0].trades);
 });

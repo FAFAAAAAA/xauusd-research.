@@ -129,6 +129,28 @@ Menu News → impor CSV (template di `templates/`). Kategori: `FOMC, US_CPI, US_
 
 ---
 
+## 5a. Strategi SNR H4/H1 → M15 (v0.1, DRAF)
+
+Aturan dipilih pemilik; implementasi: `src/lib/core/strategy/snr.ts` (adapter `snr_h4h1_m15`, versi `snr h4h1m15-v0.1`). **Belum terbukti profit — inilah yang diuji oleh backtest.**
+
+| Bagian | Aturan |
+|---|---|
+| Tren H4 | Struktur swing dari pivot terkonfirmasi (n=2): 2 pivot high terakhir & 2 pivot low terakhir naik (HH+HL) = bullish → hanya BUY; turun (LH+LL) = bearish → hanya SELL; selain itu netral → tidak entry |
+| Zona SNR | Setiap pivot H4 (n=2, 120 candle terakhir) dan H1 (n=3, 240 candle terakhir) → harga pivot ± 0,25×ATR14 TF tersebut; zona yang tumpang tindih digabung |
+| Arah zona | Bullish: zona di bawah close M15 sebelumnya (support). Bearish: di atasnya (resistance) |
+| Notifikasi dekat | `SNR_NEAR` saat pertama kali jarak ≤ 1,0×ATR14 M15 |
+| Entry | `SETUP_CONFIRMED` saat candle M15 menyentuh zona (tanpa candle konfirmasi). Entry di **open M15 berikutnya** |
+| Stop loss | BUY: bawah zona − 0,5×ATR14 M15. SELL: atas zona + 0,5×ATR14 M15 |
+| Take profit | Diuji 3 varian: RR 1:1, 1:2, 1:3 (satu sesi backtest per RR) |
+| Re-entry | Zona yang sama baru aktif lagi setelah harga menjauh (> jarak "dekat"); satu posisi per sesi RR (sinyal saat posisi terbuka dilewati) |
+| Gap | Jika open berikutnya > 60 menit setelah sinyal (mis. weekend) → dilewati |
+| Biaya default | spread 0,30 · slippage 0,10 · komisi 7/lot · 0,01 lot · TP & SL di 1 candle = anggap SL |
+| Berita | `news_confirmed` = ada rilis high-impact ±24 jam; `sentiment_confirmed` = sentimen rule_surprise_v0 searah. Tanpa arsip berita → kosong (bukan "tidak") |
+
+Anti-lookahead: pivot hanya dipakai setelah n candle kanan **tutup**; strategi hanya menerima candle H1/H4 yang sudah tutup (`runStrategyGuarded` membuang yang belum). Tes `snr.test.ts` + e2e #11 memeriksa: hasil hingga waktu T tidak berubah walau data sesudahnya ada, replay langkah-demi-langkah = backtest runner.
+
+**Data yang dibutuhkan:** impor CSV **M15** (mulai ±1 bulan sebelum tanggal backtest untuk pemanasan; untuk zona H4 idealnya 4 bulan), lalu Pengaturan → TF M15 → "Bentuk TF lebih tinggi (UTC)" (membuat H1 + H4). Jalankan dari menu Analytics → "Jalankan backtest SNR" (maks ±1 tahun per run). Pine: `pine/xauusd_snr_h4h1_m15_v01.pine` (**belum dikompilasi di TradingView**; perbedaan yang diketahui tertulis di kepala file).
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.
