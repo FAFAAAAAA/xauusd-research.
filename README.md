@@ -229,6 +229,16 @@ Sama dengan v0.5 inti, ditambah syarat: candle yang menembus level harus candle 
 Emas, RR 1:2, $10, biaya termasuk: data M30 2010–2026 → 1.705 trade (±2/minggu), win 39,5%, +$2.955 (v0.5: 2.724 trade, 37,4%, +$2.918); 2010–2017 +$1.178 (v0.5 +$589), 2018–2026 +$1.777. Data M15 2018–2026 → 869 trade, win 41,1%, +$1.938 (v0.5 +$2.572).
 Di halaman Backtest baru sekarang hanya v0.6 dan v0.5 yang bisa dipilih; strategi lain tetap ada di kode agar hasil lama masih bisa dibuka.
 
+## 5m. Breakout v0.7 (`breakout_v07`) — v0.6 + Pola N
+
+v0.6 tidak diubah sama sekali, lalu ditambah bagian **Pola N** dengan slot sendiri (jadi v0.6 dan Pola N bisa sama-sama punya posisi terbuka; risiko sesekali ±2×).
+- **Swing**: zigzag pada candle H1 dan H4 yang sudah tutup. Puncak/lembah jadi swing setelah harga berbalik ≥ 3 × ATR14 timeframe itu. Tanpa hitungan candle, tanpa batas umur pola.
+- **BUY**: A lembah, B puncak, C lembah dengan C > A. Pola terlihat saat C terkonfirmasi; sinyal = close M15 pertama di atas B (close sebelumnya ≤ B). Batal jika close M15 di bawah C lebih dulu. **SL = C**, TP = RR × risiko. SELL kebalikannya.
+- **Tren**: BUY hanya jika EMA50 H4 > EMA200 H4. SELL hanya jika EMA50 < EMA200 di H4 **dan** D1.
+
+Mesin website, emas, RR 1:2, $10, biaya termasuk: data M15 2018–2026 → 1.025 trade, win 41,3%, +$2.390, drawdown $286 (v0.6: +$1.938, DD $245). Data M30 2010–2026 → 2.018 trade, +$3.473, DD $485; 2010–2017 +$1.276 (v0.6 +$1.178), 2018–2022 +$680, 2023–2026 +$1.516.
+Pantulan 3×ATR dipilih karena satu-satunya versi Pola N yang tetap untung di 2010–2017; 1×/1,5×ATR memberi lebih banyak trade tapi rugi di 2010–2017 (riset, tidak dipasang).
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

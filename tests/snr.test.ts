@@ -331,3 +331,32 @@ test('multi-pair: bundled datasets decode, aggregate without look-ahead, and USD
   assert.equal(usdPerPoint('EURUSD', 100_000, 1.1), 100_000);
   assert.equal(instrumentCosts('XAUUSD').contractSize, 100);
 });
+
+test('breakout v0.7: registered; Pola N fires BUY on the first close above B with SL at C (C above A, uptrend)', async () => {
+  const { breakoutV07Adapter, nPolaEvaluate } = await import('../src/lib/core/strategy/npola');
+  assert.equal(getAdapter('breakout_v07'), breakoutV07Adapter);
+  const H = TIMEFRAME_MS.H1;
+  const mk = (o: number, h: number, l: number, c: number, i: number): Candle => ({ time: T0 + i * H, open: o, high: h, low: l, close: c, volume: 0 });
+  const h1: Candle[] = [];
+  for (let i = 0; i < 20; i++) h1.push(mk(100, 100.3, 99.7, 100, i));
+  const seq: [number, number, number, number][] = [
+    [100, 100.3, 98, 98.2], [98.2, 98.4, 97, 97.2], [97.2, 99.5, 97.1, 99.3],   // A = 97
+    [99.3, 102, 99.2, 101.8], [101.8, 101.9, 99.5, 99.7],                        // B = 102
+    [99.7, 99.8, 98.5, 98.7], [98.7, 101.5, 98.6, 101.3],                        // C = 98.5 (> A) → pattern visible
+    [101.3, 102.6, 101.2, 102.4],                                                // close above B → BUY
+  ];
+  seq.forEach((s, j) => h1.push(mk(...s, 20 + j)));
+  const up = Array.from({ length: 250 }, (_, i) => mk(50 + i, 51 + i, 49 + i, 50.5 + i, i - 300));
+  const st = {};
+  const ev: StrategyEventDraft[] = [];
+  for (let i = 1; i <= h1.length; i++) {
+    const w = h1.slice(0, i);
+    ev.push(...nPolaEvaluate({ mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'H1', candles: w, now: w[w.length - 1].time + H, zones: [], news: {} as never,
+      htf: { H1: w, H4: up, D1: up }, params: {}, state: {} }, st, { k: 2, useH1: true, useH4: false }));
+  }
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].details?.side, 'long');
+  assert.equal(ev[0].details?.stop_loss, 98.5);
+  assert.equal(ev[0].details?.level, 102);
+  assert.equal(ev[0].candleTime, h1[h1.length - 1].time);
+});

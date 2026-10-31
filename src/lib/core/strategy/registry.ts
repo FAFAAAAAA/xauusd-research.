@@ -9,6 +9,7 @@ import { nPatternAdapter } from './npattern';
 import { rbrDbdAdapter } from './rbrdbd';
 import { snrBreakAdapter } from './snrbreak';
 import { obFvgAdapter } from './obfvg';
+import { breakoutV07Adapter } from './npola';
 
 /**
  * Placeholder for the owner's SNR strategy. It is intentionally empty:
@@ -78,6 +79,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [breakoutV04Adapter.key]: breakoutV04Adapter,
   [breakoutV05Adapter.key]: breakoutV05Adapter,
   [breakoutV06Adapter.key]: breakoutV06Adapter,
+  [breakoutV07Adapter.key]: breakoutV07Adapter,
   [snrSndAdapter.key]: snrSndAdapter,
   [customAdapter.key]: customAdapter,
   [snrSnd2Adapter.key]: snrSnd2Adapter,
