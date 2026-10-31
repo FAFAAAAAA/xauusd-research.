@@ -92,6 +92,12 @@ function Telegram({ s, reload }: { s: any; reload: () => void }) {
     try { const r = await call<any>('/api/telegram/test', { method: 'POST' }); setTest(r); } catch (e) { setTest({ status: 'failed', error: (e as Error).message }); }
     reload(); loadLogs();
   };
+  const [det, setDet] = useState<any>(null);
+  const detect = async () => {
+    setDet({ busy: true });
+    try { setDet(await call<any>('/api/telegram/detect', { method: 'POST' })); } catch (e) { setDet({ tokenOk: false, error: (e as Error).message }); }
+  };
+  const useChat = async (id: string) => { await save({ telegram: { chatId: id } }); setChat(id); setDet(null); };
   const retry = async (id: string) => { try { await call('/api/telegram/retry', { method: 'POST', json: { id } }); } catch (e) { alert((e as Error).message); } loadLogs(); };
   return (
     <section className="panel stack">
@@ -113,6 +119,20 @@ function Telegram({ s, reload }: { s: any; reload: () => void }) {
       <div className="row">
         <label className="switch"><input type="checkbox" checked={t.liveEnabled} onChange={(e) => save({ telegram: { liveEnabled: e.target.checked } })} />Notifikasi LIVE</label>
         <label className="switch"><input type="checkbox" checked={t.backtestEnabled} onChange={(e) => save({ telegram: { backtestEnabled: e.target.checked } })} />Notifikasi BACKTEST (simulasi)</label>
+      </div>
+      <div className="stack" style={{ gap: 8 }}>
+        <div className="row">
+          <button className="btn" onClick={detect} disabled={det?.busy}>{det?.busy ? 'Memeriksa…' : 'Cek bot & cari Chat ID'}</button>
+          <span className="mute small">Simpan token dulu, kirim “halo” ke bot, lalu tekan tombol ini.</span>
+        </div>
+        {det && !det.busy ? (det.tokenOk ? (
+          <div className="notice stack" style={{ gap: 8 }}>
+            <span>Token valid: bot <strong>@{det.bot.username}</strong>.</span>
+            {det.chats.length ? det.chats.map((c: any) => (
+              <div key={c.id} className="row between"><span>{c.name || c.type} · <span className="num">{c.id}</span>{String(det.currentChatId) === c.id ? ' (dipakai)' : ''}</span>
+                <button className="btn" onClick={() => useChat(c.id)}>Pakai Chat ID ini</button></div>
+            )) : <span>{det.hint}</span>}
+          </div>) : <div className="error small">{det.error}</div>) : null}
       </div>
       <div className="row">
         <button className="btn" onClick={() => { save({ telegram: { botToken: token || undefined, chatId: chat, cooldownSeconds: Number(cool), maxPerMinute: Number(perMin) } }); setToken(''); }}>Simpan Telegram</button>
