@@ -1,0 +1,197 @@
+//@version=6
+// ============================================================================
+// SNR 3 · Level swing H1 yang sudah diuji 2–3× (bagian "Level" dari Breakout v0.5) — XAUUSD
+// Pasang di chart M15, M30 atau H1. Candle H1 disusun sendiri dari candle chart (UTC), jadi tidak repaint.
+//
+// Level   : puncak swing H1 (high lebih tinggi dari 3 candle H1 kiri & kanan) = RESISTANCE,
+//           lembah swing H1 (low lebih rendah dari 3 candle kiri & kanan)      = SUPPORT.
+// Sentuhan: swing itu sendiri = sentuhan ke-1; tiap kali candle H1 datang lagi ke level (dalam 0,25 × ATR14 H1)
+//           tanpa close menembus, dengan jarak ≥ 3 candle H1 dari sentuhan sebelumnya = +1. Label "R 2×" = total sentuhan.
+// Sinyal  : close H1 pertama yang menembus level yang sudah disentuh 2–3× (≤ 120 candle H1 setelah swing)
+//           → BUY (tembus resistance) / SELL (tembus support), hanya searah tren v0.5 (bisa dimatikan).
+//           SL = level ∓ 1,5 × ATR14 H1, TP = RR × risiko, entry di open candle berikutnya.
+// Warna   : abu-abu = belum cukup diuji · emas = sudah 2–3× (siap) · pudar = >3× (tidak dipakai lagi)
+// ============================================================================
+indicator("SNR 3 · Level diuji 2–3× (XAUUSD)", "SNR3", overlay = true, max_lines_count = 500, max_labels_count = 500)
+
+useTrend  = input.bool(true, "Pakai filter tren v0.5 (aturan nomor 1)")
+rr        = input.float(2.0, "Risk : Reward", minval = 0.5, step = 0.5)
+showAll   = input.bool(true, "Tampilkan juga level yang belum cukup diuji")
+showSLTP  = input.bool(true, "Gambar SL / TP saat sinyal")
+colRes    = input.color(#c2410c, "Resistance")
+colSup    = input.color(#12805c, "Support")
+colReady  = input.color(#d4a017, "Level siap (2–3×)")
+
+// ---------------------------------------------------------------- trend filter (same as Breakout v0.5), closed H4/D1 candles only
+f_tr() => [close, ta.ema(close, 50), ta.ema(close, 200), close[1], ta.ema(close, 50)[1], ta.ema(close, 200)[1], time_close]
+[h4c0, h4e500, h4e2000, h4c1, h4e501, h4e2001, h4tc] = request.security(syminfo.tickerid, "240", f_tr(), lookahead = barmerge.lookahead_on)
+[d1c0, d1e500, d1e2000, d1c1, d1e501, d1e2001, d1tc] = request.security(syminfo.tickerid, "D", f_tr(), lookahead = barmerge.lookahead_on)
+h4now = time_close == h4tc
+d1now = time_close == d1tc
+h4c = h4now ? h4c0 : h4c1
+h4e50 = h4now ? h4e500 : h4e501
+h4e200 = h4now ? h4e2000 : h4e2001
+d1c = d1now ? d1c0 : d1c1
+d1e50 = d1now ? d1e500 : d1e501
+d1e200 = d1now ? d1e2000 : d1e2001
+trendUp = h4c > h4e50 and h4e50 > h4e200 and d1c > d1e50
+trendDown = h4c < h4e50 and h4e50 < h4e200 and d1c < d1e50 and d1e50 < d1e200
+
+// ---------------------------------------------------------------- build H1 candles from the chart candles (UTC hours)
+var float hO = na
+var float hH = na
+var float hL = na
+var int   hT = na
+newHour = na(hT) or math.floor(time / 3600000) != math.floor(hT / 3600000)
+if newHour
+    hO := open, hH := high, hL := low, hT := time
+else
+    hH := math.max(hH, high), hL := math.min(hL, low)
+hourDone = time_close % 3600000 == 0 and timeframe.in_seconds() <= 3600   // this candle completes the H1 candle
+
+// closed H1 history (newest last)
+var array<float> H = array.new_float()
+var array<float> L = array.new_float()
+var array<float> C = array.new_float()
+var array<int>   T = array.new_int()
+var int   n1 = -1           // index of the newest closed H1 candle
+var float atr1 = na         // Wilder ATR14 on H1
+var float trSum = 0.0
+
+type Lvl
+    float price
+    bool  res        // true = resistance (pivot high)
+    int   k          // H1 index of the swing
+    int   last       // H1 index of the last touch
+    int   touches
+    line  ln
+    label lb
+
+var array<Lvl> lv = array.new<Lvl>()
+
+f_style(Lvl z) =>
+    color c = z.touches >= 2 and z.touches <= 3 ? colReady : z.touches > 3 ? color.new(z.res ? colRes : colSup, 70) : color.new(z.res ? colRes : colSup, 35)
+    line.set_color(z.ln, c)
+    line.set_width(z.ln, z.touches >= 2 and z.touches <= 3 ? 2 : 1)
+    label.set_text(z.lb, (z.res ? "R " : "S ") + str.tostring(z.touches) + "×")
+    label.set_textcolor(z.lb, c)
+    showIt = showAll or (z.touches >= 2 and z.touches <= 3)
+    line.set_style(z.ln, showIt ? line.style_solid : line.style_dotted)
+
+f_kill(Lvl z) =>
+    line.delete(z.ln)
+    label.delete(z.lb)
+
+bool sigBuy = false
+bool sigSell = false
+float sigLv = na
+float sigSL = na
+int sigT = 0
+
+if hourDone
+    // close the H1 candle
+    float cH = hH
+    float cL = hL
+    float cC = close
+    float prevC = array.size(C) > 0 ? array.get(C, array.size(C) - 1) : na
+    float tr = na(prevC) ? cH - cL : math.max(cH - cL, math.abs(cH - prevC), math.abs(cL - prevC))
+    n1 += 1
+    array.push(H, cH), array.push(L, cL), array.push(C, cC), array.push(T, hT)
+    if array.size(H) > 400
+        array.shift(H), array.shift(L), array.shift(C), array.shift(T)
+    if n1 < 14
+        trSum += tr
+        if n1 == 13
+            atr1 := trSum / 14
+    else
+        atr1 := (atr1 * 13 + tr) / 14
+    int off = n1 - (array.size(H) - 1)          // H1 index of array position 0
+    // 1) existing levels: expire, break, touch (oldest first; only the oldest broken level per side can signal)
+    bool takenR = false
+    bool takenS = false
+    int m = array.size(lv)
+    array<int> rem = array.new_int()
+    if m > 0 and not na(atr1)
+        for j = 0 to m - 1                      // index 0 = oldest level
+            Lvl z = array.get(lv, j)
+            if n1 - z.k > 119
+                f_kill(z)
+                array.push(rem, j)
+                continue
+            bool broke = z.res ? cC > z.price : cC < z.price
+            if broke
+                bool first = z.res ? not takenR : not takenS
+                if z.res
+                    takenR := true
+                else
+                    takenS := true
+                if first and z.touches >= 2 and z.touches <= 3
+                    bool ok = not useTrend or (z.res ? trendUp : trendDown)
+                    if ok
+                        if z.res
+                            sigBuy := true
+                        else
+                            sigSell := true
+                        sigLv := z.price
+                        sigT := z.touches
+                        sigSL := z.res ? z.price - 1.5 * atr1 : z.price + 1.5 * atr1
+                line.set_x2(z.ln, time_close)
+                line.set_extend(z.ln, extend.none)
+                line.set_style(z.ln, line.style_dashed)
+                label.delete(z.lb)
+                array.push(rem, j)
+            else
+                bool near = z.res ? cH >= z.price - 0.25 * atr1 : cL <= z.price + 0.25 * atr1
+                if near
+                    if n1 - z.last >= 3
+                        z.touches += 1
+                    z.last := n1
+                f_style(z)
+    int rn = array.size(rem)
+    if rn > 0
+        for q = rn - 1 to 0
+            array.remove(lv, array.get(rem, q))
+    // 2) a swing confirmed on this candle (3 H1 candles each side) becomes a level from the next candle on
+    int sz = array.size(H)
+    if sz >= 7
+        int p = sz - 4
+        float ph = array.get(H, p)
+        float pl = array.get(L, p)
+        bool isPH = true
+        bool isPL = true
+        for q = p - 3 to p + 3
+            if array.get(H, q) > ph
+                isPH := false
+            if array.get(L, q) < pl
+                isPL := false
+        int tp = array.get(T, p)
+        if isPH
+            Lvl z = Lvl.new(ph, true, n1 - 3, n1 - 3, 1, line.new(tp, ph, time_close, ph, xloc = xloc.bar_time, extend = extend.right, width = 1), label.new(time_close, ph, "", xloc = xloc.bar_time, style = label.style_none, size = size.small))
+            f_style(z)
+            array.push(lv, z)
+        if isPL
+            Lvl z = Lvl.new(pl, false, n1 - 3, n1 - 3, 1, line.new(tp, pl, time_close, pl, xloc = xloc.bar_time, extend = extend.right, width = 1), label.new(time_close, pl, "", xloc = xloc.bar_time, style = label.style_none, size = size.small))
+            f_style(z)
+            array.push(lv, z)
+    // keep labels at the right edge
+    for z in lv
+        label.set_x(z.lb, time_close)
+
+// ---------------------------------------------------------------- signals
+if sigBuy
+    label.new(bar_index, low, "BUY\nSNR3 " + str.tostring(sigT) + "×", style = label.style_label_up, color = colSup, textcolor = color.white, size = size.small)
+    if showSLTP
+        float tpPx = close + rr * (close - sigSL)
+        line.new(bar_index, sigSL, bar_index + 24, sigSL, color = color.red, width = 1)
+        line.new(bar_index, tpPx, bar_index + 24, tpPx, color = color.green, width = 1)
+    alert("BUY " + syminfo.ticker + " · SNR3: tembus resistance " + str.tostring(sigLv, format.mintick) + " (diuji " + str.tostring(sigT) + "×) · entry open berikutnya · SL " + str.tostring(sigSL, format.mintick), alert.freq_once_per_bar_close)
+if sigSell
+    label.new(bar_index, high, "SELL\nSNR3 " + str.tostring(sigT) + "×", style = label.style_label_down, color = colRes, textcolor = color.white, size = size.small)
+    if showSLTP
+        float tpPx = close - rr * (sigSL - close)
+        line.new(bar_index, sigSL, bar_index + 24, sigSL, color = color.red, width = 1)
+        line.new(bar_index, tpPx, bar_index + 24, tpPx, color = color.green, width = 1)
+    alert("SELL " + syminfo.ticker + " · SNR3: tembus support " + str.tostring(sigLv, format.mintick) + " (diuji " + str.tostring(sigT) + "×) · entry open berikutnya · SL " + str.tostring(sigSL, format.mintick), alert.freq_once_per_bar_close)
+alertcondition(sigBuy, "SNR3 BUY", "BUY {{ticker}} — SNR3 level diuji 2–3× ditembus")
+alertcondition(sigSell, "SNR3 SELL", "SELL {{ticker}} — SNR3 level diuji 2–3× ditembus")
+bgcolor(useTrend ? (trendUp ? color.new(color.green, 95) : trendDown ? color.new(color.red, 95) : na) : na, title = "Tren")
