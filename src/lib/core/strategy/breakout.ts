@@ -315,3 +315,17 @@ export const breakoutV05Adapter: StrategyAdapter = {
   htfWindow: { H1: 400, H4: 1000, D1: 1000 },
   evaluate: (ctx) => breakoutAdapter.evaluate({ ...ctx, params: { london: false, donchianM30: false, sellD1Bear: true, levelTouch: true, ...ctx.params } }),
 };
+
+/**
+ * Breakout v0.6 = v0.5 inti + momentum filter: the candle that breaks the level must have a body ≥ 1 × ATR14 of its timeframe
+ * (H1 candle for parts A and C, the base candle for New York). Chosen among 4 pre-set momentum definitions; it improved both
+ * 2010–2017 (data not used to build v0.5) and 2018–2026 (README 5l).
+ */
+export const BREAKOUT_V06_KEY = 'breakout_v06';
+export const breakoutV06Adapter: StrategyAdapter = {
+  ...breakoutAdapter,
+  key: BREAKOUT_V06_KEY,
+  name: 'Breakout v0.6 (v0.5 + candle momentum)',
+  htfWindow: { H1: 400, H4: 1000, D1: 1000 },
+  evaluate: (ctx) => breakoutAdapter.evaluate({ ...ctx, params: { london: false, donchianM30: false, sellD1Bear: true, levelTouch: true, momSize: true, ...ctx.params } }),
+};

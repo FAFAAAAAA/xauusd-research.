@@ -174,7 +174,9 @@ export default function Analytics() {
                 {fresh ? <>
                 <ReportButton filename={`backtest-${String(pairSel ?? 'xauusd').toLowerCase()}-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, symbol: pairLabel, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: String(cfgSel ?? '').startsWith('ob_fvg')
+                  rules: String(cfgSel ?? '').startsWith('breakout v0.6')
+                    ? 'Entry: open candle berikutnya setelah breakout H1 (40 candle), range New York, atau tembus level H1 yang disentuh 2–3× · candle penembus harus candle momentum (badan ≥ 1×ATR) · searah tren H4 & D1; SELL hanya saat EMA50 D1 < EMA200 D1 · SL: ATR atau sisi lain range'
+                    : String(cfgSel ?? '').startsWith('ob_fvg')
                     ? 'Entry: harga M15 pertama kali kembali ke FVG H1 (dengan break of structure) searah tren H4 & D1 · SL: di luar order block + 0,1×ATR H1'
                     : String(cfgSel ?? '').startsWith('breakout v0.5')
                     ? 'Entry: open M15 berikutnya setelah breakout H1 (40 candle), range New York, atau tembus level H1 yang disentuh 2–3× · searah tren H4 & D1; SELL hanya saat EMA50 D1 < EMA200 D1 · SL: ATR atau sisi lain range'
@@ -307,9 +309,9 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 }
 
 type PairStatus = { symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
-const STRAT_ORDER = ['breakout_v05', 'breakout_v04', 'breakout_v03', 'ob_fvg_v1', 'n_pattern_v1', 'snr_break_h1_v1', 'rbr_dbd_v1', 'snr_snd_mtf_v2', 'snr_snd_mtf_v1', 'breakout_v02'];
+const STRAT_ORDER = ['breakout_v06', 'breakout_v05'];
 const STRAT_LABEL: Record<string, string> = {
-  breakout_v05: 'Breakout v0.5 inti (terbaik, disarankan)', breakout_v04: 'Breakout v0.4 (lebih sering trade)', breakout_v03: 'Breakout v0.3',
+  breakout_v06: 'Breakout v0.6 (v0.5 + candle momentum)', breakout_v05: 'Breakout v0.5 inti', breakout_v04: 'Breakout v0.4 (lebih sering trade)', breakout_v03: 'Breakout v0.3',
   ob_fvg_v1: 'Order Block + FVG (SMC)', n_pattern_v1: 'Pola N (M15, searah tren H4)', snr_break_h1_v1: 'SNR breakout H1 (tanpa tren H4)',
   rbr_dbd_v1: 'RBR / DBD (zona base H1, searah tren H4)', snr_snd_mtf_v2: 'SNR + SND v2 (strategy Pine kamu)', snr_snd_mtf_v1: 'SNR + SND v1 (indikator Pine kamu)',
   breakout_v02: 'Breakout v0.2 (hasil riset)',
@@ -596,6 +598,7 @@ function configLabelBase(s: any) {
   const strat = String(s.strategy ?? 'strategi');
   if (strat === 'pola_n v1') return 'Pola N (M15, searah tren H4)';
   if (strat === 'ob_fvg v1') return 'Order Block + FVG (SMC)';
+  if (strat === 'breakout v0.6') return 'Breakout v0.6 (v0.5 + momentum)';
   if (strat === 'breakout v0.5') return 'Breakout v0.5 inti (H1 + NY + level)';
   if (strat === 'breakout v0.4') return 'Breakout v0.4 (v0.3 + level 2–3×)';
   if (strat === 'breakout v0.3') return 'Breakout v0.3 (H1+London+NY+M30)';

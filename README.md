@@ -223,6 +223,12 @@ Data harga forexsb.com (UTC) untuk XAUUSD, EURUSD, GBPUSD, USDJPY, USDCHF, USDCA
 - Risiko tetap per trade: lot dihitung dari jarak SL; untung/rugi USDJPY/USDCHF/USDCAD dikonversi ke USD dengan harga entry.
 - Untuk menghemat database, backtest dari data file tidak menyimpan baris sinyal (market_events); alasan entry tetap ada di trade.
 
+## 5l. Breakout v0.6 (`breakout_v06`) — v0.5 + candle momentum
+
+Sama dengan v0.5 inti, ditambah syarat: candle yang menembus level harus candle momentum, yaitu badan ≥ 1 × ATR14 timeframe-nya (candle H1 untuk breakout H1 dan level; candle dasar untuk New York). Dipilih dari 4 definisi momentum yang ditentukan dulu (bentuk badan, badan ≥ ATR, keduanya, badan ≥ 1,5× rata-rata 20 candle); semuanya memperbaiki v0.5.
+Emas, RR 1:2, $10, biaya termasuk: data M30 2010–2026 → 1.705 trade (±2/minggu), win 39,5%, +$2.955 (v0.5: 2.724 trade, 37,4%, +$2.918); 2010–2017 +$1.178 (v0.5 +$589), 2018–2026 +$1.777. Data M15 2018–2026 → 869 trade, win 41,1%, +$1.938 (v0.5 +$2.572).
+Di halaman Backtest baru sekarang hanya v0.6 dan v0.5 yang bisa dipilih; strategi lain tetap ada di kode agar hasil lama masih bisa dibuka.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.
