@@ -24,6 +24,8 @@ export const BACKTEST_DEFAULT_COSTS: CostConfig = {
 export interface BacktestInput {
   sourceId: string; from: number; to: number; strategyVersionId?: string | null;
   rrList?: number[]; costs?: Partial<CostConfig>; size?: number; name?: string | null;
+  /** Fixed dollar risk per trade (entry→SL). When set, the lot is computed per trade; `size` is ignored. */
+  riskUsd?: number | null;
 }
 
 const EMPTY_NEWS: NewsSnapshot = { archiveAvailable: false, items: [], upcoming: [] };
@@ -38,6 +40,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   if (v.to - v.from > MAX_RANGE_DAYS * DAY) throw new HttpError(422, `Maksimal ${MAX_RANGE_DAYS} hari per run — jalankan per tahun`);
   const rrList = (v.rrList?.length ? v.rrList : [1, 2, 3]).filter((x) => x > 0 && x <= 20).slice(0, 5);
   const size = v.size && v.size > 0 ? v.size : 0.01;
+  const riskUsd = v.riskUsd && v.riskUsd > 0 ? v.riskUsd : null;
   const costs: CostConfig = { ...BACKTEST_DEFAULT_COSTS, ...(v.costs ?? {}) };
 
   await repo.ensureBuiltinStrategies(db);
@@ -105,7 +108,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     const id = await repo.createBacktestSession(db, {
       name: v.name?.trim() || `SNR ${new Date(v.from).toISOString().slice(0, 10)} → ${new Date(v.to).toISOString().slice(0, 10)} RR 1:${rr}`,
       strategyVersionId: sv.id, sourceId: v.sourceId, instrumentId, timeframe: tf, profile: 'snr_trend_momentum',
-      costConfig: { ...costs, size, rr, entry: 'open M15 berikutnya', max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
+      costConfig: { ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), rr, entry: 'open M15 berikutnya', max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
       isTest, notes: `Mesin backtest website. Strategi ${label}. RR 1:${rr}.`,
     });
     sessions.push({ rr, id });
@@ -158,7 +161,10 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       const risk = m.side === 'long' ? entry - sl : sl - entry;
       if (!Number.isFinite(sl) || risk <= 0) { skipped.sl_tidak_valid++; continue; }
       const tp = m.side === 'long' ? entry + ses.rr * risk : entry - ses.rr * risk;
-      const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size }, costs);
+      // Fixed $ risk: lot so that (entry fill → SL) × lot × contract = riskUsd. Not rounded to broker lot steps.
+      const lot = riskUsd ? Math.round((riskUsd / (risk * costs.contractSize)) * 1e4) / 1e4 : size;
+      if (!(lot > 0)) { skipped.sl_tidak_valid++; continue; }
+      const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size: lot }, costs);
       busyUntil = r.exitTime ?? Infinity;
       const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.zone?.low}-${m.ev.zone?.high}`;
       trades.push({
@@ -167,7 +173,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
         exit_time: r.exitTime, exit_price: r.exitPrice, exit_reason: r.exitReason, pnl: r.pnl, pnl_r: r.pnlR, planned_rr: ses.rr,
         session_label: sessionOf(r.entryTime), news_confirmed: m.newsConfirmed, sentiment_confirmed: m.sentimentConfirmed,
         zone_outcome: r.exitReason === 'tp' ? 'respect' : r.exitReason === 'sl' ? 'breakout' : 'unknown',
-        setup_reason: { signal_close: new Date(m.now).toISOString(), status: m.ev.status, trend: m.ev.confirmations?.trend, zone: m.ev.zone, details: m.ev.details, news: m.sum.news, sentiment: m.sum.sentiment },
+        setup_reason: { lot, risk_usd: Number((risk * lot * costs.contractSize).toFixed(2)), signal_close: new Date(m.now).toISOString(), status: m.ev.status, trend: m.ev.confirmations?.trend, zone: m.ev.zone, details: m.ev.details, news: m.sum.news, sentiment: m.sum.sentiment },
         costs: r.costs, is_test: isTest,
       });
     }
@@ -179,7 +185,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   return {
     strategy: label, candlesProcessed: m15.filter((c, i) => i >= firstIdx && c.time < signalEnd).length,
     setups: signals.length, nearEvents: nearCount, guardViolations: violations,
-    newsArchive: news.archiveAvailable, costs, size, sessions: summary,
+    newsArchive: news.archiveAvailable, costs, size: riskUsd ? null : size, riskUsd, sessions: summary,
     note: 'Hasil simulasi historis, bukan jaminan profit. Strategi v0.1 masih draf.',
   };
 }

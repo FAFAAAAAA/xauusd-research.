@@ -144,7 +144,8 @@ Aturan dipilih pemilik; implementasi: `src/lib/core/strategy/snr.ts` (adapter `s
 | Take profit | Diuji 3 varian: RR 1:1, 1:2, 1:3 (satu sesi backtest per RR) |
 | Re-entry | Zona yang sama baru aktif lagi setelah harga menjauh (> jarak "dekat"); satu posisi per sesi RR (sinyal saat posisi terbuka dilewati) |
 | Gap | Jika open berikutnya > 60 menit setelah sinyal (mis. weekend) → dilewati |
-| Biaya default | spread 0,30 · slippage 0,10 · komisi 7/lot · 0,01 lot · TP & SL di 1 candle = anggap SL |
+| Ukuran posisi | Default risiko tetap **$10 per trade**: lot = 10 ÷ (jarak entry→SL × 100), tidak dibulatkan ke 0,01 broker. Kosongkan risiko → lot tetap (default 0,01) |
+| Biaya default | spread 0,30 · slippage 0,10 · komisi 7/lot · TP & SL di 1 candle = anggap SL |
 | Berita | `news_confirmed` = ada rilis high-impact ±24 jam; `sentiment_confirmed` = sentimen rule_surprise_v0 searah. Tanpa arsip berita → kosong (bukan "tidak") |
 
 Anti-lookahead: pivot hanya dipakai setelah n candle kanan **tutup**; strategi hanya menerima candle H1/H4 yang sudah tutup (`runStrategyGuarded` membuang yang belum). Tes `snr.test.ts` + e2e #11 memeriksa: hasil hingga waktu T tidak berubah walau data sesudahnya ada, replay langkah-demi-langkah = backtest runner.

@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     return runBacktest(db, {
       sourceId: reqUuid(b.source_id, 'source_id'), from, to,
       strategyVersionId: typeof b.strategy_version_id === 'string' && b.strategy_version_id ? reqUuid(b.strategy_version_id, 'strategy_version_id') : null,
-      rrList: rr, costs, size: num(b.size), name: typeof b.name === 'string' ? b.name.slice(0, 120) : null,
+      rrList: rr, costs, size: num(b.size), riskUsd: num(b.risk_usd) ?? null, name: typeof b.name === 'string' ? b.name.slice(0, 120) : null,
     });
   });
 }

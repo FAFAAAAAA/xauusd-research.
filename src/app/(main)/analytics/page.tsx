@@ -151,6 +151,7 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
         {d.candles.length ? <CandleChart candles={d.candles} markers={markers} timezone={tz} fitKey={t.id} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
       </div>
       <dl className="kv">
+        {t.setupReason?.risk_usd != null ? <><dt>Risiko</dt><dd>${Number(t.setupReason.risk_usd).toFixed(2)} · lot {t.setupReason.lot}</dd></> : null}
         <dt>Entry</dt><dd>{px(t.entryPrice)}</dd>
         <dt>Stop loss</dt><dd>{px(t.stopLoss)}</dd>
         <dt>Take profit</dt><dd>{px(t.takeProfit)}</dd>
@@ -172,7 +173,7 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 function RunBacktest({ onDone }: { onDone: (sessionId: string) => void }) {
   const [sources, setSources] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ source: '', strategy: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', size: '0.01', ambiguity: 'worst' });
+  const [f, setF] = useState({ source: '', strategy: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', size: '0.01', risk: '10', ambiguity: 'worst' });
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -190,7 +191,7 @@ function RunBacktest({ onDone }: { onDone: (sessionId: string) => void }) {
     try {
       setRes(await call<any>('/api/backtest/run', { method: 'POST', json: {
         source_id: f.source, strategy_version_id: f.strategy || null, from: `${f.from}T00:00:00Z`, to: `${f.to}T00:00:00Z`, rr: [1, 2, 3],
-        size: Number(f.size), costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
+        size: Number(f.size), risk_usd: f.risk.trim() ? Number(f.risk) : null, costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
       } }));
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
@@ -206,7 +207,9 @@ function RunBacktest({ onDone }: { onDone: (sessionId: string) => void }) {
         ) : null}
         <label className="field">Dari<input type="date" value={f.from} onChange={set('from')} /></label>
         <label className="field">Sampai<input type="date" value={f.to} onChange={set('to')} /></label>
+        <label className="field">Risiko per trade ($)<input inputMode="decimal" value={f.risk} onChange={set('risk')} placeholder="10" /></label>
       </div>
+      <p className="mute small">Kena SL = rugi sekitar ${f.risk || '—'}. RR 1:2 kena TP = untung sekitar ${f.risk ? Number(f.risk) * 2 : '—'}. Belum termasuk biaya.</p>
       <details className="more">
         <summary>Biaya & lainnya</summary>
         <div className="grid two">
@@ -214,7 +217,7 @@ function RunBacktest({ onDone }: { onDone: (sessionId: string) => void }) {
           <label className="field">Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
           <label className="field">Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
           <label className="field">Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
-          <label className="field">Lot<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
+          <label className="field">Lot tetap (dipakai kalau risiko dikosongkan)<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
           <label className="field">TP & SL kena di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Hitung sebagai SL</option><option value="best">Hitung sebagai TP</option><option value="skip">Lewati</option></select></label>
         </div>
       </details>

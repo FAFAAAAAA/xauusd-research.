@@ -360,3 +360,20 @@ test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overl
   const a = await analytics(db, r.sessions[0].backtestSessionId);
   assert.equal(a.overall!.totalTrades, r.sessions[0].trades);
 });
+
+test('12. SNR backtest with fixed $10 risk per trade: SL loss ≈ $10 + costs, TP win ≈ RR × $10', async () => {
+  const src = (await repo.listSources(db)).find((s) => s.name === 'TEST SNR zigzag')!;
+  const cov = (await repo.dataCoverage(db)).find((c) => c.source_id === src.id && c.timeframe === 'M15')!;
+  const from = cov.first + 5 * 86_400_000, to = cov.last - 2 * 86_400_000;
+  const r = await runBacktest(db, { sourceId: src.id, from, to, riskUsd: 10, rrList: [2], costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 } });
+  assert.equal(r.riskUsd, 10);
+  const trades = await repo.listTrades(db, r.sessions[0].backtestSessionId);
+  assert.ok(trades.length > 0);
+  for (const t of trades) {
+    const sr = t.setup_reason as { lot: number; risk_usd: number };
+    assert.ok(Math.abs(sr.risk_usd - 10) < 0.05, `planned risk ${sr.risk_usd}`);
+    const pnl = Number(t.pnl);
+    if (t.exit_reason === 'sl') assert.ok(pnl < -10 && pnl > -12, `SL loss ${pnl}`);
+    if (t.exit_reason === 'tp') assert.ok(pnl > 19 && pnl <= 20, `TP win ${pnl}`);
+  }
+});
