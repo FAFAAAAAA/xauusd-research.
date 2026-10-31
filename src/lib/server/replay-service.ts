@@ -134,7 +134,7 @@ export async function stepReplay(db: Db, sessionId: string, opts: { count: numbe
       const id = await repo.insertEvent(db, {
         mode: 'BACKTEST', eventUid: uid, dedupeKey: `bt:${s.id}:${runPart}:${sv?.id ?? 'none'}:${uid}`,
         instrumentId: s.instrument_id, timeframe: s.timeframe, eventType: ev.type, eventTime: now, price: ev.price,
-        zoneLow: ev.zone?.low ?? null, zoneHigh: ev.zone?.high ?? null, zoneKind: ev.zone?.kind ?? null, zoneId: ev.zone?.id ?? null,
+        zoneLow: ev.zone ? Math.min(ev.zone.low, ev.zone.high) : null, zoneHigh: ev.zone ? Math.max(ev.zone.low, ev.zone.high) : null, zoneKind: ev.zone?.kind ?? null, zoneId: ev.zone?.id ?? null,
         strategyVersionId: sv?.id ?? null, strategyLabel: strategy.label, source: 'replay_engine', replaySessionId: s.id,
         runNumber: s.run_number, confirmations, payload: { status: ev.status ?? null, details: ev.details ?? {}, candle_open_time: ev.candleTime },
         isTest: s.is_test || adapter.testOnly,

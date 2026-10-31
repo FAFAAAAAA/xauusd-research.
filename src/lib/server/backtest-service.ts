@@ -17,6 +17,11 @@ const HTF_WARMUP_DAYS = 120;     // H4/H1 history before `from` (pivots/trend ne
 const EXIT_TAIL_DAYS = 21;       // candles after `to` used only to resolve open trades
 const MAX_ENTRY_GAP_MS = 60 * 60_000; // signal close → next open further apart (weekend) → skip, the setup is stale
 
+// A strategy may report a zone whose edges come from two timeframes (e.g. H4 bottom above H1 top) or NaN — store it ordered and finite.
+const fin = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+const zoneLo = (z?: { low: number; high: number } | null) => { const a = fin(z?.low), b = fin(z?.high); return a == null || b == null ? a ?? b : Math.min(a, b); };
+const zoneHi = (z?: { low: number; high: number } | null) => { const a = fin(z?.low), b = fin(z?.high); return a == null || b == null ? b ?? a : Math.max(a, b); };
+
 export const BACKTEST_DEFAULT_COSTS: CostConfig = {
   spread: 0.30, slippage: 0.10, commissionPerUnit: 7, ambiguityPolicy: 'worst', contractSize: 100,
 };
@@ -148,7 +153,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.details?.slot ?? `${m.ev.zone?.low}-${m.ev.zone?.high}`}`;
       eventRows.push({
         mode: 'BACKTEST', eventUid: uid, dedupeKey: `btrun:${ses.id}:${uid}`, instrumentId, timeframe: tf, eventType: m.ev.type,
-        eventTime: m.now, price: m.ev.price, zoneLow: m.ev.zone?.low ?? null, zoneHigh: m.ev.zone?.high ?? null, zoneKind: m.ev.zone?.kind ?? null,
+        eventTime: m.now, price: m.ev.price, zoneLow: zoneLo(m.ev.zone), zoneHigh: zoneHi(m.ev.zone), zoneKind: m.ev.zone?.kind ?? null,
         zoneId: null, strategyVersionId: sv.id, strategyLabel: label, source: 'replay_engine', replaySessionId: null, runNumber: null,
         confirmations: { trend: m.ev.confirmations?.trend ?? '-', momentum: 'tidak dipakai (v0.1)', news: m.sum.news, sentiment: m.sum.sentiment },
         payload: { status: m.ev.status ?? null, details: m.ev.details ?? {}, candle_open_time: m.ev.candleTime, rr: ses.rr },
