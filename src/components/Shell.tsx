@@ -10,7 +10,7 @@ const ITEMS = [
   { href: '/settings', label: 'Settings' },
 ];
 
-export default function Shell({ children }: { children: React.ReactNode }) {
+export default function Shell({ children, showLogout = false }: { children: React.ReactNode; showLogout?: boolean }) {
   const path = usePathname();
   const active = (h: string) => (h === '/' ? path === '/' : path.startsWith(h));
   const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; };
@@ -22,7 +22,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           {ITEMS.map((i) => <Link key={i.href} href={i.href} aria-current={active(i.href) ? 'page' : undefined}>{i.label}</Link>)}
         </nav>
         <div className="spacer" />
-        <button className="btn" onClick={logout}>Keluar</button>
+        {showLogout ? <button className="btn" onClick={logout}>Keluar</button> : null}
       </aside>
       <main className="main">{children}</main>
       <nav className="tabbar" aria-label="Menu utama">

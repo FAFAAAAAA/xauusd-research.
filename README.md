@@ -130,7 +130,7 @@ Menu News → impor CSV (template di `templates/`). Kategori: `FOMC, US_CPI, US_
 ---
 
 ## 6. Keamanan
-- Semua halaman & API memerlukan login admin (cookie HttpOnly bertanda tangan HMAC), kecuali login, `/api/health`, dan webhook (diautentikasi secret).
+- Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.
 - Tidak ada auto-trading, tidak ada koneksi broker, tidak menyimpan password TradingView.
 - Token tidak pernah ditulis ke log (disamarkan `[TOKEN]`).
