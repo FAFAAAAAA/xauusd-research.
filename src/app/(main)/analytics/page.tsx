@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
+import { EquityChart, PeriodBreakdown, closedTrades } from '@/components/ResultCharts';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: false });
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -10,7 +11,6 @@ const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: fal
 const PROFILE: Record<string, string> = {
   snr_only: 'SNR saja', snr_news: 'SNR + berita', snr_trend_momentum: 'SNR + tren', snr_all: 'SNR + semua konfirmasi',
 };
-const SESSION: Record<string, string> = { asia: 'Asia', london: 'London', new_york: 'New York', off: 'Di luar sesi' };
 const EXIT: Record<string, string> = { tp: 'Kena TP', sl: 'Kena SL', ambiguous_worst: 'TP & SL 1 candle (dihitung SL)', ambiguous_best: 'TP & SL 1 candle (dihitung TP)', ambiguous_skipped: 'Dilewati', time: 'Waktu habis', open: 'Masih terbuka', imported: 'Impor' };
 const money = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? `${n >= 0 ? '+' : '−'}$${Math.abs(n).toFixed(2)}` : '—');
 const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? 'neg' : '') : '');
@@ -21,11 +21,14 @@ export default function Analytics() {
   const [err, setErr] = useState<string | null>(null);
   const [tz, setTz] = useState('UTC');
   const [detail, setDetail] = useState<any>(null);
+  const [tradeLimit, setTradeLimit] = useState(20);
   const load = useCallback(() => {
     setErr(null);
     call<any>(`/api/analytics${session ? `?session=${session}` : ''}`).then(setD).catch((e) => setErr(e.message));
   }, [session]);
   useEffect(() => { load(); call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, [load]);
+  const [picked, setPicked] = useState(false);
+  useEffect(() => { if (!picked && d?.sessions?.length && !session) { setPicked(true); setSession(String(d.sessions[0].id)); } }, [d, picked, session]);
   const open = async (id: string) => { setDetail({ loading: true }); try { setDetail(await call<any>(`/api/trades/${id}`)); } catch (e) { setDetail({ error: (e as Error).message }); } };
 
   const m = d?.overall;
@@ -39,7 +42,7 @@ export default function Analytics() {
         <>
           {d.sessions.length ? (
             <label className="field">Tampilkan hasil
-              <select value={session} onChange={(e) => { setSession(e.target.value); setDetail(null); }}>
+              <select value={session} onChange={(e) => { setPicked(true); setSession(e.target.value); setDetail(null); }}>
                 <option value="">Semua backtest digabung</option>
                 {d.sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''} · {s.trades} trade</option>)}
               </select>
@@ -56,9 +59,22 @@ export default function Analytics() {
               <div className="grid two">
                 <Stat label="Total P/L" v={money(m.totalPnl)} cls={tone(m.totalPnl)} />
                 <Stat label="Win rate" v={pct(m.winRate)} />
-                <Stat label="Jumlah trade" v={m.totalTrades} />
-                <Stat label="Drawdown terbesar" v={px(m.maxDrawdown)} />
+                <Stat label="Menang / kalah" v={<><span className="pos">{m.wins}</span> / <span className="neg">{m.losses}</span></>} />
+                <Stat label="Turun terdalam" v={`$${Number(m.maxDrawdown).toFixed(2)}`} cls="neg" />
               </div>
+              <section className="group stack tight">
+                <h2>Ringkasan</h2>
+                <p>Dari <strong>{m.totalTrades} trade</strong>, <span className="pos"><strong>{m.wins} menang</strong></span> dan <span className="neg"><strong>{m.losses} kalah</strong></span>{m.breakeven ? `, ${m.breakeven} impas` : ''}.</p>
+                <dl className="kv">
+                  <dt>Total dari trade menang</dt><dd className="pos">{money(m.grossProfit)}</dd>
+                  <dt>Total dari trade kalah</dt><dd className="neg">{money(-m.grossLoss)}</dd>
+                  <dt>Rata-rata sekali menang</dt><dd className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</dd>
+                  <dt>Rata-rata sekali kalah</dt><dd className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</dd>
+                  <dt>Hasil bersih</dt><dd className={tone(m.totalPnl)}>{money(m.totalPnl)}</dd>
+                </dl>
+                {!session && d.sessions.length > 1 ? <p className="mute small">Ini gabungan semua backtest (RR berbeda ikut tercampur). Pilih satu hasil di atas supaya angkanya jelas.</p> : null}
+              </section>
+
               <section className="group"><details className="more">
                 <summary>Angka lain</summary>
                 <dl className="kv">
@@ -71,11 +87,18 @@ export default function Analytics() {
                 </dl>
               </details></section>
 
-              <Breakdown title="Per tahun" rows={d.byYear} />
+              <section className="group">
+                <h2>Grafik saldo</h2>
+                <EquityChart trades={closedTrades(d.trades)} tz={tz} />
+              </section>
+
+              <section className="group">
+                <h2>Menang & kalah per waktu</h2>
+                <PeriodBreakdown trades={closedTrades(d.trades)} tz={tz} />
+              </section>
 
               <section className="group"><details className="more">
-                <summary>Rincian per sesi, berita, dan konfirmasi</summary>
-                <Breakdown title="Per sesi pasar" rows={d.bySession} label={(k) => SESSION[k] ?? k} plain />
+                <summary>Rincian berita dan konfirmasi</summary>
                 <Breakdown title="Ada berita besar atau tidak" rows={d.byNews} label={(k) => (k === 'with_news' ? 'Ada berita' : 'Tanpa berita')} plain />
                 <div>
                   <h3>Per jenis konfirmasi</h3>
@@ -92,7 +115,7 @@ export default function Analytics() {
               <section className="group">
                 <h2>Daftar trade</h2>
                 <div className="list">
-                  {d.trades.slice(-200).reverse().map((t: any) => (
+                  {d.trades.slice(-tradeLimit).reverse().map((t: any) => (
                     <button key={t.id} className="item btnrow" onClick={() => open(t.id)}>
                       <span style={{ minWidth: 0 }}>
                         <span className="t" style={{ display: 'block' }}>{fmt(Number(t.entry_ms), tz)}</span>
@@ -105,7 +128,7 @@ export default function Analytics() {
                     </button>
                   ))}
                 </div>
-                {d.trades.length > 200 ? <p className="mute small" style={{ marginTop: 12 }}>Menampilkan 200 trade terbaru dari {d.trades.length}. Semua ada di file ekspor.</p> : null}
+                {d.trades.length > tradeLimit ? <button className="btn sm" style={{ marginTop: 12 }} onClick={() => setTradeLimit((n) => n + 50)}>Tampilkan lebih banyak ({d.trades.length - tradeLimit} lagi)</button> : null}
               </section>
 
               <div className="row">
@@ -126,8 +149,8 @@ function Stat({ label, v, cls = '' }: { label: string; v: React.ReactNode; cls?:
 
 function Breakdown({ title, rows, label = (k: string) => k, plain = false }: { title: string; rows: any[]; label?: (k: string) => string; plain?: boolean }) {
   const body = rows.length ? (
-    <div className="tablewrap"><table><thead><tr><th></th><th>Trade</th><th>Win</th><th>P/L</th></tr></thead>
-      <tbody>{rows.map((r) => <tr key={r.key}><td>{label(r.key)}</td><td>{r.metrics.totalTrades}</td><td>{pct(r.metrics.winRate)}</td><td className={tone(r.metrics.totalPnl)}>{money(r.metrics.totalPnl)}</td></tr>)}</tbody></table></div>
+    <div className="tablewrap"><table><thead><tr><th></th><th>Trade</th><th>Menang</th><th>Kalah</th><th>Win</th><th>P/L</th></tr></thead>
+      <tbody>{rows.map((r) => <tr key={r.key}><td>{label(r.key)}</td><td>{r.metrics.totalTrades}</td><td className="pos">{r.metrics.wins}</td><td className="neg">{r.metrics.losses}</td><td>{pct(r.metrics.winRate)}</td><td className={tone(r.metrics.totalPnl)}>{money(r.metrics.totalPnl)}</td></tr>)}</tbody></table></div>
   ) : <p className="mute small">Belum ada data.</p>;
   if (plain) return <div className="stack tight"><h3>{title}</h3>{body}</div>;
   return <section className="group"><h2>{title}</h2>{body}</section>;
