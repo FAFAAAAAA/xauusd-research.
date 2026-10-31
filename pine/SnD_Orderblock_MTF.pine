@@ -1,0 +1,181 @@
+//@version=6
+// ============================================================================
+// Supply & Demand / Orderblock MTF — versi sendiri (bukan salinan script terkunci mana pun)
+// Ide umum: zona dibuat dari 2 candle berlawanan (BUY lalu SELL = supply, SELL lalu BUY = demand)
+// yang diikuti candle ke-3 yang meninggalkan IMBALANCE (celah) terhadap candle pertama.
+//   Supply : A naik, B turun, lalu high C < low A (wick ke wick) atau high C < open A (wick ke open)
+//   Demand : A turun, B naik, lalu low C > high A (wick ke wick) atau low C > open A (wick ke open)
+//   Zona digambar dari WICK (sampai low/high candle A) atau dari OPEN candle A; atap/lantai = high/low tertinggi A–B.
+// Zona berubah warna saat pertama disentuh (mitigated), garis 50% hilang saat harga mencapainya,
+// dan zona dihapus saat candle CLOSE menembus zona. Bisa menampilkan zona dari 2 timeframe besar.
+// Hanya alat bantu menggambar zona — bukan sinyal trading.
+// ============================================================================
+indicator("S&D / Orderblock MTF (versi sendiri)", "S&D OB MTF", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
+
+G1 = "Pembuatan zona"
+drawFrom  = input.string("Wick", "Gambar zona dari", options = ["Wick", "Open"], group = G1)
+imbFrom   = input.string("Wick ke Wick", "Imbalance dihitung", options = ["Wick ke Wick", "Wick ke Open"], group = G1)
+maxZones  = input.int(15, "Maks zona per timeframe", minval = 1, maxval = 60, group = G1)
+showMid   = input.bool(true, "Garis 50%", group = G1)
+
+G2 = "Timeframe"
+showCur = input.bool(true, "Zona timeframe chart", group = G2)
+useHtf1 = input.bool(true, "Zona timeframe besar 1", inline = "h1", group = G2)
+htf1    = input.timeframe("60", "", inline = "h1", group = G2)
+useHtf2 = input.bool(true, "Zona timeframe besar 2", inline = "h2", group = G2)
+htf2    = input.timeframe("240", "", inline = "h2", group = G2)
+
+G3 = "Warna"
+supCol  = input.color(color.new(#d1309f, 75), "Supply", group = G3)
+demCol  = input.color(color.new(#1f9e74, 75), "Demand", group = G3)
+mitCol  = input.color(color.new(#9aa0a6, 85), "Sudah disentuh", group = G3)
+showTbl = input.bool(true, "Tabel ringkasan", group = G3)
+
+type Zone
+    float  top
+    float  btm
+    bool   supply
+    bool   touched
+    bool   midHit
+    string tf
+    box    bx
+    line   mid
+    label  lb
+
+var array<Zone> zones = array.new<Zone>()
+
+// ---------------------------------------------------------------- pattern on the 3 most recent CLOSED candles of the series it runs on
+// returns [supplyTop, supplyBtm, demandTop, demandBtm, timeOfCandleA]; na when there is no zone
+f_detect(bool wickZone, bool wickImb) =>
+    // A = [2], B = [1], C = [0]
+    bool aUp = close[2] > open[2]
+    bool aDn = close[2] < open[2]
+    bool bUp = close[1] > open[1]
+    bool bDn = close[1] < open[1]
+    float hiAB = math.max(high[2], high[1])
+    float loAB = math.min(low[2], low[1])
+    float sTop = na
+    float sBtm = na
+    float dTop = na
+    float dBtm = na
+    // supply: BUY candle then SELL candle, C leaves a gap below A
+    float sRef = wickImb ? low[2] : open[2]
+    if aUp and bDn and high < sRef
+        sTop := hiAB
+        sBtm := wickZone ? low[2] : open[2]
+    // demand: SELL candle then BUY candle, C leaves a gap above A
+    float dRef = wickImb ? high[2] : open[2]
+    if aDn and bUp and low > dRef
+        dBtm := loAB
+        dTop := wickZone ? high[2] : open[2]
+    [sTop, sBtm, dTop, dBtm, time[2]]
+
+wickZone = drawFrom == "Wick"
+wickImb = imbFrom == "Wick ke Wick"
+
+f_add(float top, float btm, bool supply, int t0, string tf) =>
+    if not na(top) and not na(btm) and top > btm
+        // keep at most maxZones per timeframe: drop the oldest of this timeframe
+        int cnt = 0
+        int oldest = -1
+        int sz = array.size(zones)
+        if sz > 0
+            for i = 0 to sz - 1
+                Zone z = array.get(zones, i)
+                if z.tf == tf
+                    cnt += 1
+                    oldest := i
+        if cnt >= maxZones and oldest >= 0
+            Zone o = array.get(zones, oldest)
+            box.delete(o.bx), line.delete(o.mid), label.delete(o.lb)
+            array.remove(zones, oldest)
+        col = supply ? supCol : demCol
+        bx = box.new(t0, top, time, btm, xloc = xloc.bar_time, extend = extend.right, border_color = color.new(col, 30), bgcolor = col)
+        line md = na
+        if showMid
+            md := line.new(t0, (top + btm) / 2, time, (top + btm) / 2, xloc = xloc.bar_time, extend = extend.right, style = line.style_dashed, color = color.new(col, 10))
+        label lb = na
+        if tf != ""
+            lb := label.new(time, supply ? top : btm, tf + (supply ? " supply" : " demand"), xloc = xloc.bar_time, style = label.style_none, textcolor = color.new(col, 0), size = size.tiny)
+        array.unshift(zones, Zone.new(top, btm, supply, false, false, tf, bx, md, lb))
+
+f_tfName(string tf) =>
+    tf == "60" ? "1h" : tf == "240" ? "4h" : tf == "D" ? "1D" : tf == "W" ? "1W" : tf
+
+// ---------------------------------------------------------------- chart timeframe zones (pattern ends at the candle that just closed)
+[cST, cSB, cDT, cDB, cT] = f_detect(wickZone, wickImb)
+if showCur and barstate.isconfirmed
+    f_add(cST, cSB, true, cT, "")
+    f_add(cDT, cDB, false, cT, "")
+
+// ---------------------------------------------------------------- higher timeframe zones (only from CLOSED HTF candles: [1] + lookahead_on, no repaint)
+f_htfPrev(bool wz, bool wi) =>
+    [a, b, c, d, t] = f_detect(wz, wi)
+    [a[1], b[1], c[1], d[1], t[1]]
+
+[h1ST, h1SB, h1DT, h1DB, h1T] = request.security(syminfo.tickerid, htf1, f_htfPrev(wickZone, wickImb), lookahead = barmerge.lookahead_on)
+[h2ST, h2SB, h2DT, h2DB, h2T] = request.security(syminfo.tickerid, htf2, f_htfPrev(wickZone, wickImb), lookahead = barmerge.lookahead_on)
+var int last1 = na
+var int last2 = na
+if useHtf1 and timeframe.in_seconds(htf1) > timeframe.in_seconds() and not na(h1T) and (na(last1) or h1T != last1) and (not na(h1ST) or not na(h1DT))
+    last1 := h1T
+    f_add(h1ST, h1SB, true, h1T, f_tfName(htf1))
+    f_add(h1DT, h1DB, false, h1T, f_tfName(htf1))
+if useHtf2 and timeframe.in_seconds(htf2) > timeframe.in_seconds() and not na(h2T) and (na(last2) or h2T != last2) and (not na(h2ST) or not na(h2DT))
+    last2 := h2T
+    f_add(h2ST, h2SB, true, h2T, f_tfName(htf2))
+    f_add(h2DT, h2DB, false, h2T, f_tfName(htf2))
+
+// ---------------------------------------------------------------- update: touched → grey, 50% reached → mid line removed, closed through → zone removed
+n = array.size(zones)
+if n > 0
+    for i = n - 1 to 0
+        Zone z = array.get(zones, i)
+        bool through = z.supply ? close > z.top : close < z.btm
+        if through
+            box.delete(z.bx), line.delete(z.mid), label.delete(z.lb)
+            array.remove(zones, i)
+        else
+            bool touch = z.supply ? high >= z.btm : low <= z.top
+            if touch and not z.touched
+                z.touched := true
+                box.set_bgcolor(z.bx, mitCol)
+            float m = (z.top + z.btm) / 2
+            if not z.midHit and (z.supply ? high >= m : low <= m)
+                z.midHit := true
+                line.delete(z.mid)
+
+// ---------------------------------------------------------------- summary table
+var table tb = table.new(position.top_right, 4, 4, bgcolor = color.new(color.white, 10), border_width = 1, border_color = color.new(color.gray, 70))
+if showTbl and barstate.islast
+    int dF = 0
+    int dM = 0
+    int sF = 0
+    int sM = 0
+    for z in zones
+        if z.supply
+            if z.touched
+                sM += 1
+            else
+                sF += 1
+        else
+            if z.touched
+                dM += 1
+            else
+                dF += 1
+    table.cell(tb, 0, 0, "Zona aktif", text_size = size.small)
+    table.cell(tb, 1, 0, "Segar", text_size = size.small)
+    table.cell(tb, 2, 0, "Disentuh", text_size = size.small)
+    table.cell(tb, 3, 0, "Total", text_size = size.small)
+    table.cell(tb, 0, 1, "Demand", text_color = color.new(#1f9e74, 0), text_size = size.small)
+    table.cell(tb, 1, 1, str.tostring(dF), text_size = size.small)
+    table.cell(tb, 2, 1, str.tostring(dM), text_size = size.small)
+    table.cell(tb, 3, 1, str.tostring(dF + dM), text_size = size.small)
+    table.cell(tb, 0, 2, "Supply", text_color = color.new(#d1309f, 0), text_size = size.small)
+    table.cell(tb, 1, 2, str.tostring(sF), text_size = size.small)
+    table.cell(tb, 2, 2, str.tostring(sM), text_size = size.small)
+    table.cell(tb, 3, 2, str.tostring(sF + sM), text_size = size.small)
+    table.cell(tb, 0, 3, "Total", text_size = size.small)
+    table.cell(tb, 1, 3, str.tostring(dF + sF), text_size = size.small)
+    table.cell(tb, 2, 3, str.tostring(dM + sM), text_size = size.small)
+    table.cell(tb, 3, 3, str.tostring(dF + sF + dM + sM), text_size = size.small)
