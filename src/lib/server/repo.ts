@@ -221,6 +221,11 @@ export async function ensureBuiltinStrategies(db: Db) {
      values ('snr_snd_tv', 'v2', 'snr_snd_mtf_v2', 'active', false,
        'Strategy Pine v2 pemilik: tren H4 EMA50/200, zona SND H4 & H1 (umur & sentuhan), entry M15 rejection/sweep/break-retest, SL luar candle/zona + 0.15 ATR, TP RR, maks 1 posisi, tutup setelah 96 candle.')
      on conflict (strategy_key, version) do nothing returning id`);
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('pola_n', 'v1', 'n_pattern_v1', 'active', false,
+       'Pola N M15: swing A-B-C (pivot 5), koreksi 30-79%, dorongan >= 1.5 ATR, entry saat close tembus B searah tren H4 EMA50/200, SL di luar C + 0.1 ATR.')
+     on conflict (strategy_key, version) do nothing returning id`);
 }
 // ---- custom strategies (definition stored in strategy_settings.params.definition, mode BACKTEST)
 export async function createCustomStrategy(db: Db, def: { name: string; description?: string; kind: string }, definition: unknown): Promise<StrategyVersionRow> {

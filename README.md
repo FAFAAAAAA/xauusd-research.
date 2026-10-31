@@ -176,6 +176,11 @@ Menu **Strategi** (`/strategi`, dari Atur atau tombol di panel backtest):
 - Strategi bawaan bisa disembunyikan; buatan sendiri bisa dihapus (opsional beserta hasilnya).
 Definisi disimpan di `strategy_settings.params.definition` (mode BACKTEST) — tidak perlu migrasi.
 
+## 5d. Pola N (`n_pattern_v1`)
+
+Swing A-B-C dari pivot M15 yang sudah terkonfirmasi (5 candle kiri/kanan). BUY: A low → B high → C low di atas A, dorongan A→B ≥ 1,5×ATR, koreksi (B−C)/(B−A) 30–79%, lalu close M15 pertama menembus B (≤ 48 candle setelah C, C belum ditembus) searah tren H4 (EMA50 > EMA200 dan close > EMA50). SL = C − 0,1×ATR. SELL kebalikannya.
+Riset pada data 2018–2026 (12 variasi ditentukan sebelumnya, dipilih dari 2018–2022): 567 trade, win 37,2%, +$537 (RR 1:2, $10/trade, biaya termasuk), turun terdalam −$271; 2018–22 +0,02R/trade, 2023–26 +0,19R/trade; BUY +$709, SELL −$172. Varian tanpa filter tren semuanya minus.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

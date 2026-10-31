@@ -178,3 +178,24 @@ test('snr+snd v2 (owner Pine strategy): registered, no look-ahead, stop on the r
     }
   }
 });
+
+test('pola N: registered; BUY only after a close through B, stop beyond C, never before C is confirmed', async () => {
+  const { nPatternAdapter } = await import('../src/lib/core/strategy/npattern');
+  assert.equal(getAdapter('n_pattern_v1'), nPatternAdapter);
+  const m15 = zigzag(192 * 10, 1);
+  const h1 = aggregateCandles(m15, 'M15', 'H1', 'utc', false), h4 = aggregateCandles(m15, 'M15', 'H4', 'utc', false);
+  const state: Record<string, unknown> = {};
+  let n = 0;
+  for (let i = 60; i < m15.length; i++) {
+    const now = m15[i].time + M15;
+    const res = runStrategyGuarded(nPatternAdapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+      news: { archiveAvailable: false, items: [], upcoming: [] }, htf: { H1: h1, H4: h4 }, params: { trend: false, pivot: 3, rMax: 0.95, maxBars: 200 }, state });
+    assert.deepEqual(res.violations, []);
+    for (const e of res.events) {
+      const d = e.details as { side: string; stop_loss: number; B: number; C: number };
+      n++;
+      if (d.side === 'long') { assert.ok(e.price > d.B && d.stop_loss < d.C); } else { assert.ok(e.price < d.B && d.stop_loss > d.C); }
+    }
+  }
+  assert.ok(n > 0, 'zigzag contains N patterns');
+});
