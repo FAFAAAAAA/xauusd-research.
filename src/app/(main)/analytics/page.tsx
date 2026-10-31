@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades } from '@/components/ResultCharts';
+import { ReportButton } from '@/components/ReportImage';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: false });
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -131,6 +132,10 @@ export default function Analytics() {
                 </section>
 
                 {fresh ? <>
+                <ReportButton filename={`backtest-xauusd-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
+                  title: `${curYear} · RR 1:${curRr}`, rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
+                  metrics: m, trades: d.trades, yearRows: rows, rrOf: rrNum, tz,
+                } : null)} />
                 <section className="group">
                   <h2>Grafik saldo</h2>
                   <EquityChart trades={closedTrades(d.trades)} tz={tz} />
