@@ -2,6 +2,7 @@ import type { Db } from './db';
 import { iso, toMs, toNum } from './db';
 import type { Candle, EventType, Mode, SnrZone, Timeframe } from '../core/types';
 import type { EconomicEventRecord, NewsCategory } from '../core/news';
+import { METHODS } from '../core/strategy/methods-meta';
 
 // ----------------------------------------------------------------- settings
 export async function getAppSetting<T>(db: Db, key: string, fallback: T): Promise<T> {
@@ -201,6 +202,12 @@ export async function getStrategyVersion(db: Db, id: string | null): Promise<Str
 }
 /** Strategies implemented in code that must exist in the DB (idempotent; also shipped as a migration). */
 export async function ensureBuiltinStrategies(db: Db) {
+  for (const m of METHODS) {
+    await db.query(
+      `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+       values ('metode', $1, $2, 'active', false, $3) on conflict (strategy_key, version) do nothing returning id`,
+      [m.version, m.adapterKey, `${m.label}: ${m.rules}`]);
+  }
   await db.query(
     `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
      values ('snr', 'h4h1m15-v0.1', 'snr_h4h1_m15', 'active', false,

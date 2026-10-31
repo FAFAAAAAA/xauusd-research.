@@ -6,6 +6,7 @@ import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades } from '@/components/ResultCharts';
 import { ReportButton } from '@/components/ReportImage';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
+import { METHODS, methodByStrategy } from '@/lib/core/strategy/methods-meta';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: false });
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -174,7 +175,7 @@ export default function Analytics() {
                 {fresh ? <>
                 <ReportButton filename={`backtest-${String(pairSel ?? 'xauusd').toLowerCase()}-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, symbol: pairLabel, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: String(cfgSel ?? '').startsWith('breakout v0.8')
+                  rules: methodByStrategy(String(cfgSel ?? '').split('|')[0])?.rules ?? (String(cfgSel ?? '').startsWith('breakout v0.8')
                     ? 'v0.7 (v0.6 + Pola N H1/H4) + Breakout Base: base ≥ 3 candle (overlap ≥ 50%, tinggi ≤ 1,5×ATR) di H4 (breakout jam 07–17 UTC) dan H1 (harga sudah bergerak ≥ 1×ATR searah sebelum base) · entry setelah close M15 keluar base · SL batas base ∓ 0,3×ATR · BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1 · tiap bagian slot sendiri'
                     : String(cfgSel ?? '').startsWith('breakout v0.7')
                     ? 'v0.6 (breakout H1 40 candle, range New York, level H1 2–3×, candle momentum, searah tren H4 & D1) + Pola N: A-B-C di H1/H4 (swing = pantulan 3×ATR, C di atas A untuk BUY), entry setelah close M15 menembus B · BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1 · SL di C · v0.6 dan Pola N punya slot sendiri'
@@ -202,7 +203,7 @@ export default function Analytics() {
                     ? 'Entry: rejection M15 di zona supply/demand H4/H1 dekat SNR H4, searah EMA50/200 H4 · SL: luar zona + 0,15×ATR M15'
                     : String(cfgSel ?? '').startsWith('breakout')
                     ? 'Entry: open M15 berikutnya setelah breakout H1/London/New York/M30 searah tren H4 & D1 · SL: ATR atau sisi lain range'
-                    : 'Entry: open M15 berikutnya setelah harga menyentuh zona SNR · SL: luar zona + 0,5×ATR(14) M15',
+                    : 'Entry: open M15 berikutnya setelah harga menyentuh zona SNR · SL: luar zona + 0,5×ATR(14) M15'),
                   rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
                   metrics: m, trades: d.trades, yearRows: rows, rrOf: rrNum, tz,
                 } : null)} />
@@ -313,8 +314,9 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 }
 
 type PairStatus = { symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
-const STRAT_ORDER = ['breakout_v08', 'breakout_v07', 'breakout_v06', 'breakout_v05'];
+const STRAT_ORDER = [...METHODS.map((m) => m.adapterKey), 'breakout_v08', 'breakout_v07', 'breakout_v06', 'breakout_v05'];
 const STRAT_LABEL: Record<string, string> = {
+  ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
   breakout_v08: 'Breakout v0.8 (v0.7 + Base H4/H1)', breakout_v07: 'Breakout v0.7 (v0.6 + Pola N H1/H4)', breakout_v06: 'Breakout v0.6 (v0.5 + candle momentum)', breakout_v05: 'Breakout v0.5 inti', breakout_v04: 'Breakout v0.4 (lebih sering trade)', breakout_v03: 'Breakout v0.3',
   ob_fvg_v1: 'Order Block + FVG (SMC)', n_pattern_v1: 'Pola N (M15, searah tren H4)', snr_break_h1_v1: 'SNR breakout H1 (tanpa tren H4)',
   rbr_dbd_v1: 'RBR / DBD (zona base H1, searah tren H4)', snr_snd_mtf_v2: 'SNR + SND v2 (strategy Pine kamu)', snr_snd_mtf_v1: 'SNR + SND v1 (indikator Pine kamu)',
@@ -600,6 +602,8 @@ function configLabel(s: any) {
 }
 function configLabelBase(s: any) {
   const strat = String(s.strategy ?? 'strategi');
+  const mm = methodByStrategy(strat);
+  if (mm) return mm.label;
   if (strat === 'pola_n v1') return 'Pola N (M15, searah tren H4)';
   if (strat === 'ob_fvg v1') return 'Order Block + FVG (SMC)';
   if (strat === 'breakout v0.8') return 'Breakout v0.8 (v0.7 + Base H4/H1)';

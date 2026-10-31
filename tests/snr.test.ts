@@ -364,6 +364,8 @@ test('breakout v0.7: registered; Pola N fires BUY on the first close above B wit
 test('breakout v0.8: registered; base = ≥3 overlapping candles within 1.5×ATR, breakout candle excluded', async () => {
   const { breakoutV08Adapter, findBase } = await import('../src/lib/core/strategy/basebrk');
   assert.equal(getAdapter('breakout_v08'), breakoutV08Adapter);
+  const { METHODS } = await import('../src/lib/core/strategy/methods-meta');
+  for (const mm of METHODS) assert.equal(getAdapter(mm.adapterKey)?.key, mm.adapterKey);
   const H = TIMEFRAME_MS.H1;
   const mk = (o: number, h: number, l: number, c: number, i: number): Candle => ({ time: T0 + i * H, open: o, high: h, low: l, close: c, volume: 0 });
   const p = { minN: 3, overlap: 0.5, mult: 1.5 };

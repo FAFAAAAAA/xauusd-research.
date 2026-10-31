@@ -2,6 +2,7 @@ import { TIMEFRAME_MS, type Candle, type Timeframe } from '../types';
 import type { StrategyAdapter, StrategyContext, StrategyEventDraft } from './adapter';
 import { emaLast } from './breakout';
 import { breakoutV07Adapter } from './npola';
+import { METHODS } from './methods-meta';
 
 /**
  * Breakout Base (B + C), README 5n. Bases on CLOSED H4 and H1 candles, each timeframe separately, entry confirmed by the close of
@@ -126,6 +127,16 @@ export const breakoutV08Adapter: StrategyAdapter = {
   evaluate(ctx) {
     const s = ctx.state as { v7?: Record<string, unknown>; b?: BaseState };
     const a = breakoutV07Adapter.evaluate({ ...ctx, state: (s.v7 ??= {}) });
-    return [...a, ...baseEvaluate(ctx, (s.b ??= {}), readBaseParams(ctx.params))];
+    const evs = [...a, ...baseEvaluate(ctx, (s.b ??= {}), readBaseParams(ctx.params))];
+    // oneSlot: every part shares one slot → at most one open position for the whole strategy
+    return ctx.params.oneSlot === true ? evs.map((e) => ({ ...e, details: { ...e.details, slot: 'one' } })) : evs;
   },
 };
+
+/** One adapter per single method (see methods-meta.ts): v0.8 with only that part switched on and one shared slot. */
+export const methodAdapters: StrategyAdapter[] = METHODS.map((m) => ({
+  ...breakoutV08Adapter,
+  key: m.adapterKey,
+  name: m.label,
+  evaluate: (ctx) => breakoutV08Adapter.evaluate({ ...ctx, params: { ...m.params, ...ctx.params, oneSlot: true } }),
+}));

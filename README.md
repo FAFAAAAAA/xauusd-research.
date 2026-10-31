@@ -250,6 +250,19 @@ v0.7 tidak diubah, ditambah **Breakout Base** di H4 dan H1 (masing-masing slot s
 
 Mesin website, emas, RR 1:2, $10, biaya termasuk: data M15 2018–2026 → 1.728 trade (±4/minggu), win 41,2%, +$3.941, drawdown $324 (v0.7 +$2.390). Data M30 2010–2026 → 3.419 trade, +$5.049, DD $703; 2010–2017 +$1.608, 2018–2022 +$1.179, 2023–2026 +$2.262. Aturan base asli tanpa tambahan: base H4 rugi di 2010–2017, base H1/M15 rugi (riset, tidak dipasang).
 
+## 5o. Satu metode per versi (`metode_*`)
+
+Atas permintaan pemilik, tiap metode juga tersedia sebagai strategi sendiri dengan **1 slot** (maksimal satu posisi terbuka). Definisinya di `src/lib/core/strategy/methods-meta.ts`; aturannya sama persis dengan bagian v0.8.
+Mesin website, emas, RR 1:2, $10, biaya termasuk — M15 2018–2026 | M30 2010–2017:
+| Metode | Trade/minggu | Win | Total 2018–26 | DD | Win / total 2010–17 |
+|---|---|---|---|---|---|
+| 1 Level H1 diuji 2–3× | 0,6 | 43,7% | +$777 | $105 | 41,9% / +$596 |
+| 2 Breakout H1 40 candle | 0,9 | 39,6% | +$681 | $145 | 36,5% / +$294 |
+| 3 Range New York | 0,5 | 40,9% | +$480 | $118 | 38,6% / +$288 |
+| 4 Breakout Base H4 | 0,5 | 44,7% | +$791 | $132 | 34,6% / +$73 |
+| 5 Breakout Base H1 | 1,1 | 39,3% | +$759 | $241 | 36,5% / +$259 |
+| 6 Pola N H1/H4 | 0,4 | 43,0% | +$452 | $122 | 35,8% / +$98 |
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.
