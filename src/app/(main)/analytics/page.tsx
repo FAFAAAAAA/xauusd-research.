@@ -188,9 +188,10 @@ export default function Analytics() {
             <div className="body"><RunBacktest bare existingFor={(k) => yearRows(d.sessions.filter((s: any) => configKey(s) === k)).map((r) => r.label)} onDone={(k) => { setCfg(k); reloadAll(); window.scrollTo({ top: 0 }); }} /></div>
           </details>
           <details className="group">
-            <summary><span><h2>Kelola hasil</h2><span className="s">Hapus backtest lama atau dobel</span></span></summary>
+            <summary><span><h2>Kelola hasil</h2><span className="s">Hapus backtest lama, dobel, atau semuanya</span></span></summary>
             <div className="body">
-              <RunPicker sessions={d.sessions} selected={cur ? String(cur.id) : ''} tz={tz}
+              <DeleteAll sessions={d.sessions} current={d.sessions.filter((s: any) => configKey(s) === cfgSel)} currentLabel={configs.find((c) => c.key === cfgSel)?.label ?? ''} onDeleted={() => { setCfg(null); reloadAll(); window.scrollTo({ top: 0 }); }} />
+              <RunPicker sessions={d.sessions.filter((s: any) => configKey(s) === cfgSel)} selected={cur ? String(cur.id) : ''} tz={tz}
                 onSelect={(id) => { const s0 = d.sessions.find((x: any) => String(x.id) === id); if (s0) choose(periodLabel(s0.period_start ?? null, s0.period_end ?? null), rrNum(s0)); window.scrollTo({ top: 0 }); }}
                 onDeleted={() => reloadAll()} />
             </div>
@@ -470,6 +471,42 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
         })}
       </div>
       {runs.length > 3 ? <button className="btn sm" onClick={() => setAll(!all)}>{all ? 'Tampilkan lebih sedikit' : `Lihat semua (${runs.length})`}</button> : null}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- delete many results at once */
+function DeleteAll({ sessions, current, currentLabel, onDeleted }: { sessions: any[]; current: any[]; currentLabel: string; onDeleted: () => void }) {
+  const [ask, setAsk] = useState<'current' | 'all' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const del = async (list: any[]) => {
+    setBusy(true); setErr(null);
+    try {
+      const ids = list.map((s) => String(s.id));
+      for (let i = 0; i < ids.length; i += 500) await call('/api/backtest/sessions', { method: 'DELETE', json: { ids: ids.slice(i, i + 500) } });
+      setAsk(null); onDeleted();
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  };
+  const target = ask === 'all' ? sessions : current;
+  return (
+    <div className="stack tight">
+      {ask ? (
+        <div className="error stack tight">
+          <strong>Hapus {target.length} hasil {ask === 'all' ? 'dari SEMUA strategi' : `"${currentLabel}"`}?</strong>
+          <span>Trade dan sinyal backtest-nya ikut terhapus. Tidak bisa dibatalkan. Data harga tidak terhapus.</span>
+          <div className="row">
+            <button className="btn sm" onClick={() => setAsk(null)} disabled={busy}>Batal</button>
+            <button className="btn sm danger" onClick={() => del(target)} disabled={busy}>{busy ? 'Menghapus…' : 'Ya, hapus'}</button>
+          </div>
+        </div>
+      ) : (
+        <div className="row">
+          {current.length && current.length < sessions.length ? <button className="btn sm" onClick={() => setAsk('current')}>Hapus semua hasil strategi ini</button> : null}
+          <button className="btn sm" onClick={() => setAsk('all')}>Hapus semua hasil ({sessions.length})</button>
+        </div>
+      )}
+      {err ? <div className="error">{err}</div> : null}
     </div>
   );
 }
