@@ -40,8 +40,12 @@ export interface BreakoutParams {
   noTrend: boolean;
   retestLong: boolean;
   retestSlBar: boolean;
+  /** Momentum filter on the candle that breaks the level (research):
+   *  momShape: body ≥ 60% of the range and close in the last 25% of the range in the trade direction;
+   *  momSize:  body ≥ 1 × ATR14 of that timeframe;  momAvg: body ≥ 1.5 × average body of the previous 20 candles. */
+  momShape: boolean; momSize: boolean; momAvg: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -84,6 +88,21 @@ export function atrSeriesEwm(c: readonly Candle[], n: number): number[] {
     out[i] = e;
   }
   return out;
+}
+
+/** Momentum test of candle `k` in `c` for a trade in direction `side` (see BreakoutParams.momShape/momSize/momAvg). */
+export function momentumOk(c: readonly Candle[], k: number, side: 1 | -1, atr: number, p: { momShape: boolean; momSize: boolean; momAvg: boolean }): boolean {
+  const x = c[k];
+  if (!x) return false;
+  const body = side * (x.close - x.open), range = x.high - x.low;
+  if (p.momShape && !(body > 0 && body >= 0.6 * range && (side > 0 ? x.high - x.close : x.close - x.low) <= 0.25 * range)) return false;
+  if (p.momSize && !(body >= atr)) return false;
+  if (p.momAvg) {
+    let s = 0, n = 0;
+    for (let q = Math.max(0, k - 20); q < k; q++) { s += Math.abs(c[q].close - c[q].open); n++; }
+    if (!(n && body >= 1.5 * (s / n))) return false;
+  }
+  return true;
 }
 
 type Trend = 'up' | 'down' | 'none';
@@ -150,8 +169,10 @@ export const breakoutAdapter: StrategyAdapter = {
         });
       }
     }
+    const useMom = p.momShape || p.momSize || p.momAvg;
     const emit = (slot: string, side: 'long' | 'short', sl: number, why: string, extra: Record<string, unknown> = {}) => {
       if (!allowed(side)) return;
+      if (useMom && extra.momOk === false) return;
       if (p.retest && typeof extra.level === 'number') {
         const a1 = atrLastEwm(h1.slice(-200), 14);
         pend[`${slot}:${side}`] = { side: side === 'long' ? 1 : -1, level: extra.level, sl, atr: a1, until: now + (p.retestLong ? 24 : 12) * H, why, extra };
@@ -172,8 +193,9 @@ export const breakoutAdapter: StrategyAdapter = {
       const prev = h1.slice(-41, -1);
       const hh = Math.max(...prev.map((c) => c.high)), ll = Math.min(...prev.map((c) => c.low));
       const a = atrLastEwm(h1, 14);
-      if (last.close > hh) emit('H1', 'long', bar.close - 2.5 * a, 'H1 tembus high 40 candle', { level: hh });
-      if (last.close < ll) emit('H1', 'short', bar.close + 2.5 * a, 'H1 tembus low 40 candle', { level: ll });
+      const mOk = (s: 1 | -1) => !useMom || momentumOk(h1, h1.length - 1, s, a, p);
+      if (last.close > hh) emit('H1', 'long', bar.close - 2.5 * a, 'H1 tembus high 40 candle', { level: hh, momOk: mOk(1) });
+      if (last.close < ll) emit('H1', 'short', bar.close + 2.5 * a, 'H1 tembus low 40 candle', { level: ll, momOk: mOk(-1) });
     }
 
     // ---- L (optional): breakout of an H1 swing level that was touched 2–3 times
@@ -195,7 +217,7 @@ export const breakoutAdapter: StrategyAdapter = {
             if (near) { if (j - last >= 3) touches++; last = j; }
           }
           if (early) continue;
-          if (touches >= 2 && touches <= 3) emit('LVL', side > 0 ? 'long' : 'short', lv - side * 1.5 * at[i], `tembus level H1 yang disentuh ${touches}×`, { level: lv, touches });
+          if (touches >= 2 && touches <= 3) emit('LVL', side > 0 ? 'long' : 'short', lv - side * 1.5 * at[i], `tembus level H1 yang disentuh ${touches}×`, { level: lv, touches, momOk: !useMom || momentumOk(c, i, side, at[i], p) });
           break;                                                         // only the oldest level broken on this candle
         }
       }
@@ -241,13 +263,14 @@ export const breakoutAdapter: StrategyAdapter = {
       const width = hi - lo, da = st.d1atr ?? NaN;
       if (!(width > 0.2 * da && width < 1.5 * da)) continue;
       const brk = (st.brk ??= {});
+      const m15atr = useMom ? atrLastEwm(m.slice(-200), 14) : NaN;
       if (bar.close > hi) {
         brk[`${slot}u`] = (brk[`${slot}u`] ?? 0) + 1;
-        if (brk[`${slot}u`] === 1) emit(slot, 'long', lo, `tembus high range ${label}`, { range_high: hi, range_low: lo, level: hi });
+        if (brk[`${slot}u`] === 1) emit(slot, 'long', lo, `tembus high range ${label}`, { range_high: hi, range_low: lo, level: hi, momOk: !useMom || momentumOk(m, m.length - 1, 1, m15atr, p) });
       }
       if (bar.close < lo) {
         brk[`${slot}d`] = (brk[`${slot}d`] ?? 0) + 1;
-        if (brk[`${slot}d`] === 1) emit(slot, 'short', hi, `tembus low range ${label}`, { range_high: hi, range_low: lo, level: lo });
+        if (brk[`${slot}d`] === 1) emit(slot, 'short', hi, `tembus low range ${label}`, { range_high: hi, range_low: lo, level: lo, momOk: !useMom || momentumOk(m, m.length - 1, -1, m15atr, p) });
       }
     }
     return out;
