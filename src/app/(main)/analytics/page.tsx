@@ -34,7 +34,7 @@ export default function Analytics() {
   useEffect(() => { load(); call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, [load]);
   const [picked, setPicked] = useState(false);
   useEffect(() => {
-    if (!picked && d?.sessions?.length && !session) { setPicked(true); setSession(String(groupRuns(d.sessions)[0].sessions[0].id)); }
+    if (!picked && d?.sessions?.length && !session) { setPicked(true); setSession(String(yearRows(d.sessions)[0]?.cells[0]?.id ?? groupRuns(d.sessions)[0].sessions[0].id)); }
   }, [d, picked, session]);
   const open = async (id: string) => { setDetail({ loading: true }); try { setDetail(await call<any>(`/api/trades/${id}`)); } catch (e) { setDetail({ error: (e as Error).message }); } };
 
@@ -48,7 +48,7 @@ export default function Analytics() {
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : (
         <>
           {d.sessions.length ? (
-            <RunPicker sessions={d.sessions} selected={session} tz={tz}
+            <YearTable sessions={d.sessions} selected={session} tz={tz}
               onSelect={(id) => { setPicked(true); setSession(id); setDetail(null); }}
               onDeleted={(ids) => { setPicked(false); if (ids.includes(session)) setSession(''); else load(); }} />
           ) : null}
@@ -61,6 +61,8 @@ export default function Analytics() {
             </section>
           ) : (
             <>
+              {(() => { const cur = d.sessions.find((x: any) => String(x.id) === session); return cur
+                ? <h2 style={{ margin: '4px 4px -4px' }}>{periodLabel(cur.period_start ?? null, cur.period_end ?? null)} · RR 1:{rrNum(cur)}</h2> : null; })()}
               <div className="grid two">
                 <Stat label="Total P/L" v={money(m.totalPnl)} cls={tone(m.totalPnl)} />
                 <Stat label="Win rate" v={pct(m.winRate)} />
@@ -308,8 +310,7 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
     } catch { /* stays visible; user can retry */ } finally { setBusy(false); }
   };
   return (
-    <section className="group stack tight">
-      <div className="row between"><h2>Hasil kamu</h2><span className="mute small">{runs.length} backtest</span></div>
+    <div className="stack tight">
       <div className="list">
         {shown.map((r) => {
           const rrOf = (s: any) => s.cost_config?.rr ?? /RR 1:(\d+(\.\d+)?)/.exec(s.name ?? '')?.[1] ?? '?';
@@ -336,6 +337,67 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
         })}
       </div>
       {runs.length > 3 ? <button className="btn sm" onClick={() => setAll(!all)}>{all ? 'Tampilkan lebih sedikit' : `Lihat semua (${runs.length})`}</button> : null}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- year × RR table (newest run per period wins) */
+const RRS = [1, 2, 3];
+const rrNum = (s: any) => Number(s.cost_config?.rr ?? /RR 1:(\d+(\.\d+)?)/.exec(s.name ?? '')?.[1] ?? 0);
+function periodLabel(from: number | null, to: number | null) {
+  if (from == null || to == null) return 'Lainnya';
+  const a = new Date(from), b = new Date(to);
+  const fullYear = a.getUTCMonth() === 0 && a.getUTCDate() === 1 && b.getUTCMonth() === 0 && b.getUTCDate() === 1 && b.getUTCFullYear() === a.getUTCFullYear() + 1;
+  if (fullYear) return String(a.getUTCFullYear());
+  const f = (x: Date) => `${x.getUTCDate()}/${x.getUTCMonth() + 1}/${String(x.getUTCFullYear()).slice(2)}`;
+  return `${f(a)}–${f(b)}`;
+}
+function yearRows(sessions: any[]) {
+  const rows = new Map<string, { label: string; sort: number; cells: any[] }>();
+  for (const r of groupRuns(sessions)) { // newest first → first run seen per period is kept
+    const label = periodLabel(r.from, r.to);
+    if (rows.has(label)) continue;
+    rows.set(label, { label, sort: r.from ?? 0, cells: RRS.map((rr) => r.sessions.find((s) => rrNum(s) === rr)).filter(Boolean) });
+  }
+  return [...rows.values()].sort((a, b) => b.sort - a.sort);
+}
+
+function YearTable({ sessions, selected, tz, onSelect, onDeleted }: {
+  sessions: any[]; selected: string; tz: string; onSelect: (id: string) => void; onDeleted: (ids: string[]) => void;
+}) {
+  const rows = yearRows(sessions);
+  const runs = groupRuns(sessions);
+  const cell = (s: any | undefined) => {
+    if (!s) return <span className="ycell empty">—</span>;
+    const pnl = Number(s.pnl ?? 0);
+    const wr = s.trades ? Math.round((Number(s.wins ?? 0) / Number(s.trades)) * 100) : 0;
+    return (
+      <button className={`ycell ${pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''}`} aria-pressed={selected === String(s.id)} onClick={() => onSelect(String(s.id))}>
+        <span className="p">{`${pnl > 0 ? '+' : pnl < 0 ? '−' : ''}$${Math.round(Math.abs(pnl)).toLocaleString('en-US')}`}</span>
+        <span className="m">{s.trades} trade</span>
+        <span className="m">win {wr}%</span>
+      </button>
+    );
+  };
+  return (
+    <section className="group stack tight">
+      <h2>Hasil per tahun</h2>
+      <div className="ytable" role="table">
+        <div className="yrow head" role="row"><span role="columnheader">Tahun</span>{RRS.map((rr) => <span key={rr} role="columnheader">RR 1:{rr}</span>)}</div>
+        {rows.map((r) => (
+          <div key={r.label} className="yrow" role="row">
+            <span className="ylabel" role="rowheader">{r.label}</span>
+            {RRS.map((rr) => <span key={rr} role="cell">{cell(r.cells.find((s: any) => rrNum(s) === rr))}</span>)}
+          </div>
+        ))}
+      </div>
+      <p className="mute small">Tekan kotak untuk melihat detailnya di bawah. Angka = untung/rugi bersih · jumlah trade · win rate.</p>
+      {runs.length > rows.length || runs.length > 1 ? (
+        <details className="more">
+          <summary>Kelola / hapus backtest ({runs.length})</summary>
+          <RunPicker sessions={sessions} selected={selected} tz={tz} onSelect={onSelect} onDeleted={onDeleted} />
+        </details>
+      ) : null}
     </section>
   );
 }

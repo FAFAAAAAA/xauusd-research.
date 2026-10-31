@@ -558,7 +558,10 @@ export async function listBacktestSessions(db: Db) {
   return db.query<Record<string, unknown>>(
     `select b.id, b.name, b.confirmation_profile, b.status, b.timeframe, b.period_start, b.period_end, b.is_test, b.cost_config,
             extract(epoch from b.created_at)*1000 as created_ms,
-            sv.strategy_key || ' ' || sv.version as strategy, (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id) as trades
+            sv.strategy_key || ' ' || sv.version as strategy, (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id) as trades,
+            (select coalesce(sum(t.pnl), 0)::float8 from simulated_trades t where t.backtest_session_id=b.id) as pnl,
+            (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id and t.pnl > 0) as wins,
+            (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id and t.pnl < 0) as losses
      from backtest_sessions b left join strategy_versions sv on sv.id=b.strategy_version_id order by b.created_at desc`);
 }
 /** Deletes backtest sessions with their trades and the signal events they produced. Returns deleted ids. */
