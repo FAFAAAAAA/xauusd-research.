@@ -260,3 +260,23 @@ test('breakout v0.3: registered; SELL needs D1 EMA50 < EMA200, defaults include 
   assert.equal(breakoutV03Adapter.htfWindow?.D1, 1000);
   assert.notEqual(breakoutV03Adapter.evaluate, breakoutAdapter.evaluate);
 });
+
+test('breakout v0.4: registered; level part only fires on an H1 close and reports 2-3 touches', async () => {
+  const { breakoutV04Adapter } = await import('../src/lib/core/strategy/breakout');
+  assert.equal(getAdapter('breakout_v04'), breakoutV04Adapter);
+  const m15 = zigzag(192 * 12, 1);
+  const tfs = { H1: aggregateCandles(m15, 'M15', 'H1', 'utc', false), H4: aggregateCandles(m15, 'M15', 'H4', 'utc', false), D1: aggregateCandles(m15, 'M15', 'D1', 'utc', false) };
+  const state: Record<string, unknown> = {};
+  for (let i = 60; i < m15.length; i++) {
+    const now = m15[i].time + M15;
+    const htf = Object.fromEntries(Object.entries(tfs).map(([k, v]) => [k, v.filter((c) => c.time + TIMEFRAME_MS[k as Timeframe] <= now)]));
+    const res = runStrategyGuarded(breakoutV04Adapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+      news: { archiveAvailable: false, items: [], upcoming: [] }, htf, params: { sellD1Bear: false, d1Filter: false }, state });
+    assert.deepEqual(res.violations, []);
+    for (const e of res.events) {
+      const d = e.details as { component: string; touches?: number; side: string; stop_loss: number };
+      if (d.component === 'LVL') { assert.equal(now % TIMEFRAME_MS.H1, 0); assert.ok(d.touches! >= 2 && d.touches! <= 3); }
+      assert.ok(d.side === 'long' ? d.stop_loss < e.price : d.stop_loss > e.price);
+    }
+  }
+});

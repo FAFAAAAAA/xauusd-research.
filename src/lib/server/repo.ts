@@ -228,6 +228,11 @@ export async function ensureBuiltinStrategies(db: Db) {
      on conflict (strategy_key, version) do nothing returning id`);
   await db.query(
     `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('breakout', 'v0.4', 'breakout_v04', 'active', false,
+       'v0.4: v0.3 (breakout H1, London, New York, M30 searah tren H4 & D1; SELL hanya jika EMA50 D1 < EMA200 D1) + tembus level swing H1 yang sudah disentuh 2-3 kali, SL level -/+ 1.5 ATR H1.')
+     on conflict (strategy_key, version) do nothing returning id`);
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
      values ('breakout', 'v0.3', 'breakout_v03', 'active', false,
        'v0.3: breakout H1 (40) + London + New York + M30 (10), searah tren H4 & D1. SELL hanya jika EMA50 D1 < EMA200 D1. SL ATR/range, TP sesuai RR.')
      on conflict (strategy_key, version) do nothing returning id`);

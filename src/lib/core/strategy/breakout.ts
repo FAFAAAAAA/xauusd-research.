@@ -26,8 +26,11 @@ export interface BreakoutParams {
   /** Optional M15 Donchian part (20 candles, or 10 with m15Fast), SL 2.5 × ATR14(M15). Research only. */
   donchianM15: boolean;
   m15Fast: boolean;
+  /** Level part: an H1 swing level (pivot 3) that price came back to 2–3 times (within 0.25×ATR, ≥ 3 candles apart) is
+   *  closed through for the first time (≤ 120 H1 candles after the pivot). SL = level ∓ 1.5 × ATR14(H1). */
+  levelTouch: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -56,6 +59,20 @@ export function atrLastEwm(c: readonly Candle[], n: number): number {
     e = Number.isNaN(e) ? tr : a * tr + (1 - a) * e;
   }
   return e;
+}
+
+/** Wilder ATR series (same recursion as atrLastEwm). */
+export function atrSeriesEwm(c: readonly Candle[], n: number): number[] {
+  const out = new Array<number>(c.length).fill(NaN);
+  const a = 1 / n;
+  let e = NaN;
+  for (let i = 1; i < c.length; i++) {
+    const pc = c[i - 1].close;
+    const tr = Math.max(c[i].high - c[i].low, Math.abs(c[i].high - pc), Math.abs(c[i].low - pc));
+    e = Number.isNaN(e) ? tr : a * tr + (1 - a) * e;
+    out[i] = e;
+  }
+  return out;
 }
 
 type Trend = 'up' | 'down' | 'none';
@@ -114,6 +131,31 @@ export const breakoutAdapter: StrategyAdapter = {
       const a = atrLastEwm(h1, 14);
       if (last.close > hh) emit('H1', 'long', bar.close - 2.5 * a, 'H1 tembus high 40 candle');
       if (last.close < ll) emit('H1', 'short', bar.close + 2.5 * a, 'H1 tembus low 40 candle');
+    }
+
+    // ---- L (optional): breakout of an H1 swing level that was touched 2–3 times
+    if (p.levelTouch && now % H === 0 && h1[h1.length - 1].time + H === now && h1.length > 60) {
+      const c = h1.slice(-200), n = c.length, i = n - 1, P = 3;
+      const at = atrSeriesEwm(c, 14);
+      for (const side of [1, -1] as const) {
+        const ext = (k: number) => (side > 0 ? c[k].high : c[k].low);
+        for (let k = Math.max(P, i - 119); k + P < i; k++) {          // oldest pivot first
+          let isPiv = true;
+          for (let q = k - P; q <= k + P && isPiv; q++) if (side * (ext(q) - ext(k)) > 0) isPiv = false;
+          if (!isPiv) continue;
+          const lv = ext(k);
+          if (!(side * (c[i].close - lv) > 0)) continue;
+          let early = false, touches = 1, last = k;
+          for (let j = k + P + 1; j < i; j++) {
+            if (side * (c[j].close - lv) > 0) { early = true; break; }
+            const near = side > 0 ? c[j].high >= lv - 0.25 * at[j] : c[j].low <= lv + 0.25 * at[j];
+            if (near) { if (j - last >= 3) touches++; last = j; }
+          }
+          if (early) continue;
+          if (touches >= 2 && touches <= 3) emit('LVL', side > 0 ? 'long' : 'short', lv - side * 1.5 * at[i], `tembus level H1 yang disentuh ${touches}×`, { level: lv, touches });
+          break;                                                         // only the oldest level broken on this candle
+        }
+      }
     }
 
     // ---- D (optional): M30 Donchian 10, built from M15 candles
@@ -180,4 +222,17 @@ export const breakoutV03Adapter: StrategyAdapter = {
   name: 'Breakout v0.3 (H1 + London + New York + M30, SELL hanya saat tren D1 turun)',
   htfWindow: { H1: 400, H4: 1000, D1: 1000 },
   evaluate: (ctx) => breakoutAdapter.evaluate({ ...ctx, params: { donchianM30: true, sellD1Bear: true, ...ctx.params } }),
+};
+
+/**
+ * Breakout v0.4 = v0.3 + level part (breakout of an H1 swing level that was touched 2–3 times).
+ * Chosen on 2018-2022 (6 pre-set variants), checked on 2023-2026 (README 5h).
+ */
+export const BREAKOUT_V04_KEY = 'breakout_v04';
+export const breakoutV04Adapter: StrategyAdapter = {
+  ...breakoutAdapter,
+  key: BREAKOUT_V04_KEY,
+  name: 'Breakout v0.4 (v0.3 + tembus level yang disentuh 2–3×)',
+  htfWindow: { H1: 400, H4: 1000, D1: 1000 },
+  evaluate: (ctx) => breakoutAdapter.evaluate({ ...ctx, params: { donchianM30: true, sellD1Bear: true, levelTouch: true, ...ctx.params } }),
 };

@@ -196,6 +196,13 @@ Riset 2018–2026 (RR 1:2, $10, biaya termasuk; 12 variasi ditentukan sebelumnya
 = v0.2 + bagian M30 (Donchian 10, SL 2,5×ATR M30) + SELL hanya jika EMA50(D1) < EMA200(D1). Analisis v0.2 menunjukkan BUY +$1.832 tetapi SELL −$557: breakout ke bawah saat emas dalam tren naik jangka panjang sering gagal.
 Dipilih dari 14 variasi yang ditentukan sebelumnya berdasarkan 2018–2022 saja, lalu dicek di 2023–2026 (RR 1:2, $10, biaya termasuk): 2.348 trade (5,3/minggu; 1.911 BUY, 437 SELL), win 37,9%, **+$2.922**, turun terdalam −$613; 2018–22 +0,07R/trade (+$871), 2023–26 +0,18R/trade (+$2.051). Per tahun: 2018 −$73, 2019 +$240, 2020 +$535, 2021 −$259, 2022 +$428, 2023 +$159, 2024 +$568, 2025 +$1.021, 2026 +$303. Hasil adapter website identik dengan riset.
 
+## 5h. Breakout v0.4 (`breakout_v04`) — disarankan
+
+= v0.3 + bagian **level**: swing high/low H1 (pivot 3) yang sudah didatangi lagi 2–3 kali (dalam 0,25×ATR, jarak ≥ 3 candle) lalu pertama kali ditembus close H1 (≤ 120 candle setelah pivot), searah tren. SL = level ∓ 1,5×ATR(14) H1.
+Riset awal: tembusan level 1 sentuhan +0,03R/trade, 2 sentuhan +0,16R, 3 sentuhan +0,29R, 4+ sentuhan +0,03R (konsisten di 2018–22 dan 2023–26).
+Dipilih dari 6 variasi berdasarkan 2018–2022 (RR 1:2, $10, biaya termasuk): 2.899 trade (6,6/minggu; 2.353 BUY, 546 SELL), win 38,1%, **+$3.749**, turun terdalam −$790; 2018–22 +$1.090 (v0.3: +$871), 2023–26 +$2.659 (v0.3: +$2.051). Per tahun: 2018 −$81, 2019 +$308, 2020 +$584, 2021 −$288, 2022 +$568, 2023 +$232, 2024 +$691, 2025 +$1.305, 2026 +$431.
+Alternatif lebih tenang (tidak dipasang): H1 + New York + level = 3,2/minggu, +$2.514, turun terdalam −$335.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.
