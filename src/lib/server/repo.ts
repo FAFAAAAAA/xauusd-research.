@@ -545,10 +545,14 @@ export async function listWebhookLogs(db: Db, limit = 30) {
 }
 
 // ------------------------------------------------------------------- trades
-export async function listTrades(db: Db, backtestSessionId: string | string[] | null) {
+export async function listTrades(db: Db, backtestSessionId: string | string[] | null, opts: { light?: boolean } = {}) {
   const ids = backtestSessionId == null ? null : Array.isArray(backtestSessionId) ? backtestSessionId : [backtestSessionId];
   return db.query<Record<string, unknown>>(
-    `select id, backtest_session_id, origin, side, timeframe, extract(epoch from entry_time)*1000 as entry_ms, entry_price::float8 as entry_price,
+    opts.light
+      ? `select id, side, extract(epoch from entry_time)*1000 as entry_ms, extract(epoch from exit_time)*1000 as exit_ms, exit_reason,
+            pnl::float8 as pnl, pnl_r::float8 as pnl_r, planned_rr::float8 as planned_rr, timeframe, session_label, news_confirmed, zone_outcome
+     from simulated_trades where ($1::uuid[] is null or backtest_session_id = any($1::uuid[])) order by entry_time asc limit 50000`
+      : `select id, backtest_session_id, origin, side, timeframe, extract(epoch from entry_time)*1000 as entry_ms, entry_price::float8 as entry_price,
             stop_loss::float8 as stop_loss, take_profit::float8 as take_profit, extract(epoch from exit_time)*1000 as exit_ms,
             exit_price::float8 as exit_price, exit_reason, pnl::float8 as pnl, pnl_r::float8 as pnl_r, planned_rr::float8 as planned_rr,
             session_label, news_confirmed, sentiment_confirmed, zone_outcome, setup_reason, costs, is_test, entry_event_id, strategy_version_id
@@ -559,11 +563,14 @@ export async function listBacktestSessions(db: Db) {
   return db.query<Record<string, unknown>>(
     `select b.id, b.name, b.confirmation_profile, b.status, b.timeframe, b.period_start, b.period_end, b.is_test, b.cost_config,
             extract(epoch from b.created_at)*1000 as created_ms,
-            sv.strategy_key || ' ' || sv.version as strategy, (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id) as trades,
-            (select coalesce(sum(t.pnl), 0)::float8 from simulated_trades t where t.backtest_session_id=b.id) as pnl,
-            (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id and t.pnl > 0) as wins,
-            (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id and t.pnl < 0) as losses
-     from backtest_sessions b left join strategy_versions sv on sv.id=b.strategy_version_id order by b.created_at desc`);
+            sv.strategy_key || ' ' || sv.version as strategy,
+            coalesce(a.trades, 0) as trades, coalesce(a.pnl, 0) as pnl, coalesce(a.wins, 0) as wins, coalesce(a.losses, 0) as losses
+     from backtest_sessions b
+     left join strategy_versions sv on sv.id=b.strategy_version_id
+     left join (select backtest_session_id, count(*)::int as trades, coalesce(sum(pnl), 0)::float8 as pnl,
+                       count(*) filter (where pnl > 0)::int as wins, count(*) filter (where pnl < 0)::int as losses
+                from simulated_trades group by backtest_session_id) a on a.backtest_session_id = b.id
+     order by b.created_at desc`);
 }
 /** Deletes backtest sessions with their trades and the signal events they produced. Returns deleted ids. */
 export async function deleteBacktestSessions(db: Db, ids: string[]): Promise<string[]> {

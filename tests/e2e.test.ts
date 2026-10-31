@@ -282,11 +282,13 @@ test('10. analytics: empty until real trades exist; TradingView report import', 
   ].join('\n');
   const imp = await importStrategyReportCsv(db, report, { name: 'TEST TradingView report', chartTimezone: 'UTC', timeframe: 'H1', isTest: true });
   assert.equal(imp.trades, 2);
-  const a = await analytics(db, null);
+  const a = await analytics(db, imp.backtestSessionId);
   assert.equal(a.overall!.totalTrades, 2);
   assert.equal(a.overall!.totalPnl, 100);
   assert.equal(a.overall!.winRate, 0.5);
-  assert.equal(a.comparison.find((c) => c.profile === 'snr_news')!.metrics, null, 'comparison slots stay empty until such a run exists');
+  const list = await analytics(db, null);
+  assert.equal(list.trades.length, 0, 'without a session only the session list is returned');
+  assert.ok(list.sessions.find((x: Record<string, unknown>) => x.id === imp.backtestSessionId && Number(x.trades) === 2 && Number(x.pnl) === 100));
 });
 
 test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overlapping trades; replay agrees', async () => {

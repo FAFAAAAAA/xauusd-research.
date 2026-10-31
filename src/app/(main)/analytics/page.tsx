@@ -28,21 +28,37 @@ export default function Analytics() {
   const rows = d?.sessions?.length ? yearRows(d.sessions) : [];
   const yearSel = year && (year === 'ALL' || rows.some((r) => r.label === year)) ? year : rows[0]?.label ?? null;
   const cellOf = (r: { cells: any[] }, x: number) => r.cells.find((c: any) => rrNum(c) === x);
-  const picked: any[] = yearSel === 'ALL' ? rows.map((r) => cellOf(r, rr)).filter(Boolean)
-    : (() => { const r = rows.find((x) => x.label === yearSel); const c = r ? cellOf(r, rr) ?? r.cells[0] : null; return c ? [c] : []; })();
+  const pick = (y: string | null, x: number): any[] => y === 'ALL' ? rows.map((r) => cellOf(r, x)).filter(Boolean)
+    : (() => { const r = rows.find((q) => q.label === y); const c = r ? cellOf(r, x) ?? r.cells[0] : null; return c ? [c] : []; })();
+  const picked = pick(yearSel, rr);
   const key = picked.map((c) => String(c.id)).join(',');
+  const urlFor = (k: string) => `/api/analytics${k ? `?session=${k}` : ''}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const fresh = loadedKey === key;
+  // instant numbers from the session summaries (no waiting for the server)
+  const sum = picked.reduce((a, c) => ({ pnl: a.pnl + Number(c.pnl ?? 0), wins: a.wins + Number(c.wins ?? 0), losses: a.losses + Number(c.losses ?? 0), trades: a.trades + Number(c.trades ?? 0) }), { pnl: 0, wins: 0, losses: 0, trades: 0 });
   const cur = picked.length === 1 ? picked[0] : null;
   const curRr = picked.length ? rrNum(picked[0]) : rr;
   const curYear = yearSel === 'ALL' ? `Semua tahun (${picked.length})` : yearSel;
 
   const load = useCallback(() => {
     setErr(null);
-    const url = `/api/analytics${key ? `?session=${key}` : ''}`;
+    const url = urlFor(key);
     const cached = peek(url);
-    if (cached) setD(cached);
-    setBusy(true);
-    call<any>(url).then(setD).catch((e) => setErr(e.message)).finally(() => setBusy(false));
-  }, [key]);
+    if (cached) { setD(cached); setLoadedKey(key); }
+    setBusy(!cached);
+    call<any>(url).then((x) => { setD(x); setLoadedKey(key); }).catch((e) => setErr(e.message)).finally(() => setBusy(false));
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  // warm the cache for the other RR buttons and "Semua" so the next tap is instant
+  useEffect(() => {
+    if (!fresh || !rows.length) return;
+    const t = setTimeout(() => {
+      const keys = [1, 2, 3].map((x) => pick(yearSel, x)).concat(rows.length > 1 ? [pick('ALL', rr)] : [])
+        .map((p) => p.map((c: any) => String(c.id)).join(',')).filter((k) => k && k !== key && !peek(urlFor(k)));
+      keys.forEach((k) => { call(urlFor(k)).catch(() => {}); });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [fresh, key]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
   useEffect(() => { call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, []);
   const choose = (y: string | null, x: number) => { setYear(y); setRr(x); setDetail(null); setTradeLimit(10); };
@@ -85,17 +101,17 @@ export default function Analytics() {
           </section>
 
           <div className={`stack${busy ? ' refreshing' : ''}`}>
-            {!d.hasData || !m ? (
+            {!picked.length || (fresh && (!d.hasData || !m)) ? (
               <section className="group empty-state"><h2>Belum ada trade</h2><p>Backtest ini tidak menghasilkan trade yang selesai.</p></section>
             ) : (
               <>
                 <section className="hero verdict">
                   <span className="label">{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
-                  <span className={`price ${tone(m.totalPnl)}`}>{money(m.totalPnl)}</span>
-                  <p>{m.totalPnl > 0 ? 'Untung' : m.totalPnl < 0 ? 'Rugi' : 'Impas'} dari <strong>{m.totalTrades} trade</strong>: <strong className="pos">{m.wins} menang</strong>, <strong className="neg">{m.losses} kalah</strong>.</p>
-                  <div className="wlbar" aria-hidden><span style={{ width: `${(m.wins / Math.max(1, m.totalTrades)) * 100}%` }} /></div>
-                  <div className="row between small mute"><span>Win rate {pct(m.winRate)}</span><span>Butuh ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}% agar impas</span></div>
-                  <div className="facts">
+                  <span className={`price ${tone(sum.pnl)}`}>{money(sum.pnl)}</span>
+                  <p>{sum.pnl > 0 ? 'Untung' : sum.pnl < 0 ? 'Rugi' : 'Impas'} dari <strong>{sum.trades} trade</strong>: <strong className="pos">{sum.wins} menang</strong>, <strong className="neg">{sum.losses} kalah</strong>.</p>
+                  <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
+                  <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Butuh ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}% agar impas</span></div>
+                  {m && fresh ? <><div className="facts">
                     <div><span className="label">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
                     <div><span className="label">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
                     <div><span className="label">Turun terdalam</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
@@ -111,9 +127,10 @@ export default function Analytics() {
                       <dt>Menang beruntun</dt><dd>{m.maxConsecutiveWins}×</dd>
                       <dt>Zona bertahan / jebol</dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd>
                     </dl>
-                  </details>
+                  </details></> : <div className="facts"><div><span className="label">Memuat detail…</span></div></div>}
                 </section>
 
+                {fresh ? <>
                 <section className="group">
                   <h2>Grafik saldo</h2>
                   <EquityChart trades={closedTrades(d.trades)} tz={tz} />
@@ -146,6 +163,7 @@ export default function Analytics() {
                     <a className="btn sm" href={`/api/analytics/export?kind=trades${key ? `&session=${key}` : ''}`}>Unduh CSV</a>
                   </div>
                 </section>
+                </> : <Loading what="grafik" />}
               </>
             )}
           </div>
