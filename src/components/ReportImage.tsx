@@ -31,6 +31,8 @@ const tone = (n: number) => (n > 0 ? C.up : n < 0 ? C.down : C.ink2);
 const tint = (n: number) => (n > 0 ? C.upT : n < 0 ? C.downT : C.sunk);
 const wall = (ms: number, tz: string) => new Date(ms + tzOffsetMinutes(ms, tz) * 60_000);
 
+const fmtH = (h: number | null | undefined) => (h == null ? '—' : h < 48 ? `${h < 10 ? h.toFixed(1).replace('.', ',') : Math.round(h)} jam` : `${(h / 24).toFixed(1).replace('.', ',')} hari`);
+
 export function buildReport(r: ReportInput): HTMLCanvasElement {
   const W = 1080, P = 56, IW = W - P * 2;
   const cv = document.createElement('canvas');
@@ -221,15 +223,16 @@ export function buildReport(r: ReportInput): HTMLCanvasElement {
 
   // ---------- settings & footer
   const cc = r.costs ?? {};
-  card(200);
+  card(236);
   heading('Pengaturan backtest');
   const lines = [
     r.rules,
     `Spread ${cc.spread ?? '—'} · slippage ${cc.slippage ?? '—'} · komisi $${cc.commissionPerUnit ?? '—'}/lot · TP & SL di 1 candle: ${cc.ambiguityPolicy === 'best' ? 'dihitung TP' : cc.ambiguityPolicy === 'skip' ? 'dilewati' : 'dihitung SL'}`,
+    r.metrics?.avgHoldHours != null ? `Lama posisi rata-rata ${fmtH(r.metrics.avgHoldHours)} · sampai TP ${fmtH(r.metrics.avgHoldWinHours)} · sampai SL ${fmtH(r.metrics.avgHoldLossHours)}` : '',
     `Waktu ditampilkan dalam zona ${r.tz}. Hasil simulasi historis, bukan jaminan profit.`,
   ];
-  lines.forEach((s, i) => text(s, P + 32, y + 100 + i * 34, 19, i === 2 ? C.mute : C.ink2));
-  y += 200 + P;
+  lines.forEach((s, i) => text(s, P + 32, y + 100 + i * 34, 19, i === lines.length - 1 ? C.mute : C.ink2));
+  y += 236 + P;
 
   const out = document.createElement('canvas');
   out.width = W; out.height = Math.min(y, cv.height);

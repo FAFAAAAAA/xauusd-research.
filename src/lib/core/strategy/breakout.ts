@@ -36,10 +36,12 @@ export interface BreakoutParams {
    *  0.5×ATR H1 back through the level cancels. SL: the breakout SL price (default) or, with retestSlBar, beyond the retest
    *  candle / level − 0.3×ATR H1. */
   retest: boolean;
+  /** Ignore the trend filter completely (research). */
+  noTrend: boolean;
   retestLong: boolean;
   retestSlBar: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -122,7 +124,7 @@ export const breakoutAdapter: StrategyAdapter = {
     }
     const trend = st.trend ?? 'none';
     const out: StrategyEventDraft[] = [];
-    const allowed = (side: 'long' | 'short') => side === 'long' ? p.allowBuy && trend === 'up'
+    const allowed = (side: 'long' | 'short') => p.noTrend ? (side === 'long' ? p.allowBuy : p.allowSell) : side === 'long' ? p.allowBuy && trend === 'up'
       : p.allowSell && trend === 'down' && !(p.sellD1Bear && !st.d1bear);
     const pend = (st.pend ??= {});
     // retest mode: check waiting breakouts on this M15 candle (before new breakouts are registered)

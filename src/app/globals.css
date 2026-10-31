@@ -325,3 +325,9 @@ details.group > summary::after { transition: transform .2s ease-out; }
 .pairrow .bar span { display: block; height: 100%; border-radius: 999px; background: var(--mute); }
 .pairrow.up .bar span { background: var(--up); } .pairrow.down .bar span { background: var(--down); }
 .ink { color: var(--ink); }
+.hold { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.hold3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.hold3 > div { background: var(--sunk); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hold3 strong { font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hold3 span { font-size: 12px; color: var(--mute); }
+.hold3 .pos strong { color: var(--up); } .hold3 .neg strong { color: var(--down); }

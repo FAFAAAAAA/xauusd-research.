@@ -30,6 +30,11 @@ export interface Metrics {
   avgPlannedRr: number | null;
   maxConsecutiveWins: number;
   maxConsecutiveLosses: number;
+  /** Hours from entry to exit (exit = the candle in which TP/SL was hit). */
+  avgHoldHours: number | null;
+  medianHoldHours: number | null;
+  avgHoldWinHours: number | null;
+  avgHoldLossHours: number | null;
 }
 
 /** Returns null when there are no closed trades — the UI then shows an empty state, never zeros. */
@@ -41,6 +46,7 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
   let cw = 0, cl = 0, mcw = 0, mcl = 0;
   const rs: number[] = [];
   const rrs: number[] = [];
+  const hold: number[] = [], holdW: number[] = [], holdL: number[] = [];
   for (const t of closed) {
     const p = t.pnl!;
     total += p;
@@ -56,6 +62,8 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
       const pct = dd / (startingEquity + peak);
       if (pct > (maxDdPct ?? 0)) maxDdPct = pct;
     }
+    const h = (t.exitTime! - t.entryTime) / 3_600_000;
+    if (Number.isFinite(h) && h >= 0) { hold.push(h); if (p > 0) holdW.push(h); else if (p < 0) holdL.push(h); }
     if (t.pnlR != null) rs.push(t.pnlR);
     if (t.plannedRr != null) rrs.push(t.plannedRr);
   }
@@ -76,6 +84,10 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     avgPlannedRr: avg(rrs),
     maxConsecutiveWins: mcw,
     maxConsecutiveLosses: mcl,
+    avgHoldHours: avg(hold),
+    medianHoldHours: hold.length ? [...hold].sort((a, b) => a - b)[Math.floor(hold.length / 2)] : null,
+    avgHoldWinHours: avg(holdW),
+    avgHoldLossHours: avg(holdL),
   };
 }
 

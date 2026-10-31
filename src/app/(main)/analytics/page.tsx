@@ -15,6 +15,14 @@ const PROFILE: Record<string, string> = {
 };
 const EXIT: Record<string, string> = { tp: 'Kena TP', sl: 'Kena SL', ambiguous_worst: 'TP & SL 1 candle (dihitung SL)', ambiguous_best: 'TP & SL 1 candle (dihitung TP)', ambiguous_skipped: 'Dilewati', time: 'Waktu habis', open: 'Masih terbuka', imported: 'Impor' };
 const money = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? `${n >= 0 ? '+' : '−'}$${Math.abs(n).toFixed(2)}` : '—');
+/** 0.75 → "45 mnt", 16.4 → "16 jam", 50 → "2 hari 2 jam" */
+const hrs = (h: unknown) => {
+  if (typeof h !== 'number' || !Number.isFinite(h)) return '—';
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))} mnt`;
+  if (h < 48) return `${h < 10 ? h.toFixed(1).replace('.', ',') : Math.round(h)} jam`;
+  const d = Math.floor(h / 24), r = Math.round(h - d * 24);
+  return r ? `${d} hari ${r} jam` : `${d} hari`;
+};
 const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? 'neg' : '') : '');
 
 export default function Analytics() {
@@ -139,6 +147,16 @@ export default function Analytics() {
                     <div><span className="label">Turun terdalam</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
                     <div><span className="label">Kalah beruntun</span><strong>{m.maxConsecutiveLosses}×</strong></div>
                   </div>
+                  {m.avgHoldHours != null ? (
+                    <div className="hold">
+                      <span className="label">Rata-rata lama posisi terbuka</span>
+                      <div className="hold3">
+                        <div><strong>{hrs(m.avgHoldHours)}</strong><span>semua trade</span></div>
+                        <div className="pos"><strong>{hrs(m.avgHoldWinHours)}</strong><span>sampai TP</span></div>
+                        <div className="neg"><strong>{hrs(m.avgHoldLossHours)}</strong><span>sampai SL</span></div>
+                      </div>
+                    </div>
+                  ) : null}
                   <details className="more">
                     <summary>Angka lain</summary>
                     <dl className="kv">
@@ -147,6 +165,7 @@ export default function Analytics() {
                       <dt>Profit factor</dt><dd>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</dd>
                       <dt>Rata-rata per trade</dt><dd>{money(m.expectancy)}</dd>
                       <dt>Menang beruntun</dt><dd>{m.maxConsecutiveWins}×</dd>
+                      <dt>Lama posisi (median)</dt><dd>{hrs(m.medianHoldHours)}</dd>
                       <dt>Zona bertahan / jebol</dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd>
                     </dl>
                   </details></> : <div className="facts"><div><span className="label">Memuat detail…</span></div></div>}
