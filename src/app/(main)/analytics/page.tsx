@@ -318,11 +318,9 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
     }
     const st: YearStatus[] = list.map((y) => ({ year: y, state: skipDone && existing.includes(String(y)) ? 'skip' : 'wait' }));
     setProg([...st]);
-    // run 3 years at the same time (each year is its own server request) so 9 years finish ~3× faster
-    const queue = st.filter((x) => x.state !== 'skip');
-    const worker = async () => { for (let it = queue.shift(); it; it = queue.shift()) await one(it); };
-    const one = async (it: YearStatus) => {
-      if (stop.current) { it.state = 'skip'; it.note = 'dibatalkan'; setProg([...st]); return; }
+    for (const it of st) {
+      if (it.state === 'skip') continue;
+      if (stop.current) { it.state = 'skip'; it.note = 'dibatalkan'; setProg([...st]); continue; }
       it.state = 'run'; setProg([...st]);
       try {
         const r = await call<any>('/api/backtest/run', { method: 'POST', json: body(`${it.year}-01-01T00:00:00Z`, `${it.year + 1}-01-01T00:00:00Z`) });
@@ -333,8 +331,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
         it.state = 'fail'; it.note = /Tidak ada candle/.test(msg) ? 'tidak ada data tahun ini' : msg;
       }
       setProg([...st]);
-    };
-    await Promise.all([worker(), worker(), worker()]);
+    }
     setBusy(false);
     onDone(cfgKey);
   };
@@ -382,7 +379,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       </details>
       {!sources.length ? <div className="notice">Impor data M15 dulu di Atur → Data harga.</div> : null}
       {busy && !custom
-        ? <button className="btn block" onClick={() => { stop.current = true; }}>Berhenti setelah yang sedang jalan</button>
+        ? <button className="btn block" onClick={() => { stop.current = true; }}>Berhenti setelah tahun ini</button>
         : <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy || (!custom && !list.length)}>
             {busy ? 'Menghitung…' : custom ? 'Jalankan backtest' : list.length > 1 ? `Jalankan ${y1}–${y2} (${list.length} tahun)` : `Jalankan ${y1}`}
           </button>}
