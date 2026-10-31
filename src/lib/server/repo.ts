@@ -228,6 +228,11 @@ export async function ensureBuiltinStrategies(db: Db) {
      on conflict (strategy_key, version) do nothing returning id`);
   await db.query(
     `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('breakout', 'v0.8', 'breakout_v08', 'active', false,
+       'v0.8: v0.7 tanpa perubahan + Breakout Base: base >= 3 candle (overlap >= 50%, tinggi <= 1.5 ATR) di H4 (breakout jam 07-17 UTC) dan H1 (harga sebelumnya sudah bergerak >= 1 ATR searah), entry close M15 keluar base, SL batas base -/+ 0.3 ATR, filter tren EMA50/200 H4 (SELL juga D1); tiap bagian slot sendiri.')
+     on conflict (strategy_key, version) do nothing returning id`);
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
      values ('breakout', 'v0.7', 'breakout_v07', 'active', false,
        'v0.7: v0.6 tanpa perubahan + Pola N (A-B-C di H1 dan H4, swing = pantulan 3 ATR, C lebih tinggi/rendah dari A, entry close M15 tembus B, SL di C, BUY: EMA50 H4 > EMA200; SELL: EMA50 < EMA200 di H4 dan D1) dengan slot sendiri.')
      on conflict (strategy_key, version) do nothing returning id`);

@@ -239,6 +239,17 @@ v0.6 tidak diubah sama sekali, lalu ditambah bagian **Pola N** dengan slot sendi
 Mesin website, emas, RR 1:2, $10, biaya termasuk: data M15 2018–2026 → 1.025 trade, win 41,3%, +$2.390, drawdown $286 (v0.6: +$1.938, DD $245). Data M30 2010–2026 → 2.018 trade, +$3.473, DD $485; 2010–2017 +$1.276 (v0.6 +$1.178), 2018–2022 +$680, 2023–2026 +$1.516.
 Pantulan 3×ATR dipilih karena satu-satunya versi Pola N yang tetap untung di 2010–2017; 1×/1,5×ATR memberi lebih banyak trade tapi rugi di 2010–2017 (riset, tidak dipasang).
 
+## 5n. Breakout v0.8 (`breakout_v08`) — v0.7 + Breakout Base H4/H1
+
+v0.7 tidak diubah, ditambah **Breakout Base** di H4 dan H1 (masing-masing slot sendiri; dengan v0.6 dan Pola N jadi 4 slot → risiko sesekali sampai ±4×).
+- **Base** (candle timeframe base yang sudah tutup): ≥ 3 candle berurutan, tiap pasangan berurutan overlap ≥ 50% dari range candle yang lebih kecil (range nol = gagal), tinggi total ≤ 1,5 × ATR14 timeframe itu. Base aktif = rangkaian valid terpanjang yang berakhir di candle terakhir; berlaku sampai ada close yang keluar (satu breakout per base) atau diganti base baru. Candle sampai candle breakout tidak boleh masuk base berikutnya.
+- **Entry**: close M15 di atas batas atas (BUY) / di bawah batas bawah (SELL). **SL** = batas seberang ∓ 0,3 × ATR timeframe base. TP = RR × risiko.
+- **Tambahan** (hasil riset, dipilih di 2018–2022, dicek di 2023–2026 dan 2010–2017): base H4 hanya breakout jam 07:00–16:59 UTC; base H1 hanya jika harga sudah bergerak ≥ 1 × ATR searah trade dalam 5 candle sebelum base.
+- **Tren**: BUY EMA50 H4 > EMA200; SELL EMA50 < EMA200 di H4 dan D1.
+- Parameter bisa diubah lewat params: `baseMinN`, `baseOverlap`, `baseMult`, `baseSlAtr`, `baseImpAtr`, `baseH4`, `baseH1`.
+
+Mesin website, emas, RR 1:2, $10, biaya termasuk: data M15 2018–2026 → 1.728 trade (±4/minggu), win 41,2%, +$3.941, drawdown $324 (v0.7 +$2.390). Data M30 2010–2026 → 3.419 trade, +$5.049, DD $703; 2010–2017 +$1.608, 2018–2022 +$1.179, 2023–2026 +$2.262. Aturan base asli tanpa tambahan: base H4 rugi di 2010–2017, base H1/M15 rugi (riset, tidak dipasang).
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

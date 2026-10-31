@@ -360,3 +360,21 @@ test('breakout v0.7: registered; Pola N fires BUY on the first close above B wit
   assert.equal(ev[0].details?.level, 102);
   assert.equal(ev[0].candleTime, h1[h1.length - 1].time);
 });
+
+test('breakout v0.8: registered; base = ≥3 overlapping candles within 1.5×ATR, breakout candle excluded', async () => {
+  const { breakoutV08Adapter, findBase } = await import('../src/lib/core/strategy/basebrk');
+  assert.equal(getAdapter('breakout_v08'), breakoutV08Adapter);
+  const H = TIMEFRAME_MS.H1;
+  const mk = (o: number, h: number, l: number, c: number, i: number): Candle => ({ time: T0 + i * H, open: o, high: h, low: l, close: c, volume: 0 });
+  const p = { minN: 3, overlap: 0.5, mult: 1.5 };
+  const trend = [mk(90, 91, 89, 90, 0), mk(90, 96, 90, 95, 1)];
+  const base = [mk(100, 101, 99.5, 100.5, 2), mk(100.5, 101.2, 99.8, 100.2, 3), mk(100.2, 101, 99.6, 100.8, 4)];
+  const b = findBase([...trend, ...base], 2, p);
+  assert.ok(b);
+  assert.equal(b!.n, 3); assert.equal(b!.top, 101.2); assert.equal(b!.bot, 99.5);
+  assert.equal(findBase([...trend, ...base], 0.9, p), null, 'height 1.7 > 1.5 × 0.9');
+  assert.equal(findBase([...trend, ...base.slice(0, 2)], 2, p), null, 'only 2 candles');
+  const noOverlap = [mk(100, 101, 100, 100.9, 2), mk(100.9, 102, 100.9, 101.9, 3), mk(101.9, 103, 101.9, 102.9, 4)];
+  assert.equal(findBase(noOverlap, 5, p), null, 'touching candles overlap 0%');
+  assert.equal(findBase([...trend, ...base], 2, p, base[0].time), null, 'candles up to the breakout candle are excluded');
+});
