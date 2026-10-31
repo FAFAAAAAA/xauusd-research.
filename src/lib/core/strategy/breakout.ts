@@ -1,5 +1,6 @@
 import { aggregateCandles } from '../timeframes';
 import type { Candle } from '../types';
+import { findPivots, trendFromPivots } from './snr';
 import type { StrategyAdapter, StrategyEventDraft } from './adapter';
 
 /**
@@ -18,8 +19,12 @@ export interface BreakoutParams {
   donchianH1: boolean; london: boolean; newYork: boolean; donchianM30: boolean; allowSell: boolean; allowBuy: boolean;
   /** v0.3: SELL only while the long-term D1 trend is down too (EMA50(D1) < EMA200(D1)). */
   sellD1Bear: boolean;
+  /** H4 trend from swing structure (last 2 confirmed pivot highs/lows, pivot 3: HH+HL up, LH+LL down) instead of EMA50/200. */
+  swingTrend: boolean;
+  /** Also require D1 close vs EMA50(D1) in the trade direction. */
+  d1Filter: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -75,7 +80,11 @@ export const breakoutAdapter: StrategyAdapter = {
       const h4c = h4.map((c) => c.close), d1c = d1.map((c) => c.close);
       const e50 = emaLast(h4c, 50), e200 = emaLast(h4c, 200), d50 = emaLast(d1c, 50);
       const lc4 = h4c[h4c.length - 1], lcd = d1c[d1c.length - 1];
-      st.trend = lc4 > e50 && e50 > e200 && lcd > d50 ? 'up' : lc4 < e50 && e50 < e200 && lcd < d50 ? 'down' : 'none';
+      const d1up = !p.d1Filter || lcd > d50, d1dn = !p.d1Filter || lcd < d50;
+      if (p.swingTrend) {
+        const sw = trendFromPivots(findPivots(h4.slice(-300), 3)).trend;
+        st.trend = sw === 'bullish' && d1up ? 'up' : sw === 'bearish' && d1dn ? 'down' : 'none';
+      } else st.trend = lc4 > e50 && e50 > e200 && d1up ? 'up' : lc4 < e50 && e50 < e200 && d1dn ? 'down' : 'none';
       st.d1bear = emaLast(d1c, 50) < emaLast(d1c, 200);
       st.d1atr = atrLastEwm(d1, 14);
       st.tk = tk;
