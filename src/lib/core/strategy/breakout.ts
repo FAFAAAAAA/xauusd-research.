@@ -31,8 +31,15 @@ export interface BreakoutParams {
   levelTouch: boolean;
   /** Simple trend: only H4 close vs EMA50(H4) (no EMA200, no D1). */
   ema50Only: boolean;
+  /** Retest entry: after a breakout, wait (≤ 12 H1 hours, 24 with retestLong) for an M15 candle that comes back to the broken
+   *  level (within 0.1×ATR H1) and closes back on the breakout side as a candle in the trade direction. A close more than
+   *  0.5×ATR H1 back through the level cancels. SL: the breakout SL price (default) or, with retestSlBar, beyond the retest
+   *  candle / level − 0.3×ATR H1. */
+  retest: boolean;
+  retestLong: boolean;
+  retestSlBar: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -94,7 +101,8 @@ export const breakoutAdapter: StrategyAdapter = {
     if (!h1?.length || !h4?.length || !d1?.length || m.length < 30) return [];
     const bar = m[m.length - 1];
     const now = ctx.now;
-    const st = ctx.state as { tk?: string; trend?: Trend; d1bear?: boolean; d1atr?: number; day?: string; brk?: Record<string, number> };
+    const st = ctx.state as { tk?: string; trend?: Trend; d1bear?: boolean; d1atr?: number; day?: string; brk?: Record<string, number>;
+      pend?: Record<string, { side: 1 | -1; level: number; sl: number; atr: number; until: number; why: string; extra: Record<string, unknown> }> };
 
     // trend + D1 ATR: recompute only when a new H4 or D1 candle has closed
     const tk = `${h4[h4.length - 1].time}|${d1[d1.length - 1].time}`;
@@ -114,9 +122,39 @@ export const breakoutAdapter: StrategyAdapter = {
     }
     const trend = st.trend ?? 'none';
     const out: StrategyEventDraft[] = [];
+    const allowed = (side: 'long' | 'short') => side === 'long' ? p.allowBuy && trend === 'up'
+      : p.allowSell && trend === 'down' && !(p.sellD1Bear && !st.d1bear);
+    const pend = (st.pend ??= {});
+    // retest mode: check waiting breakouts on this M15 candle (before new breakouts are registered)
+    if (p.retest) {
+      for (const [k, d] of Object.entries(pend)) {
+        if (now > d.until) { delete pend[k]; continue; }
+        const s = d.side;
+        if (s * (bar.close - d.level) < -0.5 * d.atr) { delete pend[k]; continue; }     // failed breakout
+        const touched = s > 0 ? bar.low <= d.level + 0.1 * d.atr : bar.high >= d.level - 0.1 * d.atr;
+        const confirm = s * (bar.close - d.level) > 0 && s * (bar.close - bar.open) > 0;
+        if (!touched || !confirm) continue;
+        delete pend[k];
+        const side = s > 0 ? 'long' : 'short';
+        if (!allowed(side)) continue;
+        const sl = p.retestSlBar ? (s > 0 ? Math.min(bar.low, d.level) : Math.max(bar.high, d.level)) - s * 0.3 * d.atr : d.sl;
+        if (!(s * (bar.close - sl) > 0)) continue;
+        const slot = k.split(':')[0];
+        out.push({
+          type: 'SETUP_CONFIRMED', candleTime: bar.time, price: bar.close, zone: null,
+          confirmations: { trend: trend === 'up' ? 'Naik (H4 & D1)' : 'Turun (H4 & D1)' },
+          status: `${side === 'long' ? 'BUY' : 'SELL'} — retest setelah ${d.why}; entry di open M15 berikutnya`,
+          details: { side, stop_loss: Number(sl.toFixed(4)), slot: k, component: slot, retest: true, level: d.level, ...d.extra },
+        });
+      }
+    }
     const emit = (slot: string, side: 'long' | 'short', sl: number, why: string, extra: Record<string, unknown> = {}) => {
-      if (side === 'long' && (!p.allowBuy || trend !== 'up')) return;
-      if (side === 'short' && (!p.allowSell || trend !== 'down' || (p.sellD1Bear && !st.d1bear))) return;
+      if (!allowed(side)) return;
+      if (p.retest && typeof extra.level === 'number') {
+        const a1 = atrLastEwm(h1.slice(-200), 14);
+        pend[`${slot}:${side}`] = { side: side === 'long' ? 1 : -1, level: extra.level, sl, atr: a1, until: now + (p.retestLong ? 24 : 12) * H, why, extra };
+        return;
+      }
       out.push({
         type: 'SETUP_CONFIRMED', candleTime: bar.time, price: bar.close,
         zone: null,
@@ -132,8 +170,8 @@ export const breakoutAdapter: StrategyAdapter = {
       const prev = h1.slice(-41, -1);
       const hh = Math.max(...prev.map((c) => c.high)), ll = Math.min(...prev.map((c) => c.low));
       const a = atrLastEwm(h1, 14);
-      if (last.close > hh) emit('H1', 'long', bar.close - 2.5 * a, 'H1 tembus high 40 candle');
-      if (last.close < ll) emit('H1', 'short', bar.close + 2.5 * a, 'H1 tembus low 40 candle');
+      if (last.close > hh) emit('H1', 'long', bar.close - 2.5 * a, 'H1 tembus high 40 candle', { level: hh });
+      if (last.close < ll) emit('H1', 'short', bar.close + 2.5 * a, 'H1 tembus low 40 candle', { level: ll });
     }
 
     // ---- L (optional): breakout of an H1 swing level that was touched 2–3 times
@@ -169,8 +207,8 @@ export const breakoutAdapter: StrategyAdapter = {
         const prev = m30.slice(-11, -1);
         const hh = Math.max(...prev.map((c) => c.high)), ll = Math.min(...prev.map((c) => c.low));
         const a = atrLastEwm(aggregateCandles(m, 'M15', 'M30', 'utc', false), 14);
-        if (last.close > hh) emit('M30', 'long', bar.close - 2.5 * a, 'M30 tembus high 10 candle');
-        if (last.close < ll) emit('M30', 'short', bar.close + 2.5 * a, 'M30 tembus low 10 candle');
+        if (last.close > hh) emit('M30', 'long', bar.close - 2.5 * a, 'M30 tembus high 10 candle', { level: hh });
+        if (last.close < ll) emit('M30', 'short', bar.close + 2.5 * a, 'M30 tembus low 10 candle', { level: ll });
       }
     }
 
@@ -203,11 +241,11 @@ export const breakoutAdapter: StrategyAdapter = {
       const brk = (st.brk ??= {});
       if (bar.close > hi) {
         brk[`${slot}u`] = (brk[`${slot}u`] ?? 0) + 1;
-        if (brk[`${slot}u`] === 1) emit(slot, 'long', lo, `tembus high range ${label}`, { range_high: hi, range_low: lo });
+        if (brk[`${slot}u`] === 1) emit(slot, 'long', lo, `tembus high range ${label}`, { range_high: hi, range_low: lo, level: hi });
       }
       if (bar.close < lo) {
         brk[`${slot}d`] = (brk[`${slot}d`] ?? 0) + 1;
-        if (brk[`${slot}d`] === 1) emit(slot, 'short', hi, `tembus low range ${label}`, { range_high: hi, range_low: lo });
+        if (brk[`${slot}d`] === 1) emit(slot, 'short', hi, `tembus low range ${label}`, { range_high: hi, range_low: lo, level: lo });
       }
     }
     return out;
