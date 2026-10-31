@@ -33,7 +33,9 @@ export default function Analytics() {
   }, [session]);
   useEffect(() => { load(); call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, [load]);
   const [picked, setPicked] = useState(false);
-  useEffect(() => { if (!picked && d?.sessions?.length && !session) { setPicked(true); setSession(String(d.sessions[0].id)); } }, [d, picked, session]);
+  useEffect(() => {
+    if (!picked && d?.sessions?.length && !session) { setPicked(true); setSession(String(groupRuns(d.sessions)[0].sessions[0].id)); }
+  }, [d, picked, session]);
   const open = async (id: string) => { setDetail({ loading: true }); try { setDetail(await call<any>(`/api/trades/${id}`)); } catch (e) { setDetail({ error: (e as Error).message }); } };
 
   const m = d?.overall;
@@ -46,12 +48,9 @@ export default function Analytics() {
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : (
         <>
           {d.sessions.length ? (
-            <label className="field">Tampilkan hasil
-              <select value={session} onChange={(e) => { setPicked(true); setSession(e.target.value); setDetail(null); }}>
-                <option value="">Semua backtest digabung</option>
-                {d.sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''} · {s.trades} trade</option>)}
-              </select>
-            </label>
+            <RunPicker sessions={d.sessions} selected={session} tz={tz}
+              onSelect={(id) => { setPicked(true); setSession(id); setDetail(null); }}
+              onDeleted={(ids) => { setPicked(false); if (ids.includes(session)) setSession(''); else load(); }} />
           ) : null}
 
           <div className={`stack${busy ? ' refreshing' : ''}`}>
@@ -270,6 +269,73 @@ function RunBacktest({ onDone }: { onDone: (sessionId: string) => void }) {
           </div>
         </div>
       ) : null}
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- runs (one backtest press = 1 run = up to 3 RR sessions) */
+interface Run { key: string; from: number | null; to: number | null; created: number; risk: number | null; sessions: any[] }
+
+function groupRuns(sessions: any[]): Run[] {
+  const m = new Map<string, Run>();
+  for (const s of sessions) {
+    const cc = s.cost_config ?? {};
+    // new runs carry run_id; older ones are grouped by period + creation minute
+    const key = cc.run_id ?? `${s.period_start}|${s.period_end}|${Math.floor(Number(s.created_ms) / 60_000)}|${s.name?.replace(/RR 1:\d+(\.\d+)?/, '')}`;
+    const r = m.get(key) ?? { key, from: s.period_start ?? null, to: s.period_end ?? null, created: Number(s.created_ms) || 0, risk: cc.risk_usd ?? null, sessions: [] };
+    r.sessions.push(s);
+    m.set(key, r);
+  }
+  const rr = (s: any) => Number(s.cost_config?.rr ?? /RR 1:(\d+(\.\d+)?)/.exec(s.name ?? '')?.[1] ?? 0);
+  return [...m.values()].map((r) => ({ ...r, sessions: r.sessions.sort((a, b) => rr(a) - rr(b)) })).sort((a, b) => b.created - a.created);
+}
+
+function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
+  sessions: any[]; selected: string; tz: string; onSelect: (id: string) => void; onDeleted: (ids: string[]) => void;
+}) {
+  const runs = groupRuns(sessions);
+  const [all, setAll] = useState(false);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const shown = all ? runs : runs.slice(0, 3);
+  const day = (ms: number | null) => (ms == null ? '—' : fmt(ms, 'UTC').slice(0, 10));
+  const del = async (r: Run) => {
+    setBusy(true);
+    try {
+      const ids = r.sessions.map((s) => String(s.id));
+      await call('/api/backtest/sessions', { method: 'DELETE', json: { ids } });
+      setConfirm(null); onDeleted(ids);
+    } catch { /* stays visible; user can retry */ } finally { setBusy(false); }
+  };
+  return (
+    <section className="group stack tight">
+      <div className="row between"><h2>Hasil kamu</h2><span className="mute small">{runs.length} backtest</span></div>
+      <div className="list">
+        {shown.map((r) => {
+          const rrOf = (s: any) => s.cost_config?.rr ?? /RR 1:(\d+(\.\d+)?)/.exec(s.name ?? '')?.[1] ?? '?';
+          return (
+            <div key={r.key} className="item run">
+              <div className="run-head">
+                <span style={{ minWidth: 0 }}>
+                  <span className="t" style={{ display: 'block' }}>{day(r.from)} – {day(r.to)}</span>
+                  <span className="d">Dijalankan {fmt(r.created, tz)}{r.risk ? ` · risiko $${r.risk}` : ''}{r.sessions[0]?.is_test ? ' · tes' : ''}</span>
+                </span>
+                {confirm === r.key
+                  ? <span className="row" style={{ gap: 6, flexWrap: 'nowrap', flex: 'none' }}><button className="btn sm" onClick={() => setConfirm(null)}>Batal</button><button className="btn sm danger" onClick={() => del(r)} disabled={busy}>{busy ? '…' : 'Hapus'}</button></span>
+                  : <button className="btn sm ghost" onClick={() => setConfirm(r.key)} aria-label="Hapus backtest ini">Hapus</button>}
+              </div>
+              <div className="chips">
+                {r.sessions.map((s) => (
+                  <button key={s.id} className="chip" aria-pressed={selected === String(s.id)} onClick={() => onSelect(String(s.id))}>
+                    <span className="k">RR 1:{rrOf(s)}</span><span className="v">{s.trades} trade</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {runs.length > 3 ? <button className="btn sm" onClick={() => setAll(!all)}>{all ? 'Tampilkan lebih sedikit' : `Lihat semua (${runs.length})`}</button> : null}
     </section>
   );
 }

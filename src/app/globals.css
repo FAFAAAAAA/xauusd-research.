@@ -198,6 +198,24 @@ tr.click:active td { background: var(--sunk); }
 .trend.bear .arrow { background: var(--down-tint); color: var(--down); }
 .trend.flat .arrow { background: var(--sunk); color: var(--mute); }
 
+/* backtest runs */
+.item.run { flex-direction: column; align-items: stretch; gap: 10px; }
+.run-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 8px 6px; font: inherit; cursor: pointer; color: var(--ink);
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; transition: transform .16s var(--ease, ease), background-color .2s, border-color .2s; }
+.chip .k { font-weight: 700; font-size: 14px; }
+.chip .v { font-size: 12px; color: var(--mute); }
+.chip[aria-pressed='true'] { background: var(--gold); border-color: var(--gold); color: #fff; }
+.chip[aria-pressed='true'] .v { color: rgba(255,255,255,.85); }
+.chip:active { transform: scale(.96); }
+.btn.danger { background: var(--down); border-color: var(--down); color: #fff; }
+
+/* iOS date/time inputs have a wide intrinsic size — keep them inside their column */
+input[type='date'], input[type='datetime-local'] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; display: block; text-align: left; }
+input::-webkit-date-and-time-value { text-align: left; }
+label.field > input, label.field > select { min-width: 0; max-width: 100%; }
+
 /* PnL calendar */
 .tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; padding: 4px 0 10px; font: inherit; font-weight: 700; font-size: 17px; color: var(--mute); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }

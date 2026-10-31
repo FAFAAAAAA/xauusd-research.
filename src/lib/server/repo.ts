@@ -557,8 +557,16 @@ export async function listTrades(db: Db, backtestSessionId: string | null) {
 export async function listBacktestSessions(db: Db) {
   return db.query<Record<string, unknown>>(
     `select b.id, b.name, b.confirmation_profile, b.status, b.timeframe, b.period_start, b.period_end, b.is_test, b.cost_config,
+            extract(epoch from b.created_at)*1000 as created_ms,
             sv.strategy_key || ' ' || sv.version as strategy, (select count(*)::int from simulated_trades t where t.backtest_session_id=b.id) as trades
      from backtest_sessions b left join strategy_versions sv on sv.id=b.strategy_version_id order by b.created_at desc`);
+}
+/** Deletes backtest sessions with their trades and the signal events they produced. Returns deleted ids. */
+export async function deleteBacktestSessions(db: Db, ids: string[]): Promise<string[]> {
+  if (!ids.length) return [];
+  await db.query('delete from market_events where backtest_session_id = any($1::uuid[]) returning id', [ids]);
+  const r = await db.query<{ id: string }>('delete from backtest_sessions where id = any($1::uuid[]) returning id', [ids]);
+  return r.map((x) => x.id);
 }
 export async function insertTrade(db: Db, t: Record<string, unknown>) {
   const cols = Object.keys(t);

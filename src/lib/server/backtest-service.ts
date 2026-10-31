@@ -102,13 +102,14 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     }
   }
 
-  // ---- 2. sessions (one per RR)
+  // ---- 2. sessions (one per RR), linked by run_id so the UI can group them
+  const runId = globalThis.crypto.randomUUID();
   const sessions: Array<{ rr: number; id: string }> = [];
   for (const rr of rrList) {
     const id = await repo.createBacktestSession(db, {
       name: v.name?.trim() || `SNR ${new Date(v.from).toISOString().slice(0, 10)} → ${new Date(v.to).toISOString().slice(0, 10)} RR 1:${rr}`,
       strategyVersionId: sv.id, sourceId: v.sourceId, instrumentId, timeframe: tf, profile: 'snr_trend_momentum',
-      costConfig: { ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), rr, entry: 'open M15 berikutnya', max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
+      costConfig: { run_id: runId, ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), rr, entry: 'open M15 berikutnya', max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
       isTest, notes: `Mesin backtest website. Strategi ${label}. RR 1:${rr}.`,
     });
     sessions.push({ rr, id });

@@ -376,4 +376,10 @@ test('12. SNR backtest with fixed $10 risk per trade: SL loss ≈ $10 + costs, T
     if (t.exit_reason === 'sl') assert.ok(pnl < -10 && pnl > -12, `SL loss ${pnl}`);
     if (t.exit_reason === 'tp') assert.ok(pnl > 19 && pnl <= 20, `TP win ${pnl}`);
   }
+  // deleting a run removes its sessions, trades and signal events
+  const ids = r.sessions.map((x) => x.backtestSessionId);
+  assert.deepEqual((await repo.deleteBacktestSessions(db, ids)).sort(), [...ids].sort());
+  assert.equal((await repo.listTrades(db, ids[0])).length, 0);
+  const left = await db.query<{ n: number }>(`select count(*)::int as n from market_events where backtest_session_id = any($1::uuid[])`, [ids]);
+  assert.equal(left[0].n, 0);
 });
