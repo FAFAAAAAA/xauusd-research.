@@ -29,8 +29,10 @@ export interface BreakoutParams {
   /** Level part: an H1 swing level (pivot 3) that price came back to 2–3 times (within 0.25×ATR, ≥ 3 candles apart) is
    *  closed through for the first time (≤ 120 H1 candles after the pivot). SL = level ∓ 1.5 × ATR14(H1). */
   levelTouch: boolean;
+  /** Simple trend: only H4 close vs EMA50(H4) (no EMA200, no D1). */
+  ema50Only: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -101,7 +103,8 @@ export const breakoutAdapter: StrategyAdapter = {
       const e50 = emaLast(h4c, 50), e200 = emaLast(h4c, 200), d50 = emaLast(d1c, 50);
       const lc4 = h4c[h4c.length - 1], lcd = d1c[d1c.length - 1];
       const d1up = !p.d1Filter || lcd > d50, d1dn = !p.d1Filter || lcd < d50;
-      if (p.swingTrend) {
+      if (p.ema50Only) st.trend = lc4 > e50 ? 'up' : lc4 < e50 ? 'down' : 'none';
+      else if (p.swingTrend) {
         const sw = trendFromPivots(findPivots(h4.slice(-300), 3)).trend;
         st.trend = sw === 'bullish' && d1up ? 'up' : sw === 'bearish' && d1dn ? 'down' : 'none';
       } else st.trend = lc4 > e50 && e50 > e200 && d1up ? 'up' : lc4 < e50 && e50 < e200 && d1dn ? 'down' : 'none';
