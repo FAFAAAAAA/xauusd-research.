@@ -181,6 +181,11 @@ Definisi disimpan di `strategy_settings.params.definition` (mode BACKTEST) — t
 Swing A-B-C dari pivot M15 yang sudah terkonfirmasi (5 candle kiri/kanan). BUY: A low → B high → C low di atas A, dorongan A→B ≥ 1,5×ATR, koreksi (B−C)/(B−A) 30–79%, lalu close M15 pertama menembus B (≤ 48 candle setelah C, C belum ditembus) searah tren H4 (EMA50 > EMA200 dan close > EMA50). SL = C − 0,1×ATR. SELL kebalikannya.
 Riset pada data 2018–2026 (12 variasi ditentukan sebelumnya, dipilih dari 2018–2022): 567 trade, win 37,2%, +$537 (RR 1:2, $10/trade, biaya termasuk), turun terdalam −$271; 2018–22 +0,02R/trade, 2023–26 +0,19R/trade; BUY +$709, SELL −$172. Varian tanpa filter tren semuanya minus.
 
+## 5e. RBR / DBD (`rbr_dbd_v1`)
+
+RBR (BUY): dorongan naik (1–3 candle, total ≥ 1×ATR) → base 1–3 candle kecil (badan ≤ 0,5×ATR) → dorongan naik lagi (≥ 1×ATR, close di atas base). Zona demand = badan tertinggi base s/d low terendah base, dari candle H1 yang sudah tutup. Zona harus segar (belum pernah didatangi lagi), mati jika ada close di luar sisi jauh atau lewat 120 candle H1. Entry: candle penolakan M15 (close searah, di 60% atas range) saat harga kembali ke base, searah tren H4 EMA50/200; SL di luar base + 0,1×ATR M15; 1 trade per zona. DBD kebalikannya.
+Riset 2018–2026 (RR 1:2, $10, biaya termasuk; 12+12 variasi ditentukan sebelumnya): setelan bawaan 125 trade (±0,3/minggu), win 32,8%, −$60, 2018–22 −0,05R, 2023–26 −0,05R. Tidak ada variasi yang positif konsisten di kedua periode; pola ini jarang muncul sehingga tidak mencapai target 3–10 trade/minggu.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

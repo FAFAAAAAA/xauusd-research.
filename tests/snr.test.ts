@@ -199,3 +199,35 @@ test('pola N: registered; BUY only after a close through B, stop beyond C, never
   }
   assert.ok(n > 0, 'zigzag contains N patterns');
 });
+
+test('rbr/dbd: registered; zones from closed candles only, stop beyond the base, one trade per zone', async () => {
+  const { rbrDbdAdapter, findRbrDbd } = await import('../src/lib/core/strategy/rbrdbd');
+  assert.equal(getAdapter('rbr_dbd_v1'), rbrDbdAdapter);
+  // hand-made RBR: leg-in up, 2 small candles, leg-out up
+  const mk = (o: number, c: number, i: number): Candle => ({ time: T0 + i * M15, open: o, close: c, high: Math.max(o, c) + 0.1, low: Math.min(o, c) - 0.1 });
+  const flat = Array.from({ length: 20 }, (_, i) => mk(100 + (i % 2) * 0.5, 100 + ((i + 1) % 2) * 0.5, i));
+  const seq = [...flat, mk(100, 103, 20), mk(103, 103.2, 21), mk(103.2, 103.1, 22), mk(103.1, 107, 23)];
+  const z = findRbrDbd(seq, { legAtr: 1, baseMax: 3, baseBody: 0.5, legBars: 3 });
+  assert.equal(z.length, 1);
+  assert.equal(z[0].side, 1);
+  assert.equal(z[0].outIndex, 23);
+  assert.ok(Math.abs(z[0].proximal - 103.2) < 1e-9 && Math.abs(z[0].distal - 102.9) < 1e-9);
+  // full walk on synthetic data
+  const m15 = zigzag(192 * 10, 1);
+  const h1 = aggregateCandles(m15, 'M15', 'H1', 'utc', false), h4 = aggregateCandles(m15, 'M15', 'H4', 'utc', false);
+  const state: Record<string, unknown> = {};
+  const seen = new Set<string>();
+  for (let i = 60; i < m15.length; i++) {
+    const now = m15[i].time + M15;
+    const res = runStrategyGuarded(rbrDbdAdapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+      news: { archiveAvailable: false, items: [], upcoming: [] }, htf: { H1: h1, H4: h4 }, params: { trend: false, zoneTf: 'M15', fresh: false, entry: 'touch' }, state });
+    assert.deepEqual(res.violations, []);
+    for (const e of res.events) {
+      const d = e.details as { side: string; stop_loss: number };
+      if (d.side === 'long') assert.ok(d.stop_loss < e.zone!.low && d.stop_loss < e.price); else assert.ok(d.stop_loss > e.zone!.high && d.stop_loss > e.price);
+      const k = `${e.zone!.low}:${e.zone!.high}`;
+      assert.ok(!seen.has(k), 'one trade per zone');
+      seen.add(k);
+    }
+  }
+});
