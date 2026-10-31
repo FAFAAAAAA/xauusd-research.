@@ -29,7 +29,7 @@ export async function createReplaySession(db: Db, v: {
   const adapter = getAdapter(sv?.adapter_key);
   for (const t of adapter.requiredTimeframes ?? []) {
     if (!(await repo.hasCandles(db, v.sourceId, t))) {
-      throw new HttpError(422, `Strategi ini butuh data ${t}. Buka Atur → Data harga → tekan "Bentuk H1 & H4" dulu.`);
+      throw new HttpError(422, `Strategi ini butuh data ${t}. Buka Atur → Data harga → tekan "Bentuk H1, H4 & D1" dulu.`);
     }
   }
   // Candles strictly before the start are history (visible, not processed). Processing begins at the start candle.
@@ -90,7 +90,8 @@ export async function stepReplay(db: Db, sessionId: string, opts: { count: numbe
 
   const htfList = adapter.requiredTimeframes ?? [];
   const htfAll: Partial<Record<Timeframe, Candle[]>> = {};
-  for (const t of htfList) htfAll[t] = await repo.candlesUpTo(db, s.source_id, t, lastClose - 1, HTF_WINDOW + 50);
+  const winOf = (t: Timeframe) => adapter.htfWindow?.[t] ?? HTF_WINDOW;
+  for (const t of htfList) htfAll[t] = await repo.candlesUpTo(db, s.source_id, t, lastClose - 1, winOf(t) + 50);
 
   const state = { ...s.strategy_state };
   const violations: string[] = [];
@@ -109,7 +110,7 @@ export async function stepReplay(db: Db, sessionId: string, opts: { count: numbe
       htf = {};
       for (const t of htfList) {
         const closed = htfAll[t]!.filter((h) => h.time + TIMEFRAME_MS[t] <= now);
-        htf[t] = closed.slice(-HTF_WINDOW);
+        htf[t] = closed.slice(-winOf(t));
       }
     }
     const res = runStrategyGuarded(adapter, {
@@ -119,7 +120,7 @@ export async function stepReplay(db: Db, sessionId: string, opts: { count: numbe
     violations.push(...res.violations);
     const newsSummary = summarizeNews(snap);
     for (const ev of res.events) {
-      const zoneKey = ev.zone ? `${ev.zone.id ?? ''}${ev.zone.low}-${ev.zone.high}` : 'nozone';
+      const zoneKey = ev.details?.slot ? String(ev.details.slot) : ev.zone ? `${ev.zone.id ?? ''}${ev.zone.low}-${ev.zone.high}` : 'nozone';
       const runPart = s.resend_policy === 'new_run' ? `r${s.run_number}` : 'r*';
       const uid = `${ev.type}:${ev.candleTime}:${zoneKey}`;
       const confirmations = {

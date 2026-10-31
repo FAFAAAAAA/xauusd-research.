@@ -62,6 +62,8 @@ export interface StrategyAdapter {
   warmupCandles: number;
   /** Extra timeframes the strategy reads (must exist in the same data source). */
   requiredTimeframes?: Timeframe[];
+  /** How many closed candles per higher timeframe the strategy needs (default 400). */
+  htfWindow?: Partial<Record<Timeframe, number>>;
   evaluate(ctx: StrategyContext): StrategyEventDraft[];
 }
 

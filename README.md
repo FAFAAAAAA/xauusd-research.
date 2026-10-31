@@ -111,7 +111,7 @@ curl -X POST https://<app>/api/webhooks/tradingview -H 'content-type: applicatio
 ### Data historis
 1. Settings → Tambah sumber data: nama, penyedia, simbol, **zona waktu file** (`UTC`, `UTC+2`, atau IANA `Europe/Athens`), basis harga, spread tipikal.
 2. Pilih file CSV + timeframe → Impor. Format yang dikenali: TradingView export, MetaTrader, Dukascopy, ISO/unix. Baris rusak dilaporkan; duplikat dilewati.
-3. "Bentuk H1 & H4" mengagregasi dari TF yang diimpor (penjajaran UTC atau close 17:00 New York). Bucket tidak lengkap di ujung data dibuang.
+3. "Bentuk H1, H4 & D1" mengagregasi dari TF yang diimpor (penjajaran UTC atau close 17:00 New York). Bucket tidak lengkap di ujung data dibuang.
 4. Dashboard & Replay menampilkan rentang tanggal yang **benar-benar ada**.
 
 ### Berita & kalender
@@ -150,7 +150,22 @@ Aturan dipilih pemilik; implementasi: `src/lib/core/strategy/snr.ts` (adapter `s
 
 Anti-lookahead: pivot hanya dipakai setelah n candle kanan **tutup**; strategi hanya menerima candle H1/H4 yang sudah tutup (`runStrategyGuarded` membuang yang belum). Tes `snr.test.ts` + e2e #11 memeriksa: hasil hingga waktu T tidak berubah walau data sesudahnya ada, replay langkah-demi-langkah = backtest runner.
 
-**Data yang dibutuhkan:** impor CSV **M15** (mulai ±1 bulan sebelum tanggal backtest untuk pemanasan; untuk zona H4 idealnya 4 bulan), lalu Atur → Data harga → "Bentuk H1 & H4". Jalankan dari menu Hasil → "Jalankan backtest" (maks ±1 tahun per run). Pine: `pine/xauusd_snr_h4h1_m15_v01.pine` (**belum dikompilasi di TradingView**; perbedaan yang diketahui tertulis di kepala file).
+**Data yang dibutuhkan:** impor CSV **M15** (mulai ±1 bulan sebelum tanggal backtest untuk pemanasan; untuk zona H4 idealnya 4 bulan), lalu Atur → Data harga → "Bentuk H1, H4 & D1". Jalankan dari menu Hasil → "Jalankan backtest" (maks ±1 tahun per run). Pine: `pine/xauusd_snr_h4h1_m15_v01.pine` (**belum dikompilasi di TradingView**; perbedaan yang diketahui tertulis di kepala file).
+
+## 5b. Strategi Breakout v0.2 (dipilih dari riset data 2018–2026)
+
+Kode: `src/lib/core/strategy/breakout.ts` (adapter `breakout_v02`). Riset: 92 variasi diuji pada XAUUSD M15 Mei 2018 – Okt 2026 dengan RR 1:2, risiko $10, spread 0,30, slippage 0,10, komisi $7/lot; aturan dipilih dari 2018–2022 dan diuji ulang 2023–2026. Adapter website menghasilkan sinyal yang sama persis dengan riset (1.497 trade, +$1.274).
+
+| Bagian | Aturan |
+|---|---|
+| Tren | BUY hanya jika close H4 > EMA50(H4) > EMA200(H4) **dan** close D1 > EMA50(D1); SELL kebalikannya |
+| H1 | candle H1 ditutup di atas high tertinggi 40 candle H1 sebelumnya (SELL: di bawah low terendah). SL = close ∓ 2,5×ATR14(H1) |
+| London | range 00:00–07:00 UTC; close M15 pertama di luar range antara 07:00–11:00 UTC. SL = sisi lain range |
+| New York | range 12:00–13:30 UTC; close M15 pertama di luar range antara 13:30–16:00 UTC. SL = sisi lain range |
+| M30 (opsional) | breakout 10 candle M30, SL 2,5×ATR14(M30) — lebih sering, hasil lebih lemah |
+| Posisi | satu BUY dan satu SELL boleh terbuka per bagian |
+
+Hasil riset (BUY+SELL, H1+London+NY, RR 1:2): ±3,4 trade/minggu, win 36,6%, +$1.274, turun terdalam −$502; 2018–2022 ≈ impas, 2023–2026 +0,18R/trade. Sisi SELL merugi di data ini (−$557) dan bisa dimatikan. **Butuh data D1** (Atur → Data harga → "Bentuk H1, H4 & D1"). Bukan jaminan profit.
 
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.

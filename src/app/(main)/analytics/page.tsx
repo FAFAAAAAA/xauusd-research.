@@ -26,7 +26,10 @@ export default function Analytics() {
   const [year, setYear] = useState<string | null>(null); // null = newest, 'ALL' = all years
   const [rr, setRr] = useState(2);
 
-  const rows = d?.sessions?.length ? yearRows(d.sessions) : [];
+  const configs = d?.sessions?.length ? strategyConfigs(d.sessions) : [];
+  const [cfg, setCfg] = useState<string | null>(null);
+  const cfgSel = cfg && configs.some((c) => c.key === cfg) ? cfg : configs[0]?.key ?? null;
+  const rows = d?.sessions?.length ? yearRows(d.sessions.filter((s: any) => configKey(s) === cfgSel)) : [];
   const yearSel = year && (year === 'ALL' || rows.some((r) => r.label === year)) ? year : rows[0]?.label ?? null;
   const cellOf = (r: { cells: any[] }, x: number) => r.cells.find((c: any) => rrNum(c) === x);
   const pick = (y: string | null, x: number): any[] => y === 'ALL' ? rows.map((r) => cellOf(r, x)).filter(Boolean)
@@ -73,10 +76,17 @@ export default function Analytics() {
       <PageHead title="Hasil backtest" />
 
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : !hasRuns ? (
-        <RunBacktest existing={[]} onDone={reloadAll} />
+        <RunBacktest existingFor={() => []} onDone={(k) => { setCfg(k); reloadAll(); }} />
       ) : (
         <>
           <section className="group stack">
+            {configs.length > 1 ? (
+              <label className="field">Strategi
+                <select value={cfgSel ?? ''} onChange={(e) => { setCfg(e.target.value); setYear(null); setDetail(null); }}>
+                  {configs.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                </select>
+              </label>
+            ) : configs[0] ? <span className="label">{configs[0].label}</span> : null}
             <div className="stack tight">
               <span className="label">Tahun</span>
               <div className="seg scroll" role="group" aria-label="Tahun">
@@ -175,7 +185,7 @@ export default function Analytics() {
 
           <details className="group">
             <summary><span><h2>Backtest baru</h2><span className="s">Jalankan tahun lain atau ubah risiko</span></span></summary>
-            <div className="body"><RunBacktest bare existing={rows.map((r) => r.label)} onDone={() => { reloadAll(); window.scrollTo({ top: 0 }); }} /></div>
+            <div className="body"><RunBacktest bare existingFor={(k) => yearRows(d.sessions.filter((s: any) => configKey(s) === k)).map((r) => r.label)} onDone={(k) => { setCfg(k); reloadAll(); window.scrollTo({ top: 0 }); }} /></div>
           </details>
           <details className="group">
             <summary><span><h2>Kelola hasil</h2><span className="s">Hapus backtest lama atau dobel</span></span></summary>
@@ -243,7 +253,10 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 
 type YearStatus = { year: number; state: 'wait' | 'run' | 'done' | 'skip' | 'fail'; note?: string };
 
-function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; bare?: boolean; existing: string[] }) {
+const PER_WEEK: Record<string, number> = { donchianH1: 1.37, london: 0.95, newYork: 1.08, donchianM30: 3.27 }; // research 2018–2026, BUY+SELL
+
+function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string) => string[] }) {
+  const [bp, setBp] = useState<Record<string, boolean>>({ donchianH1: true, london: true, newYork: true, donchianM30: false, allowBuy: true, allowSell: true });
   const [sources, setSources] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
   const [cov, setCov] = useState<any[]>([]);
@@ -260,7 +273,8 @@ function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; b
     call<any[]>('/api/strategies').then((s) => {
       const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active');
       setStrategies(usable);
-      if (usable.length) setF((x) => ({ ...x, strategy: x.strategy || usable[usable.length - 1].id }));
+      const pref = usable.find((x: any) => x.adapter_key === 'breakout_v02') ?? usable[usable.length - 1];
+      if (pref) setF((x) => ({ ...x, strategy: x.strategy || pref.id }));
     }).catch(() => {});
     call<any[]>('/api/sources/coverage').then(setCov).catch(() => {});
   }, []);
@@ -272,7 +286,14 @@ function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; b
   const y1 = Number(f.y1) || firstY, y2 = Number(f.y2) || lastY;
   const list = years.filter((y) => y >= y1 && y <= y2);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
-  const body = (from: string, to: string) => ({
+  const strat = strategies.find((x: any) => x.id === f.strategy);
+  const isBreakout = strat?.adapter_key === 'breakout_v02';
+  const params: Record<string, boolean> = isBreakout ? bp : {};
+  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}`;
+  const existing = existingFor(cfgKey);
+  const sidesShare = (bp.allowBuy ? 0.65 : 0) + (bp.allowSell ? 0.35 : 0);
+  const perWeek = Object.entries(PER_WEEK).reduce((a, [k, v]) => a + (bp[k] ? v : 0), 0) * sidesShare;
+  const body = (from: string, to: string) => ({ params,
     source_id: f.source, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3],
     size: Number(f.size), risk_usd: f.risk.trim() ? Number(f.risk) : null,
     costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
@@ -282,7 +303,7 @@ function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; b
     setBusy(true); setErr(null); stop.current = false;
     if (custom) {
       setProg(null);
-      try { await call<any>('/api/backtest/run', { method: 'POST', json: body(`${f.from}T00:00:00Z`, `${f.to}T00:00:00Z`) }); onDone(); }
+      try { await call<any>('/api/backtest/run', { method: 'POST', json: body(`${f.from}T00:00:00Z`, `${f.to}T00:00:00Z`) }); onDone(cfgKey); }
       catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
       return;
     }
@@ -303,7 +324,7 @@ function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; b
       setProg([...st]);
     }
     setBusy(false);
-    onDone();
+    onDone(cfgKey);
   };
   const done = prog?.filter((p) => p.state === 'done' || p.state === 'fail' || p.state === 'skip').length ?? 0;
 
@@ -311,8 +332,26 @@ function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; b
     <section className={bare ? 'stack' : 'group stack'}>
       <div className="stack tight">
         {bare ? null : <h2>Jalankan backtest</h2>}
-        <p className="mute small">Strategi SNR: tren H4, zona H4/H1, entry M15. Setiap tahun diuji dengan RR 1:1, 1:2, dan 1:3.</p>
+        <p className="mute small">Setiap tahun diuji dengan RR 1:1, 1:2, dan 1:3.</p>
       </div>
+      {strategies.length ? (
+        <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>
+          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (disarankan)' : s.adapter_key === 'snr_h4h1_m15' ? 'SNR v0.1 (sentuh zona)' : `${s.strategy_key} ${s.version}`}</option>)}
+        </select></label>
+      ) : null}
+      {isBreakout ? (
+        <div className="stack tight">
+          <span className="label">Bagian strategi</span>
+          <label className="switch">Breakout H1 (40 candle)<input type="checkbox" checked={bp.donchianH1} onChange={(e) => setBp({ ...bp, donchianH1: e.target.checked })} /></label>
+          <label className="switch">Breakout sesi London<input type="checkbox" checked={bp.london} onChange={(e) => setBp({ ...bp, london: e.target.checked })} /></label>
+          <label className="switch">Breakout sesi New York<input type="checkbox" checked={bp.newYork} onChange={(e) => setBp({ ...bp, newYork: e.target.checked })} /></label>
+          <label className="switch">Breakout M30 (lebih sering, lebih berisiko)<input type="checkbox" checked={bp.donchianM30} onChange={(e) => setBp({ ...bp, donchianM30: e.target.checked })} /></label>
+          <span className="label" style={{ marginTop: 6 }}>Arah</span>
+          <label className="switch">BUY<input type="checkbox" checked={bp.allowBuy} onChange={(e) => setBp({ ...bp, allowBuy: e.target.checked })} /></label>
+          <label className="switch">SELL<input type="checkbox" checked={bp.allowSell} onChange={(e) => setBp({ ...bp, allowSell: e.target.checked })} /></label>
+          <p className="mute small">Perkiraan ±{perWeek.toFixed(1)} trade per minggu (dari data 2018–2026).</p>
+        </div>
+      ) : null}
       {sources.length > 1 ? (
         <label className="field">Data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''}</option>)}</select></label>
       ) : null}
@@ -335,7 +374,6 @@ function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; b
         <summary>Biaya & lainnya</summary>
         <label className="switch">Pakai rentang tanggal sendiri<input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} /></label>
         <div className="grid two">
-          {strategies.length > 1 ? <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>{strategies.map((s) => <option key={s.id} value={s.id}>{s.strategy_key} {s.version}</option>)}</select></label> : null}
           <label className="field">Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
           <label className="field">Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
           <label className="field">Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
@@ -346,7 +384,7 @@ function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; b
       {!sources.length ? <div className="notice">Impor data M15 dulu di Atur → Data harga.</div> : null}
       {busy && !custom
         ? <button className="btn block" onClick={() => { stop.current = true; }}>Berhenti setelah tahun ini</button>
-        : <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy || (!custom && !list.length)}>
+        : <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy || (!custom && !list.length) || (isBreakout && (!(bp.allowBuy || bp.allowSell) || !(bp.donchianH1 || bp.london || bp.newYork || bp.donchianM30)))}>
             {busy ? 'Menghitung…' : custom ? 'Jalankan backtest' : list.length > 1 ? `Jalankan ${y1}–${y2} (${list.length} tahun)` : `Jalankan ${y1}`}
           </button>}
       {err ? <div className="error">{err}</div> : null}
@@ -434,6 +472,32 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
       {runs.length > 3 ? <button className="btn sm" onClick={() => setAll(!all)}>{all ? 'Tampilkan lebih sedikit' : `Lihat semua (${runs.length})`}</button> : null}
     </div>
   );
+}
+
+/* ---------------------------------------------------------------- strategy configurations (strategy + switches) */
+const PART: Record<string, string> = { donchianH1: 'H1', london: 'London', newYork: 'New York', donchianM30: 'M30' };
+function paramsOf(s: any): Record<string, boolean> { return (s.cost_config?.strategy_params ?? {}) as Record<string, boolean>; }
+function configKey(s: any) {
+  const p = paramsOf(s);
+  return `${s.strategy ?? '?'}|${Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join(',')}`;
+}
+function configLabel(s: any) {
+  const strat = String(s.strategy ?? 'strategi');
+  if (!strat.startsWith('breakout')) return strat === 'snr h4h1m15-v0.1' ? 'SNR v0.1 (sentuh zona)' : strat;
+  const p = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowBuy: true, allowSell: true, ...paramsOf(s) };
+  const parts = Object.entries(PART).filter(([k]) => (p as any)[k]).map(([, v]) => v).join(' + ');
+  const sides = p.allowBuy && p.allowSell ? 'BUY+SELL' : p.allowBuy ? 'BUY saja' : 'SELL saja';
+  return `Breakout v0.2 · ${parts} · ${sides}`;
+}
+function strategyConfigs(sessions: any[]) {
+  const m = new Map<string, { key: string; label: string; created: number }>();
+  for (const s of sessions) {
+    const k = configKey(s);
+    const c = Number(s.created_ms) || 0;
+    const cur = m.get(k);
+    if (!cur || c > cur.created) m.set(k, { key: k, label: configLabel(s), created: c });
+  }
+  return [...m.values()].sort((a, b) => b.created - a.created);
 }
 
 /* ---------------------------------------------------------------- year × RR table (newest run per period wins) */

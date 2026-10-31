@@ -218,7 +218,7 @@ function HistoricalData() {
   const [derive, setDerive] = useState<any>(null);
   const runDerive = async (alignment: string) => {
     setDerive({ busy: true });
-    try { setDerive(await call('/api/import/derive', { method: 'POST', json: { source_id: src, from: tf, alignment, targets: ['H1', 'H4'] } })); reload(); }
+    try { setDerive(await call('/api/import/derive', { method: 'POST', json: { source_id: src, from: tf, alignment, targets: ['H1', 'H4', 'D1'] } })); reload(); }
     catch (e) { setDerive({ error: (e as Error).message }); }
   };
   const realCov = cov.filter((c) => !c.is_test);
@@ -266,9 +266,9 @@ function HistoricalData() {
         : <div className="notice">Mengunggah {Math.round((prog.done / Math.max(1, prog.total)) * 100)}%… jangan tutup halaman.</div>) : null}
       {prog?.issues?.length ? <pre>{prog.issues.slice(0, 10).map((i: any) => `Baris ${i.line}: ${i.message}`).join('\n')}</pre> : null}
 
-      <h3>3. Bentuk H1 & H4</h3>
-      <p className="mute small">Setelah semua file M15 masuk, tekan sekali. Strategi butuh H1 dan H4.</p>
-      <button className="btn block" onClick={() => runDerive('utc')} disabled={!src || derive?.busy}>{derive?.busy ? 'Menghitung… (bisa beberapa menit)' : `Bentuk H1 & H4 dari ${tf}`}</button>
+      <h3>3. Bentuk H1, H4 & D1</h3>
+      <p className="mute small">Setelah semua file M15 masuk, tekan sekali. Strategi butuh H1, H4 dan D1. Aman ditekan ulang.</p>
+      <button className="btn block" onClick={() => runDerive('utc')} disabled={!src || derive?.busy}>{derive?.busy ? 'Menghitung… (bisa beberapa menit)' : `Bentuk H1, H4 & D1 dari ${tf}`}</button>
       {derive && !derive.busy ? (derive.error ? <div className="error">{derive.error}</div>
         : <div className="ok">Selesai: {Object.entries(derive).map(([k, v]) => `${k} ${(v as number).toLocaleString('id-ID')} baru`).join(', ')}.</div>) : null}
       <details className="more">

@@ -300,11 +300,12 @@ test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overl
   const csv = ['time,open,high,low,close,volume', ...m15.map((c) => `${new Date(c.time).toISOString()},${c.open},${c.high},${c.low},${c.close},1`)].join('\n');
   assert.equal((await importOhlcChunk(db, { sourceId: src.id, timeframe: 'M15', text: csv })).inserted, m15.length);
   // Without H1/H4 the run is refused with a clear message
-  await assert.rejects(runBacktest(db, { sourceId: src.id, from: m15[0].time, to: m15[100].time }), (e: HttpError) => e.status === 422 && /H1/.test(e.message));
+  await assert.rejects(runBacktest(db, { sourceId: src.id, strategyVersionId: (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'snr_h4h1_m15')!.id, from: m15[0].time, to: m15[100].time }), (e: HttpError) => e.status === 422 && /H1/.test(e.message));
   await deriveTimeframes(db, src.id, 'M15', ['H1', 'H4'], 'utc');
+  const snrId = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'snr_h4h1_m15')!.id;
 
   const from = m15[0].time + 5 * 86_400_000, to = m15[m15.length - 1].time - 2 * 86_400_000;
-  const r = await runBacktest(db, { sourceId: src.id, from, to, costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 }, size: 0.01 });
+  const r = await runBacktest(db, { sourceId: src.id, strategyVersionId: snrId, from, to, costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 }, size: 0.01 });
   assert.equal(r.strategy, 'snr h4h1m15-v0.1');
   assert.equal(r.sessions.length, 3);
   assert.equal(r.guardViolations, 0);
@@ -340,7 +341,7 @@ test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overl
 
   // Causality: a shorter run gives the same trades for the shared period
   const shortTo = from + 5 * 86_400_000;
-  const r2 = await runBacktest(db, { sourceId: src.id, from, to: shortTo, rrList: [2], costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 }, size: 0.01 });
+  const r2 = await runBacktest(db, { sourceId: src.id, strategyVersionId: snrId, from, to: shortTo, rrList: [2], costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 }, size: 0.01 });
   const long2 = (await repo.listTrades(db, r.sessions.find((x) => x.rr === 2)!.backtestSessionId)).filter((t) => Number(t.entry_ms) <= shortTo);
   const short2 = await repo.listTrades(db, r2.sessions[0].backtestSessionId);
   const key = (t: Record<string, unknown>) => `${t.entry_ms}|${t.entry_price}|${t.stop_loss}|${t.exit_ms}|${t.exit_reason}`;
@@ -367,7 +368,8 @@ test('12. SNR backtest with fixed $10 risk per trade: SL loss ≈ $10 + costs, T
   const src = (await repo.listSources(db)).find((s) => s.name === 'TEST SNR zigzag')!;
   const cov = (await repo.dataCoverage(db)).find((c) => c.source_id === src.id && c.timeframe === 'M15')!;
   const from = cov.first + 5 * 86_400_000, to = cov.last - 2 * 86_400_000;
-  const r = await runBacktest(db, { sourceId: src.id, from, to, riskUsd: 10, rrList: [2], costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 } });
+  const snr12 = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'snr_h4h1_m15')!.id;
+  const r = await runBacktest(db, { sourceId: src.id, strategyVersionId: snr12, from, to, riskUsd: 10, rrList: [2], costs: { spread: 0.3, slippage: 0.1, commissionPerUnit: 7 } });
   assert.equal(r.riskUsd, 10);
   const trades = await repo.listTrades(db, r.sessions[0].backtestSessionId);
   assert.ok(trades.length > 0);
@@ -384,4 +386,29 @@ test('12. SNR backtest with fixed $10 risk per trade: SL loss ≈ $10 + costs, T
   assert.equal((await repo.listTrades(db, ids[0])).length, 0);
   const left = await db.query<{ n: number }>(`select count(*)::int as n from market_events where backtest_session_id = any($1::uuid[])`, [ids]);
   assert.equal(left[0].n, 0);
+});
+
+test('13. Breakout v0.2: needs D1, runs BUY+SELL with one position per part and side', async () => {
+  const src = (await repo.listSources(db)).find((s) => s.name === 'TEST SNR zigzag')!;
+  const cov = (await repo.dataCoverage(db)).find((c) => c.source_id === src.id && c.timeframe === 'M15')!;
+  const sv = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'breakout_v02')!;
+  assert.ok(sv, 'breakout v0.2 is registered');
+  const from = cov.first + 5 * 86_400_000, to = cov.last;
+  await assert.rejects(runBacktest(db, { sourceId: src.id, strategyVersionId: sv.id, from, to }), (e: HttpError) => e.status === 422 && /D1/.test(e.message));
+  await deriveTimeframes(db, src.id, 'M15', ['D1'], 'utc');
+  const r = await runBacktest(db, { sourceId: src.id, strategyVersionId: sv.id, from, to, riskUsd: 10, rrList: [2], params: { donchianH1: true, london: true, newYork: true } });
+  assert.equal(r.guardViolations, 0);
+  const trades = await repo.listTrades(db, r.sessions[0].backtestSessionId);
+  assert.ok(trades.length > 0, 'synthetic uptrend produces breakout trades');
+  const bySlot = new Map<string, Array<{ e: number; x: number }>>();
+  for (const t of trades) {
+    const slot = String((t.setup_reason as { details?: { slot?: string } }).details?.slot);
+    assert.match(slot, /^(H1|LON|NY):(long|short)$/);
+    const list = bySlot.get(slot) ?? [];
+    list.push({ e: Number(t.entry_ms), x: t.exit_ms == null ? Infinity : Number(t.exit_ms) });
+    bySlot.set(slot, list);
+  }
+  for (const list of bySlot.values()) for (let i = 1; i < list.length; i++) assert.ok(list[i].e > list[i - 1].x, 'no overlap inside one slot');
+  const cfg = (await repo.listBacktestSessions(db)).find((s) => s.id === r.sessions[0].backtestSessionId)!;
+  assert.deepEqual((cfg.cost_config as { strategy_params: unknown }).strategy_params, { donchianH1: true, london: true, newYork: true });
 });

@@ -24,6 +24,8 @@ export const BACKTEST_DEFAULT_COSTS: CostConfig = {
 export interface BacktestInput {
   sourceId: string; from: number; to: number; strategyVersionId?: string | null;
   rrList?: number[]; costs?: Partial<CostConfig>; size?: number; name?: string | null;
+  /** Strategy switches (e.g. breakout parts, allowSell). */
+  params?: Record<string, unknown>;
   /** Fixed dollar risk per trade (entry→SL). When set, the lot is computed per trade; `size` is ignored. */
   riskUsd?: number | null;
 }
@@ -53,7 +55,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   const htfList = adapter.requiredTimeframes ?? [];
   for (const t of [tf, ...htfList]) {
     if (!(await repo.hasCandles(db, v.sourceId, t))) {
-      throw new HttpError(422, `Data ${t} belum ada untuk sumber ini. Impor M15 lalu buka Atur → Data harga → tekan "Bentuk H1 & H4".`);
+      throw new HttpError(422, `Data ${t} belum ada untuk sumber ini. Impor M15 lalu buka Atur → Data harga → tekan "Bentuk H1, H4 & D1".`);
     }
   }
 
@@ -66,7 +68,11 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   if (!body.length || body[0].time >= signalEnd) throw new HttpError(422, 'Tidak ada candle M15 pada rentang ini');
 
   const htf: Partial<Record<Timeframe, Candle[]>> = {};
-  for (const t of htfList) htf[t] = await repo.candlesBetween(db, v.sourceId, t, v.from - HTF_WARMUP_DAYS * DAY, v.to);
+  for (const t of htfList) {
+    // enough closed history for the strategy's window (weekends ≈ ×1.5), at least HTF_WARMUP_DAYS
+    const days = Math.max(HTF_WARMUP_DAYS, Math.ceil(((adapter.htfWindow?.[t] ?? HTF_WINDOW) * TIMEFRAME_MS[t] * 1.5) / DAY));
+    htf[t] = await repo.candlesBetween(db, v.sourceId, t, v.from - days * DAY, v.to);
+  }
   const ptr: Partial<Record<Timeframe, number>> = {};
   for (const t of htfList) ptr[t] = 0;
 
@@ -87,13 +93,13 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       let p = ptr[t]!;
       while (p < arr.length && arr[p].time + TIMEFRAME_MS[t] <= now) p++; // closed HTF candles only
       ptr[t] = p;
-      ctxHtf[t] = arr.slice(Math.max(0, p - HTF_WINDOW), p);
+      ctxHtf[t] = arr.slice(Math.max(0, p - (adapter.htfWindow?.[t] ?? HTF_WINDOW)), p);
     }
     const window = m15.slice(Math.max(0, i + 1 - M15_WINDOW), i + 1);
     if (window.length < adapter.warmupCandles) continue;
     const res = runStrategyGuarded(adapter, {
       mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: tf, candles: window, now, zones: [], news: EMPTY_NEWS,
-      htf: ctxHtf, params: {}, state,
+      htf: ctxHtf, params: v.params ?? {}, state,
     });
     violations += res.violations.length;
     for (const ev of res.events) {
@@ -109,7 +115,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     const id = await repo.createBacktestSession(db, {
       name: v.name?.trim() || `SNR ${new Date(v.from).toISOString().slice(0, 10)} → ${new Date(v.to).toISOString().slice(0, 10)} RR 1:${rr}`,
       strategyVersionId: sv.id, sourceId: v.sourceId, instrumentId, timeframe: tf, profile: 'snr_trend_momentum',
-      costConfig: { run_id: runId, ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), rr, entry: 'open M15 berikutnya', max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
+      costConfig: { run_id: runId, strategy_params: v.params ?? {}, ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), rr, entry: 'open M15 berikutnya', max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
       isTest, notes: `Mesin backtest website. Strategi ${label}. RR 1:${rr}.`,
     });
     sessions.push({ rr, id });
@@ -132,7 +138,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   });
   for (const ses of sessions) {
     for (const m of meta) {
-      const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.zone?.low}-${m.ev.zone?.high}`;
+      const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.details?.slot ?? `${m.ev.zone?.low}-${m.ev.zone?.high}`}`;
       eventRows.push({
         mode: 'BACKTEST', eventUid: uid, dedupeKey: `btrun:${ses.id}:${uid}`, instrumentId, timeframe: tf, eventType: m.ev.type,
         eventTime: m.now, price: m.ev.price, zoneLow: m.ev.zone?.low ?? null, zoneHigh: m.ev.zone?.high ?? null, zoneKind: m.ev.zone?.kind ?? null,
@@ -150,12 +156,14 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   for (const ses of sessions) {
     const trades: repo.TradeInsert[] = [];
     const skipped: Record<string, number> = { posisi_masih_terbuka: 0, gap_weekend: 0, sl_tidak_valid: 0, tanpa_candle_berikut: 0 };
-    let busyUntil = -Infinity; // open time of the exit candle of the previous trade (Infinity = never closed)
+    // one open position per slot (SNR: a single slot; breakout: one BUY + one SELL per part); value = exit candle time
+    const busy = new Map<string, number>();
     for (const m of meta) {
       const entryIdx = m.i + 1;
       const entryBar = m15[entryIdx];
       if (!entryBar) { skipped.tanpa_candle_berikut++; continue; }
-      if (entryBar.time <= busyUntil) { skipped.posisi_masih_terbuka++; continue; }
+      const slot = String(m.ev.details?.slot ?? 'all');
+      if (entryBar.time <= (busy.get(slot) ?? -Infinity)) { skipped.posisi_masih_terbuka++; continue; }
       if (entryBar.time - m.now > MAX_ENTRY_GAP_MS) { skipped.gap_weekend++; continue; }
       const sl = Number(m.ev.details?.stop_loss);
       const entry = fillPrice(m.side, entryBar.open, costs);
@@ -166,8 +174,8 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       const lot = riskUsd ? Math.round((riskUsd / (risk * costs.contractSize)) * 1e4) / 1e4 : size;
       if (!(lot > 0)) { skipped.sl_tidak_valid++; continue; }
       const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size: lot }, costs);
-      busyUntil = r.exitTime ?? Infinity;
-      const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.zone?.low}-${m.ev.zone?.high}`;
+      busy.set(slot, r.exitTime ?? Infinity);
+      const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.details?.slot ?? `${m.ev.zone?.low}-${m.ev.zone?.high}`}`;
       trades.push({
         backtest_session_id: ses.id, strategy_version_id: sv.id, entry_event_id: eventIds.get(`btrun:${ses.id}:${uid}`) ?? null,
         origin: 'engine', side: m.side, timeframe: tf, entry_time: r.entryTime, entry_price: r.entryPrice, stop_loss: sl, take_profit: tp,

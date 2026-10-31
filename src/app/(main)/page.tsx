@@ -28,7 +28,7 @@ export default function Dashboard() {
   const tgOk = tg.tokenConfigured && tg.chatConfigured && tg.lastTest?.ok;
   const steps = [
     { t: 'Impor data M15', d: 'File CSV harga emas per 15 menit', done: tfOf('M15'), href: '/settings#data' },
-    { t: 'Bentuk H1 dan H4', d: 'Satu tombol di Atur → Data harga', done: tfOf('H1') && tfOf('H4'), href: '/settings#data' },
+    { t: 'Bentuk H1, H4 dan D1', d: 'Satu tombol di Atur → Data harga', done: tfOf('H1') && tfOf('H4') && tfOf('D1'), href: '/settings#data' },
     { t: 'Jalankan backtest', d: 'Lihat hasil RR 1:1, 1:2, 1:3', done: d.eventCounts.BACKTEST > 0, href: '/analytics' },
     { t: 'Hubungkan Telegram', d: 'Supaya bot bisa kirim sinyal', done: !!tgOk, href: '/settings#telegram' },
   ];

@@ -206,6 +206,11 @@ export async function ensureBuiltinStrategies(db: Db) {
      values ('snr', 'h4h1m15-v0.1', 'snr_h4h1_m15', 'active', false,
        'DRAF v0.1: tren H4 (struktur swing), zona SNR H4+H1, entry M15 saat sentuh zona, SL luar zona + 0.5 ATR(14) M15, TP diuji RR 1/2/3. Belum terbukti profit.')
      on conflict (strategy_key, version) do nothing returning id`);
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('breakout', 'v0.2', 'breakout_v02', 'active', false,
+       'v0.2 hasil riset 2018-2026: breakout H1 (40 candle) + breakout sesi London & New York, hanya searah tren H4 & D1, BUY dan SELL. SL ATR/range, TP sesuai RR.')
+     on conflict (strategy_key, version) do nothing returning id`);
 }
 export async function defaultStrategyVersion(db: Db): Promise<StrategyVersionRow | null> {
   const r = await db.query<StrategyVersionRow>(
