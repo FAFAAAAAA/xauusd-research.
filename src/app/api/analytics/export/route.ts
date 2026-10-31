@@ -9,8 +9,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const u = new URL(req.url);
   const kind = u.searchParams.get('kind') ?? 'trades';
-  const session = u.searchParams.get('session');
-  if (session && !UUID.test(session)) return NextResponse.json({ ok: false, error: 'session tidak valid' }, { status: 422 });
+  const sessionParam = u.searchParams.get('session');
+  const session = sessionParam ? sessionParam.split(',').slice(0, 40).map((x) => x.trim()) : null;
+  if (session && !session.every((x) => UUID.test(x))) return NextResponse.json({ ok: false, error: 'session tidak valid' }, { status: 422 });
   const db = await getDb();
   let rows: Record<string, unknown>[] = [];
   if (kind === 'trades') {

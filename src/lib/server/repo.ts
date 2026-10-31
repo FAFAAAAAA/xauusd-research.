@@ -545,14 +545,15 @@ export async function listWebhookLogs(db: Db, limit = 30) {
 }
 
 // ------------------------------------------------------------------- trades
-export async function listTrades(db: Db, backtestSessionId: string | null) {
+export async function listTrades(db: Db, backtestSessionId: string | string[] | null) {
+  const ids = backtestSessionId == null ? null : Array.isArray(backtestSessionId) ? backtestSessionId : [backtestSessionId];
   return db.query<Record<string, unknown>>(
     `select id, backtest_session_id, origin, side, timeframe, extract(epoch from entry_time)*1000 as entry_ms, entry_price::float8 as entry_price,
             stop_loss::float8 as stop_loss, take_profit::float8 as take_profit, extract(epoch from exit_time)*1000 as exit_ms,
             exit_price::float8 as exit_price, exit_reason, pnl::float8 as pnl, pnl_r::float8 as pnl_r, planned_rr::float8 as planned_rr,
             session_label, news_confirmed, sentiment_confirmed, zone_outcome, setup_reason, costs, is_test, entry_event_id, strategy_version_id
-     from simulated_trades where ($1::uuid is null or backtest_session_id = $1::uuid) order by entry_time asc limit 20000`,
-    [backtestSessionId]);
+     from simulated_trades where ($1::uuid[] is null or backtest_session_id = any($1::uuid[])) order by entry_time asc limit 50000`,
+    [ids]);
 }
 export async function listBacktestSessions(db: Db) {
   return db.query<Record<string, unknown>>(

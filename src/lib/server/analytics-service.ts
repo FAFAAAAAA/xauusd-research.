@@ -12,7 +12,7 @@ export function rowToTrade(r: Record<string, unknown>): TradeRecord {
   };
 }
 
-export async function analytics(db: Db, backtestSessionId: string | null) {
+export async function analytics(db: Db, backtestSessionId: string | string[] | null) {
   const rows = await repo.listTrades(db, backtestSessionId);
   const trades = rows.map(rowToTrade);
   const overall = computeMetrics(trades);

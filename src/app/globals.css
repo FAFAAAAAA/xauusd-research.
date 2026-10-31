@@ -213,6 +213,8 @@ tr.click:active td { background: var(--sunk); }
 .verdict p { font-size: 16px; }
 .wlbar { height: 10px; border-radius: 999px; background: var(--down); overflow: hidden; }
 .wlbar span { display: block; height: 100%; background: var(--up); border-radius: 999px 0 0 999px; transition: width .5s var(--ease, ease); }
+.wlbar.progress { background: var(--sunk); height: 8px; }
+.wlbar.progress span { background: var(--gold); border-radius: 999px; }
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
 .facts > div { display: flex; flex-direction: column; gap: 1px; }
 .facts strong { font-size: 18px; font-variant-numeric: tabular-nums; }

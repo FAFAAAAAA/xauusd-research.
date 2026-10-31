@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
@@ -16,42 +16,38 @@ const money = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? `${
 const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? 'neg' : '') : '');
 
 export default function Analytics() {
-  const [session, setSession] = useState('');
   const [d, setD] = useState<any>(() => peek('/api/analytics'));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [tz, setTz] = useState('UTC');
   const [detail, setDetail] = useState<any>(null);
   const [tradeLimit, setTradeLimit] = useState(10);
+  const [year, setYear] = useState<string | null>(null); // null = newest, 'ALL' = all years
+  const [rr, setRr] = useState(2);
+
+  const rows = d?.sessions?.length ? yearRows(d.sessions) : [];
+  const yearSel = year && (year === 'ALL' || rows.some((r) => r.label === year)) ? year : rows[0]?.label ?? null;
+  const cellOf = (r: { cells: any[] }, x: number) => r.cells.find((c: any) => rrNum(c) === x);
+  const picked: any[] = yearSel === 'ALL' ? rows.map((r) => cellOf(r, rr)).filter(Boolean)
+    : (() => { const r = rows.find((x) => x.label === yearSel); const c = r ? cellOf(r, rr) ?? r.cells[0] : null; return c ? [c] : []; })();
+  const key = picked.map((c) => String(c.id)).join(',');
+  const cur = picked.length === 1 ? picked[0] : null;
+  const curRr = picked.length ? rrNum(picked[0]) : rr;
+  const curYear = yearSel === 'ALL' ? `Semua tahun (${picked.length})` : yearSel;
+
   const load = useCallback(() => {
     setErr(null);
-    const url = `/api/analytics${session ? `?session=${session}` : ''}`;
+    const url = `/api/analytics${key ? `?session=${key}` : ''}`;
     const cached = peek(url);
     if (cached) setD(cached);
     setBusy(true);
     call<any>(url).then(setD).catch((e) => setErr(e.message)).finally(() => setBusy(false));
-  }, [session]);
-  useEffect(() => { load(); call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, [load]);
-
-  const rows = d?.sessions?.length ? yearRows(d.sessions) : [];
-  const cur = d?.sessions?.find((x: any) => String(x.id) === session) ?? null;
-  const curYear = cur ? periodLabel(cur.period_start ?? null, cur.period_end ?? null) : null;
-  const curRr = cur ? rrNum(cur) : null;
-  const row = rows.find((r) => r.label === curYear) ?? rows[0];
-  // pick a result automatically: newest year, RR 1:2 if it exists
-  useEffect(() => {
-    if (rows.length && !cur) {
-      const r0 = rows[0];
-      const s0 = r0.cells.find((c: any) => rrNum(c) === 2) ?? r0.cells[0];
-      if (s0) setSession(String(s0.id));
-    }
-  }, [rows.length, cur]); // eslint-disable-line react-hooks/exhaustive-deps
-  const choose = (year: string, rr: number) => {
-    const r = rows.find((x) => x.label === year);
-    const s = r?.cells.find((c: any) => rrNum(c) === rr) ?? r?.cells[0];
-    if (s) { setSession(String(s.id)); setDetail(null); setTradeLimit(10); }
-  };
+  }, [key]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, []);
+  const choose = (y: string | null, x: number) => { setYear(y); setRr(x); setDetail(null); setTradeLimit(10); };
   const open = async (id: string) => { setDetail({ loading: true }); try { setDetail(await call<any>(`/api/trades/${id}`)); } catch (e) { setDetail({ error: (e as Error).message }); } };
+  const reloadAll = () => { setYear(null); call<any>('/api/analytics').then(setD).catch(() => {}); };
 
   const m = d?.overall;
   const hasRuns = rows.length > 0;
@@ -60,25 +56,26 @@ export default function Analytics() {
       <PageHead title="Hasil backtest" />
 
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : !hasRuns ? (
-        <RunBacktest onDone={(id) => { setSession(id); load(); }} />
+        <RunBacktest existing={[]} onDone={reloadAll} />
       ) : (
         <>
           <section className="group stack">
             <div className="stack tight">
               <span className="label">Tahun</span>
               <div className="seg scroll" role="group" aria-label="Tahun">
-                {rows.map((r) => <button key={r.label} aria-pressed={r.label === row?.label} onClick={() => choose(r.label, curRr ?? 2)}>{r.label}</button>)}
+                {rows.length > 1 ? <button aria-pressed={yearSel === 'ALL'} onClick={() => choose('ALL', curRr)}>Semua</button> : null}
+                {rows.map((r) => <button key={r.label} aria-pressed={r.label === yearSel} onClick={() => choose(r.label, curRr)}>{r.label}</button>)}
               </div>
             </div>
             <div className="stack tight">
               <span className="label">Risk : Reward</span>
               <div className="rr3">
-                {[1, 2, 3].map((rr) => {
-                  const c = row?.cells.find((x: any) => rrNum(x) === rr);
-                  const p = c ? Number(c.pnl ?? 0) : null;
+                {[1, 2, 3].map((x) => {
+                  const cells = yearSel === 'ALL' ? rows.map((r) => cellOf(r, x)).filter(Boolean) : rows.filter((r) => r.label === yearSel).map((r) => cellOf(r, x)).filter(Boolean);
+                  const p = cells.length ? cells.reduce((a: number, c: any) => a + Number(c.pnl ?? 0), 0) : null;
                   return (
-                    <button key={rr} className={`rrbtn ${p == null ? '' : p > 0 ? 'up' : p < 0 ? 'down' : ''}`} aria-pressed={curRr === rr && cur != null} disabled={!c} onClick={() => row && choose(row.label, rr)}>
-                      <span className="k">1:{rr}</span>
+                    <button key={x} className={`rrbtn ${p == null ? '' : p > 0 ? 'up' : p < 0 ? 'down' : ''}`} aria-pressed={curRr === x && picked.length > 0} disabled={!cells.length} onClick={() => choose(yearSel, x)}>
+                      <span className="k">1:{x}</span>
                       <span className="p">{p == null ? '—' : `${p > 0 ? '+' : p < 0 ? '−' : ''}$${Math.round(Math.abs(p)).toLocaleString('en-US')}`}</span>
                     </button>
                   );
@@ -93,7 +90,7 @@ export default function Analytics() {
             ) : (
               <>
                 <section className="hero verdict">
-                  <span className="label">{curYear} · RR 1:{curRr} · risiko {cur?.cost_config?.risk_usd ? `$${cur.cost_config.risk_usd}` : 'lot tetap'} per trade</span>
+                  <span className="label">{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
                   <span className={`price ${tone(m.totalPnl)}`}>{money(m.totalPnl)}</span>
                   <p>{m.totalPnl > 0 ? 'Untung' : m.totalPnl < 0 ? 'Rugi' : 'Impas'} dari <strong>{m.totalTrades} trade</strong>: <strong className="pos">{m.wins} menang</strong>, <strong className="neg">{m.losses} kalah</strong>.</p>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(m.wins / Math.max(1, m.totalTrades)) * 100}%` }} /></div>
@@ -123,7 +120,7 @@ export default function Analytics() {
                 </section>
 
                 <section className="group">
-                  <PnlCalendar key={session} trades={closedTrades(d.trades)} tz={tz} />
+                  <PnlCalendar key={key} trades={closedTrades(d.trades)} tz={tz} />
                 </section>
 
                 {detail ? <TradeDetail d={detail} tz={tz} onClose={() => setDetail(null)} /> : null}
@@ -146,7 +143,7 @@ export default function Analytics() {
                   </div>
                   <div className="row" style={{ marginTop: 12 }}>
                     {d.trades.length > tradeLimit ? <button className="btn sm" onClick={() => setTradeLimit((n) => n + 30)}>Tampilkan lebih banyak</button> : null}
-                    <a className="btn sm" href={`/api/analytics/export?kind=trades${session ? `&session=${session}` : ''}`}>Unduh CSV</a>
+                    <a className="btn sm" href={`/api/analytics/export?kind=trades${key ? `&session=${key}` : ''}`}>Unduh CSV</a>
                   </div>
                 </section>
               </>
@@ -155,14 +152,14 @@ export default function Analytics() {
 
           <details className="group">
             <summary><span><h2>Backtest baru</h2><span className="s">Jalankan tahun lain atau ubah risiko</span></span></summary>
-            <div className="body"><RunBacktest bare onDone={(id) => { setSession(id); load(); window.scrollTo({ top: 0 }); }} /></div>
+            <div className="body"><RunBacktest bare existing={rows.map((r) => r.label)} onDone={() => { reloadAll(); window.scrollTo({ top: 0 }); }} /></div>
           </details>
           <details className="group">
             <summary><span><h2>Kelola hasil</h2><span className="s">Hapus backtest lama atau dobel</span></span></summary>
             <div className="body">
-              <RunPicker sessions={d.sessions} selected={session} tz={tz}
-                onSelect={(id) => { setSession(id); setDetail(null); window.scrollTo({ top: 0 }); }}
-                onDeleted={(ids) => { if (ids.includes(session)) setSession(''); load(); }} />
+              <RunPicker sessions={d.sessions} selected={cur ? String(cur.id) : ''} tz={tz}
+                onSelect={(id) => { const s0 = d.sessions.find((x: any) => String(x.id) === id); if (s0) choose(periodLabel(s0.period_start ?? null, s0.period_end ?? null), rrNum(s0)); window.scrollTo({ top: 0 }); }}
+                onDeleted={() => reloadAll()} />
             </div>
           </details>
         </>
@@ -221,13 +218,20 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
   );
 }
 
-function RunBacktest({ onDone, bare = false }: { onDone: (sessionId: string) => void; bare?: boolean }) {
+type YearStatus = { year: number; state: 'wait' | 'run' | 'done' | 'skip' | 'fail'; note?: string };
+
+function RunBacktest({ onDone, bare = false, existing }: { onDone: () => void; bare?: boolean; existing: string[] }) {
   const [sources, setSources] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ source: '', strategy: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', size: '0.01', risk: '10', ambiguity: 'worst' });
+  const [cov, setCov] = useState<any[]>([]);
+  const now = new Date().getUTCFullYear();
+  const [f, setF] = useState({ source: '', strategy: '', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', size: '0.01', risk: '10', ambiguity: 'worst' });
+  const [custom, setCustom] = useState(false);
+  const [skipDone, setSkipDone] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [res, setRes] = useState<any>(null);
+  const [prog, setProg] = useState<YearStatus[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const stop = useRef(false);
   useEffect(() => {
     call<any[]>('/api/sources').then((s) => { setSources(s); if (s[0]) setF((x) => ({ ...x, source: x.source || s.find((y: any) => !y.is_test)?.id || s[0].id })); }).catch(() => {});
     call<any[]>('/api/strategies').then((s) => {
@@ -235,54 +239,106 @@ function RunBacktest({ onDone, bare = false }: { onDone: (sessionId: string) => 
       setStrategies(usable);
       if (usable.length) setF((x) => ({ ...x, strategy: x.strategy || usable[usable.length - 1].id }));
     }).catch(() => {});
+    call<any[]>('/api/sources/coverage').then(setCov).catch(() => {});
   }, []);
+  // years that have M15 data for the chosen source
+  const m15 = cov.find((c) => c.source_id === f.source && c.timeframe === 'M15');
+  const firstY = m15 ? new Date(m15.first).getUTCFullYear() : 2018;
+  const lastY = m15 ? new Date(m15.last).getUTCFullYear() : now;
+  const years = Array.from({ length: Math.max(0, lastY - firstY + 1) }, (_, i) => firstY + i);
+  const y1 = Number(f.y1) || firstY, y2 = Number(f.y2) || lastY;
+  const list = years.filter((y) => y >= y1 && y <= y2);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const body = (from: string, to: string) => ({
+    source_id: f.source, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3],
+    size: Number(f.size), risk_usd: f.risk.trim() ? Number(f.risk) : null,
+    costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
+  });
+
   const run = async () => {
-    setBusy(true); setErr(null); setRes(null);
-    try {
-      setRes(await call<any>('/api/backtest/run', { method: 'POST', json: {
-        source_id: f.source, strategy_version_id: f.strategy || null, from: `${f.from}T00:00:00Z`, to: `${f.to}T00:00:00Z`, rr: [1, 2, 3],
-        size: Number(f.size), risk_usd: f.risk.trim() ? Number(f.risk) : null, costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
-      } }));
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    setBusy(true); setErr(null); stop.current = false;
+    if (custom) {
+      setProg(null);
+      try { await call<any>('/api/backtest/run', { method: 'POST', json: body(`${f.from}T00:00:00Z`, `${f.to}T00:00:00Z`) }); onDone(); }
+      catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+      return;
+    }
+    const st: YearStatus[] = list.map((y) => ({ year: y, state: skipDone && existing.includes(String(y)) ? 'skip' : 'wait' }));
+    setProg([...st]);
+    for (const it of st) {
+      if (it.state === 'skip') continue;
+      if (stop.current) { it.state = 'skip'; it.note = 'dibatalkan'; setProg([...st]); continue; }
+      it.state = 'run'; setProg([...st]);
+      try {
+        const r = await call<any>('/api/backtest/run', { method: 'POST', json: body(`${it.year}-01-01T00:00:00Z`, `${it.year + 1}-01-01T00:00:00Z`) });
+        it.state = 'done';
+        it.note = r.sessions.map((x: any) => `1:${x.rr} ${x.trades}`).join(' · ') + ' trade';
+      } catch (e) {
+        const msg = (e as Error).message;
+        it.state = 'fail'; it.note = /Tidak ada candle/.test(msg) ? 'tidak ada data tahun ini' : msg;
+      }
+      setProg([...st]);
+    }
+    setBusy(false);
+    onDone();
   };
+  const done = prog?.filter((p) => p.state === 'done' || p.state === 'fail' || p.state === 'skip').length ?? 0;
+
   return (
     <section className={bare ? 'stack' : 'group stack'}>
       <div className="stack tight">
         {bare ? null : <h2>Jalankan backtest</h2>}
-        <p className="mute small">Strategi SNR: tren H4, zona H4/H1, entry M15. Diuji dengan RR 1:1, 1:2, dan 1:3.</p>
+        <p className="mute small">Strategi SNR: tren H4, zona H4/H1, entry M15. Setiap tahun diuji dengan RR 1:1, 1:2, dan 1:3.</p>
       </div>
-      <div className="grid two">
-        {sources.length > 1 ? (
-          <label className="field">Data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''}</option>)}</select></label>
-        ) : null}
-        <label className="field">Dari<input type="date" value={f.from} onChange={set('from')} /></label>
-        <label className="field">Sampai<input type="date" value={f.to} onChange={set('to')} /></label>
-        <label className="field">Risiko per trade ($)<input inputMode="decimal" value={f.risk} onChange={set('risk')} placeholder="10" /></label>
-      </div>
-      <p className="mute small">Kena SL = rugi sekitar ${f.risk || '—'}. RR 1:2 kena TP = untung sekitar ${f.risk ? Number(f.risk) * 2 : '—'}. Belum termasuk biaya.</p>
+      {sources.length > 1 ? (
+        <label className="field">Data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''}</option>)}</select></label>
+      ) : null}
+      {!custom ? (
+        <div className="grid two">
+          <label className="field">Dari tahun<select value={y1} onChange={set('y1')}>{years.map((y) => <option key={y} value={y}>{y}</option>)}</select></label>
+          <label className="field">Sampai tahun<select value={y2} onChange={set('y2')}>{years.map((y) => <option key={y} value={y}>{y}</option>)}</select></label>
+        </div>
+      ) : (
+        <div className="grid two">
+          <label className="field">Dari tanggal<input type="date" value={f.from} onChange={set('from')} /></label>
+          <label className="field">Sampai tanggal<input type="date" value={f.to} onChange={set('to')} /></label>
+        </div>
+      )}
+      <label className="field">Risiko per trade ($)<input inputMode="decimal" value={f.risk} onChange={set('risk')} placeholder="10" /></label>
+      {!custom && existing.some((y) => list.includes(Number(y))) ? (
+        <label className="switch">Lewati tahun yang sudah ada hasilnya<input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} /></label>
+      ) : null}
       <details className="more">
         <summary>Biaya & lainnya</summary>
+        <label className="switch">Pakai rentang tanggal sendiri<input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} /></label>
         <div className="grid two">
           {strategies.length > 1 ? <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>{strategies.map((s) => <option key={s.id} value={s.id}>{s.strategy_key} {s.version}</option>)}</select></label> : null}
           <label className="field">Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
           <label className="field">Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
           <label className="field">Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
-          <label className="field">Lot tetap (dipakai kalau risiko dikosongkan)<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
+          <label className="field">Lot tetap (kalau risiko dikosongkan)<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
           <label className="field">TP & SL kena di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Hitung sebagai SL</option><option value="best">Hitung sebagai TP</option><option value="skip">Lewati</option></select></label>
         </div>
       </details>
       {!sources.length ? <div className="notice">Impor data M15 dulu di Atur → Data harga.</div> : null}
-      <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy}>{busy ? 'Menghitung… (±1 menit)' : 'Jalankan backtest'}</button>
+      {busy && !custom
+        ? <button className="btn block" onClick={() => { stop.current = true; }}>Berhenti setelah tahun ini</button>
+        : <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy || (!custom && !list.length)}>
+            {busy ? 'Menghitung…' : custom ? 'Jalankan backtest' : list.length > 1 ? `Jalankan ${y1}–${y2} (${list.length} tahun)` : `Jalankan ${y1}`}
+          </button>}
       {err ? <div className="error">{err}</div> : null}
-      {res ? (
+      {prog ? (
         <div className="stack tight">
-          <p className="small mute">{res.setups} setup ditemukan{res.newsArchive ? '' : ' · tanpa data berita'}</p>
-          <div className="grid two">
-            {res.sessions.map((s: any) => (
-              <button key={s.backtestSessionId} className="stat btnrow" style={{ border: '1px solid var(--line)', cursor: 'pointer' }} onClick={() => onDone(s.backtestSessionId)}>
-                <div className="label">RR 1:{s.rr}</div><div className="v">{s.trades} trade</div><div className="small" style={{ color: 'var(--gold)', fontWeight: 700 }}>Lihat hasil</div>
-              </button>
+          <div className="row between small"><strong>{busy ? 'Sedang berjalan… biarkan halaman ini terbuka' : 'Selesai'}</strong><span className="mute">{done}/{prog.length}</span></div>
+          <div className="wlbar progress" aria-hidden><span style={{ width: `${(done / Math.max(1, prog.length)) * 100}%` }} /></div>
+          <div className="list">
+            {prog.map((p) => (
+              <div key={p.year} className="item">
+                <span className="t">{p.year}</span>
+                <span className={`end small ${p.state === 'fail' ? 'neg' : p.state === 'done' ? 'pos' : 'mute'}`} style={{ flex: '1 1 auto', minWidth: 0 }}>
+                  {p.state === 'wait' ? 'Menunggu' : p.state === 'run' ? 'Menghitung…' : p.state === 'done' ? `✓ ${p.note}` : p.state === 'skip' ? (p.note ?? 'Sudah ada, dilewati') : `Gagal: ${p.note}`}
+                </span>
+              </div>
             ))}
           </div>
         </div>
@@ -363,7 +419,7 @@ const rrNum = (s: any) => Number(s.cost_config?.rr ?? /RR 1:(\d+(\.\d+)?)/.exec(
 function periodLabel(from: number | null, to: number | null) {
   if (from == null || to == null) return 'Lainnya';
   const a = new Date(from), b = new Date(to);
-  const fullYear = a.getUTCMonth() === 0 && a.getUTCDate() === 1 && b.getUTCMonth() === 0 && b.getUTCDate() === 1 && b.getUTCFullYear() === a.getUTCFullYear() + 1;
+  const fullYear = a.getUTCMonth() === 0 && a.getUTCDate() === 1 && b.getTime() <= Date.UTC(a.getUTCFullYear() + 1, 0, 1) && b.getUTCFullYear() >= a.getUTCFullYear();
   if (fullYear) return String(a.getUTCFullYear());
   const f = (x: Date) => `${x.getUTCDate()}/${x.getUTCMonth() + 1}/${String(x.getUTCFullYear()).slice(2)}`;
   return `${f(a)}–${f(b)}`;
