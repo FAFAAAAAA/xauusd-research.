@@ -284,7 +284,7 @@ function groupRuns(sessions: any[]): Run[] {
     const cc = s.cost_config ?? {};
     // new runs carry run_id; older ones are grouped by period + creation minute
     const key = cc.run_id ?? `${s.period_start}|${s.period_end}|${Math.floor(Number(s.created_ms) / 60_000)}|${s.name?.replace(/RR 1:\d+(\.\d+)?/, '')}`;
-    const r = m.get(key) ?? { key, from: s.period_start ?? null, to: s.period_end ?? null, created: Number(s.created_ms) || 0, risk: cc.risk_usd ?? null, sessions: [] };
+    const r: Run = m.get(key) ?? { key, from: s.period_start ?? null, to: s.period_end ?? null, created: Number(s.created_ms) || 0, risk: cc.risk_usd ?? null, sessions: [] };
     r.sessions.push(s);
     m.set(key, r);
   }
