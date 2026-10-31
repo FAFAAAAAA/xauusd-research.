@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -19,7 +20,12 @@ const ITEMS = [
 
 export default function Shell({ children, showLogout = false }: { children: React.ReactNode; showLogout?: boolean }) {
   const path = usePathname();
-  const active = (h: string) => (h === '/' ? path === '/' : path.startsWith(h));
+  // Highlight the tapped tab immediately, before the new page has finished loading.
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => { setPending(null); }, [path]);
+  const cur = pending ?? path;
+  const active = (h: string) => (h === '/' ? cur === '/' : cur.startsWith(h));
+  const go = (h: string) => () => { if (h !== path) setPending(h); window.scrollTo({ top: 0 }); };
   const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; };
   return (
     <div className="shell">
@@ -27,15 +33,17 @@ export default function Shell({ children, showLogout = false }: { children: Reac
         <div className="topbar-in">
           <Link href="/" className="brand"><span className="brand-mark" aria-hidden>Au</span>XAUUSD Research</Link>
           <nav className="topnav" aria-label="Menu">
-            {ITEMS.map((i) => <Link key={i.href} href={i.href} aria-current={active(i.href) ? 'page' : undefined}>{i.label}</Link>)}
+            {ITEMS.map((i) => <Link key={i.href} href={i.href} onClick={go(i.href)} aria-current={active(i.href) ? 'page' : undefined}>{i.label}</Link>)}
           </nav>
           {showLogout ? <button className="btn sm" onClick={logout}>Keluar</button> : null}
         </div>
       </header>
-      <main className="main">{children}</main>
+      <main className="main" aria-busy={pending ? true : undefined}>
+        <div key={path} className="page">{children}</div>
+      </main>
       <nav className="tabbar" aria-label="Menu utama">
         {ITEMS.map((i) => (
-          <Link key={i.href} href={i.href} aria-current={active(i.href) ? 'page' : undefined}>
+          <Link key={i.href} href={i.href} onClick={go(i.href)} aria-current={active(i.href) ? 'page' : undefined}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{i.icon}</svg>
             {i.label}
           </Link>

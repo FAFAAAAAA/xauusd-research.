@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { call, fmt } from '@/components/client';
+import { call, fmt, peek } from '@/components/client';
 import { ErrorBox, Loading, PageHead, Status } from '@/components/Status';
 import { FileText } from '@/components/FileText';
 import { TIMEFRAMES } from '@/lib/core/types';
@@ -21,7 +21,7 @@ const ALERT_EXAMPLE = `{
 }`;
 
 export default function Settings() {
-  const [s, setS] = useState<any>(null);
+  const [s, setS] = useState<any>(() => peek('/api/settings'));
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => { setErr(null); call<any>('/api/settings').then(setS).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { load(); }, [load]);

@@ -4,7 +4,14 @@ import { formatInTz } from '@/lib/core/time';
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 
+const cache = new Map<string, unknown>();
+/** Last successful GET response for `url` (shown instantly while fresh data loads). */
+export function peek<T>(url: string): T | null {
+  return (cache.get(url) as T) ?? null;
+}
+
 export async function call<T>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+  const isGet = !init?.method || init.method === 'GET';
   const res = await fetch(url, {
     ...init,
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
@@ -19,6 +26,8 @@ export async function call<T>(url: string, init?: RequestInit & { json?: unknown
     const detail = Array.isArray(body.errors) ? `: ${body.errors.join('; ')}` : '';
     throw new ApiError(res.status, (body.error ?? `HTTP ${res.status}`) + detail);
   }
+  if (isGet) cache.set(url, body.data);
+  else cache.clear(); // a write may change any view
   return body.data as T;
 }
 

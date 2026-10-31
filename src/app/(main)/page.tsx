@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { call, fmt, px } from '@/components/client';
+import { call, fmt, peek, px } from '@/components/client';
 import { ErrorBox, Loading, ModeTag, PageHead, Status } from '@/components/Status';
 import { CATEGORY_LABEL } from '@/lib/core/news';
 
@@ -14,7 +14,7 @@ const EVENT_LABEL: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const [d, setD] = useState<Dash | null>(null);
+  const [d, setD] = useState<Dash | null>(() => peek<Dash>('/api/dashboard'));
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => { setErr(null); call<Dash>('/api/dashboard').then(setD).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { load(); const t = setInterval(load, 30_000); return () => clearInterval(t); }, [load]);

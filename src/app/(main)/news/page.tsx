@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { call, fmt, tzShort } from '@/components/client';
+import { call, fmt, peek, tzShort } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { CATEGORY_LABEL } from '@/lib/core/news';
 import { zonedWallTimeToUtc } from '@/lib/core/time';
@@ -16,7 +16,7 @@ const GOLD: Record<string, { t: string; c: string }> = {
 export default function News() {
   const [tz, setTz] = useState('UTC');
   const [asOfLocal, setAsOfLocal] = useState('');
-  const [d, setD] = useState<any>(null);
+  const [d, setD] = useState<any>(() => peek('/api/news'));
   const [err, setErr] = useState<string | null>(null);
 
   const asOfUtc = (() => {

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { call, fmt, pct, px } from '@/components/client';
+import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PeriodBreakdown, PnlCalendar, closedTrades } from '@/components/ResultCharts';
 
@@ -17,14 +17,19 @@ const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? '
 
 export default function Analytics() {
   const [session, setSession] = useState('');
-  const [d, setD] = useState<any>(null);
+  const [d, setD] = useState<any>(() => peek('/api/analytics'));
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [tz, setTz] = useState('UTC');
   const [detail, setDetail] = useState<any>(null);
   const [tradeLimit, setTradeLimit] = useState(20);
   const load = useCallback(() => {
     setErr(null);
-    call<any>(`/api/analytics${session ? `?session=${session}` : ''}`).then(setD).catch((e) => setErr(e.message));
+    const url = `/api/analytics${session ? `?session=${session}` : ''}`;
+    const cached = peek(url);
+    if (cached) setD(cached);
+    setBusy(true);
+    call<any>(url).then(setD).catch((e) => setErr(e.message)).finally(() => setBusy(false));
   }, [session]);
   useEffect(() => { load(); call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, [load]);
   const [picked, setPicked] = useState(false);
@@ -49,6 +54,7 @@ export default function Analytics() {
             </label>
           ) : null}
 
+          <div className={`stack${busy ? ' refreshing' : ''}`}>
           {!d.hasData ? (
             <section className="group empty-state">
               <h2>Belum ada hasil</h2>
@@ -141,6 +147,7 @@ export default function Analytics() {
               </div>
             </>
           )}
+          </div>
         </>
       )}
     </div>
