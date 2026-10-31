@@ -111,7 +111,7 @@ curl -X POST https://<app>/api/webhooks/tradingview -H 'content-type: applicatio
 ### Data historis
 1. Settings → Tambah sumber data: nama, penyedia, simbol, **zona waktu file** (`UTC`, `UTC+2`, atau IANA `Europe/Athens`), basis harga, spread tipikal.
 2. Pilih file CSV + timeframe → Impor. Format yang dikenali: TradingView export, MetaTrader, Dukascopy, ISO/unix. Baris rusak dilaporkan; duplikat dilewati.
-3. "Bentuk TF lebih tinggi" mengagregasi dari TF yang diimpor (penjajaran UTC atau close 17:00 New York). Bucket tidak lengkap di ujung data dibuang.
+3. "Bentuk H1 & H4" mengagregasi dari TF yang diimpor (penjajaran UTC atau close 17:00 New York). Bucket tidak lengkap di ujung data dibuang.
 4. Dashboard & Replay menampilkan rentang tanggal yang **benar-benar ada**.
 
 ### Berita & kalender
@@ -149,7 +149,7 @@ Aturan dipilih pemilik; implementasi: `src/lib/core/strategy/snr.ts` (adapter `s
 
 Anti-lookahead: pivot hanya dipakai setelah n candle kanan **tutup**; strategi hanya menerima candle H1/H4 yang sudah tutup (`runStrategyGuarded` membuang yang belum). Tes `snr.test.ts` + e2e #11 memeriksa: hasil hingga waktu T tidak berubah walau data sesudahnya ada, replay langkah-demi-langkah = backtest runner.
 
-**Data yang dibutuhkan:** impor CSV **M15** (mulai ±1 bulan sebelum tanggal backtest untuk pemanasan; untuk zona H4 idealnya 4 bulan), lalu Pengaturan → TF M15 → "Bentuk TF lebih tinggi (UTC)" (membuat H1 + H4). Jalankan dari menu Analytics → "Jalankan backtest SNR" (maks ±1 tahun per run). Pine: `pine/xauusd_snr_h4h1_m15_v01.pine` (**belum dikompilasi di TradingView**; perbedaan yang diketahui tertulis di kepala file).
+**Data yang dibutuhkan:** impor CSV **M15** (mulai ±1 bulan sebelum tanggal backtest untuk pemanasan; untuk zona H4 idealnya 4 bulan), lalu Atur → Data harga → "Bentuk H1 & H4". Jalankan dari menu Hasil → "Jalankan backtest" (maks ±1 tahun per run). Pine: `pine/xauusd_snr_h4h1_m15_v01.pine` (**belum dikompilasi di TradingView**; perbedaan yang diketahui tertulis di kepala file).
 
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.

@@ -2,15 +2,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, pct, px } from '@/components/client';
-import { ErrorBox, Loading } from '@/components/Status';
+import { ErrorBox, Loading, PageHead } from '@/components/Status';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: false });
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const PROFILE: Record<string, string> = {
-  snr_only: 'A · SNR saja', snr_news: 'B · SNR + berita', snr_trend_momentum: 'C · SNR + trend/momentum', snr_all: 'D · SNR + semua konfirmasi',
+  snr_only: 'SNR saja', snr_news: 'SNR + berita', snr_trend_momentum: 'SNR + tren', snr_all: 'SNR + semua konfirmasi',
 };
 const SESSION: Record<string, string> = { asia: 'Asia', london: 'London', new_york: 'New York', off: 'Di luar sesi' };
+const EXIT: Record<string, string> = { tp: 'Kena TP', sl: 'Kena SL', ambiguous_worst: 'TP & SL 1 candle (dihitung SL)', ambiguous_best: 'TP & SL 1 candle (dihitung TP)', ambiguous_skipped: 'Dilewati', time: 'Waktu habis', open: 'Masih terbuka', imported: 'Impor' };
+const money = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? `${n >= 0 ? '+' : '−'}$${Math.abs(n).toFixed(2)}` : '—');
+const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? 'neg' : '') : '');
 
 export default function Analytics() {
   const [session, setSession] = useState('');
@@ -25,120 +28,143 @@ export default function Analytics() {
   useEffect(() => { load(); call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, [load]);
   const open = async (id: string) => { setDetail({ loading: true }); try { setDetail(await call<any>(`/api/trades/${id}`)); } catch (e) { setDetail({ error: (e as Error).message }); } };
 
-  if (err) return <><h1>Backtest analytics</h1><ErrorBox error={err} retry={load} /></>;
-  if (!d) return <><h1>Backtest analytics</h1><Loading /></>;
-  const m = d.overall;
+  const m = d?.overall;
   return (
     <div className="stack">
-      <div className="row between" style={{ alignItems: 'flex-end' }}>
-        <div>
-          <h1>Backtest analytics</h1>
-          <p className="sub" style={{ marginBottom: 0 }}>Semua angka dihitung dari trade yang benar-benar tercatat. Tanpa data, tidak ada statistik.</p>
-        </div>
-        <div className="row">
-          <select value={session} onChange={(e) => setSession(e.target.value)} style={{ width: 'auto' }} aria-label="Sesi backtest">
-            <option value="">Semua sesi</option>
-            {d.sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (TEST)' : ''} · {s.trades} trade</option>)}
-          </select>
-          <a className="btn" href={`/api/analytics/export?kind=trades${session ? `&session=${session}` : ''}`}>Ekspor trade CSV</a>
-          <a className="btn" href="/api/analytics/export?kind=events">Ekspor event CSV</a>
-        </div>
-      </div>
+      <PageHead title="Hasil backtest" />
 
-      <RunBacktest onDone={(id) => { setSession(id); load(); }} />
+      <RunBacktest onDone={(id) => { setSession(id); setDetail(null); }} />
 
-      {!d.hasData ? (
-        <div className="notice"><strong>Belum ada hasil backtest.</strong> Statistik akan muncul setelah strategi SNR dikonfigurasi dan dijalankan, atau setelah Anda mengimpor laporan “List of trades” dari TradingView Strategy Tester (Settings → Impor).</div>
-      ) : (
+      {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : (
         <>
-          <div className="grid">
-            <Metric label="Total trade" v={m.totalTrades} />
-            <Metric label="Win rate" v={pct(m.winRate)} />
-            <Metric label="Total P/L" v={px(m.totalPnl)} />
-            <Metric label="Profit factor" v={m.profitFactor == null ? '— (tanpa loss)' : m.profitFactor.toFixed(2)} />
-            <Metric label="Expectancy" v={`${px(m.expectancy)}${m.expectancyR != null ? ` · ${m.expectancyR.toFixed(2)}R` : ''}`} />
-            <Metric label="Max drawdown" v={px(m.maxDrawdown)} />
-            <Metric label="Rata-rata R:R rencana" v={m.avgPlannedRr == null ? '—' : `1:${m.avgPlannedRr.toFixed(2)}`} />
-            <Metric label="Beruntun menang / kalah" v={`${m.maxConsecutiveWins} / ${m.maxConsecutiveLosses}`} />
-          </div>
-          <div className="grid">
-            <Breakdown title="Per tahun" rows={d.byYear} />
-            <Breakdown title="Per timeframe" rows={d.byTimeframe} />
-            <Breakdown title="Per sesi" rows={d.bySession} label={(k) => SESSION[k] ?? k} />
-            <Breakdown title="Dengan / tanpa konfirmasi berita" rows={d.byNews} label={(k) => (k === 'with_news' ? 'Dengan berita' : 'Tanpa berita')} />
-          </div>
-          <section className="panel">
-            <h2>Hasil di zona SNR</h2>
-            <dl className="kv"><dt>Respect</dt><dd>{d.zoneOutcomes.respect}</dd><dt>Breakout</dt><dd>{d.zoneOutcomes.breakout}</dd><dt>Tidak diketahui</dt><dd>{d.zoneOutcomes.unknown}</dd></dl>
-          </section>
+          {d.sessions.length ? (
+            <label className="field">Tampilkan hasil
+              <select value={session} onChange={(e) => { setSession(e.target.value); setDetail(null); }}>
+                <option value="">Semua backtest digabung</option>
+                {d.sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''} · {s.trades} trade</option>)}
+              </select>
+            </label>
+          ) : null}
+
+          {!d.hasData ? (
+            <section className="group empty-state">
+              <h2>Belum ada hasil</h2>
+              <p>Jalankan backtest di atas. Hasilnya muncul di sini.</p>
+            </section>
+          ) : (
+            <>
+              <div className="grid two">
+                <Stat label="Total P/L" v={money(m.totalPnl)} cls={tone(m.totalPnl)} />
+                <Stat label="Win rate" v={pct(m.winRate)} />
+                <Stat label="Jumlah trade" v={m.totalTrades} />
+                <Stat label="Drawdown terbesar" v={px(m.maxDrawdown)} />
+              </div>
+              <section className="group"><details className="more">
+                <summary>Angka lain</summary>
+                <dl className="kv">
+                  <dt>Profit factor</dt><dd>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</dd>
+                  <dt>Rata-rata per trade</dt><dd>{money(m.expectancy)}{m.expectancyR != null ? ` (${m.expectancyR.toFixed(2)}R)` : ''}</dd>
+                  <dt>RR rencana</dt><dd>{m.avgPlannedRr == null ? '—' : `1:${m.avgPlannedRr.toFixed(1)}`}</dd>
+                  <dt>Menang beruntun</dt><dd>{m.maxConsecutiveWins}</dd>
+                  <dt>Kalah beruntun</dt><dd>{m.maxConsecutiveLosses}</dd>
+                  <dt>Zona bertahan / jebol</dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd>
+                </dl>
+              </details></section>
+
+              <Breakdown title="Per tahun" rows={d.byYear} />
+
+              <section className="group"><details className="more">
+                <summary>Rincian per sesi, berita, dan konfirmasi</summary>
+                <Breakdown title="Per sesi pasar" rows={d.bySession} label={(k) => SESSION[k] ?? k} plain />
+                <Breakdown title="Ada berita besar atau tidak" rows={d.byNews} label={(k) => (k === 'with_news' ? 'Ada berita' : 'Tanpa berita')} plain />
+                <div>
+                  <h3>Per jenis konfirmasi</h3>
+                  <div className="tablewrap"><table><thead><tr><th>Konfirmasi</th><th>Trade</th><th>Win</th><th>Rata-rata</th></tr></thead>
+                    <tbody>{d.comparison.map((c: any) => (
+                      <tr key={c.profile}><td>{PROFILE[c.profile]}</td>{c.metrics
+                        ? <><td>{c.metrics.totalTrades}</td><td>{pct(c.metrics.winRate)}</td><td className={tone(c.metrics.expectancy)}>{money(c.metrics.expectancy)}</td></>
+                        : <td colSpan={3} className="mute">Belum diuji</td>}</tr>))}</tbody></table></div>
+                </div>
+              </details></section>
+
+              {detail ? <TradeDetail d={detail} tz={tz} onClose={() => setDetail(null)} /> : null}
+
+              <section className="group">
+                <h2>Daftar trade</h2>
+                <div className="list">
+                  {d.trades.slice(-200).reverse().map((t: any) => (
+                    <button key={t.id} className="item btnrow" onClick={() => open(t.id)}>
+                      <span style={{ minWidth: 0 }}>
+                        <span className="t" style={{ display: 'block' }}>{fmt(Number(t.entry_ms), tz)}</span>
+                        <span className="d">{EXIT[t.exit_reason] ?? t.exit_reason}{t.planned_rr ? ` · RR 1:${Number(t.planned_rr)}` : ''}</span>
+                      </span>
+                      <span className="row" style={{ gap: 8, flex: 'none' }}>
+                        <span className={`tag ${t.side === 'long' ? 'buy' : 'sell'}`}>{t.side === 'long' ? 'BUY' : 'SELL'}</span>
+                        <span className={`num ${tone(t.pnl)}`} style={{ fontWeight: 700, minWidth: 72, textAlign: 'right' }}>{money(t.pnl)}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {d.trades.length > 200 ? <p className="mute small" style={{ marginTop: 12 }}>Menampilkan 200 trade terbaru dari {d.trades.length}. Semua ada di file ekspor.</p> : null}
+              </section>
+
+              <div className="row">
+                <a className="btn sm" href={`/api/analytics/export?kind=trades${session ? `&session=${session}` : ''}`}>Unduh trade (CSV)</a>
+                <a className="btn sm" href="/api/analytics/export?kind=events">Unduh sinyal (CSV)</a>
+              </div>
+            </>
+          )}
         </>
       )}
-
-      <section className="panel">
-        <h2>Perbandingan konfirmasi</h2>
-        <p className="mute small">Setiap baris hanya terisi dari sesi backtest yang benar-benar dijalankan dengan profil tersebut.</p>
-        <div className="tablewrap"><table><thead><tr><th>Profil</th><th>Sesi</th><th>Trade</th><th>Win rate</th><th>Expectancy</th><th>Profit factor</th><th>Max DD</th></tr></thead>
-          <tbody>{d.comparison.map((c: any) => (
-            <tr key={c.profile}><td>{PROFILE[c.profile]}</td>{c.metrics ? <>
-              <td>{c.sessions}</td><td>{c.metrics.totalTrades}</td><td>{pct(c.metrics.winRate)}</td><td>{px(c.metrics.expectancy)}</td>
-              <td>{c.metrics.profitFactor?.toFixed(2) ?? '—'}</td><td>{px(c.metrics.maxDrawdown)}</td></> : <td colSpan={6} className="mute">Belum dijalankan</td>}</tr>))}</tbody></table></div>
-      </section>
-
-      {d.trades.length ? (
-        <section className="panel">
-          <h2>Daftar transaksi</h2>
-          <div className="tablewrap"><table><thead><tr><th>Entry</th><th>Arah</th><th>TF</th><th>Harga entry</th><th>Exit</th><th>Alasan exit</th><th>P/L</th><th></th></tr></thead>
-            <tbody>{d.trades.map((t: any) => (
-              <tr key={t.id} className="click" onClick={() => open(t.id)}>
-                <td>{fmt(Number(t.entry_ms), tz)}</td><td>{t.side}</td><td>{t.timeframe ?? '—'}</td><td>{px(t.entry_price)}</td>
-                <td>{px(t.exit_price)}</td><td>{t.exit_reason}</td><td className="num">{px(t.pnl)}</td><td>{t.is_test ? 'TEST' : ''}</td>
-              </tr>))}</tbody></table></div>
-        </section>
-      ) : null}
-
-      {detail ? <TradeDetail d={detail} tz={tz} onClose={() => setDetail(null)} /> : null}
     </div>
   );
 }
 
-function Metric({ label, v }: { label: string; v: React.ReactNode }) {
-  return <div className="panel"><div className="mute small">{label}</div><div className="num" style={{ fontSize: 24, fontWeight: 800 }}>{v}</div></div>;
+function Stat({ label, v, cls = '' }: { label: string; v: React.ReactNode; cls?: string }) {
+  return <div className="stat"><div className="label">{label}</div><div className={`v ${cls}`}>{v}</div></div>;
 }
-function Breakdown({ title, rows, label = (k: string) => k }: { title: string; rows: any[]; label?: (k: string) => string }) {
-  return (
-    <section className="panel">
-      <h2>{title}</h2>
-      {rows.length ? <table><thead><tr><th></th><th>Trade</th><th>Win</th><th>P/L</th></tr></thead>
-        <tbody>{rows.map((r) => <tr key={r.key}><td>{label(r.key)}</td><td>{r.metrics.totalTrades}</td><td>{pct(r.metrics.winRate)}</td><td className="num">{px(r.metrics.totalPnl)}</td></tr>)}</tbody></table>
-        : <p className="mute small">Tidak ada data untuk pengelompokan ini.</p>}
-    </section>
-  );
+
+function Breakdown({ title, rows, label = (k: string) => k, plain = false }: { title: string; rows: any[]; label?: (k: string) => string; plain?: boolean }) {
+  const body = rows.length ? (
+    <div className="tablewrap"><table><thead><tr><th></th><th>Trade</th><th>Win</th><th>P/L</th></tr></thead>
+      <tbody>{rows.map((r) => <tr key={r.key}><td>{label(r.key)}</td><td>{r.metrics.totalTrades}</td><td>{pct(r.metrics.winRate)}</td><td className={tone(r.metrics.totalPnl)}>{money(r.metrics.totalPnl)}</td></tr>)}</tbody></table></div>
+  ) : <p className="mute small">Belum ada data.</p>;
+  if (plain) return <div className="stack tight"><h3>{title}</h3>{body}</div>;
+  return <section className="group"><h2>{title}</h2>{body}</section>;
 }
+
 function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => void }) {
-  if (d.loading) return <section className="panel"><Loading what="detail trade" /></section>;
+  if (d.loading) return <section className="group"><Loading what="trade" /></section>;
   if (d.error) return <ErrorBox error={d.error} />;
   const t = d.trade;
   const markers = [
-    { time: t.entry, text: `Entry ${t.side}`, position: t.side === 'long' ? 'below' : 'above', shape: t.side === 'long' ? 'arrowUp' : 'arrowDown' },
-    ...(t.exit ? [{ time: t.exit, text: `Exit ${t.exitReason}`, position: 'above', shape: 'square' }] : []),
+    { time: t.entry, text: t.side === 'long' ? 'BUY' : 'SELL', position: t.side === 'long' ? 'below' : 'above', shape: t.side === 'long' ? 'arrowUp' : 'arrowDown' },
+    ...(t.exit ? [{ time: t.exit, text: EXIT[t.exitReason] ?? t.exitReason, position: 'above', shape: 'square' }] : []),
   ] as any;
   return (
-    <section className="panel stack">
-      <div className="row between"><h2 style={{ margin: 0 }}>Trade {fmt(t.entry, tz)} {t.isTest ? '(TEST)' : ''}</h2><button className="btn" onClick={onClose}>Tutup</button></div>
-      <div className="chartbox" style={{ height: 340 }}>
-        {d.candles.length ? <CandleChart candles={d.candles} markers={markers} timezone={tz} fitKey={t.id} /> : <div className="empty">Tidak ada data candle yang tertaut ke trade ini.</div>}
+    <section className="group stack">
+      <div className="row between">
+        <h2>{t.side === 'long' ? 'BUY' : 'SELL'} · {fmt(t.entry, tz)}</h2>
+        <button className="btn sm" onClick={onClose}>Tutup</button>
       </div>
-      <div className="grid">
-        <dl className="kv"><dt>Arah</dt><dd>{t.side}</dd><dt>Entry</dt><dd>{px(t.entryPrice)}</dd><dt>SL / TP</dt><dd>{px(t.stopLoss)} / {px(t.takeProfit)}</dd>
-          <dt>Exit</dt><dd>{px(t.exitPrice)} ({t.exitReason})</dd><dt>P/L</dt><dd>{px(t.pnl)}</dd><dt>Asal</dt><dd>{t.origin}</dd></dl>
-        <div><div className="mute small">Alasan setup</div><pre className="small" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{JSON.stringify(t.setupReason, null, 2)}</pre></div>
-        <div>
-          <div className="mute small">Berita yang tersedia saat entry</div>
-          {!d.newsAtEntry.archiveAvailable ? <strong>DATA UNAVAILABLE</strong> : d.newsAtEntry.items.length
-            ? d.newsAtEntry.items.map((n: any) => <div key={n.id} className="small">{n.title} — {n.sentiment?.label ?? 'Unknown'}</div>)
-            : <span className="small">Tidak ada rilis 24 jam sebelumnya.</span>}
-        </div>
+      <div className="chartbox" style={{ height: 300, minHeight: 0 }}>
+        {d.candles.length ? <CandleChart candles={d.candles} markers={markers} timezone={tz} fitKey={t.id} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
       </div>
+      <dl className="kv">
+        <dt>Entry</dt><dd>{px(t.entryPrice)}</dd>
+        <dt>Stop loss</dt><dd>{px(t.stopLoss)}</dd>
+        <dt>Take profit</dt><dd>{px(t.takeProfit)}</dd>
+        <dt>Keluar</dt><dd>{px(t.exitPrice)} · {EXIT[t.exitReason] ?? t.exitReason}</dd>
+        <dt>Hasil</dt><dd className={tone(t.pnl)}>{money(t.pnl)}</dd>
+      </dl>
+      <details className="more">
+        <summary>Alasan entry & berita</summary>
+        {t.setupReason?.trend ? <p className="small">{t.setupReason.trend}</p> : null}
+        <p className="small">{!d.newsAtEntry.archiveAvailable ? 'Data berita tidak tersedia untuk tanggal ini.' : d.newsAtEntry.items.length
+          ? d.newsAtEntry.items.map((n: any) => `${n.title} (${n.sentiment?.label ?? 'Unknown'})`).join(' · ')
+          : 'Tidak ada rilis 24 jam sebelum entry.'}</p>
+        <pre>{JSON.stringify(t.setupReason, null, 2)}</pre>
+      </details>
     </section>
   );
 }
@@ -162,46 +188,51 @@ function RunBacktest({ onDone }: { onDone: (sessionId: string) => void }) {
   const run = async () => {
     setBusy(true); setErr(null); setRes(null);
     try {
-      const r = await call<any>('/api/backtest/run', { method: 'POST', json: {
+      setRes(await call<any>('/api/backtest/run', { method: 'POST', json: {
         source_id: f.source, strategy_version_id: f.strategy || null, from: `${f.from}T00:00:00Z`, to: `${f.to}T00:00:00Z`, rr: [1, 2, 3],
         size: Number(f.size), costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
-      } });
-      setRes(r);
+      } }));
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
   return (
-    <section className="panel">
-      <h2>Jalankan backtest SNR</h2>
-      <p className="mute small">Tren H4 → zona H4/H1 → entry M15 saat sentuh zona, di open candle M15 berikutnya. SL di luar zona + 0,5×ATR M15. Diuji 3 versi: RR 1:1, 1:2, 1:3 (masing-masing jadi satu sesi). Butuh data M15 + H1 + H4 di sumber yang sama. Maks ±1 tahun per run.</p>
-      <div className="grid">
-        <label>Sumber data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (TEST)' : ''}</option>)}</select></label>
-        <label>Strategi<select value={f.strategy} onChange={set('strategy')}>{strategies.map((s) => <option key={s.id} value={s.id}>{s.strategy_key} {s.version}</option>)}</select></label>
-        <label>Mulai (UTC)<input type="date" value={f.from} onChange={set('from')} /></label>
-        <label>Selesai (UTC, tidak termasuk)<input type="date" value={f.to} onChange={set('to')} /></label>
-        <label>Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
-        <label>Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
-        <label>Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
-        <label>Lot<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
-        <label>TP & SL di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Anggap SL (konservatif)</option><option value="best">Anggap TP</option><option value="skip">Lewati</option></select></label>
+    <section className="group stack">
+      <div className="stack tight">
+        <h2>Jalankan backtest</h2>
+        <p className="mute small">Strategi SNR: tren H4, zona H4/H1, entry M15. Diuji dengan RR 1:1, 1:2, dan 1:3.</p>
       </div>
-      <div className="row" style={{ marginTop: 12 }}>
-        <button className="btn primary" onClick={run} disabled={busy || !f.source || !f.strategy}>{busy ? 'Menghitung… (bisa ±1 menit)' : 'Jalankan backtest'}</button>
-        {!strategies.length && <span className="mute small">Strategi SNR belum terdaftar — muat ulang halaman.</span>}
+      <div className="grid two">
+        {sources.length > 1 ? (
+          <label className="field">Data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''}</option>)}</select></label>
+        ) : null}
+        <label className="field">Dari<input type="date" value={f.from} onChange={set('from')} /></label>
+        <label className="field">Sampai<input type="date" value={f.to} onChange={set('to')} /></label>
       </div>
-      {err && <div className="notice" style={{ marginTop: 12 }}>{err}</div>}
-      {res && (
-        <div style={{ marginTop: 12 }}>
-          <p className="small">{res.candlesProcessed} candle M15 diproses · {res.setups} setup · {res.nearEvents} kali mendekati zona · arsip berita: {res.newsArchive ? 'ada' : 'TIDAK ADA (konfirmasi berita = data tidak tersedia)'}{res.guardViolations ? ` · ⚠ ${res.guardViolations} pelanggaran look-ahead dibuang` : ''}</p>
-          <div className="tablewrap"><table><thead><tr><th>RR</th><th>Trade</th><th>Dilewati</th><th></th></tr></thead><tbody>
-            {res.sessions.map((s: any) => (
-              <tr key={s.backtestSessionId}><td>1:{s.rr}</td><td>{s.trades}</td>
-                <td className="small">{Object.entries(s.skipped).filter(([, n]) => (n as number) > 0).map(([k, n]) => `${k.replace(/_/g, ' ')}: ${n}`).join(', ') || '—'}</td>
-                <td><button className="btn" onClick={() => onDone(s.backtestSessionId)}>Lihat hasil</button></td></tr>
-            ))}
-          </tbody></table></div>
-          <p className="mute small">{res.note}</p>
+      <details className="more">
+        <summary>Biaya & lainnya</summary>
+        <div className="grid two">
+          {strategies.length > 1 ? <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>{strategies.map((s) => <option key={s.id} value={s.id}>{s.strategy_key} {s.version}</option>)}</select></label> : null}
+          <label className="field">Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
+          <label className="field">Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
+          <label className="field">Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
+          <label className="field">Lot<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
+          <label className="field">TP & SL kena di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Hitung sebagai SL</option><option value="best">Hitung sebagai TP</option><option value="skip">Lewati</option></select></label>
         </div>
-      )}
+      </details>
+      {!sources.length ? <div className="notice">Impor data M15 dulu di Atur → Data harga.</div> : null}
+      <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy}>{busy ? 'Menghitung… (±1 menit)' : 'Jalankan backtest'}</button>
+      {err ? <div className="error">{err}</div> : null}
+      {res ? (
+        <div className="stack tight">
+          <p className="small mute">{res.setups} setup ditemukan{res.newsArchive ? '' : ' · tanpa data berita'}</p>
+          <div className="grid two">
+            {res.sessions.map((s: any) => (
+              <button key={s.backtestSessionId} className="stat btnrow" style={{ border: '1px solid var(--line)', cursor: 'pointer' }} onClick={() => onDone(s.backtestSessionId)}>
+                <div className="label">RR 1:{s.rr}</div><div className="v">{s.trades} trade</div><div className="small" style={{ color: 'var(--gold)', fontWeight: 700 }}>Lihat hasil</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

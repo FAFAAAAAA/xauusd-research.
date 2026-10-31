@@ -1,106 +1,116 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { call, fmt, px, tzShort } from '@/components/client';
-import { ErrorBox, Loading, ModeTag, Status } from '@/components/Status';
+import { call, fmt, px } from '@/components/client';
+import { ErrorBox, Loading, ModeTag, PageHead, Status } from '@/components/Status';
 import { CATEGORY_LABEL } from '@/lib/core/news';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Dash = any;
+
+const EVENT_LABEL: Record<string, string> = {
+  SNR_NEAR: 'Mendekati zona', SNR_TOUCH: 'Menyentuh zona', SNR_BREAKOUT: 'Breakout', SNR_RETEST: 'Retest',
+  SETUP_CONFIRMED: 'Setup entry', SETUP_INVALIDATED: 'Setup batal',
+};
 
 export default function Dashboard() {
   const [d, setD] = useState<Dash | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => { setErr(null); call<Dash>('/api/dashboard').then(setD).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { load(); const t = setInterval(load, 30_000); return () => clearInterval(t); }, [load]);
-  if (err) return <><h1>Dashboard</h1><ErrorBox error={err} retry={load} /></>;
-  if (!d) return <><h1>Dashboard</h1><Loading /></>;
+  if (err) return <><PageHead title="Beranda" /><ErrorBox error={err} retry={load} /></>;
+  if (!d) return <><PageHead title="Beranda" /><Loading /></>;
   const tz = d.timezone;
-  const tv = d.tradingview;
   const tg = d.telegram;
+  const tv = d.tradingview;
+  const real = (d.coverage as any[]).filter((c) => !c.is_test);
+  const tfOf = (tf: string) => real.some((c) => c.timeframe === tf);
+  const tgOk = tg.tokenConfigured && tg.chatConfigured && tg.lastTest?.ok;
+  const steps = [
+    { t: 'Impor data M15', d: 'File CSV harga emas per 15 menit', done: tfOf('M15'), href: '/settings#data' },
+    { t: 'Bentuk H1 dan H4', d: 'Satu tombol di Atur → Data harga', done: tfOf('H1') && tfOf('H4'), href: '/settings#data' },
+    { t: 'Jalankan backtest', d: 'Lihat hasil RR 1:1, 1:2, 1:3', done: d.eventCounts.BACKTEST > 0, href: '/analytics' },
+    { t: 'Hubungkan Telegram', d: 'Supaya bot bisa kirim sinyal', done: !!tgOk, href: '/settings#telegram' },
+  ];
+  const allDone = steps.every((s) => s.done);
+  const events = [...d.liveEvents, ...d.backtestEvents].sort((a: any, b: any) => b.event_time - a.event_time).slice(0, 5);
+
   return (
     <div className="stack">
-      <div>
-        <h1>Dashboard</h1>
-        <p className="sub">Waktu ditampilkan dalam zona {tzShort(tz)}. Data LIVE dan BACKTEST dipisah.</p>
-      </div>
+      <PageHead title="Beranda" />
 
-      <div className="grid">
-        <section className="panel">
-          <h2>TradingView webhook</h2>
-          <Status on={tv.configured && tv.lastStatus?.status === 'accepted'} error={tv.lastStatus && tv.lastStatus.status !== 'accepted' && tv.lastStatus.status !== 'duplicate'}>
-            {!tv.configured ? 'Secret belum diatur' : tv.lastStatus ? `Terakhir: ${tv.lastStatus.status}` : 'Belum pernah menerima alert'}
-          </Status>
-          {tv.lastStatus ? <p className="mute small">{fmt(tv.lastStatus.at, tz, true)}{tv.lastStatus.error ? ` — ${tv.lastStatus.error}` : ''}</p> : null}
+      {d.latestCandle ? (
+        <section className="hero">
+          <span className="label">Harga terakhir di data kamu</span>
+          <span className="price">{px(d.latestCandle.close)}</span>
+          <span className="mute small">{fmt(d.latestCandle.time, tz)} · {d.latestCandle.timeframe} · {d.latestCandle.source}</span>
         </section>
-        <section className="panel">
-          <h2>Telegram</h2>
-          <Status on={tg.tokenConfigured && tg.chatConfigured && tg.lastTest?.ok} error={tg.lastTest && !tg.lastTest.ok}>
-            {!tg.tokenConfigured ? 'Bot token belum diatur' : !tg.chatConfigured ? 'Chat ID belum diatur'
-              : !tg.lastTest ? 'Belum diuji — kirim Test di Settings' : tg.lastTest.ok ? 'Terverifikasi oleh Telegram' : `Gagal: ${tg.lastTest.error}`}
-          </Status>
-          <p className="mute small">Live {tg.liveEnabled ? 'aktif' : 'nonaktif'} · Backtest {tg.backtestEnabled ? 'aktif' : 'nonaktif'}</p>
-        </section>
-        <section className="panel">
-          <h2>Data XAUUSD terakhir</h2>
-          {d.latestCandle ? (
-            <>
-              <div className="clock" style={{ fontSize: 32 }}>{px(d.latestCandle.close)}</div>
-              <p className="mute small">{d.latestCandle.timeframe} · {fmt(d.latestCandle.time, tz)} · {d.latestCandle.source}
-                {d.latestCandle.is_test ? ' · TEST' : ''}<br />Data historis tersimpan, bukan harga live.</p>
-            </>
-          ) : <p className="mute">Belum ada data. Impor CSV OHLC di Settings.</p>}
-        </section>
-        <section className="panel">
-          <h2>Kejadian SNR</h2>
-          <dl className="kv"><dt>LIVE</dt><dd className="num">{d.eventCounts.LIVE}</dd><dt>BACKTEST</dt><dd className="num">{d.eventCounts.BACKTEST}</dd></dl>
-        </section>
-      </div>
+      ) : null}
 
-      <div className="grid">
-        <EventsPanel title="Aktivitas LIVE" events={d.liveEvents} tz={tz} empty="Belum ada event dari TradingView." />
-        <EventsPanel title="Aktivitas BACKTEST" events={d.backtestEvents} tz={tz} empty="Belum ada event replay." />
-      </div>
-
-      <div className="grid">
-        <section className="panel">
-          <h2>Berita ekonomi terdekat</h2>
-          {d.upcomingNews.length ? d.upcomingNews.map((n: any) => (
-            <div key={n.id} className="event"><div className="row between"><strong>{n.title}</strong><span className="tag">{n.impact}</span></div>
-              <span className="mute">{fmt(n.scheduledAt, tz)} · {CATEGORY_LABEL[n.category as keyof typeof CATEGORY_LABEL] ?? n.category}</span></div>
-          )) : <p className="mute">DATA UNAVAILABLE — belum ada kalender untuk 7 hari ke depan. Impor di menu News.</p>}
+      {!allDone ? (
+        <section className="group">
+          <h2>Langkah memulai</h2>
+          <ol className="steps">
+            {steps.map((s, i) => (
+              <li key={s.t} className={s.done ? 'done' : ''}>
+                <span className="check" aria-hidden>{s.done ? '✓' : i + 1}</span>
+                <span><span className="t" style={{ fontWeight: 600, display: 'block' }}>{s.t}</span><span className="mute small">{s.d}</span></span>
+                {s.done ? <span className="mute small">Selesai</span> : <Link className="btn sm" href={s.href}>Buka</Link>}
+              </li>
+            ))}
+          </ol>
         </section>
-        <section className="panel">
-          <h2>Notifikasi terakhir</h2>
-          {d.lastDeliveries.length ? d.lastDeliveries.map((x: any) => (
-            <div key={x.id} className="event row between"><span><span className="tag">{x.mode}</span> {x.status}{x.skip_reason ? ` (${x.skip_reason})` : ''}</span>
-              <span className="mute">{fmt(Date.parse(x.created_at), tz)}</span></div>
-          )) : <p className="mute">Belum ada pengiriman.</p>}
-        </section>
-      </div>
+      ) : null}
 
-      <section className="panel">
-        <h2>Rentang data historis yang tersedia</h2>
-        {d.coverage.length ? (
-          <div className="tablewrap"><table><thead><tr><th>Sumber</th><th>TF</th><th>Dari</th><th>Sampai</th><th>Candle</th></tr></thead>
-            <tbody>{d.coverage.map((c: any) => <tr key={c.source_id + c.timeframe}><td>{c.source_name}{c.is_test ? ' (TEST)' : ''}</td><td>{c.timeframe}</td><td>{fmt(c.first, tz)}</td><td>{fmt(c.last, tz)}</td><td className="num">{c.candles.toLocaleString()}</td></tr>)}</tbody>
-          </table></div>
-        ) : <p className="mute">Belum ada. <Link href="/settings">Impor CSV OHLC</Link>.</p>}
+      <section className="group">
+        <h2>Koneksi</h2>
+        <div className="list">
+          <div className="item">
+            <span className="t">Bot Telegram</span>
+            <span className="end"><Status on={!!tgOk} error={tg.lastTest && !tg.lastTest.ok}>
+              {!tg.tokenConfigured ? 'Belum diatur' : !tg.chatConfigured ? 'Chat ID kosong' : !tg.lastTest ? 'Belum dites' : tg.lastTest.ok ? 'Terhubung' : 'Gagal'}
+            </Status></span>
+          </div>
+          <div className="item">
+            <span className="t">TradingView (live)</span>
+            <span className="end"><Status on={tv.configured && tv.lastStatus?.status === 'accepted'} error={tv.lastStatus && !['accepted', 'duplicate'].includes(tv.lastStatus.status)}>
+              {!tv.configured ? 'Belum diatur' : tv.lastStatus ? (tv.lastStatus.status === 'accepted' ? `Alert ${fmt(tv.lastStatus.at, tz)}` : 'Alert ditolak') : 'Menunggu alert'}
+            </Status></span>
+          </div>
+        </div>
+      </section>
+
+      <section className="group">
+        <h2>Sinyal terbaru</h2>
+        {events.length ? (
+          <div className="list">
+            {events.map((e: any) => (
+              <div key={e.id} className="item">
+                <span style={{ minWidth: 0 }}>
+                  <span className="t" style={{ display: 'block' }}>{EVENT_LABEL[e.event_type] ?? e.event_type}</span>
+                  <span className="d">{fmt(e.event_time, tz)} · {px(e.price)}</span>
+                </span>
+                <ModeTag mode={e.mode} test={e.is_test} />
+              </div>
+            ))}
+          </div>
+        ) : <p className="mute">Belum ada sinyal. Sinyal muncul dari replay, backtest, atau alert TradingView.</p>}
+      </section>
+
+      <section className="group">
+        <h2>Berita penting minggu ini</h2>
+        {d.upcomingNews.length ? (
+          <div className="list">
+            {d.upcomingNews.slice(0, 4).map((n: any) => (
+              <div key={n.id} className="item">
+                <span style={{ minWidth: 0 }}><span className="t" style={{ display: 'block' }}>{n.title}</span>
+                  <span className="d">{fmt(n.scheduledAt, tz)} · {CATEGORY_LABEL[n.category as keyof typeof CATEGORY_LABEL] ?? n.category}</span></span>
+                {n.impact === 'high' ? <span className="tag sell">Tinggi</span> : <span className="tag">{n.impact}</span>}
+              </div>
+            ))}
+          </div>
+        ) : <p className="mute">Kalender belum diisi. <Link href="/news">Impor di Berita</Link></p>}
       </section>
     </div>
-  );
-}
-
-function EventsPanel({ title, events, tz, empty }: { title: string; events: any[]; tz: string; empty: string }) {
-  return (
-    <section className="panel">
-      <h2>{title}</h2>
-      {events.length ? events.map((e) => (
-        <div key={e.id} className="event">
-          <div className="row between"><strong>{e.event_type} {e.timeframe}</strong><ModeTag mode={e.mode} test={e.is_test} /></div>
-          <span className="mute">{fmt(e.event_time, tz)} · {px(e.price)} · zona {px(e.zone_low)}–{px(e.zone_high)}</span>
-        </div>
-      )) : <p className="mute">{empty}</p>}
-    </section>
   );
 }

@@ -50,7 +50,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   const htfList = adapter.requiredTimeframes ?? [];
   for (const t of [tf, ...htfList]) {
     if (!(await repo.hasCandles(db, v.sourceId, t))) {
-      throw new HttpError(422, `Data ${t} belum ada untuk sumber ini. Impor M15 lalu di Pengaturan tekan "Bentuk TF lebih tinggi (UTC)".`);
+      throw new HttpError(422, `Data ${t} belum ada untuk sumber ini. Impor M15 lalu buka Atur → Data harga → tekan "Bentuk H1 & H4".`);
     }
   }
 

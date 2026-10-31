@@ -3,7 +3,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { call, fmt, px, tzShort } from '@/components/client';
-import { ErrorBox, Loading, ModeTag } from '@/components/Status';
+import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import type { ChartMarker, ChartZone } from '@/components/CandleChart';
 import { TIMEFRAMES, TIMEFRAME_MS, type Candle, type Timeframe } from '@/lib/core/types';
 import { zonedWallTimeToUtc } from '@/lib/core/time';
@@ -40,8 +40,8 @@ function Replay() {
   }, []);
   useEffect(() => { loadBoot(); }, [loadBoot]);
 
-  if (err) return <><h1>Replay</h1><ErrorBox error={err} retry={loadBoot} /></>;
-  if (!boot) return <><h1>Replay</h1><Loading what="replay" /></>;
+  if (err) return <><PageHead title="Replay" /><ErrorBox error={err} retry={loadBoot} /></>;
+  if (!boot) return <><PageHead title="Replay" /><Loading what="replay" /></>;
   return sessionId
     ? <Player key={sessionId} id={sessionId} tz={tz} strategies={boot.strategies} onClose={() => router.push('/replay')} />
     : <Setup boot={boot} tz={tz} onCreated={(id) => router.push(`/replay?session=${id}`)} />;
@@ -51,7 +51,7 @@ function Setup({ boot, tz, onCreated }: { boot: any; tz: string; onCreated: (id:
   const cov: any[] = boot.coverage;
   const [sourceId, setSourceId] = useState<string>(cov[0]?.source_id ?? '');
   const tfs = cov.filter((c) => c.source_id === sourceId).map((c) => c.timeframe as Timeframe);
-  const [tf, setTf] = useState<Timeframe>((tfs.includes('H1') ? 'H1' : tfs[0]) ?? 'H1');
+  const [tf, setTf] = useState<Timeframe>((tfs.includes('M15') ? 'M15' : tfs.includes('H1') ? 'H1' : tfs[0]) ?? 'M15');
   const range = cov.find((c) => c.source_id === sourceId && c.timeframe === tf);
   const years = useMemo(() => {
     if (!range) return [] as number[];
@@ -92,23 +92,27 @@ function Setup({ boot, tz, onCreated }: { boot: any; tz: string; onCreated: (id:
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
 
+  const sources = [...new Map(cov.map((c) => [c.source_id, c])).values()];
   return (
     <div className="stack">
-      <div>
-        <h1>Replay</h1>
-        <p className="sub">Replay berjalan di website ini dengan waktu pasar historis. Candle masa depan tidak pernah dikirim ke browser. Replay ini tidak mengendalikan Bar Replay di TradingView.</p>
-      </div>
+      <PageHead title="Replay" sub="Putar ulang pasar candle demi candle. Masa depan tetap tersembunyi." />
       {!cov.length ? (
-        <div className="notice"><strong>Belum ada data historis.</strong> Impor CSV OHLC di Settings → Data historis. Data tidak akan dibuat-buat.</div>
+        <section className="group empty-state">
+          <h2>Belum ada data harga</h2>
+          <p>Impor file CSV M15 dulu, lalu kembali ke sini.</p>
+          <a className="btn primary" href="/settings#data">Buka Data harga</a>
+        </section>
       ) : (
-        <section className="panel stack">
-          <h2>Sesi baru</h2>
-          <div className="grid">
-            <label className="field">Sumber data
-              <select value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
-                {[...new Map(cov.map((c) => [c.source_id, c])).values()].map((c) => <option key={c.source_id} value={c.source_id}>{c.source_name}{c.is_test ? ' (TEST)' : ''}</option>)}
-              </select>
-            </label>
+        <section className="group stack">
+          <h2>Mulai replay</h2>
+          <div className="grid two">
+            {sources.length > 1 ? (
+              <label className="field">Data
+                <select value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
+                  {sources.map((c) => <option key={c.source_id} value={c.source_id}>{c.source_name}{c.is_test ? ' (tes)' : ''}</option>)}
+                </select>
+              </label>
+            ) : null}
             <label className="field">Timeframe
               <select value={tf} onChange={(e) => setTf(e.target.value as Timeframe)}>
                 {TIMEFRAMES.filter((t) => tfs.includes(t)).map((t) => <option key={t}>{t}</option>)}
@@ -117,45 +121,49 @@ function Setup({ boot, tz, onCreated }: { boot: any; tz: string; onCreated: (id:
             <label className="field">Tahun
               <select value={year ?? ''} onChange={(e) => setYear(Number(e.target.value))}>{years.map((y) => <option key={y}>{y}</option>)}</select>
             </label>
-            <label className="field">Tanggal & jam mulai ({tzShort(tz)})
+            <label className="field">Mulai dari ({tzShort(tz)})
               <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} />
             </label>
           </div>
-          {range ? <p className="mute small" style={{ margin: 0 }}>Data tersedia: {fmt(range.first, tz)} → {fmt(range.last, tz)} ({range.candles.toLocaleString()} candle)</p> : null}
-          <div className="grid">
-            <label className="field">Versi strategi
-              <select value={strategyId} onChange={(e) => setStrategyId(e.target.value)}>
-                {boot.strategies.map((s: any) => <option key={s.id} value={s.id}>{s.strategy_key} {s.version}{s.testOnly ? ' — TEST' : ''}{!s.configured ? ' — belum dikonfigurasi' : ''}</option>)}
-              </select>
-            </label>
-            {strategy?.testOnly ? (
-              <label className="field">Jarak “dekat” (TEST, satuan harga)
-                <input inputMode="decimal" value={near} onChange={(e) => setNear(e.target.value)} placeholder="mis. 1.5" />
+          {range ? <p className="mute small">Data tersedia {fmt(range.first, tz).slice(0, 10)} sampai {fmt(range.last, tz).slice(0, 10)}</p> : null}
+          {strategy && !strategy.configured ? <div className="notice">Strategi ini belum punya aturan, jadi tidak akan ada sinyal.</div> : null}
+          <details className="more">
+            <summary>Pengaturan lain</summary>
+            <div className="grid two">
+              <label className="field">Strategi
+                <select value={strategyId} onChange={(e) => setStrategyId(e.target.value)}>
+                  {boot.strategies.map((s: any) => <option key={s.id} value={s.id}>{s.strategy_key} {s.version}{s.testOnly ? ' (tes)' : ''}{!s.configured ? ' (kosong)' : ''}</option>)}
+                </select>
               </label>
-            ) : null}
-            <label className="field">Saat Reset, event yang sudah tercatat
-              <select value={resend} onChange={(e) => setResend(e.target.value as 'never' | 'new_run')}>
-                <option value="never">tidak dikirim ulang ke Telegram</option>
-                <option value="new_run">dicatat & dikirim ulang (run baru)</option>
-              </select>
-            </label>
-          </div>
-          {strategy && !strategy.configured ? <div className="notice"><strong>Strategy Not Configured.</strong> Replay tetap berjalan, tetapi tidak ada event atau sinyal sampai aturan SNR Anda ditambahkan.</div> : null}
-          {strategy?.testOnly ? <div className="notice"><strong>Fixture TEST.</strong> Hanya untuk uji teknis pipeline (zona manual → event → Telegram). Bukan strategi trading, tanpa BUY/SELL.</div> : null}
-          {err ? <div className="error small">{err}</div> : null}
-          <div><button className="btn primary" onClick={create} disabled={busy || !sourceId || !dt}>{busy ? 'Menyiapkan…' : 'Mulai sesi replay'}</button></div>
+              {strategy?.testOnly ? (
+                <label className="field">Jarak dekat (tes)
+                  <input inputMode="decimal" value={near} onChange={(e) => setNear(e.target.value)} placeholder="1.5" />
+                </label>
+              ) : null}
+              <label className="field">Setelah reset
+                <select value={resend} onChange={(e) => setResend(e.target.value as 'never' | 'new_run')}>
+                  <option value="never">Jangan kirim ulang ke Telegram</option>
+                  <option value="new_run">Kirim ulang ke Telegram</option>
+                </select>
+              </label>
+            </div>
+          </details>
+          {err ? <div className="error">{err}</div> : null}
+          <button className="btn primary block" onClick={create} disabled={busy || !sourceId || !dt}>{busy ? 'Menyiapkan…' : 'Mulai replay'}</button>
         </section>
       )}
       {boot.sessions.length ? (
-        <section className="panel">
-          <h2>Sesi sebelumnya</h2>
-          <div className="tablewrap"><table><thead><tr><th>Dibuat</th><th>TF</th><th>Mulai</th><th>Posisi</th><th>Status</th></tr></thead>
-            <tbody>{boot.sessions.map((s: Session) => (
-              <tr key={s.id} className="click" onClick={() => onCreated(s.id)}>
-                <td>{fmt(s.created_at, tz)}</td><td>{s.timeframe}</td><td>{fmt(s.start_time, tz)}</td>
-                <td>{s.cursor_time ? fmt(s.cursor_time + TIMEFRAME_MS[s.timeframe as Timeframe], tz) : '—'}</td>
-                <td>{s.status}{s.is_test ? ' · TEST' : ''}</td>
-              </tr>))}</tbody></table></div>
+        <section className="group">
+          <h2>Replay sebelumnya</h2>
+          <div className="list">
+            {boot.sessions.slice(0, 8).map((s: Session) => (
+              <button key={s.id} className="item btnrow" onClick={() => onCreated(s.id)}>
+                <span><span className="t" style={{ display: 'block' }}>{s.timeframe} · mulai {fmt(s.start_time, tz).slice(0, 10)}</span>
+                  <span className="d">Posisi {s.cursor_time ? fmt(s.cursor_time + TIMEFRAME_MS[s.timeframe as Timeframe], tz) : 'awal'}</span></span>
+                <span className="end">{s.status === 'finished' ? 'Selesai' : 'Lanjutkan'}</span>
+              </button>
+            ))}
+          </div>
         </section>
       ) : null}
     </div>
@@ -262,97 +270,104 @@ function Player({ id, tz, strategies, onClose }: { id: string; tz: string; strat
     return [...evm, ...nm].filter((m) => m.time >= first);
   }, [events, news, showSnr, showNews, s, candles]);
 
-  if (err && !s) return <><h1>Replay</h1><ErrorBox error={err} retry={reloadAll} /></>;
-  if (!s) return <><h1>Replay</h1><Loading what="sesi replay" /></>;
+  if (err && !s) return <><PageHead title="Replay" /><ErrorBox error={err} retry={reloadAll} /></>;
+  if (!s) return <><PageHead title="Replay" /><Loading what="replay" /></>;
   const playing = s.status === 'playing';
   const finished = s.status === 'finished';
   const [dPart, tPart] = marketTime ? fmt(marketTime, tz).split(' ') : ['—', '—'];
+  const tr = snr?.available ? snr.trend : null;
 
   return (
     <div className="stack">
-      <div className="row between" style={{ alignItems: 'flex-end' }}>
-        <div>
-          <div className="row" style={{ marginBottom: 10 }}>
-            <ModeTag mode="BACKTEST" test={s.is_test} />
-            <span className="tag">{s.timeframe}</span>
-            <span className="tag">{finished ? 'selesai' : playing ? 'berjalan' : s.status === 'paused' ? 'dijeda' : 'siap'}</span>
-          </div>
-          <div className="clock num" aria-live="polite">{tPart}<span className="date">{dPart} · waktu pasar {tzShort(tz)}</span></div>
-        </div>
-        <button className="btn" onClick={onClose}>Semua sesi</button>
+      <div className="row between">
+        <button className="btn ghost" onClick={onClose} style={{ paddingLeft: 0 }}>‹ Semua replay</button>
+        <span className="row" style={{ gap: 6 }}>
+          <span className="tag">{s.timeframe}</span>
+          {finished ? <span className="tag">Selesai</span> : null}
+          {s.is_test ? <span className="tag test">Tes</span> : null}
+        </span>
       </div>
 
-      {strategy && !strategy.configured ? <div className="notice"><strong>Strategy Not Configured.</strong> Candle diputar, tetapi tidak ada event dan tidak ada sinyal BUY/SELL.</div> : null}
-      {strategy?.testOnly ? <div className="notice"><strong>Fixture TEST aktif.</strong> Event berasal dari aturan uji teknis terhadap zona manual, bukan strategi trading.</div> : null}
-
-      {snr?.available ? (
-        <section className="panel">
-          <div className="row between">
-            <strong>Tren H4: {snr.trend === 'bullish' ? 'BULLISH → hanya BUY' : snr.trend === 'bearish' ? 'BEARISH → hanya SELL' : 'NETRAL → tidak ada entry'}</strong>
-            <span className="mute small">{snr.trendDetail} · {snr.zones.length} zona H4/H1</span>
+      <div className="row between" style={{ alignItems: 'flex-end' }}>
+        <div className="clock" aria-live="polite">{tPart}<span className="date">{dPart} · {tzShort(tz)}</span></div>
+        {tr ? (
+          <div className={`trend ${tr === 'bullish' ? 'bull' : tr === 'bearish' ? 'bear' : 'flat'}`}>
+            <span className="arrow" aria-hidden>{tr === 'bullish' ? '↑' : tr === 'bearish' ? '↓' : '–'}</span>
+            <span><span style={{ fontWeight: 700, display: 'block' }}>{tr === 'bullish' ? 'Hanya BUY' : tr === 'bearish' ? 'Hanya SELL' : 'Tunggu'}</span>
+              <span className="mute small">Tren H4 {tr === 'bullish' ? 'naik' : tr === 'bearish' ? 'turun' : 'netral'}</span></span>
           </div>
-          <p className="mute small" style={{ marginBottom: 0 }}>Chart menampilkan 6 zona terdekat. Dihitung hanya dari candle H4/H1 yang sudah tutup pada waktu replay.</p>
-        </section>
-      ) : null}
+        ) : null}
+      </div>
+
+      {strategy && !strategy.configured ? <div className="notice">Strategi ini belum punya aturan, jadi tidak ada sinyal.</div> : null}
 
       <div className="chartbox">
         {candles.length ? <CandleChart candles={candles} zones={visibleZones} markers={markers} timezone={tz} fitKey={`${id}-${s.run_number}`} />
-          : <div className="empty">Belum ada candle sebelum waktu mulai. Tekan Next Candle atau Play.</div>}
+          : <div className="empty">Tekan Putar atau Maju 1 untuk mulai.</div>}
       </div>
 
       <div className="controls">
         {playing
-          ? <button className="btn primary" onClick={() => patch({ status: 'paused' })}>Pause</button>
-          : <button className="btn primary" onClick={() => patch({ status: 'playing' })} disabled={finished}>Play</button>}
-        <button className="btn" onClick={() => step(true).catch((e) => setErr(e.message))} disabled={playing || finished}>Next candle</button>
-        <button className="btn" onClick={reset}>Reset</button>
+          ? <button className="btn primary grow" onClick={() => patch({ status: 'paused' })}>Jeda</button>
+          : <button className="btn primary grow" onClick={() => patch({ status: 'playing' })} disabled={finished}>Putar</button>}
+        <button className="btn grow" onClick={() => step(true).catch((e) => setErr(e.message))} disabled={playing || finished}>Maju 1</button>
         <div className="seg" role="group" aria-label="Kecepatan">
           {SPEEDS.map((x) => <button key={x} aria-pressed={s.speed === x} onClick={() => patch({ speed: x })}>{x}×</button>)}
         </div>
-        <label className="switch"><input type="checkbox" checked={showSnr} onChange={(e) => setShowSnr(e.target.checked)} />SNR</label>
-        <label className="switch"><input type="checkbox" checked={showNews} onChange={(e) => setShowNews(e.target.checked)} />Berita</label>
       </div>
-
-      <section className="panel stack">
-        <label className="switch"><input type="checkbox" checked={s.telegram_enabled} onChange={(e) => patch({ telegram_enabled: e.target.checked })} />
-          Kirim notifikasi SIMULASI ke Telegram</label>
-        <p className="mute small" style={{ margin: 0 }}>
-          Default mati. Pesan berlabel “SIMULASI HISTORIS — BUKAN SINYAL LIVE”, dikirim saat replay melewati event, mengikuti kecepatan replay, dan berhenti saat Pause.
-          Pengiriman juga memerlukan “Notifikasi Backtest” aktif di Settings. Saat Reset: {s.resend_policy === 'never' ? 'event yang sudah tercatat tidak dikirim ulang.' : 'setiap Reset membuat run baru dan event dikirim ulang.'}
-          {' '}<button className="btn" style={{ minHeight: 0, padding: '2px 8px' }} onClick={() => patch({ resend_policy: s.resend_policy === 'never' ? 'new_run' : 'never' })}>Ubah</button>
-        </p>
-        {tgNote ? <div className="error small">{tgNote}</div> : null}
-      </section>
 
       {err ? <ErrorBox error={err} /> : null}
 
-      <div className="grid">
-        <section className="panel">
-          <h2>Event pada replay ini</h2>
-          <div className="eventlist">
-            {events.length ? events.map((e) => (
-              <div key={e.id} className="event">
-                <div className="row between"><strong>{e.event_type} {e.timeframe}</strong>
-                  <span className="mute">{e.telegram?.status ? `Telegram: ${e.telegram.status}` : ''}</span></div>
-                <div className="mute">{fmt(e.event_time, tz)} · {px(e.price)} · zona {px(e.zone_low)}–{px(e.zone_high)}</div>
-                <div className="small">Trend: {e.confirmations?.trend} · News: {e.confirmations?.news} · Sentiment: {e.confirmations?.sentiment}</div>
-              </div>)) : <p className="mute">Belum ada event sampai waktu ini.</p>}
+      <section className="group stack">
+        <label className="switch">Kirim sinyal ke Telegram<input type="checkbox" checked={s.telegram_enabled} onChange={(e) => patch({ telegram_enabled: e.target.checked })} /></label>
+        <label className="switch">Tampilkan zona SNR<input type="checkbox" checked={showSnr} onChange={(e) => setShowSnr(e.target.checked)} /></label>
+        <label className="switch">Tampilkan berita<input type="checkbox" checked={showNews} onChange={(e) => setShowNews(e.target.checked)} /></label>
+        {tgNote ? <div className="error">{tgNote}</div> : null}
+        <details className="more">
+          <summary>Lainnya</summary>
+          <p className="mute small">Pesan Telegram diberi label simulasi. Notifikasi backtest juga harus aktif di Atur → Telegram.</p>
+          <div className="row">
+            <button className="btn sm" onClick={reset}>Ulang dari awal</button>
+            <button className="btn sm" onClick={() => patch({ resend_policy: s.resend_policy === 'never' ? 'new_run' : 'never' })}>
+              Setelah ulang: {s.resend_policy === 'never' ? 'jangan kirim ulang' : 'kirim ulang'}
+            </button>
           </div>
-        </section>
-        <section className="panel">
-          <h2>Berita yang sudah tersedia</h2>
-          {!news ? <Loading what="berita" /> : !news.archiveAvailable ? <p><strong>DATA UNAVAILABLE</strong><br /><span className="mute small">Arsip berita/kalender untuk periode ini belum diimpor.</span></p> : (
-            <div className="eventlist">
-              {news.items.length ? news.items.map((n: any) => (
-                <div key={n.id} className="event"><strong>{n.title}</strong>
-                  <div className="mute">tersedia {fmt(n.availableAt, tz)}{n.impact ? ` · ${n.impact}` : ''}</div>
-                  {n.sentiment ? <div className="small">{n.sentiment.label} ({n.sentiment.confidence ?? '–'}): {n.sentiment.reasoning}</div> : null}
-                </div>)) : <p className="mute">Tidak ada rilis dalam 24 jam terakhir.</p>}
-              {news.upcoming.map((u: any) => <div key={u.id} className="event mute">Terjadwal: {u.title} · {fmt(u.scheduledAt, tz)} (actual belum diketahui)</div>)}
-            </div>)}
-        </section>
-      </div>
-      <p className="mute small">Diproses: {s.candles_processed} candle · Run #{s.run_number} · Session ID <span className="num">{s.id}</span></p>
+          <p className="mute small">{s.candles_processed} candle diproses · putaran {s.run_number}</p>
+        </details>
+      </section>
+
+      <section className="group">
+        <h2>Sinyal di replay ini</h2>
+        <div className="eventlist">
+          {events.length ? events.map((e) => {
+            const side = e.event_type === 'SETUP_CONFIRMED' ? (e.zone_kind === 'support' ? 'BUY' : 'SELL') : null;
+            return (
+              <div key={e.id} className="event">
+                <div className="row between">
+                  <strong>{e.event_type === 'SETUP_CONFIRMED' ? 'Setup entry' : e.event_type === 'SNR_NEAR' ? 'Mendekati zona' : e.event_type}</strong>
+                  {side ? <span className={`tag ${side === 'BUY' ? 'buy' : 'sell'}`}>{side}</span> : null}
+                </div>
+                <span className="mute">{fmt(e.event_time, tz)} · {px(e.price)} · zona {px(e.zone_low)}–{px(e.zone_high)}</span>
+                {e.confirmations?.news && !/unavailable/i.test(e.confirmations.news) ? <span className="small">Berita: {e.confirmations.news}</span> : null}
+                {e.telegram?.status === 'sent' ? <span className="small mute">Terkirim ke Telegram</span> : null}
+              </div>
+            );
+          }) : <p className="mute">Belum ada sinyal sampai waktu ini.</p>}
+        </div>
+      </section>
+
+      <section className="group">
+        <h2>Berita saat ini</h2>
+        {!news ? <Loading what="berita" /> : !news.archiveAvailable ? <p className="mute">Belum ada data berita untuk tanggal ini.</p> : (
+          <div className="eventlist">
+            {news.items.length ? news.items.map((n: any) => (
+              <div key={n.id} className="event"><strong>{n.title}</strong>
+                <span className="mute">{fmt(n.availableAt, tz)}{n.sentiment && n.sentiment.label !== 'Unknown' ? ` · emas ${n.sentiment.label === 'Bullish' ? 'cenderung naik' : n.sentiment.label === 'Bearish' ? 'cenderung turun' : 'netral'}` : ''}</span>
+              </div>)) : <p className="mute">Tidak ada rilis 24 jam terakhir.</p>}
+            {news.upcoming.map((u: any) => <div key={u.id} className="event mute">Akan rilis: {u.title} · {fmt(u.scheduledAt, tz)}</div>)}
+          </div>)}
+      </section>
     </div>
   );
 }
+

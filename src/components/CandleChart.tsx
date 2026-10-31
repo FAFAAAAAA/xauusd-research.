@@ -26,15 +26,15 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     if (!box.current) return;
     const c = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: '#000000' }, textColor: '#8a8a90', fontFamily: 'Manrope, system-ui, sans-serif' },
-      grid: { vertLines: { color: '#141416' }, horzLines: { color: '#141416' } },
+      layout: { background: { type: ColorType.Solid, color: '#ffffff' }, textColor: '#8a94a6', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" },
+      grid: { vertLines: { color: '#f2f4f7' }, horzLines: { color: '#f2f4f7' } },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: '#26262a' },
-      timeScale: { borderColor: '#26262a', timeVisible: true, secondsVisible: false, rightOffset: 6 },
+      rightPriceScale: { borderColor: '#e4e7ec' },
+      timeScale: { borderColor: '#e4e7ec', timeVisible: true, secondsVisible: false, rightOffset: 6 },
     });
     series.current = c.addCandlestickSeries({
-      upColor: 'rgba(0,0,0,0)', borderUpColor: '#f5f5f5', wickUpColor: '#f5f5f5',
-      downColor: '#6b6b70', borderDownColor: '#6b6b70', wickDownColor: '#6b6b70',
+      upColor: '#12805c', borderUpColor: '#12805c', wickUpColor: '#12805c',
+      downColor: '#c2410c', borderDownColor: '#c2410c', wickDownColor: '#c2410c',
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
     });
     chart.current = c;
@@ -48,7 +48,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     if (!s) return;
     s.setData(candles.map((c) => ({ time: shift(c.time), open: c.open, high: c.high, low: c.low, close: c.close })));
     const m: SeriesMarker<UTCTimestamp>[] = markers
-      .map((x) => ({ time: shift(x.time), position: x.position === 'above' ? 'aboveBar' as const : 'belowBar' as const, shape: x.shape, color: '#f5f5f5', text: x.text }))
+      .map((x) => ({ time: shift(x.time), position: x.position === 'above' ? 'aboveBar' as const : 'belowBar' as const, shape: x.shape, color: '#1b2433', text: x.text }))
       .sort((a, b) => a.time - b.time);
     s.setMarkers(m);
     if (fitKey !== lastFit.current) { chart.current?.timeScale().fitContent(); lastFit.current = fitKey; }
@@ -60,8 +60,8 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     if (!s) return;
     lines.current.forEach((l) => s.removePriceLine(l));
     lines.current = zones.flatMap((z) => [
-      s.createPriceLine({ price: z.high, color: '#c4c4c8', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: z.kind === 'resistance' ? 'R' : z.kind === 'support' ? 'S' : 'Z' }),
-      s.createPriceLine({ price: z.low, color: '#c4c4c8', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: false, title: '' }),
+      s.createPriceLine({ price: z.high, color: z.kind === 'resistance' ? '#c2410c' : '#a87a1f', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: z.kind === 'resistance' ? 'R' : z.kind === 'support' ? 'S' : 'Z' }),
+      s.createPriceLine({ price: z.low, color: z.kind === 'resistance' ? '#c2410c' : '#a87a1f', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: false, title: '' }),
     ]);
   }, [zones]);
 

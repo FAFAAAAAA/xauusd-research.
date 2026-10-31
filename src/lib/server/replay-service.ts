@@ -29,7 +29,7 @@ export async function createReplaySession(db: Db, v: {
   const adapter = getAdapter(sv?.adapter_key);
   for (const t of adapter.requiredTimeframes ?? []) {
     if (!(await repo.hasCandles(db, v.sourceId, t))) {
-      throw new HttpError(422, `Strategi ini butuh data ${t}. Buka Pengaturan → pilih TF M15 → tekan "Bentuk TF lebih tinggi (UTC)" dulu.`);
+      throw new HttpError(422, `Strategi ini butuh data ${t}. Buka Atur → Data harga → tekan "Bentuk H1 & H4" dulu.`);
     }
   }
   // Candles strictly before the start are history (visible, not processed). Processing begins at the start candle.

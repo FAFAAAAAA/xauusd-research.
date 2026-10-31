@@ -2,12 +2,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+const I = {
+  home: <path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" />,
+  replay: <><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" fill="currentColor" stroke="none" /></>,
+  results: <path d="M5 19V11M10 19V6M15 19v-5M20 19V9" />,
+  news: <><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M8 9h8M8 12h8M8 15h5" /></>,
+  settings: <><circle cx="12" cy="12" r="3" /><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" /></>,
+};
 const ITEMS = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/replay', label: 'Replay' },
-  { href: '/analytics', label: 'Analytics' },
-  { href: '/news', label: 'News' },
-  { href: '/settings', label: 'Settings' },
+  { href: '/', label: 'Beranda', icon: I.home },
+  { href: '/replay', label: 'Replay', icon: I.replay },
+  { href: '/analytics', label: 'Hasil', icon: I.results },
+  { href: '/news', label: 'Berita', icon: I.news },
+  { href: '/settings', label: 'Atur', icon: I.settings },
 ];
 
 export default function Shell({ children, showLogout = false }: { children: React.ReactNode; showLogout?: boolean }) {
@@ -16,17 +23,23 @@ export default function Shell({ children, showLogout = false }: { children: Reac
   const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; };
   return (
     <div className="shell">
-      <aside className="rail">
-        <div className="brand">XAUUSD Research<small>SNR · replay · Telegram</small></div>
-        <nav className="nav">
-          {ITEMS.map((i) => <Link key={i.href} href={i.href} aria-current={active(i.href) ? 'page' : undefined}>{i.label}</Link>)}
-        </nav>
-        <div className="spacer" />
-        {showLogout ? <button className="btn" onClick={logout}>Keluar</button> : null}
-      </aside>
+      <header className="topbar">
+        <div className="topbar-in">
+          <Link href="/" className="brand"><span className="brand-mark" aria-hidden>Au</span>XAUUSD Research</Link>
+          <nav className="topnav" aria-label="Menu">
+            {ITEMS.map((i) => <Link key={i.href} href={i.href} aria-current={active(i.href) ? 'page' : undefined}>{i.label}</Link>)}
+          </nav>
+          {showLogout ? <button className="btn sm" onClick={logout}>Keluar</button> : null}
+        </div>
+      </header>
       <main className="main">{children}</main>
       <nav className="tabbar" aria-label="Menu utama">
-        {ITEMS.map((i) => <Link key={i.href} href={i.href} aria-current={active(i.href) ? 'page' : undefined}>{i.label}</Link>)}
+        {ITEMS.map((i) => (
+          <Link key={i.href} href={i.href} aria-current={active(i.href) ? 'page' : undefined}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{i.icon}</svg>
+            {i.label}
+          </Link>
+        ))}
       </nav>
     </div>
   );

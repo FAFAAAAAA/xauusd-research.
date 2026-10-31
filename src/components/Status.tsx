@@ -4,12 +4,15 @@ export function Status({ on, error, children }: { on: boolean; error?: boolean; 
 export function ModeTag({ mode, test }: { mode: string; test?: boolean }) {
   return (
     <span className="row" style={{ gap: 6 }}>
-      <span className={`tag ${mode === 'LIVE' ? 'live' : 'bt'}`}>{mode === 'LIVE' ? 'LIVE' : 'BACKTEST'}</span>
-      {test ? <span className="tag test">TEST</span> : null}
+      <span className={`tag ${mode === 'LIVE' ? 'live' : 'bt'}`}>{mode === 'LIVE' ? 'Live' : 'Simulasi'}</span>
+      {test ? <span className="tag test">Tes</span> : null}
     </span>
   );
 }
+export function PageHead({ title, sub, children }: { title: string; sub?: string; children?: React.ReactNode }) {
+  return <div className="page-head"><h1>{title}</h1>{sub ? <p className="sub">{sub}</p> : null}{children}</div>;
+}
 export function Loading({ what = 'data' }: { what?: string }) { return <p className="skeleton">Memuat {what}…</p>; }
 export function ErrorBox({ error, retry }: { error: string; retry?: () => void }) {
-  return <div className="error row between"><span>{error}</span>{retry ? <button className="btn" onClick={retry}>Coba lagi</button> : null}</div>;
+  return <div className="error row between"><span>{error}</span>{retry ? <button className="btn sm" onClick={retry}>Coba lagi</button> : null}</div>;
 }
