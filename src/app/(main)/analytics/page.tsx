@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades } from '@/components/ResultCharts';
@@ -144,7 +145,9 @@ export default function Analytics() {
                 {fresh ? <>
                 <ReportButton filename={`backtest-xauusd-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: String(cfgSel ?? '').startsWith('snr_snd_tv')
+                  rules: String(cfgSel ?? '').startsWith('custom ')
+                    ? 'Strategi buatan sendiri (aturan di menu Strategi) · entry di open M15 berikutnya'
+                    : String(cfgSel ?? '').startsWith('snr_snd_tv')
                     ? 'Entry: rejection M15 di zona supply/demand H4/H1 dekat SNR H4, searah EMA50/200 H4 · SL: luar zona + 0,15×ATR M15'
                     : String(cfgSel ?? '').startsWith('breakout')
                     ? 'Entry: open M15 berikutnya setelah breakout H1/London/New York/M30 searah tren H4 & D1 · SL: ATR atau sisi lain range'
@@ -342,8 +345,8 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
         <p className="mute small">Setiap tahun diuji dengan RR 1:1, 1:2, dan 1:3.</p>
       </div>
       {strategies.length ? (
-        <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>
-          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (disarankan)' : s.adapter_key === 'snr_h4h1_m15' ? 'SNR v0.1 (sentuh zona)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'Indikator TradingView kamu (SNR + SND)' : `${s.strategy_key} ${s.version}`}</option>)}
+        <label className="field"><span className="row between">Strategi <Link href="/strategi" style={{ fontSize: 13 }}>Tambah / kelola strategi</Link></span><select value={f.strategy} onChange={set('strategy')}>
+          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (disarankan)' : s.adapter_key === 'snr_h4h1_m15' ? 'SNR v0.1 (sentuh zona)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'Indikator TradingView kamu (SNR + SND)' : s.adapter_key === 'custom_v1' ? s.version : `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : null}
       {isBreakout ? (
@@ -527,6 +530,7 @@ function configKey(s: any) {
 function configLabel(s: any) {
   const strat = String(s.strategy ?? 'strategi');
   if (strat === 'snr_snd_tv v1') return 'Indikator TradingView kamu (SNR + SND)';
+  if (strat.startsWith('custom ')) return strat.slice(7);
   if (!strat.startsWith('breakout')) return strat === 'snr h4h1m15-v0.1' ? 'SNR v0.1 (sentuh zona)' : strat;
   const p = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowBuy: true, allowSell: true, ...paramsOf(s) };
   const parts = Object.entries(PART).filter(([k]) => (p as any)[k]).map(([, v]) => v).join(' + ');

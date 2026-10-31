@@ -124,3 +124,39 @@ test('snr+snd (owner TradingView indicator): registered, no look-ahead, signals 
     }
   }
 });
+
+test('builder: validation messages, rule strategy fires without look-ahead, signals file only acts on its own candle', async () => {
+  const { validateDefinition, customAdapter } = await import('../src/lib/core/strategy/builder');
+  const { parseSignalsCsv } = await import('../src/lib/core/signals-csv');
+  const bad = validateDefinition({ kind: 'rules', name: '', sides: 'x', entry: { type: 'nope' }, stop: { type: 'range' } });
+  assert.equal(bad.ok, false);
+  const good = { kind: 'rules', name: 'Breakout M15', sides: 'both', entry: { type: 'donchian', tf: 'M15', length: 20 },
+    filters: [{ type: 'ema_trend', tf: 'H1', fast: 20, slow: 50 }], stop: { type: 'atr', tf: 'M15', mult: 2 }, cooldownBars: 4 };
+  assert.equal(validateDefinition(good).ok, true);
+  const m15 = zigzag(192 * 6, 1);
+  const h1 = aggregateCandles(m15, 'M15', 'H1', 'utc', false), h4 = aggregateCandles(m15, 'M15', 'H4', 'utc', false), d1 = aggregateCandles(m15, 'M15', 'D1', 'utc', false);
+  const run = (definition: unknown) => {
+    const state: Record<string, unknown> = {};
+    const out: Array<{ t: number; side: unknown; sl: number; price: number }> = [];
+    for (let i = 0; i < m15.length; i++) {
+      const now = m15[i].time + M15;
+      const res = runStrategyGuarded(customAdapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+        news: { archiveAvailable: false, items: [], upcoming: [] }, htf: { H1: h1, H4: h4, D1: d1 }, params: { definition }, state });
+      assert.deepEqual(res.violations, []);
+      for (const e of res.events) out.push({ t: e.candleTime, side: e.details!.side, sl: e.details!.stop_loss as number, price: e.price });
+    }
+    return out;
+  };
+  const ev = run(good);
+  assert.ok(ev.length > 0, 'uptrend donchian produces signals');
+  for (const e of ev) { assert.equal(e.side, 'long', 'H1 uptrend filter blocks SELL'); assert.ok(e.sl < e.price); }
+  for (let k = 1; k < ev.length; k++) assert.ok(ev[k].t - ev[k - 1].t >= 4 * M15, 'cooldown respected');
+  // signals file
+  const csv = `time,side,stop_loss\n${new Date(m15[300].time).toISOString().slice(0, 16).replace('T', ' ')},BUY,${m15[300].close - 5}\nbad,line,x`;
+  const parsed = parseSignalsCsv(csv);
+  assert.equal(parsed.signals.length, 1);
+  assert.equal(parsed.errors.length, 1);
+  const sev = run({ kind: 'signals', name: 'file', signals: parsed.signals });
+  assert.equal(sev.length, 1);
+  assert.equal(sev[0].t, m15[300].time);
+});

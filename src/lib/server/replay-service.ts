@@ -32,11 +32,13 @@ export async function createReplaySession(db: Db, v: {
       throw new HttpError(422, `Strategi ini butuh data ${t}. Buka Atur → Data harga → tekan "Bentuk H1, H4 & D1" dulu.`);
     }
   }
+  let params = v.params ?? {};
+  if (adapter.key === 'custom_v1' && sv) params = { definition: await repo.strategyDefinition(db, sv.id) };
   // Candles strictly before the start are history (visible, not processed). Processing begins at the start candle.
   const initialCursor = await repo.lastCandleBefore(db, v.sourceId, v.timeframe, v.startTime);
   return repo.insertReplay(db, {
     sourceId: v.sourceId, instrumentId, strategyVersionId: sv?.id ?? null, timeframe: v.timeframe, startTime: v.startTime,
-    cursorTime: initialCursor, resendPolicy: v.resendPolicy ?? 'never', params: v.params ?? {},
+    cursorTime: initialCursor, resendPolicy: v.resendPolicy ?? 'never', params,
     isTest: source.is_test || !!sv?.is_test,
   });
 }

@@ -52,6 +52,13 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   const adapter = getAdapter(sv?.adapter_key);
   if (!sv || !adapter.configured) throw new HttpError(422, 'Strategi belum dikonfigurasi');
   const tf: Timeframe = 'M15';
+  // custom strategies keep their rules in the database; they are passed to the adapter as params.definition
+  let runParams: Record<string, unknown> = v.params ?? {};
+  if (adapter.key === 'custom_v1') {
+    const definition = await repo.strategyDefinition(db, sv.id);
+    if (!definition) throw new HttpError(422, 'Definisi strategi tidak ditemukan');
+    runParams = { definition };
+  }
   const htfList = adapter.requiredTimeframes ?? [];
   for (const t of [tf, ...htfList]) {
     if (!(await repo.hasCandles(db, v.sourceId, t))) {
@@ -99,7 +106,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     if (window.length < adapter.warmupCandles) continue;
     const res = runStrategyGuarded(adapter, {
       mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: tf, candles: window, now, zones: [], news: EMPTY_NEWS,
-      htf: ctxHtf, params: v.params ?? {}, state,
+      htf: ctxHtf, params: runParams, state,
     });
     violations += res.violations.length;
     for (const ev of res.events) {

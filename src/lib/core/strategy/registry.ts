@@ -3,6 +3,7 @@ import type { EventType } from '../types';
 import { snrAdapter } from './snr';
 import { breakoutAdapter } from './breakout';
 import { snrSndAdapter } from './snrsnd';
+import { customAdapter } from './builder';
 
 /**
  * Placeholder for the owner's SNR strategy. It is intentionally empty:
@@ -69,6 +70,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [snrAdapter.key]: snrAdapter,
   [breakoutAdapter.key]: breakoutAdapter,
   [snrSndAdapter.key]: snrSndAdapter,
+  [customAdapter.key]: customAdapter,
 };
 
 export function getAdapter(key: string | null | undefined): StrategyAdapter {

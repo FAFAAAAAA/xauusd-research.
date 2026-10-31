@@ -167,6 +167,15 @@ Kode: `src/lib/core/strategy/breakout.ts` (adapter `breakout_v02`). Riset: 92 va
 
 Hasil riset (BUY+SELL, H1+London+NY, RR 1:2): ±3,4 trade/minggu, win 36,6%, +$1.274, turun terdalam −$502; 2018–2022 ≈ impas, 2023–2026 +0,18R/trade. Sisi SELL merugi di data ini (−$557) dan bisa dimatikan. **Butuh data D1** (Atur → Data harga → "Bentuk H1, H4 & D1"). Bukan jaminan profit.
 
+## 5c. Strategi buatan sendiri (tanpa coding)
+
+Menu **Strategi** (`/strategi`, dari Atur atau tombol di panel backtest):
+- **Buat strategi**: pemicu entry (breakout N candle, EMA cross, harga × EMA, RSI, Bollinger, MACD, breakout range sesi, pola candle) + syarat (tren EMA, harga vs EMA, RSI, jam, hari) + SL (ATR, swing, range, $ tetap). TP diuji RR 1:1/1:2/1:3.
+- **Impor file strategi (.json)**: format di `AI_GUIDE` (`src/lib/core/strategy/builder.ts`) — tombol "Salin panduan" untuk dipakai di AI lain.
+- **Impor sinyal (.csv)**: `time,side,stop_loss` (jam buka candle M15 sinyal, UTC).
+- Strategi bawaan bisa disembunyikan; buatan sendiri bisa dihapus (opsional beserta hasilnya).
+Definisi disimpan di `strategy_settings.params.definition` (mode BACKTEST) — tidak perlu migrasi.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

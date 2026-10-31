@@ -412,3 +412,21 @@ test('13. Breakout v0.2: needs D1, runs BUY+SELL with one position per part and 
   const cfg = (await repo.listBacktestSessions(db)).find((s) => s.id === r.sessions[0].backtestSessionId)!;
   assert.deepEqual((cfg.cost_config as { strategy_params: unknown }).strategy_params, { donchianH1: true, london: true, newYork: true });
 });
+
+test('14. Custom strategy: create from definition, backtest, delete with results', async () => {
+  const src = (await repo.listSources(db)).find((s) => s.name === 'TEST SNR zigzag')!;
+  const cov = (await repo.dataCoverage(db)).find((c) => c.source_id === src.id && c.timeframe === 'M15')!;
+  const def = { kind: 'rules', name: 'TEST builder', sides: 'both', entry: { type: 'donchian', tf: 'H1', length: 20 }, filters: [], stop: { type: 'atr', tf: 'H1', mult: 2 } };
+  const sv = await repo.createCustomStrategy(db, def, def);
+  const again = await repo.createCustomStrategy(db, def, def);
+  assert.equal(again.version, 'TEST builder (2)', 'same name gets a suffix');
+  const r = await runBacktest(db, { sourceId: src.id, strategyVersionId: sv.id, from: cov.first + 5 * 86_400_000, to: cov.last, rrList: [2], riskUsd: 10 });
+  assert.equal(r.guardViolations, 0);
+  assert.ok(r.sessions[0].trades > 0);
+  assert.equal(await repo.deleteCustomStrategy(db, sv.id, true), true);
+  assert.equal((await repo.listTrades(db, r.sessions[0].backtestSessionId)).length, 0, 'results deleted with the strategy');
+  const builtin = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'breakout_v02')!;
+  assert.equal(await repo.deleteCustomStrategy(db, builtin.id, false), false, 'built-ins cannot be deleted');
+  assert.equal(await repo.setStrategyStatus(db, builtin.id, 'retired'), true);
+  assert.equal(await repo.setStrategyStatus(db, builtin.id, 'active'), true);
+});

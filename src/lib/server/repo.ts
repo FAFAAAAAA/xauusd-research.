@@ -217,6 +217,52 @@ export async function ensureBuiltinStrategies(db: Db) {
        'Indikator TradingView pemilik: tren H4 EMA50/200, SNR pivot H4, zona supply/demand H4 & H1, entry rejection M15, SL luar zona + 0.15 ATR, TP 2x.')
      on conflict (strategy_key, version) do nothing returning id`);
 }
+// ---- custom strategies (definition stored in strategy_settings.params.definition, mode BACKTEST)
+export async function createCustomStrategy(db: Db, def: { name: string; description?: string; kind: string }, definition: unknown): Promise<StrategyVersionRow> {
+  const base = def.name.trim().slice(0, 60);
+  for (let k = 0; k < 20; k++) {
+    const version = k ? `${base} (${k + 1})` : base;
+    const r = await db.query<StrategyVersionRow>(
+      `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+       values ('custom', $1, 'custom_v1', 'active', false, $2)
+       on conflict (strategy_key, version) do nothing
+       returning id, strategy_key, version, adapter_key, status, is_test, description`,
+      [version, (def.description ?? '').slice(0, 500) || (def.kind === 'signals' ? 'Sinyal dari file' : 'Strategi buatan sendiri')]);
+    if (r[0]) {
+      await db.query(`insert into strategy_settings (strategy_version_id, mode, params, active) values ($1, 'BACKTEST', $2::jsonb, true) returning id`,
+        [r[0].id, JSON.stringify({ definition })]);
+      return r[0];
+    }
+  }
+  throw new Error('Nama strategi sudah dipakai terlalu banyak kali');
+}
+export async function strategyDefinition(db: Db, strategyVersionId: string): Promise<unknown | null> {
+  const r = await db.query<{ params: { definition?: unknown } }>(
+    `select params from strategy_settings where strategy_version_id = $1 and mode = 'BACKTEST'`, [strategyVersionId]);
+  return r[0]?.params?.definition ?? null;
+}
+/** Short info per custom strategy for the UI (never the full signal list). */
+export async function customStrategySummaries(db: Db) {
+  return db.query<{ id: string; kind: string | null; signals: number | null; definition: unknown }>(
+    `select sv.id, ss.params->'definition'->>'kind' as kind,
+            case when ss.params->'definition'->>'kind' = 'signals' then jsonb_array_length(ss.params->'definition'->'signals') end as signals,
+            case when ss.params->'definition'->>'kind' = 'rules' then ss.params->'definition' end as definition
+     from strategy_versions sv join strategy_settings ss on ss.strategy_version_id = sv.id and ss.mode = 'BACKTEST'
+     where sv.adapter_key = 'custom_v1'`);
+}
+export async function setStrategyStatus(db: Db, id: string, status: 'active' | 'retired') {
+  const r = await db.query<{ id: string }>('update strategy_versions set status = $2 where id = $1 returning id', [id, status]);
+  return r.length > 0;
+}
+/** Deletes a custom strategy (optionally with its backtest results). Built-in strategies are only hidden. */
+export async function deleteCustomStrategy(db: Db, id: string, withResults: boolean) {
+  if (withResults) {
+    const ids = (await db.query<{ id: string }>('select id from backtest_sessions where strategy_version_id = $1', [id])).map((x) => x.id);
+    if (ids.length) await deleteBacktestSessions(db, ids);
+  }
+  const r = await db.query<{ id: string }>(`delete from strategy_versions where id = $1 and adapter_key = 'custom_v1' returning id`, [id]);
+  return r.length > 0;
+}
 export async function defaultStrategyVersion(db: Db): Promise<StrategyVersionRow | null> {
   const r = await db.query<StrategyVersionRow>(
     `select id, strategy_key, version, adapter_key, status, is_test, description from strategy_versions
