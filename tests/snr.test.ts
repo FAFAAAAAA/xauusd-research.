@@ -280,3 +280,18 @@ test('breakout v0.4: registered; level part only fires on an H1 close and report
     }
   }
 });
+
+test('breakout v0.5: registered; never emits London or M30 signals', async () => {
+  const { breakoutV05Adapter } = await import('../src/lib/core/strategy/breakout');
+  assert.equal(getAdapter('breakout_v05'), breakoutV05Adapter);
+  const m15 = zigzag(192 * 8, 1);
+  const tfs = { H1: aggregateCandles(m15, 'M15', 'H1', 'utc', false), H4: aggregateCandles(m15, 'M15', 'H4', 'utc', false), D1: aggregateCandles(m15, 'M15', 'D1', 'utc', false) };
+  const state: Record<string, unknown> = {};
+  for (let i = 60; i < m15.length; i++) {
+    const now = m15[i].time + M15;
+    const htf = Object.fromEntries(Object.entries(tfs).map(([k, v]) => [k, v.filter((c) => c.time + TIMEFRAME_MS[k as Timeframe] <= now)]));
+    const res = runStrategyGuarded(breakoutV05Adapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+      news: { archiveAvailable: false, items: [], upcoming: [] }, htf, params: { d1Filter: false, sellD1Bear: false }, state });
+    for (const e of res.events) assert.ok(!['LON', 'M30'].includes(String(e.details!.component)));
+  }
+});

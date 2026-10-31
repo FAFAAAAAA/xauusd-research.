@@ -239,3 +239,16 @@ export const breakoutV04Adapter: StrategyAdapter = {
   htfWindow: { H1: 400, H4: 1000, D1: 1000 },
   evaluate: (ctx) => breakoutAdapter.evaluate({ ...ctx, params: { donchianM30: true, sellD1Bear: true, levelTouch: true, ...ctx.params } }),
 };
+
+/**
+ * Breakout v0.5 "inti" = the three strongest parts of v0.4: H1 Donchian 40 + New York range + level touched 2–3×,
+ * with the same trend filter (H4 EMA50/200 + D1; SELL only when D1 EMA50 < EMA200). London and M30 removed (weakest per trade).
+ */
+export const BREAKOUT_V05_KEY = 'breakout_v05';
+export const breakoutV05Adapter: StrategyAdapter = {
+  ...breakoutAdapter,
+  key: BREAKOUT_V05_KEY,
+  name: 'Breakout v0.5 inti (H1 + New York + level 2–3×)',
+  htfWindow: { H1: 400, H4: 1000, D1: 1000 },
+  evaluate: (ctx) => breakoutAdapter.evaluate({ ...ctx, params: { london: false, donchianM30: false, sellD1Bear: true, levelTouch: true, ...ctx.params } }),
+};

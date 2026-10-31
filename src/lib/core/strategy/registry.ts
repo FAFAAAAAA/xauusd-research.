@@ -1,7 +1,7 @@
 import type { StrategyAdapter, StrategyEventDraft } from './adapter';
 import type { EventType } from '../types';
 import { snrAdapter } from './snr';
-import { breakoutAdapter, breakoutV03Adapter, breakoutV04Adapter } from './breakout';
+import { breakoutAdapter, breakoutV03Adapter, breakoutV04Adapter, breakoutV05Adapter } from './breakout';
 import { snrSndAdapter } from './snrsnd';
 import { customAdapter } from './builder';
 import { snrSnd2Adapter } from './snrsnd2';
@@ -75,6 +75,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [breakoutAdapter.key]: breakoutAdapter,
   [breakoutV03Adapter.key]: breakoutV03Adapter,
   [breakoutV04Adapter.key]: breakoutV04Adapter,
+  [breakoutV05Adapter.key]: breakoutV05Adapter,
   [snrSndAdapter.key]: snrSndAdapter,
   [customAdapter.key]: customAdapter,
   [snrSnd2Adapter.key]: snrSnd2Adapter,

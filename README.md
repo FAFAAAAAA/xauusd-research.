@@ -203,6 +203,12 @@ Riset awal: tembusan level 1 sentuhan +0,03R/trade, 2 sentuhan +0,16R, 3 sentuha
 Dipilih dari 6 variasi berdasarkan 2018–2022 (RR 1:2, $10, biaya termasuk): 2.899 trade (6,6/minggu; 2.353 BUY, 546 SELL), win 38,1%, **+$3.749**, turun terdalam −$790; 2018–22 +$1.090 (v0.3: +$871), 2023–26 +$2.659 (v0.3: +$2.051). Per tahun: 2018 −$81, 2019 +$308, 2020 +$584, 2021 −$288, 2022 +$568, 2023 +$232, 2024 +$691, 2025 +$1.305, 2026 +$431.
 Alternatif lebih tenang (tidak dipasang): H1 + New York + level = 3,2/minggu, +$2.514, turun terdalam −$335.
 
+## 5i. Breakout v0.5 inti (`breakout_v05`) — disarankan
+
+Tiga bagian terkuat v0.4 (untung per trade tertinggi dan positif di 2018–22 maupun 2023–26): breakout H1 40 candle, range New York, tembus level H1 2–3×; filter tren sama dengan v0.3/v0.4. London (rugi di 2018–22) dan M30 (+0,08R/trade) dibuang.
+Hasil 2018–2026 (RR 1:2, $10, biaya termasuk): 1.422 trade (3,2/minggu), win 39,7%, +0,18R/trade, **+$2.514**, turun terdalam **−$335** (v0.4: −$780); untung/turun-terdalam 7,5 (v0.4: 4,8). 2018–22 +$860, 2023–26 +$1.655. Per tahun: 2018 −$45, 2019 +$190, 2020 +$317, 2021 +$32, 2022 +$367, 2023 +$143, 2024 +$373, 2025 +$903, 2026 +$236.
+Catatan jujur: v0.5 disusun setelah melihat hasil per bagian di seluruh 2018–2026, jadi uji 2023–2026 bukan lagi uji "buta"; cek ke depan (forward test) tetap perlu.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.
