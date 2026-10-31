@@ -228,6 +228,11 @@ export async function ensureBuiltinStrategies(db: Db) {
      on conflict (strategy_key, version) do nothing returning id`);
   await db.query(
     `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('snr_break', 'h1-v1', 'snr_break_h1_v1', 'active', false,
+       'SNR breakout H1 tanpa tren H4: level = swing high/low H1 terakhir (pivot 3), entry di open M15 berikutnya saat candle H1 close menembus level (pertama kali), BUY dan SELL, SL = level -/+ 1.5 ATR(14) H1.')
+     on conflict (strategy_key, version) do nothing returning id`);
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
      values ('rbr_dbd', 'v1', 'rbr_dbd_v1', 'active', false,
        'RBR/DBD: zona base H1 (1-3 candle kecil <= 0.5 ATR) di antara dua dorongan searah >= 1 ATR, zona masih segar, entry candle penolakan M15 saat harga kembali ke base, searah tren H4 EMA50/200, SL di luar base + 0.1 ATR, 1 trade per zona.')
      on conflict (strategy_key, version) do nothing returning id`);

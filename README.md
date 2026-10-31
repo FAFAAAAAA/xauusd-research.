@@ -186,6 +186,11 @@ Riset pada data 2018–2026 (12 variasi ditentukan sebelumnya, dipilih dari 2018
 RBR (BUY): dorongan naik (1–3 candle, total ≥ 1×ATR) → base 1–3 candle kecil (badan ≤ 0,5×ATR) → dorongan naik lagi (≥ 1×ATR, close di atas base). Zona demand = badan tertinggi base s/d low terendah base, dari candle H1 yang sudah tutup. Zona harus segar (belum pernah didatangi lagi), mati jika ada close di luar sisi jauh atau lewat 120 candle H1. Entry: candle penolakan M15 (close searah, di 60% atas range) saat harga kembali ke base, searah tren H4 EMA50/200; SL di luar base + 0,1×ATR M15; 1 trade per zona. DBD kebalikannya.
 Riset 2018–2026 (RR 1:2, $10, biaya termasuk; 12+12 variasi ditentukan sebelumnya): setelan bawaan 125 trade (±0,3/minggu), win 32,8%, −$60, 2018–22 −0,05R, 2023–26 −0,05R. Tidak ada variasi yang positif konsisten di kedua periode; pola ini jarang muncul sehingga tidak mencapai target 3–10 trade/minggu.
 
+## 5f. SNR breakout H1 (`snr_break_h1_v1`)
+
+Tanpa filter tren. Level SNR = swing high/low H1 terakhir yang sudah terkonfirmasi (pivot 3). Saat candle H1 pertama kali close menembus level itu → entry di open M15 berikutnya (BUY tembus resistance, SELL tembus support). SL = level ∓ 1,5×ATR(14) H1; dilewati jika risiko > 3×ATR. Opsi `mode: 'retest'` menunggu harga kembali ke level dulu.
+Riset 2018–2026 (RR 1:2, $10, biaya termasuk; 12 variasi ditentukan sebelumnya): setelan bawaan 1.610 trade (3,7/minggu), win 33,9%, +$21 (impas), turun terdalam −$768; 2018–22 −0,05R, 2023–26 +0,07R. Belum ada keunggulan yang meyakinkan.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

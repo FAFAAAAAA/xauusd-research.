@@ -231,3 +231,25 @@ test('rbr/dbd: registered; zones from closed candles only, stop beyond the base,
     }
   }
 });
+
+test('snr breakout H1: registered; BUY only after an H1 close above a confirmed swing high, stop below the level', async () => {
+  const { snrBreakAdapter } = await import('../src/lib/core/strategy/snrbreak');
+  assert.equal(getAdapter('snr_break_h1_v1'), snrBreakAdapter);
+  const m15 = zigzag(192 * 10, 1);
+  const h1 = aggregateCandles(m15, 'M15', 'H1', 'utc', false);
+  const state: Record<string, unknown> = {};
+  let n = 0;
+  for (let i = 30; i < m15.length; i++) {
+    const now = m15[i].time + M15;
+    const res = runStrategyGuarded(snrBreakAdapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+      news: { archiveAvailable: false, items: [], upcoming: [] }, htf: { H1: h1 }, params: {}, state });
+    assert.deepEqual(res.violations, []);
+    for (const e of res.events) {
+      const d = e.details as { side: string; stop_loss: number; level: number };
+      n++;
+      assert.equal(now % TIMEFRAME_MS.H1, 0, 'acts on H1 close only');
+      if (d.side === 'long') assert.ok(e.price > d.level && d.stop_loss < d.level); else assert.ok(e.price < d.level && d.stop_loss > d.level);
+    }
+  }
+  assert.ok(n > 0, 'zigzag breaks swing levels');
+});

@@ -7,6 +7,7 @@ import { customAdapter } from './builder';
 import { snrSnd2Adapter } from './snrsnd2';
 import { nPatternAdapter } from './npattern';
 import { rbrDbdAdapter } from './rbrdbd';
+import { snrBreakAdapter } from './snrbreak';
 
 /**
  * Placeholder for the owner's SNR strategy. It is intentionally empty:
@@ -77,6 +78,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [snrSnd2Adapter.key]: snrSnd2Adapter,
   [nPatternAdapter.key]: nPatternAdapter,
   [rbrDbdAdapter.key]: rbrDbdAdapter,
+  [snrBreakAdapter.key]: snrBreakAdapter,
 };
 
 export function getAdapter(key: string | null | undefined): StrategyAdapter {
