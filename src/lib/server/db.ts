@@ -10,14 +10,16 @@ export interface Db {
   query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 let pool: Db | null = null;
 
 export async function getDb(): Promise<Db> {
   if (pool) return pool;
   const url = process.env.DATABASE_URL;
   if (!url) throw new ConfigError('DATABASE_URL belum diatur. Lihat README → Supabase.');
-  const pg = await import('pg');
-  const p = new pg.default.Pool({
+  const mod: any = await import('pg');
+  const Pool = (mod.default ?? mod).Pool;
+  const p = new Pool({
     connectionString: url,
     max: Number(process.env.DATABASE_POOL_MAX ?? 3),
     ssl: url.includes('localhost') || url.includes('127.0.0.1') ? undefined : { rejectUnauthorized: false },
