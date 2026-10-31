@@ -143,7 +143,11 @@ export default function Analytics() {
 
                 {fresh ? <>
                 <ReportButton filename={`backtest-xauusd-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
-                  title: `${curYear} · RR 1:${curRr}`, rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
+                  title: `${curYear} · RR 1:${curRr}`, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
+                  rules: String(cfgSel ?? '').startsWith('breakout')
+                    ? 'Entry: open M15 berikutnya setelah breakout H1/London/New York/M30 searah tren H4 & D1 · SL: ATR atau sisi lain range'
+                    : 'Entry: open M15 berikutnya setelah harga menyentuh zona SNR · SL: luar zona + 0,5×ATR(14) M15',
+                  rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
                   metrics: m, trades: d.trades, yearRows: rows, rrOf: rrNum, tz,
                 } : null)} />
                 <section className="group">

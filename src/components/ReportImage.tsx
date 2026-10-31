@@ -9,6 +9,8 @@ import { sessionOf, tzOffsetMinutes } from '@/lib/core/time';
  */
 export interface ReportInput {
   title: string;               // e.g. "2019 · RR 1:2" or "Semua tahun · RR 1:2"
+  strategyLabel: string;       // e.g. "Breakout v0.2 · H1 + London + New York · BUY+SELL"
+  rules: string;               // one line describing entry/SL
   rr: number;
   riskUsd: number | null;
   costs: Record<string, any> | null;
@@ -61,7 +63,9 @@ export function buildReport(r: ReportInput): HTMLCanvasElement {
   text('Au', P + 26, y + 34, 22, '#fff', 800, 'center');
   text('Laporan Backtest XAUUSD', P + 72, y + 38, 40, C.ink, 700);
   y += 92;
-  text(`Strategi SNR H4/H1 → M15  ·  ${r.title}`, P, y, 26, C.ink2, 600);
+  text(r.strategyLabel, P, y, 26, C.ink2, 600);
+  y += 36;
+  text(r.title, P, y, 26, C.ink2, 600);
   y += 38;
   const made = wall(Date.now(), r.tz);
   text(`Risiko ${r.riskUsd ? `$${r.riskUsd}` : 'lot tetap'} per trade  ·  dibuat ${made.getUTCDate()} ${MONTHS[made.getUTCMonth()]} ${made.getUTCFullYear()}`, P, y, 22, C.mute);
@@ -219,7 +223,7 @@ export function buildReport(r: ReportInput): HTMLCanvasElement {
   card(200);
   heading('Pengaturan backtest');
   const lines = [
-    `Entry: open candle M15 berikutnya setelah harga menyentuh zona · SL: luar zona + 0,5×ATR(14) M15`,
+    r.rules,
     `Spread $${cc.spread ?? '—'} · slippage $${cc.slippage ?? '—'} · komisi $${cc.commissionPerUnit ?? '—'}/lot · TP & SL di 1 candle: ${cc.ambiguityPolicy === 'best' ? 'dihitung TP' : cc.ambiguityPolicy === 'skip' ? 'dilewati' : 'dihitung SL'}`,
     `Waktu ditampilkan dalam zona ${r.tz}. Hasil simulasi historis, bukan jaminan profit.`,
   ];
