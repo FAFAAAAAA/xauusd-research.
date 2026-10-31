@@ -80,7 +80,7 @@ export const snrBreakAdapter: StrategyAdapter = {
           if (p.mode === 'retest') { pend.push({ side, level: lv.price, atr, until: ctx.now + p.retestBars * TIMEFRAME_MS.H1, key }); continue; }
           const sl = p.sl === 'level' ? lv.price - side * p.slAtr * atr : (side > 0 ? cur.low : cur.high) - side * p.slBufferAtr * atr;
           const risk = side * (bar.close - sl);
-          if (risk > 0.01 && risk <= p.maxSlAtr * atr) out.push(ev(side, lv.price, sl, 'tembus'));
+          if (risk > Math.min(0.01, 0.01 * atr) && risk <= p.maxSlAtr * atr) out.push(ev(side, lv.price, sl, 'tembus'));
         }
       }
     }
@@ -98,7 +98,7 @@ export const snrBreakAdapter: StrategyAdapter = {
       pend.splice(q, 1);
       const sl = p.sl === 'level' ? d.level - d.side * p.slAtr * d.atr : (d.side > 0 ? bar.low : bar.high) - d.side * p.slBufferAtr * d.atr;
       const risk = d.side * (bar.close - sl);
-      if (risk > 0.01 && risk <= p.maxSlAtr * d.atr) return [ev(d.side, d.level, sl, 'retest')];
+      if (risk > Math.min(0.01, 0.01 * d.atr) && risk <= p.maxSlAtr * d.atr) return [ev(d.side, d.level, sl, 'retest')];
     }
     return [];
   },

@@ -1,0 +1,142 @@
+{
+ "USA30IDXUSD_M30": {
+  "symbol": "USA30IDXUSD",
+  "tf": "M30",
+  "first": 1369233000000,
+  "last": 1793388600000,
+  "candles": 141961
+ },
+ "GBPUSD_M15": {
+  "symbol": "GBPUSD",
+  "tf": "M15",
+  "first": 1540285200000,
+  "last": 1793393100000,
+  "candles": 200000
+ },
+ "USATECHIDXUSD_M30": {
+  "symbol": "USATECHIDXUSD",
+  "tf": "M30",
+  "first": 1369234800000,
+  "last": 1793388600000,
+  "candles": 140194
+ },
+ "EURUSD_M30": {
+  "symbol": "EURUSD",
+  "tf": "M30",
+  "first": 1287448200000,
+  "last": 1793392200000,
+  "candles": 200000
+ },
+ "USDJPY_M15": {
+  "symbol": "USDJPY",
+  "tf": "M15",
+  "first": 1540311300000,
+  "last": 1793393100000,
+  "candles": 200000
+ },
+ "BTCUSD_M15": {
+  "symbol": "BTCUSD",
+  "tf": "M15",
+  "first": 1611433800000,
+  "last": 1793439900000,
+  "candles": 200000
+ },
+ "EURUSD_M15": {
+  "symbol": "EURUSD",
+  "tf": "M15",
+  "first": 1540310400000,
+  "last": 1793393100000,
+  "candles": 200000
+ },
+ "USDCAD_M15": {
+  "symbol": "USDCAD",
+  "tf": "M15",
+  "first": 1540286100000,
+  "last": 1793393100000,
+  "candles": 200000
+ },
+ "ETHUSD_M15": {
+  "symbol": "ETHUSD",
+  "tf": "M15",
+  "first": 1611485100000,
+  "last": 1793439900000,
+  "candles": 200000
+ },
+ "ETHUSD_M30": {
+  "symbol": "ETHUSD",
+  "tf": "M30",
+  "first": 1514844000000,
+  "last": 1793439000000,
+  "candles": 140061
+ },
+ "USDJPY_M30": {
+  "symbol": "USDJPY",
+  "tf": "M30",
+  "first": 1287367200000,
+  "last": 1793392200000,
+  "candles": 200000
+ },
+ "USATECHIDXUSD_M15": {
+  "symbol": "USATECHIDXUSD",
+  "tf": "M15",
+  "first": 1506519000000,
+  "last": 1793390400000,
+  "candles": 200000
+ },
+ "USDCHF_M15": {
+  "symbol": "USDCHF",
+  "tf": "M15",
+  "first": 1540242000000,
+  "last": 1793393100000,
+  "candles": 200000
+ },
+ "GBPUSD_M30": {
+  "symbol": "GBPUSD",
+  "tf": "M30",
+  "first": 1287401400000,
+  "last": 1793392200000,
+  "candles": 200000
+ },
+ "XAUUSD_M30": {
+  "symbol": "XAUUSD",
+  "tf": "M30",
+  "first": 1264042800000,
+  "last": 1793392200000,
+  "candles": 200000
+ },
+ "BTCUSD_M30": {
+  "symbol": "BTCUSD",
+  "tf": "M30",
+  "first": 1495497600000,
+  "last": 1793439000000,
+  "candles": 147236
+ },
+ "USDCHF_M30": {
+  "symbol": "USDCHF",
+  "tf": "M30",
+  "first": 1287394200000,
+  "last": 1793392200000,
+  "candles": 200000
+ },
+ "USA30IDXUSD_M15": {
+  "symbol": "USA30IDXUSD",
+  "tf": "M15",
+  "first": 1513068300000,
+  "last": 1793390400000,
+  "candles": 200000
+ },
+ "XAUUSD_M15": {
+  "symbol": "XAUUSD",
+  "tf": "M15",
+  "first": 1526530500000,
+  "last": 1793393100000,
+  "candles": 200000
+ },
+ "USDCAD_M30": {
+  "symbol": "USDCAD",
+  "tf": "M30",
+  "first": 1287397800000,
+  "last": 1793392200000,
+  "candles": 200000
+ }
+}

@@ -103,7 +103,8 @@ export const snrSnd2Adapter: StrategyAdapter = {
     const a15arr = atrPine(m.slice(-150), 14), atr15 = a15arr[a15arr.length - 1];
     if (!Number.isFinite(atr15)) return [];
     const { open: o, high: h, low: l, close: c } = bar;
-    const size = Math.max(h - l, MINTICK), body = Math.max(Math.abs(c - o), MINTICK);
+    const tick = Math.min(MINTICK, atr15 * 0.01);   // 0.01 for gold; scales with the instrument
+    const size = Math.max(h - l, tick), body = Math.max(Math.abs(c - o), tick);
     const lowerWick = Math.min(o, c) - l, upperWick = h - Math.max(o, c);
     const strongBuy = c > o && (c - l) / size >= P.closeStrength;
     const strongSell = c < o && (h - c) / size >= P.closeStrength;
@@ -144,8 +145,8 @@ export const snrSnd2Adapter: StrategyAdapter = {
     const shortType = sweepSell ? 'SWEEP' : retestSell ? 'RETEST' : 'REJECTION';
     const buySL = Math.min(l, buyBase) - atr15 * P.slBufferATR, sellSL = Math.max(h, sellCap) + atr15 * P.slBufferATR;
     const riskBuy = c - buySL, riskSell = sellSL - c;
-    const okB = Number.isFinite(riskBuy) && riskBuy > MINTICK && riskBuy <= atr15 * P.maxStopATR;
-    const okS = Number.isFinite(riskSell) && riskSell > MINTICK && riskSell <= atr15 * P.maxStopATR;
+    const okB = Number.isFinite(riskBuy) && riskBuy > tick && riskBuy <= atr15 * P.maxStopATR;
+    const okS = Number.isFinite(riskSell) && riskSell > tick && riskSell <= atr15 * P.maxStopATR;
     const cooldownOK = st.last == null || n - st.last >= P.cooldownBars;
     const buy = cooldownOK && bullTrend && snrBuy && longPattern && okB;
     const sell = cooldownOK && bearTrend && snrSell && shortPattern && okS;

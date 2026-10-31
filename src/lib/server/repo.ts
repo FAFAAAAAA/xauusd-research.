@@ -659,10 +659,11 @@ export async function listBacktestSessions(db: Db) {
   return db.query<Record<string, unknown>>(
     `select b.id, b.name, b.confirmation_profile, b.status, b.timeframe, b.period_start, b.period_end, b.is_test, b.cost_config,
             extract(epoch from b.created_at)*1000 as created_ms,
-            sv.strategy_key || ' ' || sv.version as strategy,
+            sv.strategy_key || ' ' || sv.version as strategy, i.symbol,
             coalesce(a.trades, 0) as trades, coalesce(a.pnl, 0) as pnl, coalesce(a.wins, 0) as wins, coalesce(a.losses, 0) as losses
      from backtest_sessions b
      left join strategy_versions sv on sv.id=b.strategy_version_id
+     left join instruments i on i.id = b.instrument_id
      left join (select backtest_session_id, count(*)::int as trades, coalesce(sum(pnl), 0)::float8 as pnl,
                        count(*) filter (where pnl > 0)::int as wins, count(*) filter (where pnl < 0)::int as losses
                 from simulated_trades group by backtest_session_id) a on a.backtest_session_id = b.id

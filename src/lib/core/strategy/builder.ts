@@ -224,7 +224,7 @@ function entrySignal(ctx: StrategyContext, en: Entry, st: St): { side: 1 | -1; w
       return null;
     }
     case 'candle': {
-      const x = c[i], p = c[i - 1], range = Math.max(x.high - x.low, 0.01), w = en.wickRatio ?? 0.6;
+      const x = c[i], p = c[i - 1], range = Math.max(x.high - x.low, 1e-9), w = en.wickRatio ?? 0.6;
       if (en.pattern === 'rejection') {
         if (x.close > x.open && x.close > p.close && (x.close - x.low) / range >= w) return { side: 1, why: `rejection bullish ${en.tf}` };
         if (x.close < x.open && x.close < p.close && (x.high - x.close) / range >= w) return { side: -1, why: `rejection bearish ${en.tf}` };

@@ -128,7 +128,7 @@ export const rbrDbdAdapter: StrategyAdapter = {
     if (!Number.isFinite(atr)) return [];
     const trend = p.trend ? trendOf(ctx, st, bar.time) : 'none';
     const used = (st.used ??= {});
-    const range = Math.max(bar.high - bar.low, 0.01);
+    const range = Math.max(bar.high - bar.low, 1e-9);
 
     // newest zones first
     for (let q = st.zones.length - 1; q >= 0; q--) {
@@ -148,7 +148,7 @@ export const rbrDbdAdapter: StrategyAdapter = {
       const sl = z.distal - z.side * p.slBufferAtr * atr;
       const risk = z.side * (bar.close - sl);
       used[key] = 1;
-      if (!(risk > 0.01) || risk > p.maxSlAtr * atr) continue;
+      if (!(risk > Math.min(0.01, 0.01 * atr)) || risk > p.maxSlAtr * atr) continue;
       const ev: StrategyEventDraft = {
         type: 'SETUP_CONFIRMED', candleTime: bar.time, price: bar.close,
         zone: { kind: z.side > 0 ? 'support' : 'resistance', low: Math.min(z.proximal, z.distal), high: Math.max(z.proximal, z.distal) },

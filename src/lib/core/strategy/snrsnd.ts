@@ -138,7 +138,8 @@ export const snrSndAdapter: StrategyAdapter = {
     const atr15 = atr15arr[atr15arr.length - 1];
     if (!Number.isFinite(atr15)) return [];
     const { open: o, high: h, low: l, close: c } = bar;
-    const range = Math.max(h - l, MINTICK);
+    const tick = Math.min(MINTICK, atr15 * 0.01);   // 0.01 for gold; scales with the instrument
+    const range = Math.max(h - l, tick);
     const rejBuy = c > o && c > prevBar.close && (c - l) / range >= p.wickRatio;
     const rejSell = c < o && c < prevBar.close && (h - c) / range >= p.wickRatio;
 
@@ -156,8 +157,8 @@ export const snrSndAdapter: StrategyAdapter = {
 
     const slBuy = Math.min(dBot, l) - atr15 * p.slBuffer, slSell = Math.max(sTop, h) + atr15 * p.slBuffer;
     const riskBuy = c - slBuy, riskSell = slSell - c;
-    const okBuy = Number.isFinite(riskBuy) && riskBuy > MINTICK && riskBuy <= atr15 * p.maxSlATR;
-    const okSell = Number.isFinite(riskSell) && riskSell > MINTICK && riskSell <= atr15 * p.maxSlATR;
+    const okBuy = Number.isFinite(riskBuy) && riskBuy > tick && riskBuy <= atr15 * p.maxSlATR;
+    const okSell = Number.isFinite(riskSell) && riskSell > tick && riskSell <= atr15 * p.maxSlATR;
 
     const canSignal = st.last == null || st.n - st.last >= p.cooldown;
     const buy = canSignal && bullish && (inD4 || inD1) && snrBuy && rejBuy && okBuy;

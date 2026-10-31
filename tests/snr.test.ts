@@ -311,3 +311,23 @@ test('ob+fvg: registered; finds a bullish FVG with BOS and an order block below 
   assert.equal(z[0].entry, 102);
   assert.equal(z[0].obFar, 99.8);
 });
+
+test('multi-pair: bundled datasets decode, aggregate without look-ahead, and USD-base pairs convert P&L', async () => {
+  const { datasets, fileProvider } = await import('../src/lib/server/market-files');
+  const { usdPerPoint, instrumentCosts } = await import('../src/lib/core/instruments');
+  const ds = datasets();
+  assert.ok(ds.some((d) => d.symbol === 'EURUSD' && d.tf === 'M15'));
+  const p = fileProvider('EURUSD', 'M15');
+  const from = Date.UTC(2020, 0, 6), to = Date.UTC(2020, 0, 13);
+  const m15 = p.between('M15', from, to), h1 = p.between('H1', from, to);
+  assert.ok(m15.length > 400 && h1.length > 100);
+  assert.ok(m15.every((c) => c.time >= from && c.time < to && c.high >= c.low));
+  assert.equal(Math.round(m15[0].close * 1e5), m15[0].close * 1e5, 'prices rounded to 5 digits');
+  // first H1 candle = the 4 M15 candles of that hour
+  const k = m15.findIndex((c) => c.time === h1[0].time);
+  assert.equal(h1[0].high, Math.max(...m15.slice(k, k + 4).map((c) => c.high)));
+  assert.ok(p.upTo('M15', from - 1, 10).every((c) => c.time < from));
+  assert.equal(usdPerPoint('USDJPY', 100_000, 125), 800);           // 1.00 JPY move on 1 lot = ¥100,000 = $800 at 125
+  assert.equal(usdPerPoint('EURUSD', 100_000, 1.1), 100_000);
+  assert.equal(instrumentCosts('XAUUSD').contractSize, 100);
+});

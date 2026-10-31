@@ -214,6 +214,15 @@ Catatan jujur: v0.5 disusun setelah melihat hasil per bagian di seluruh 2018–2
 FVG (high candle 1 < low candle 3 untuk BUY, celah ≥ 0,3×ATR) yang dorongannya menembus swing high terakhir (BOS); order block = candle berlawanan terakhir sebelum dorongan. Entry saat harga M15 pertama kali kembali ke FVG, SL di luar OB + 0,1×ATR, searah tren H4 EMA50/200 + D1 (SELL juga perlu EMA50 D1 < EMA200 D1). Zona dari candle H1 yang sudah tutup.
 Riset 2018–2026 (10 variasi ditentukan sebelumnya, RR 1:2, $10, biaya termasuk): setelan bawaan 495 trade (1,1/minggu), win 37,2%, +$495, turun terdalam −$237; 2018–22 +0,02R, 2023–26 +0,19R. Entry di OB, konfirmasi candle, zona M15, atau tanpa filter tren lebih jelek. Masih di bawah Breakout v0.5.
 
+## 5k. Banyak pair (data file bawaan)
+
+Data harga forexsb.com (UTC) untuk XAUUSD, EURUSD, GBPUSD, USDJPY, USDCHF, USDCAD, US100 (USATECHIDXUSD), US30 (USA30IDXUSD), BTCUSD dan ETHUSD disimpan sebagai file di `data/market/<SIMBOL>_<TF>.bin.gz` (M15 sejak 2017/2018, kripto sejak 2021; M30 sejak 2010/2013/2017) — **bukan di database**, supaya Supabase gratis tidak penuh. Dibuat ulang dengan `node scripts/pack-market-data.mjs <folder-csv>`.
+- Halaman **Hasil → Backtest baru**: pilih strategi, data M15/M30, pair (default semua) dan tahun → dijalankan per pair per tahun (berurutan). Hasil tampil sebagai daftar **Hasil per pair** (untung/rugi semua tahun, trade, win rate); tekan pair untuk grafik, kalender dan trade-nya.
+- Tiap dataset muncul sebagai sumber data `file:<SIMBOL>:<TF>`; H1/H4/D1 dibentuk di memori dari M15/M30 (UTC). Entry di open candle berikutnya dari timeframe dasar.
+- Biaya per pair (`src/lib/core/instruments.ts`) adalah perkiraan akun ECN, bukan kutipan broker: EURUSD spread 0,5 pip, GBPUSD/USDCHF/USDCAD 0,8 pip, USDJPY 0,6 pip (+0,2 pip slippage, komisi $7/lot); US100 1,5 poin, US30 3 poin; BTC $25, ETH $2. XAUUSD tetap memakai biaya yang bisa diubah.
+- Risiko tetap per trade: lot dihitung dari jarak SL; untung/rugi USDJPY/USDCHF/USDCAD dikonversi ke USD dengan harga entry.
+- Untuk menghemat database, backtest dari data file tidak menyimpan baris sinyal (market_events); alasan entry tetap ada di trade.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

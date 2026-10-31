@@ -114,7 +114,7 @@ export const obFvgAdapter: StrategyAdapter = {
       st.zk = zk;
     }
     const trend = p.trend ? trendOf(ctx, st, bar.time) : 'none';
-    const range = Math.max(bar.high - bar.low, 0.01);
+    const range = Math.max(bar.high - bar.low, 1e-9);
     for (let q = st.live.length - 1; q >= 0; q--) {
       const z = st.live[q];
       if (used[z.key]) continue;
@@ -129,7 +129,7 @@ export const obFvgAdapter: StrategyAdapter = {
       used[z.key] = 1;
       const sl = z.obFar - z.side * p.slBufferAtr * z.atr;
       const risk = z.side * (bar.close - sl);
-      if (!(risk > 0.01) || risk > p.maxSlAtr * z.atr) continue;
+      if (!(risk > Math.min(0.01, 0.01 * z.atr)) || risk > p.maxSlAtr * z.atr) continue;
       const lo = Math.min(z.obFar, z.fvgNear, z.obNear), hi = Math.max(z.obFar, z.fvgNear, z.obNear);
       const ev: StrategyEventDraft = {
         type: 'SETUP_CONFIRMED', candleTime: bar.time, price: bar.close,

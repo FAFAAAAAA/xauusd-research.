@@ -5,6 +5,7 @@ import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades } from '@/components/ResultCharts';
 import { ReportButton } from '@/components/ReportImage';
+import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: false });
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -29,7 +30,11 @@ export default function Analytics() {
   const configs = d?.sessions?.length ? strategyConfigs(d.sessions) : [];
   const [cfg, setCfg] = useState<string | null>(null);
   const cfgSel = cfg && configs.some((c) => c.key === cfg) ? cfg : configs[0]?.key ?? null;
-  const rows = d?.sessions?.length ? yearRows(d.sessions.filter((s: any) => configKey(s) === cfgSel)) : [];
+  const cfgSessions: any[] = d?.sessions?.length ? d.sessions.filter((s: any) => configKey(s) === cfgSel) : [];
+  const pairs = pairSummaries(cfgSessions, rr);
+  const [pair, setPair] = useState<string | null>(null);
+  const pairSel = pair && pairs.some((p) => p.symbol === pair) ? pair : pairs[0]?.symbol ?? null;
+  const rows = yearRows(cfgSessions.filter((s: any) => symOf(s) === pairSel));
   const yearSel = year && (year === 'ALL' || rows.some((r) => r.label === year)) ? year : rows[0]?.label ?? null;
   const cellOf = (r: { cells: any[] }, x: number) => r.cells.find((c: any) => rrNum(c) === x);
   const pick = (y: string | null, x: number): any[] => y === 'ALL' ? rows.map((r) => cellOf(r, x)).filter(Boolean)
@@ -68,6 +73,11 @@ export default function Analytics() {
   const choose = (y: string | null, x: number) => { setYear(y); setRr(x); setDetail(null); setTradeLimit(10); };
   const open = async (id: string) => { setDetail({ loading: true }); try { setDetail(await call<any>(`/api/trades/${id}`)); } catch (e) { setDetail({ error: (e as Error).message }); } };
   const reloadAll = () => { setYear(null); call<any>('/api/analytics').then(setD).catch(() => {}); };
+  const pickPair = (sym: string) => {
+    setPair(sym); setYear(pairs.length > 1 ? 'ALL' : null); setDetail(null); setTradeLimit(10);
+    setTimeout(() => document.getElementById('pair-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
+  const pairLabel = instrumentLabel(pairSel);
 
   const m = d?.overall;
   const hasRuns = rows.length > 0;
@@ -76,19 +86,20 @@ export default function Analytics() {
       <PageHead title="Hasil backtest" />
 
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : !hasRuns ? (
-        <RunBacktest existingFor={() => []} onDone={(k) => { setCfg(k); reloadAll(); }} />
+        <RunBacktest existingFor={() => []} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); }} />
       ) : (
         <>
           <section className="group stack">
             {configs.length > 1 ? (
               <label className="field">Strategi
-                <select value={cfgSel ?? ''} onChange={(e) => { setCfg(e.target.value); setYear(null); setDetail(null); }}>
+                <select value={cfgSel ?? ''} onChange={(e) => { setCfg(e.target.value); setPair(null); setYear(null); setDetail(null); }}>
                   {configs.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
                 </select>
               </label>
             ) : configs[0] ? <span className="label">{configs[0].label}</span> : null}
-            <div className="stack tight">
-              <span className="label">Tahun</span>
+            {pairs.length > 1 ? <PairTable pairs={pairs} selected={pairSel} rr={rr} onPick={pickPair} /> : null}
+            <div className="stack tight" id="pair-detail" style={{ scrollMarginTop: 12 }}>
+              <span className="label">{pairs.length > 1 ? <>Tahun · <strong className="ink">{pairLabel}</strong></> : 'Tahun'}</span>
               <div className="seg scroll" role="group" aria-label="Tahun">
                 {rows.length > 1 ? <button aria-pressed={yearSel === 'ALL'} onClick={() => choose('ALL', curRr)}>Semua</button> : null}
                 {rows.map((r) => <button key={r.label} aria-pressed={r.label === yearSel} onClick={() => choose(r.label, curRr)}>{r.label}</button>)}
@@ -117,7 +128,7 @@ export default function Analytics() {
             ) : (
               <>
                 <section className="hero verdict">
-                  <span className="label">{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
+                  <span className="label">{pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
                   <span className={`price ${tone(sum.pnl)}`}>{money(sum.pnl)}</span>
                   <p>{sum.pnl > 0 ? 'Untung' : sum.pnl < 0 ? 'Rugi' : 'Impas'} dari <strong>{sum.trades} trade</strong>: <strong className="pos">{sum.wins} menang</strong>, <strong className="neg">{sum.losses} kalah</strong>.</p>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
@@ -142,8 +153,8 @@ export default function Analytics() {
                 </section>
 
                 {fresh ? <>
-                <ReportButton filename={`backtest-xauusd-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
-                  title: `${curYear} · RR 1:${curRr}`, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
+                <ReportButton filename={`backtest-${String(pairSel ?? 'xauusd').toLowerCase()}-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
+                  title: `${curYear} · RR 1:${curRr}`, symbol: pairLabel, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
                   rules: String(cfgSel ?? '').startsWith('ob_fvg')
                     ? 'Entry: harga M15 pertama kali kembali ke FVG H1 (dengan break of structure) searah tren H4 & D1 · SL: di luar order block + 0,1×ATR H1'
                     : String(cfgSel ?? '').startsWith('breakout v0.5')
@@ -209,13 +220,13 @@ export default function Analytics() {
 
           <details className="group">
             <summary><span><h2>Backtest baru</h2><span className="s">Jalankan tahun lain atau ubah risiko</span></span></summary>
-            <div className="body"><RunBacktest bare existingFor={(k) => yearRows(d.sessions.filter((s: any) => configKey(s) === k)).map((r) => r.label)} onDone={(k) => { setCfg(k); reloadAll(); window.scrollTo({ top: 0 }); }} /></div>
+            <div className="body"><RunBacktest bare existingFor={(k, sym) => yearRows(d.sessions.filter((s: any) => configKey(s) === k && symOf(s) === sym)).map((r) => r.label)} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); window.scrollTo({ top: 0 }); }} /></div>
           </details>
           <details className="group">
             <summary><span><h2>Kelola hasil</h2><span className="s">Hapus backtest lama, dobel, atau semuanya</span></span></summary>
             <div className="body">
               <DeleteAll sessions={d.sessions} current={d.sessions.filter((s: any) => configKey(s) === cfgSel)} currentLabel={configs.find((c) => c.key === cfgSel)?.label ?? ''} onDeleted={() => { setCfg(null); reloadAll(); window.scrollTo({ top: 0 }); }} />
-              <RunPicker sessions={d.sessions.filter((s: any) => configKey(s) === cfgSel)} selected={cur ? String(cur.id) : ''} tz={tz}
+              <RunPicker sessions={cfgSessions.filter((s: any) => symOf(s) === pairSel)} selected={cur ? String(cur.id) : ''} tz={tz}
                 onSelect={(id) => { const s0 = d.sessions.find((x: any) => String(x.id) === id); if (s0) choose(periodLabel(s0.period_start ?? null, s0.period_end ?? null), rrNum(s0)); window.scrollTo({ top: 0 }); }}
                 onDeleted={() => reloadAll()} />
             </div>
@@ -276,93 +287,122 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
   );
 }
 
-type YearStatus = { year: number; state: 'wait' | 'run' | 'done' | 'skip' | 'fail'; note?: string };
+type PairStatus = { symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
+const STRAT_ORDER = ['breakout_v05', 'breakout_v04', 'breakout_v03', 'ob_fvg_v1', 'n_pattern_v1', 'snr_break_h1_v1', 'rbr_dbd_v1', 'snr_snd_mtf_v2', 'snr_snd_mtf_v1', 'breakout_v02'];
+const STRAT_LABEL: Record<string, string> = {
+  breakout_v05: 'Breakout v0.5 inti (terbaik, disarankan)', breakout_v04: 'Breakout v0.4 (lebih sering trade)', breakout_v03: 'Breakout v0.3',
+  ob_fvg_v1: 'Order Block + FVG (SMC)', n_pattern_v1: 'Pola N (M15, searah tren H4)', snr_break_h1_v1: 'SNR breakout H1 (tanpa tren H4)',
+  rbr_dbd_v1: 'RBR / DBD (zona base H1, searah tren H4)', snr_snd_mtf_v2: 'SNR + SND v2 (strategy Pine kamu)', snr_snd_mtf_v1: 'SNR + SND v1 (indikator Pine kamu)',
+  breakout_v02: 'Breakout v0.2 (hasil riset)',
+};
+const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 
-function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string) => string[] }) {
-  const [sources, setSources] = useState<any[]>([]);
+/** One strategy → every chosen pair, one year per request (sequential), RR 1:1/1:2/1:3 each. */
+function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
+  const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [cov, setCov] = useState<any[]>([]);
-  const now = new Date().getUTCFullYear();
-  const [f, setF] = useState({ source: '', strategy: '', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', size: '0.01', risk: '10', ambiguity: 'worst' });
+  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', risk: '10', ambiguity: 'worst' });
+  const [sel, setSel] = useState<string[] | null>(null); // null = all pairs
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [prog, setProg] = useState<YearStatus[] | null>(null);
+  const [prog, setProg] = useState<PairStatus[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const stop = useRef(false);
   useEffect(() => {
-    call<any[]>('/api/sources').then((s) => { setSources(s); if (s[0]) setF((x) => ({ ...x, source: x.source || s.find((y: any) => !y.is_test)?.id || s[0].id })); }).catch(() => {});
+    call<any[]>('/api/markets').then(setMarkets).catch((e) => setErr(e.message));
     call<any[]>('/api/strategies').then((s) => {
-      const ORDER = ['breakout_v05', 'breakout_v04', 'breakout_v03', 'ob_fvg_v1', 'n_pattern_v1', 'snr_break_h1_v1', 'rbr_dbd_v1', 'snr_snd_mtf_v2', 'snr_snd_mtf_v1', 'breakout_v02'];
-      const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active' && ORDER.includes(x.adapter_key))
-        .sort((a: any, b: any) => ORDER.indexOf(a.adapter_key) - ORDER.indexOf(b.adapter_key));
+      const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active' && STRAT_ORDER.includes(x.adapter_key))
+        .sort((a: any, b: any) => STRAT_ORDER.indexOf(a.adapter_key) - STRAT_ORDER.indexOf(b.adapter_key));
       setStrategies(usable);
-      const pref = usable[0];
-      if (pref) setF((x) => ({ ...x, strategy: x.strategy || pref.id }));
+      if (usable[0]) setF((x) => ({ ...x, strategy: x.strategy || usable[0].id }));
     }).catch(() => {});
-    call<any[]>('/api/sources/coverage').then(setCov).catch(() => {});
   }, []);
-  // years that have M15 data for the chosen source
-  const m15 = cov.find((c) => c.source_id === f.source && c.timeframe === 'M15');
-  const firstY = m15 ? new Date(m15.first).getUTCFullYear() : 2018;
-  const lastY = m15 ? new Date(m15.last).getUTCFullYear() : now;
+  const sets = markets.filter((m) => m.tf === f.tf && m.source_id);
+  const chosen = sets.filter((m) => sel == null || sel.includes(m.symbol));
+  const firstY = chosen.length ? Math.min(...chosen.map((m) => yearOf(m.first))) : 2018;
+  const lastY = chosen.length ? Math.max(...chosen.map((m) => yearOf(m.last))) : new Date().getUTCFullYear();
   const years = Array.from({ length: Math.max(0, lastY - firstY + 1) }, (_, i) => firstY + i);
-  const y1 = Number(f.y1) || firstY, y2 = Number(f.y2) || lastY;
+  const y1 = Math.max(Number(f.y1) || firstY, firstY), y2 = Math.min(Number(f.y2) || lastY, lastY);
   const list = years.filter((y) => y >= y1 && y <= y2);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const strat = strategies.find((x: any) => x.id === f.strategy);
   const params: Record<string, boolean> = {};
-  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}`;
-  const existing = existingFor(cfgKey);
-  const body = (from: string, to: string) => ({ params,
-    source_id: f.source, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3],
-    size: Number(f.size), risk_usd: f.risk.trim() ? Number(f.risk) : null,
+  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${f.tf === 'M30' ? '|M30' : ''}`;
+  const yearsFor = (m: any) => list.filter((y) => y >= yearOf(m.first) && y <= yearOf(m.last));
+  const togglePair = (sym: string) => setSel((cur) => {
+    const base = cur ?? sets.map((m) => m.symbol);
+    const next = base.includes(sym) ? base.filter((x) => x !== sym) : [...base, sym];
+    return next.length === sets.length ? null : next;
+  });
+  const body = (m: any, from: string, to: string) => ({ params,
+    source_id: m.source_id, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null,
     costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
   });
 
   const run = async () => {
     setBusy(true); setErr(null); stop.current = false;
-    if (custom) {
-      setProg(null);
-      try { await call<any>('/api/backtest/run', { method: 'POST', json: body(`${f.from}T00:00:00Z`, `${f.to}T00:00:00Z`) }); onDone(cfgKey); }
-      catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
-      return;
-    }
-    const st: YearStatus[] = list.map((y) => ({ year: y, state: skipDone && existing.includes(String(y)) ? 'skip' : 'wait' }));
-    setProg([...st]);
-    for (const it of st) {
-      if (it.state === 'skip') continue;
-      if (stop.current) { it.state = 'skip'; it.note = 'dibatalkan'; setProg([...st]); continue; }
-      it.state = 'run'; setProg([...st]);
-      try {
-        const r = await call<any>('/api/backtest/run', { method: 'POST', json: body(`${it.year}-01-01T00:00:00Z`, `${it.year + 1}-01-01T00:00:00Z`) });
-        it.state = 'done';
-        it.note = r.sessions.map((x: any) => `1:${x.rr} ${x.trades}`).join(' · ') + ' trade';
-      } catch (e) {
-        const msg = (e as Error).message;
-        it.state = 'fail'; it.note = /Tidak ada candle/.test(msg) ? 'tidak ada data tahun ini' : msg;
+    const st: PairStatus[] = chosen.map((m) => {
+      const ys = custom ? [0] : yearsFor(m);
+      const have = existingFor(cfgKey, m.symbol);
+      const todo = custom ? ys : ys.filter((y) => !(skipDone && have.includes(String(y))));
+      return { symbol: m.symbol, label: m.label, years: todo, done: 0, fail: 0, skip: ys.length - todo.length, state: 'wait' };
+    });
+    setProg(st.map((x) => ({ ...x })));
+    for (const p of st) {
+      const m = chosen.find((x) => x.symbol === p.symbol)!;
+      if (stop.current) break;
+      p.state = 'run';
+      for (const y of p.years) {
+        if (stop.current) break;
+        p.cur = y; setProg(st.map((x) => ({ ...x })));
+        try {
+          await call<any>('/api/backtest/run', { method: 'POST', json: custom ? body(m, `${f.from}T00:00:00Z`, `${f.to}T00:00:00Z`) : body(m, `${y}-01-01T00:00:00Z`, `${y + 1}-01-01T00:00:00Z`) });
+          p.done++;
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (/Tidak ada candle/.test(msg)) p.skip++; else { p.fail++; p.note = msg; }
+        }
+        p.proc = (p.proc ?? 0) + 1;
       }
-      setProg([...st]);
+      p.cur = undefined; p.state = 'done'; setProg(st.map((x) => ({ ...x })));
     }
     setBusy(false);
     onDone(cfgKey);
   };
-  const done = prog?.filter((p) => p.state === 'done' || p.state === 'fail' || p.state === 'skip').length ?? 0;
+  const total = prog?.reduce((a, p) => a + p.years.length, 0) ?? 0;
+  const finished = prog?.reduce((a, p) => a + (p.proc ?? 0), 0) ?? 0;
+  const allSel = sel == null;
 
   return (
     <section className={bare ? 'stack' : 'group stack'}>
       <div className="stack tight">
         {bare ? null : <h2>Jalankan backtest</h2>}
-        <p className="mute small">Setiap tahun diuji dengan RR 1:1, 1:2, dan 1:3.</p>
+        <p className="mute small">Satu strategi diuji di semua pair yang dipilih, per tahun, dengan RR 1:1, 1:2, dan 1:3.</p>
       </div>
       {strategies.length ? (
         <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>
-          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'n_pattern_v1' ? 'Pola N (M15, searah tren H4)' : s.adapter_key === 'breakout_v05' ? 'Breakout v0.5 inti (terbaik, disarankan)' : s.adapter_key === 'breakout_v04' ? 'Breakout v0.4 (lebih sering trade)' : s.adapter_key === 'breakout_v03' ? 'Breakout v0.3' : s.adapter_key === 'ob_fvg_v1' ? 'Order Block + FVG (SMC)' : s.adapter_key === 'snr_break_h1_v1' ? 'SNR breakout H1 (tanpa tren H4)' : s.adapter_key === 'rbr_dbd_v1' ? 'RBR / DBD (zona base H1, searah tren H4)' : s.adapter_key === 'snr_snd_mtf_v2' ? 'SNR + SND v2 (strategy Pine kamu)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'SNR + SND v1 (indikator Pine kamu)' : s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (hasil riset)' : `${s.strategy_key} ${s.version}`}</option>)}
+          {strategies.map((s) => <option key={s.id} value={s.id}>{STRAT_LABEL[s.adapter_key] ?? `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : null}
-      {sources.length > 1 ? (
-        <label className="field">Data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''}</option>)}</select></label>
-      ) : null}
+      <div className="stack tight">
+        <span className="label">Data</span>
+        <div className="seg" role="group" aria-label="Timeframe data">
+          <button aria-pressed={f.tf === 'M15'} onClick={() => setF((x) => ({ ...x, tf: 'M15', y1: '', y2: '' }))}>M15 · sejak 2017/18</button>
+          <button aria-pressed={f.tf === 'M30'} onClick={() => setF((x) => ({ ...x, tf: 'M30', y1: '', y2: '' }))}>M30 · sejak 2010</button>
+        </div>
+      </div>
+      <div className="stack tight">
+        <div className="row between"><span className="label">Pair ({chosen.length}/{sets.length})</span>
+          <button className="btn sm ghost" onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>
+        <div className="chips">
+          {sets.map((m) => (
+            <button key={m.symbol} className="chip" aria-pressed={allSel || (sel ?? []).includes(m.symbol)} onClick={() => togglePair(m.symbol)}>
+              <span className="k">{m.label.replace(/ \(.*\)$/, '')}</span><span className="v">{yearOf(m.first)}–{yearOf(m.last)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       {!custom ? (
         <div className="grid two">
           <label className="field">Dari tahun<select value={y1} onChange={set('y1')}>{years.map((y) => <option key={y} value={y}>{y}</option>)}</select></label>
@@ -375,37 +415,39 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
         </div>
       )}
       <label className="field">Risiko per trade ($)<input inputMode="decimal" value={f.risk} onChange={set('risk')} placeholder="10" /></label>
-      {!custom && existing.some((y) => list.includes(Number(y))) ? (
-        <label className="switch">Lewati tahun yang sudah ada hasilnya<input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} /></label>
-      ) : null}
+      <label className="switch">Lewati tahun yang sudah ada hasilnya<input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} /></label>
       <details className="more">
         <summary>Biaya & lainnya</summary>
         <label className="switch">Pakai rentang tanggal sendiri<input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} /></label>
+        <p className="mute small">Biaya XAUUSD bisa diubah di bawah. Pair lain memakai perkiraan bawaan (akun ECN):</p>
+        <div className="tablewrap"><table><thead><tr><th>Pair</th><th>Spread</th><th>Slippage</th><th>Komisi/lot</th></tr></thead>
+          <tbody>{sets.filter((m) => m.symbol !== 'XAUUSD').map((m) => <tr key={m.symbol}><td>{m.label}</td><td>{m.costs?.spread}</td><td>{m.costs?.slippage}</td><td>${m.costs?.commission}</td></tr>)}</tbody></table></div>
         <div className="grid two">
-          <label className="field">Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
-          <label className="field">Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
-          <label className="field">Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
-          <label className="field">Lot tetap (kalau risiko dikosongkan)<input inputMode="decimal" value={f.size} onChange={set('size')} /></label>
+          <label className="field">Spread XAUUSD ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
+          <label className="field">Slippage XAUUSD ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
+          <label className="field">Komisi XAUUSD per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
           <label className="field">TP & SL kena di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Hitung sebagai SL</option><option value="best">Hitung sebagai TP</option><option value="skip">Lewati</option></select></label>
         </div>
       </details>
-      {!sources.length ? <div className="notice">Impor data M15 dulu di Atur → Data harga.</div> : null}
-      {busy && !custom
+      {!sets.length ? <div className="notice">{markets.length ? 'Data belum siap.' : 'Memuat daftar pair…'}</div> : null}
+      {busy
         ? <button className="btn block" onClick={() => { stop.current = true; }}>Berhenti setelah tahun ini</button>
-        : <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy || (!custom && !list.length)}>
-            {busy ? 'Menghitung…' : custom ? 'Jalankan backtest' : list.length > 1 ? `Jalankan ${y1}–${y2} (${list.length} tahun)` : `Jalankan ${y1}`}
+        : <button className="btn primary block" onClick={run} disabled={!f.strategy || !chosen.length || (!custom && !list.length)}>
+            {custom ? `Jalankan ${chosen.length} pair` : `Jalankan ${chosen.length} pair · ${y1 === y2 ? y1 : `${y1}–${y2}`}`}
           </button>}
       {err ? <div className="error">{err}</div> : null}
       {prog ? (
         <div className="stack tight">
-          <div className="row between small"><strong>{busy ? 'Sedang berjalan… biarkan halaman ini terbuka' : 'Selesai'}</strong><span className="mute">{done}/{prog.length}</span></div>
-          <div className="wlbar progress" aria-hidden><span style={{ width: `${(done / Math.max(1, prog.length)) * 100}%` }} /></div>
+          <div className="row between small"><strong>{busy ? 'Sedang berjalan… biarkan halaman ini terbuka' : 'Selesai'}</strong><span className="mute">{finished}/{total} tahun</span></div>
+          <div className="wlbar progress" aria-hidden><span style={{ width: `${(finished / Math.max(1, total)) * 100}%` }} /></div>
           <div className="list">
             {prog.map((p) => (
-              <div key={p.year} className="item">
-                <span className="t">{p.year}</span>
-                <span className={`end small ${p.state === 'fail' ? 'neg' : p.state === 'done' ? 'pos' : 'mute'}`} style={{ flex: '1 1 auto', minWidth: 0 }}>
-                  {p.state === 'wait' ? 'Menunggu' : p.state === 'run' ? 'Menghitung…' : p.state === 'done' ? `✓ ${p.note}` : p.state === 'skip' ? (p.note ?? 'Sudah ada, dilewati') : `Gagal: ${p.note}`}
+              <div key={p.symbol} className="item">
+                <span className="t">{p.label}</span>
+                <span className={`end small ${p.fail ? 'neg' : p.state === 'done' ? 'pos' : 'mute'}`} style={{ flex: '1 1 auto', minWidth: 0 }}>
+                  {p.state === 'wait' ? (p.years.length ? `Menunggu · ${p.years.length} tahun` : 'Sudah ada, dilewati')
+                    : p.state === 'run' ? `Menghitung ${custom ? '' : p.cur ?? ''}… ${p.done}/${p.years.length}`
+                    : `✓ ${p.done} tahun${p.skip ? ` · ${p.skip} dilewati` : ''}${p.fail ? ` · ${p.fail} gagal: ${p.note}` : ''}`}
                 </span>
               </div>
             ))}
@@ -521,11 +563,17 @@ function DeleteAll({ sessions, current, currentLabel, onDeleted }: { sessions: a
 /* ---------------------------------------------------------------- strategy configurations (strategy + switches) */
 const PART: Record<string, string> = { donchianH1: 'H1', london: 'London', newYork: 'New York', donchianM30: 'M30' };
 function paramsOf(s: any): Record<string, boolean> { return (s.cost_config?.strategy_params ?? {}) as Record<string, boolean>; }
+const dataTf = (s: any) => String(s.cost_config?.data_tf ?? 'M15');
+const symOf = (s: any) => String(s.symbol ?? s.cost_config?.symbol ?? 'XAUUSD');
 function configKey(s: any) {
   const p = paramsOf(s);
-  return `${s.strategy ?? '?'}|${Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join(',')}`;
+  return `${s.strategy ?? '?'}|${Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join(',')}${dataTf(s) === 'M30' ? '|M30' : ''}`;
 }
 function configLabel(s: any) {
+  const base = configLabelBase(s);
+  return dataTf(s) === 'M30' ? `${base} · data M30` : base;
+}
+function configLabelBase(s: any) {
   const strat = String(s.strategy ?? 'strategi');
   if (strat === 'pola_n v1') return 'Pola N (M15, searah tren H4)';
   if (strat === 'ob_fvg v1') return 'Order Block + FVG (SMC)';
@@ -552,6 +600,45 @@ function strategyConfigs(sessions: any[]) {
     if (!cur || c > cur.created) m.set(k, { key: k, label: configLabel(s), created: c });
   }
   return [...m.values()].sort((a, b) => b.created - a.created);
+}
+
+/* ---------------------------------------------------------------- one row per pair (all years, chosen RR) */
+interface PairSum { symbol: string; label: string; pnl: number; trades: number; wins: number; years: number; first: string | null; last: string | null }
+function pairSummaries(sessions: any[], rr: number): PairSum[] {
+  const syms = [...new Set(sessions.map(symOf))];
+  const order = (s: string) => { const i = INSTRUMENTS.findIndex((x) => x.symbol === s); return i < 0 ? 99 : i; };
+  return syms.map((sym) => {
+    const rows = yearRows(sessions.filter((s) => symOf(s) === sym));
+    const cells = rows.map((r) => r.cells.find((c: any) => rrNum(c) === rr)).filter(Boolean);
+    const labels = rows.map((r) => r.label).sort();
+    return { symbol: sym, label: instrumentLabel(sym), years: rows.length, first: labels[0] ?? null, last: labels[labels.length - 1] ?? null,
+      pnl: cells.reduce((a: number, c: any) => a + Number(c.pnl ?? 0), 0), trades: cells.reduce((a: number, c: any) => a + Number(c.trades ?? 0), 0),
+      wins: cells.reduce((a: number, c: any) => a + Number(c.wins ?? 0), 0) };
+  }).sort((a, b) => b.pnl - a.pnl || order(a.symbol) - order(b.symbol));
+}
+function PairTable({ pairs, selected, rr, onPick }: { pairs: PairSum[]; selected: string | null; rr: number; onPick: (sym: string) => void }) {
+  const max = Math.max(1, ...pairs.map((p) => Math.abs(p.pnl)));
+  const total = pairs.reduce((a, p) => a + p.pnl, 0);
+  const plus = pairs.filter((p) => p.pnl > 0).length;
+  return (
+    <div className="stack tight">
+      <div className="row between"><span className="label">Hasil per pair · RR 1:{rr} · semua tahun</span>
+        <span className={`small ${total > 0 ? 'pos' : total < 0 ? 'neg' : 'mute'}`}><strong>{plus}/{pairs.length} untung</strong></span></div>
+      <div className="pairs" role="list">
+        {pairs.map((p, i) => (
+          <button key={p.symbol} role="listitem" className={`pairrow ${p.pnl > 0 ? 'up' : p.pnl < 0 ? 'down' : ''}`} aria-pressed={p.symbol === selected} onClick={() => onPick(p.symbol)}>
+            <span className="rank">{i + 1}</span>
+            <span className="nm"><strong>{p.label}</strong><span className="mute small">{p.trades} trade · win {p.trades ? Math.round((p.wins / p.trades) * 100) : 0}% · {p.years} th</span></span>
+            <span className="pl">
+              <span className="v">{`${p.pnl > 0 ? '+' : p.pnl < 0 ? '−' : ''}$${Math.round(Math.abs(p.pnl)).toLocaleString('en-US')}`}</span>
+              <span className="bar" aria-hidden><span style={{ width: `${(Math.abs(p.pnl) / max) * 100}%` }} /></span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="mute small">Tekan pair untuk melihat grafik, kalender, dan trade-nya di bawah.</p>
+    </div>
+  );
 }
 
 /* ---------------------------------------------------------------- year × RR table (newest run per period wins) */
