@@ -16,8 +16,10 @@ import type { StrategyAdapter, StrategyEventDraft } from './adapter';
  */
 export interface BreakoutParams {
   donchianH1: boolean; london: boolean; newYork: boolean; donchianM30: boolean; allowSell: boolean; allowBuy: boolean;
+  /** v0.3: SELL only while the long-term D1 trend is down too (EMA50(D1) < EMA200(D1)). */
+  sellD1Bear: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -65,7 +67,7 @@ export const breakoutAdapter: StrategyAdapter = {
     if (!h1?.length || !h4?.length || !d1?.length || m.length < 30) return [];
     const bar = m[m.length - 1];
     const now = ctx.now;
-    const st = ctx.state as { tk?: string; trend?: Trend; d1atr?: number; day?: string; brk?: Record<string, number> };
+    const st = ctx.state as { tk?: string; trend?: Trend; d1bear?: boolean; d1atr?: number; day?: string; brk?: Record<string, number> };
 
     // trend + D1 ATR: recompute only when a new H4 or D1 candle has closed
     const tk = `${h4[h4.length - 1].time}|${d1[d1.length - 1].time}`;
@@ -74,6 +76,7 @@ export const breakoutAdapter: StrategyAdapter = {
       const e50 = emaLast(h4c, 50), e200 = emaLast(h4c, 200), d50 = emaLast(d1c, 50);
       const lc4 = h4c[h4c.length - 1], lcd = d1c[d1c.length - 1];
       st.trend = lc4 > e50 && e50 > e200 && lcd > d50 ? 'up' : lc4 < e50 && e50 < e200 && lcd < d50 ? 'down' : 'none';
+      st.d1bear = emaLast(d1c, 50) < emaLast(d1c, 200);
       st.d1atr = atrLastEwm(d1, 14);
       st.tk = tk;
     }
@@ -81,7 +84,7 @@ export const breakoutAdapter: StrategyAdapter = {
     const out: StrategyEventDraft[] = [];
     const emit = (slot: string, side: 'long' | 'short', sl: number, why: string, extra: Record<string, unknown> = {}) => {
       if (side === 'long' && (!p.allowBuy || trend !== 'up')) return;
-      if (side === 'short' && (!p.allowSell || trend !== 'down')) return;
+      if (side === 'short' && (!p.allowSell || trend !== 'down' || (p.sellD1Bear && !st.d1bear))) return;
       out.push({
         type: 'SETUP_CONFIRMED', candleTime: bar.time, price: bar.close,
         zone: null,
@@ -142,4 +145,17 @@ export const breakoutAdapter: StrategyAdapter = {
     }
     return out;
   },
+};
+
+/**
+ * Breakout v0.3 = v0.2 + M30 Donchian part + SELL only when D1 EMA50 < EMA200 (long-term downtrend).
+ * Chosen on 2018-2022 among 14 pre-set variants, checked on 2023-2026 (README 5g).
+ */
+export const BREAKOUT_V03_KEY = 'breakout_v03';
+export const breakoutV03Adapter: StrategyAdapter = {
+  ...breakoutAdapter,
+  key: BREAKOUT_V03_KEY,
+  name: 'Breakout v0.3 (H1 + London + New York + M30, SELL hanya saat tren D1 turun)',
+  htfWindow: { H1: 400, H4: 1000, D1: 1000 },
+  evaluate: (ctx) => breakoutAdapter.evaluate({ ...ctx, params: { donchianM30: true, sellD1Bear: true, ...ctx.params } }),
 };

@@ -191,6 +191,11 @@ Riset 2018–2026 (RR 1:2, $10, biaya termasuk; 12+12 variasi ditentukan sebelum
 Tanpa filter tren. Level SNR = swing high/low H1 terakhir yang sudah terkonfirmasi (pivot 3). Saat candle H1 pertama kali close menembus level itu → entry di open M15 berikutnya (BUY tembus resistance, SELL tembus support). SL = level ∓ 1,5×ATR(14) H1; dilewati jika risiko > 3×ATR. Opsi `mode: 'retest'` menunggu harga kembali ke level dulu.
 Riset 2018–2026 (RR 1:2, $10, biaya termasuk; 12 variasi ditentukan sebelumnya): setelan bawaan 1.610 trade (3,7/minggu), win 33,9%, +$21 (impas), turun terdalam −$768; 2018–22 −0,05R, 2023–26 +0,07R. Belum ada keunggulan yang meyakinkan.
 
+## 5g. Breakout v0.3 (`breakout_v03`) — disarankan
+
+= v0.2 + bagian M30 (Donchian 10, SL 2,5×ATR M30) + SELL hanya jika EMA50(D1) < EMA200(D1). Analisis v0.2 menunjukkan BUY +$1.832 tetapi SELL −$557: breakout ke bawah saat emas dalam tren naik jangka panjang sering gagal.
+Dipilih dari 14 variasi yang ditentukan sebelumnya berdasarkan 2018–2022 saja, lalu dicek di 2023–2026 (RR 1:2, $10, biaya termasuk): 2.348 trade (5,3/minggu; 1.911 BUY, 437 SELL), win 37,9%, **+$2.922**, turun terdalam −$613; 2018–22 +0,07R/trade (+$871), 2023–26 +0,18R/trade (+$2.051). Per tahun: 2018 −$73, 2019 +$240, 2020 +$535, 2021 −$259, 2022 +$428, 2023 +$159, 2024 +$568, 2025 +$1.021, 2026 +$303. Hasil adapter website identik dengan riset.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

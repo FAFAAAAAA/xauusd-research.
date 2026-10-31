@@ -253,3 +253,10 @@ test('snr breakout H1: registered; BUY only after an H1 close above a confirmed 
   }
   assert.ok(n > 0, 'zigzag breaks swing levels');
 });
+
+test('breakout v0.3: registered; SELL needs D1 EMA50 < EMA200, defaults include M30', async () => {
+  const { breakoutV03Adapter, breakoutAdapter } = await import('../src/lib/core/strategy/breakout');
+  assert.equal(getAdapter('breakout_v03'), breakoutV03Adapter);
+  assert.equal(breakoutV03Adapter.htfWindow?.D1, 1000);
+  assert.notEqual(breakoutV03Adapter.evaluate, breakoutAdapter.evaluate);
+});
