@@ -1,0 +1,271 @@
+//@version=6
+// ============================================================================
+// Breakout v0.5 inti — XAUUSD (indikator, BUKAN auto-trading)
+// Port dari strategi website (src/lib/core/strategy/breakout.ts, breakoutV05Adapter).
+// Pasang di chart M15. Semua nilai timeframe besar diambil dari candle yang SUDAH tutup (tidak repaint).
+//
+// Saringan tren:  BUY  = H4 close > EMA50 > EMA200  dan  D1 close > EMA50
+//                 SELL = H4 close < EMA50 < EMA200  dan  D1 close < EMA50  dan  EMA50 D1 < EMA200 D1
+// Pintu masuk:    A  H1 close tembus high/low 40 candle H1 sebelumnya          SL = close ∓ 2,5 × ATR14 H1
+//                 B  New York: close M15 tembus range 12:00–13:30 UTC, jam 13:30–16:00 UTC (tembusan pertama per hari,
+//                    lebar range 0,2–1,5 × ATR14 D1)                            SL = sisi lain range
+//                 C  Level: swing H1 (pivot 3) yang didatangi lagi 2–3× (dalam 0,25 × ATR, jarak ≥ 3 candle)
+//                    lalu pertama kali ditembus close H1 (≤ 120 candle H1)       SL = level ∓ 1,5 × ATR14 H1
+// Entry di open candle M15 berikutnya, TP = RR × risiko. Tiap pintu maks 1 BUY + 1 SELL terbuka.
+// Catatan: candle H4/D1 di TradingView mengikuti jam sesi broker, website memakai UTC → sinyal bisa sedikit beda.
+//          Statistik di tabel belum memperhitungkan spread/komisi.
+// ============================================================================
+indicator("Breakout v0.5 inti — XAUUSD", overlay = true, max_lines_count = 500, max_labels_count = 500)
+
+rr        = input.float(2.0, "Risk : Reward (TP = RR × risiko)", minval = 0.5, step = 0.5)
+useH1     = input.bool(true, "Pintu A · Breakout H1 (40 candle)")
+useNY     = input.bool(true, "Pintu B · Breakout New York")
+useLvl    = input.bool(true, "Pintu C · Level disentuh 2–3×")
+showTrade = input.bool(true, "Gambar entry / SL / TP")
+showStats = input.bool(true, "Tabel statistik")
+
+// ---------------------------------------------------------------- higher timeframe helpers
+// value of the last HTF candle that is CLOSED at this M15 candle's close (current one only if it closes right now)
+f_tr() => [close, ta.ema(close, 50), ta.ema(close, 200), ta.atr(14), close[1], ta.ema(close, 50)[1], ta.ema(close, 200)[1], ta.atr(14)[1], time_close]
+[h4c0, h4e500, h4e2000, h4a0, h4c1, h4e501, h4e2001, h4a1, h4tc] = request.security(syminfo.tickerid, "240", f_tr(), lookahead = barmerge.lookahead_on)
+[d1c0, d1e500, d1e2000, d1a0, d1c1, d1e501, d1e2001, d1a1, d1tc] = request.security(syminfo.tickerid, "D", f_tr(), lookahead = barmerge.lookahead_on)
+h4now = time_close == h4tc
+d1now = time_close == d1tc
+h4c   = h4now ? h4c0 : h4c1
+h4e50 = h4now ? h4e500 : h4e501
+h4e200 = h4now ? h4e2000 : h4e2001
+d1c   = d1now ? d1c0 : d1c1
+d1e50 = d1now ? d1e500 : d1e501
+d1e200 = d1now ? d1e2000 : d1e2001
+d1atr = d1now ? d1a0 : d1a1
+
+trendUp   = h4c > h4e50 and h4e50 > h4e200 and d1c > d1e50
+trendDown = h4c < h4e50 and h4e50 < h4e200 and d1c < d1e50
+sellOk    = trendDown and d1e50 < d1e200
+
+// ---------------------------------------------------------------- H1 context: Donchian 40 + level touched 2–3×
+f_h1() =>
+    var array<float> hP = array.new_float()
+    var array<int>   hK = array.new_int()
+    var array<int>   hL = array.new_int()
+    var array<int>   hT = array.new_int()
+    var array<float> lP = array.new_float()
+    var array<int>   lK = array.new_int()
+    var array<int>   lL = array.new_int()
+    var array<int>   lT = array.new_int()
+    a = ta.atr(14)
+    i = bar_index
+    hh = ta.highest(high, 40)[1]
+    ll = ta.lowest(low, 40)[1]
+    hi7 = ta.highest(high, 7)   // evaluated on every candle (not inside a condition)
+    lo7 = ta.lowest(low, 7)
+    isPH = bar_index >= 6 and high[3] == hi7
+    isPL = bar_index >= 6 and low[3] == lo7
+    float buyLv = na
+    float sellLv = na
+    int buyT = 0
+    int sellT = 0
+    // resistance levels (BUY on a close above)
+    rem = array.new_int()
+    taken = false
+    n = array.size(hP)
+    if n > 0
+        for j = 0 to n - 1
+            p = array.get(hP, j)
+            if i - array.get(hK, j) > 119
+                array.push(rem, j)
+            else if close > p
+                if not taken
+                    taken := true
+                    t = array.get(hT, j)
+                    if t >= 2 and t <= 3
+                        buyLv := p
+                        buyT := t
+                array.push(rem, j)
+            else if high >= p - 0.25 * a
+                if i - array.get(hL, j) >= 3
+                    array.set(hT, j, array.get(hT, j) + 1)
+                array.set(hL, j, i)
+    m = array.size(rem)
+    if m > 0
+        for q = m - 1 to 0
+            r = array.get(rem, q)
+            array.remove(hP, r), array.remove(hK, r), array.remove(hL, r), array.remove(hT, r)
+    // support levels (SELL on a close below)
+    rem2 = array.new_int()
+    taken2 = false
+    n2 = array.size(lP)
+    if n2 > 0
+        for j = 0 to n2 - 1
+            p = array.get(lP, j)
+            if i - array.get(lK, j) > 119
+                array.push(rem2, j)
+            else if close < p
+                if not taken2
+                    taken2 := true
+                    t = array.get(lT, j)
+                    if t >= 2 and t <= 3
+                        sellLv := p
+                        sellT := t
+                array.push(rem2, j)
+            else if low <= p + 0.25 * a
+                if i - array.get(lL, j) >= 3
+                    array.set(lT, j, array.get(lT, j) + 1)
+                array.set(lL, j, i)
+    m2 = array.size(rem2)
+    if m2 > 0
+        for q = m2 - 1 to 0
+            r = array.get(rem2, q)
+            array.remove(lP, r), array.remove(lK, r), array.remove(lL, r), array.remove(lT, r)
+    // pivots confirmed on this candle become levels from the next candle on
+    if isPH
+        array.push(hP, high[3]), array.push(hK, i - 3), array.push(hL, i - 3), array.push(hT, 1)
+    if isPL
+        array.push(lP, low[3]), array.push(lK, i - 3), array.push(lL, i - 3), array.push(lT, 1)
+    [close, hh, ll, a, buyLv, buyT, sellLv, sellT, time_close]
+
+[h1c, h1hh, h1ll, h1atr, lvBuy, lvBuyT, lvSell, lvSellT, h1tc] = request.security(syminfo.tickerid, "60", f_h1(), lookahead = barmerge.lookahead_on)
+h1now = time_close == h1tc   // this M15 candle completes an H1 candle
+
+// ---------------------------------------------------------------- New York range (UTC)
+mins = hour(time, "UTC") * 60 + minute(time, "UTC")
+newDay = nz(ta.change(dayofmonth(time, "UTC"))) != 0
+var float nyHi = na
+var float nyLo = na
+var bool nyUp = false
+var bool nyDn = false
+if newDay
+    nyHi := na, nyLo := na, nyUp := false, nyDn := false
+if mins >= 720 and mins < 810
+    nyHi := na(nyHi) ? high : math.max(nyHi, high)
+    nyLo := na(nyLo) ? low : math.min(nyLo, low)
+inWin = mins >= 810 and mins < 960
+nyWidthOk = not na(nyHi) and not na(d1atr) and (nyHi - nyLo) > 0.2 * d1atr and (nyHi - nyLo) < 1.5 * d1atr
+
+// ---------------------------------------------------------------- signals (at this candle's close)
+sigA_L = useH1 and h1now and h1c > h1hh and trendUp
+sigA_S = useH1 and h1now and h1c < h1ll and sellOk
+float slA_L = close - 2.5 * h1atr
+float slA_S = close + 2.5 * h1atr
+
+nyBreakUp = inWin and nyWidthOk and not nyUp and close > nyHi
+nyBreakDn = inWin and nyWidthOk and not nyDn and close < nyLo
+sigB_L = useNY and nyBreakUp and trendUp
+sigB_S = useNY and nyBreakDn and sellOk
+if nyBreakUp
+    nyUp := true
+if nyBreakDn
+    nyDn := true
+
+sigC_L = useLvl and h1now and not na(lvBuy) and trendUp
+sigC_S = useLvl and h1now and not na(lvSell) and sellOk
+float slC_L = lvBuy - 1.5 * h1atr
+float slC_S = lvSell + 1.5 * h1atr
+
+// ---------------------------------------------------------------- trade tracking per slot (A-L, A-S, B-L, B-S, C-L, C-S)
+var array<bool>  busy  = array.new_bool(6, false)
+var array<bool>  pend  = array.new_bool(6, false)
+var array<float> pSL   = array.new_float(6, na)
+var array<float> eE    = array.new_float(6, na)
+var array<float> eSL   = array.new_float(6, na)
+var array<float> eTP   = array.new_float(6, na)
+var array<line>  lnE   = array.new<line>(6)
+var array<line>  lnS   = array.new<line>(6)
+var array<line>  lnT   = array.new<line>(6)
+var int wins = 0
+var int losses = 0
+var float sumR = 0.0
+
+// 1) pending signals enter at this candle's open (skip if the gap after the signal is > 60 minutes, e.g. weekend)
+for s = 0 to 5
+    if array.get(pend, s)
+        array.set(pend, s, false)
+        isLong = s % 2 == 0
+        sl = array.get(pSL, s)
+        entry = open
+        risk = isLong ? entry - sl : sl - entry
+        if risk > 0 and time - time_close[1] <= 60 * 60 * 1000
+            tp = isLong ? entry + rr * risk : entry - rr * risk
+            array.set(busy, s, true), array.set(eE, s, entry), array.set(eSL, s, sl), array.set(eTP, s, tp)
+            if showTrade
+                array.set(lnE, s, line.new(bar_index, entry, bar_index, entry, color = color.new(color.blue, 0), width = 1))
+                array.set(lnS, s, line.new(bar_index, sl, bar_index, sl, color = color.new(color.red, 0), width = 1))
+                array.set(lnT, s, line.new(bar_index, tp, bar_index, tp, color = color.new(color.green, 0), width = 1))
+
+// 2) open trades: TP / SL (both inside one candle → counted as SL, like the website)
+for s = 0 to 5
+    if array.get(busy, s)
+        isLong = s % 2 == 0
+        sl = array.get(eSL, s)
+        tp = array.get(eTP, s)
+        hitSL = isLong ? low <= sl : high >= sl
+        hitTP = isLong ? high >= tp : low <= tp
+        if showTrade
+            line.set_x2(array.get(lnE, s), bar_index), line.set_x2(array.get(lnS, s), bar_index), line.set_x2(array.get(lnT, s), bar_index)
+        if hitSL or hitTP
+            array.set(busy, s, false)
+            if hitSL
+                losses += 1
+                sumR -= 1.0
+                if showTrade
+                    label.new(bar_index, sl, "SL", style = label.style_label_center, color = color.new(color.red, 20), textcolor = color.white, size = size.tiny)
+            else
+                wins += 1
+                sumR += rr
+                if showTrade
+                    label.new(bar_index, tp, "TP", style = label.style_label_center, color = color.new(color.green, 20), textcolor = color.white, size = size.tiny)
+
+// 3) new signals (only when that slot has no open trade)
+f_signal(int s, bool cond, float sl) =>
+    fired = false
+    if cond and not array.get(busy, s) and not array.get(pend, s) and not na(sl)
+        isLong = s % 2 == 0
+        if isLong ? sl < close : sl > close
+            array.set(pend, s, true)
+            array.set(pSL, s, sl)
+            fired := true
+    fired
+
+fA_L = f_signal(0, sigA_L, slA_L)
+fA_S = f_signal(1, sigA_S, slA_S)
+fB_L = f_signal(2, sigB_L, nyLo)
+fB_S = f_signal(3, sigB_S, nyHi)
+fC_L = f_signal(4, sigC_L, slC_L)
+fC_S = f_signal(5, sigC_S, slC_S)
+
+anyBuy = fA_L or fB_L or fC_L
+anySell = fA_S or fB_S or fC_S
+buyTxt = (fA_L ? "H1 " : "") + (fB_L ? "NY " : "") + (fC_L ? "Level" : "")
+sellTxt = (fA_S ? "H1 " : "") + (fB_S ? "NY " : "") + (fC_S ? "Level" : "")
+buySL = fA_L ? slA_L : fB_L ? nyLo : slC_L
+sellSL = fA_S ? slA_S : fB_S ? nyHi : slC_S
+
+if anyBuy
+    label.new(bar_index, low, "BUY\n" + str.trim(buyTxt), style = label.style_label_up, color = color.new(color.green, 0), textcolor = color.white, size = size.small)
+    alert("BUY " + syminfo.ticker + " · Breakout v0.5 (" + str.trim(buyTxt) + ") · entry di open M15 berikutnya · SL " + str.tostring(buySL, format.mintick) + " · TP = " + str.tostring(rr) + "× risiko", alert.freq_once_per_bar_close)
+if anySell
+    label.new(bar_index, high, "SELL\n" + str.trim(sellTxt), style = label.style_label_down, color = color.new(color.red, 0), textcolor = color.white, size = size.small)
+    alert("SELL " + syminfo.ticker + " · Breakout v0.5 (" + str.trim(sellTxt) + ") · entry di open M15 berikutnya · SL " + str.tostring(sellSL, format.mintick) + " · TP = " + str.tostring(rr) + "× risiko", alert.freq_once_per_bar_close)
+
+alertcondition(anyBuy, "Breakout v0.5 BUY", "BUY {{ticker}} Breakout v0.5 — entry di open M15 berikutnya")
+alertcondition(anySell, "Breakout v0.5 SELL", "SELL {{ticker}} Breakout v0.5 — entry di open M15 berikutnya")
+
+// background: trend state
+bgcolor(trendUp ? color.new(color.green, 94) : sellOk ? color.new(color.red, 94) : na, title = "Tren (hijau = boleh BUY, merah = boleh SELL)")
+
+// ---------------------------------------------------------------- statistics table
+var table tb = table.new(position.top_right, 2, 6, bgcolor = color.new(color.white, 10), border_width = 1, border_color = color.new(color.gray, 70))
+if showStats and barstate.islast
+    n = wins + losses
+    table.cell(tb, 0, 0, "Breakout v0.5", text_color = color.black, text_size = size.small)
+    table.cell(tb, 1, 0, timeframe.period == "15" ? "M15 ✓" : "Pakai chart M15!", text_color = timeframe.period == "15" ? color.green : color.red, text_size = size.small)
+    table.cell(tb, 0, 1, "Trade selesai", text_color = color.black, text_size = size.small)
+    table.cell(tb, 1, 1, str.tostring(n), text_color = color.black, text_size = size.small)
+    table.cell(tb, 0, 2, "Menang / kalah", text_color = color.black, text_size = size.small)
+    table.cell(tb, 1, 2, str.tostring(wins) + " / " + str.tostring(losses), text_color = color.black, text_size = size.small)
+    table.cell(tb, 0, 3, "Win rate", text_color = color.black, text_size = size.small)
+    table.cell(tb, 1, 3, n > 0 ? str.tostring(100.0 * wins / n, "#.0") + "%" : "—", text_color = color.black, text_size = size.small)
+    table.cell(tb, 0, 4, "Hasil (R, tanpa biaya)", text_color = color.black, text_size = size.small)
+    table.cell(tb, 1, 4, str.tostring(sumR, "+#.0;-#.0"), text_color = sumR >= 0 ? color.green : color.red, text_size = size.small)
+    table.cell(tb, 0, 5, "Tren sekarang", text_color = color.black, text_size = size.small)
+    table.cell(tb, 1, 5, trendUp ? "Naik → BUY" : sellOk ? "Turun → SELL" : "Tidak jelas → diam", text_color = trendUp ? color.green : sellOk ? color.red : color.gray, text_size = size.small)
