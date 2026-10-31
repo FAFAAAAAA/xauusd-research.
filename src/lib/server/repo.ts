@@ -243,6 +243,11 @@ export async function ensureBuiltinStrategies(db: Db) {
      on conflict (strategy_key, version) do nothing returning id`);
   await db.query(
     `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
+     values ('ob_fvg', 'v1', 'ob_fvg_v1', 'active', false,
+       'Order Block + FVG H1 (SMC): FVG >= 0.3 ATR dengan break of structure, entry saat harga pertama kali kembali ke FVG, SL di luar order block + 0.1 ATR, searah tren H4 EMA50/200 & D1.')
+     on conflict (strategy_key, version) do nothing returning id`);
+  await db.query(
+    `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)
      values ('snr_break', 'h1-v1', 'snr_break_h1_v1', 'active', false,
        'SNR breakout H1 tanpa tren H4: level = swing high/low H1 terakhir (pivot 3), entry di open M15 berikutnya saat candle H1 close menembus level (pertama kali), BUY dan SELL, SL = level -/+ 1.5 ATR(14) H1.')
      on conflict (strategy_key, version) do nothing returning id`);

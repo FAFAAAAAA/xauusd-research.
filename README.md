@@ -209,6 +209,11 @@ Tiga bagian terkuat v0.4 (untung per trade tertinggi dan positif di 2018–22 ma
 Hasil 2018–2026 (RR 1:2, $10, biaya termasuk): 1.422 trade (3,2/minggu), win 39,7%, +0,18R/trade, **+$2.514**, turun terdalam **−$335** (v0.4: −$780); untung/turun-terdalam 7,5 (v0.4: 4,8). 2018–22 +$860, 2023–26 +$1.655. Per tahun: 2018 −$45, 2019 +$190, 2020 +$317, 2021 +$32, 2022 +$367, 2023 +$143, 2024 +$373, 2025 +$903, 2026 +$236.
 Catatan jujur: v0.5 disusun setelah melihat hasil per bagian di seluruh 2018–2026, jadi uji 2023–2026 bukan lagi uji "buta"; cek ke depan (forward test) tetap perlu.
 
+## 5j. Order Block + FVG (`ob_fvg_v1`)
+
+FVG (high candle 1 < low candle 3 untuk BUY, celah ≥ 0,3×ATR) yang dorongannya menembus swing high terakhir (BOS); order block = candle berlawanan terakhir sebelum dorongan. Entry saat harga M15 pertama kali kembali ke FVG, SL di luar OB + 0,1×ATR, searah tren H4 EMA50/200 + D1 (SELL juga perlu EMA50 D1 < EMA200 D1). Zona dari candle H1 yang sudah tutup.
+Riset 2018–2026 (10 variasi ditentukan sebelumnya, RR 1:2, $10, biaya termasuk): setelan bawaan 495 trade (1,1/minggu), win 37,2%, +$495, turun terdalam −$237; 2018–22 +0,02R, 2023–26 +0,19R. Entry di OB, konfirmasi candle, zona M15, atau tanpa filter tren lebih jelek. Masih di bawah Breakout v0.5.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

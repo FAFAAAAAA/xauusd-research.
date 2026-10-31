@@ -144,7 +144,9 @@ export default function Analytics() {
                 {fresh ? <>
                 <ReportButton filename={`backtest-xauusd-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: String(cfgSel ?? '').startsWith('breakout v0.5')
+                  rules: String(cfgSel ?? '').startsWith('ob_fvg')
+                    ? 'Entry: harga M15 pertama kali kembali ke FVG H1 (dengan break of structure) searah tren H4 & D1 · SL: di luar order block + 0,1×ATR H1'
+                    : String(cfgSel ?? '').startsWith('breakout v0.5')
                     ? 'Entry: open M15 berikutnya setelah breakout H1 (40 candle), range New York, atau tembus level H1 yang disentuh 2–3× · searah tren H4 & D1; SELL hanya saat EMA50 D1 < EMA200 D1 · SL: ATR atau sisi lain range'
                     : String(cfgSel ?? '').startsWith('breakout v0.4')
                     ? 'Entry: open M15 berikutnya setelah breakout H1/London/New York/M30 atau tembus level H1 yang disentuh 2–3× · searah tren H4 & D1; SELL hanya saat EMA50 D1 < EMA200 D1 · SL: ATR atau sisi lain range'
@@ -291,7 +293,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   useEffect(() => {
     call<any[]>('/api/sources').then((s) => { setSources(s); if (s[0]) setF((x) => ({ ...x, source: x.source || s.find((y: any) => !y.is_test)?.id || s[0].id })); }).catch(() => {});
     call<any[]>('/api/strategies').then((s) => {
-      const ORDER = ['breakout_v05', 'breakout_v04', 'breakout_v03', 'n_pattern_v1', 'snr_break_h1_v1', 'rbr_dbd_v1', 'snr_snd_mtf_v2', 'snr_snd_mtf_v1', 'breakout_v02'];
+      const ORDER = ['breakout_v05', 'breakout_v04', 'breakout_v03', 'ob_fvg_v1', 'n_pattern_v1', 'snr_break_h1_v1', 'rbr_dbd_v1', 'snr_snd_mtf_v2', 'snr_snd_mtf_v1', 'breakout_v02'];
       const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active' && ORDER.includes(x.adapter_key))
         .sort((a: any, b: any) => ORDER.indexOf(a.adapter_key) - ORDER.indexOf(b.adapter_key));
       setStrategies(usable);
@@ -355,7 +357,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       </div>
       {strategies.length ? (
         <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>
-          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'n_pattern_v1' ? 'Pola N (M15, searah tren H4)' : s.adapter_key === 'breakout_v05' ? 'Breakout v0.5 inti (terbaik, disarankan)' : s.adapter_key === 'breakout_v04' ? 'Breakout v0.4 (lebih sering trade)' : s.adapter_key === 'breakout_v03' ? 'Breakout v0.3' : s.adapter_key === 'snr_break_h1_v1' ? 'SNR breakout H1 (tanpa tren H4)' : s.adapter_key === 'rbr_dbd_v1' ? 'RBR / DBD (zona base H1, searah tren H4)' : s.adapter_key === 'snr_snd_mtf_v2' ? 'SNR + SND v2 (strategy Pine kamu)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'SNR + SND v1 (indikator Pine kamu)' : s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (hasil riset)' : `${s.strategy_key} ${s.version}`}</option>)}
+          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'n_pattern_v1' ? 'Pola N (M15, searah tren H4)' : s.adapter_key === 'breakout_v05' ? 'Breakout v0.5 inti (terbaik, disarankan)' : s.adapter_key === 'breakout_v04' ? 'Breakout v0.4 (lebih sering trade)' : s.adapter_key === 'breakout_v03' ? 'Breakout v0.3' : s.adapter_key === 'ob_fvg_v1' ? 'Order Block + FVG (SMC)' : s.adapter_key === 'snr_break_h1_v1' ? 'SNR breakout H1 (tanpa tren H4)' : s.adapter_key === 'rbr_dbd_v1' ? 'RBR / DBD (zona base H1, searah tren H4)' : s.adapter_key === 'snr_snd_mtf_v2' ? 'SNR + SND v2 (strategy Pine kamu)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'SNR + SND v1 (indikator Pine kamu)' : s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (hasil riset)' : `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : null}
       {sources.length > 1 ? (
@@ -526,6 +528,7 @@ function configKey(s: any) {
 function configLabel(s: any) {
   const strat = String(s.strategy ?? 'strategi');
   if (strat === 'pola_n v1') return 'Pola N (M15, searah tren H4)';
+  if (strat === 'ob_fvg v1') return 'Order Block + FVG (SMC)';
   if (strat === 'breakout v0.5') return 'Breakout v0.5 inti (H1 + NY + level)';
   if (strat === 'breakout v0.4') return 'Breakout v0.4 (v0.3 + level 2–3×)';
   if (strat === 'breakout v0.3') return 'Breakout v0.3 (H1+London+NY+M30)';

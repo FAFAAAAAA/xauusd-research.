@@ -295,3 +295,19 @@ test('breakout v0.5: registered; never emits London or M30 signals', async () =>
     for (const e of res.events) assert.ok(!['LON', 'M30'].includes(String(e.details!.component)));
   }
 });
+
+test('ob+fvg: registered; finds a bullish FVG with BOS and an order block below it', async () => {
+  const { obFvgAdapter, findObFvg } = await import('../src/lib/core/strategy/obfvg');
+  assert.equal(getAdapter('ob_fvg_v1'), obFvgAdapter);
+  const mk = (o: number, h: number, l: number, c: number, i: number): Candle => ({ time: T0 + i * M15, open: o, high: h, low: l, close: c });
+  const c: Candle[] = [];
+  for (let i = 0; i < 30; i++) c.push(mk(100, 100.6, 99.4, 100.2, i));
+  c.push(mk(100.2, 101.5, 100, 101.2, 30)); for (let i = 31; i < 35; i++) c.push(mk(101, 101.1, 100.3, 100.5, i)); // swing high 101.5
+  c.push(mk(100.5, 100.6, 99.8, 99.9, 35));            // bearish = order block (a)
+  c.push(mk(99.9, 104, 99.8, 103.8, 36));              // displacement (b)
+  c.push(mk(103.8, 105, 102, 104.6, 37));              // c: low 102 > high(a) 100.6 → FVG, close > 101.5 → BOS
+  const z = findObFvg(c, { fvgAtr: 0.3, entry: 'fvg' }).filter((x) => x.side === 1);
+  assert.equal(z.length, 1);
+  assert.equal(z[0].entry, 102);
+  assert.equal(z[0].obFar, 99.8);
+});
