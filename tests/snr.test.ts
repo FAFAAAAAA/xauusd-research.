@@ -160,3 +160,21 @@ test('builder: validation messages, rule strategy fires without look-ahead, sign
   assert.equal(sev.length, 1);
   assert.equal(sev[0].t, m15[300].time);
 });
+
+test('snr+snd v2 (owner Pine strategy): registered, no look-ahead, stop on the right side, time exit attached', async () => {
+  const { snrSnd2Adapter } = await import('../src/lib/core/strategy/snrsnd2');
+  assert.equal(getAdapter('snr_snd_mtf_v2'), snrSnd2Adapter);
+  const m15 = zigzag(192 * 12, 1);
+  const h1 = aggregateCandles(m15, 'M15', 'H1', 'utc', false), h4 = aggregateCandles(m15, 'M15', 'H4', 'utc', false);
+  const state: Record<string, unknown> = {};
+  for (let i = 30; i < m15.length; i++) {
+    const now = m15[i].time + M15;
+    const res = runStrategyGuarded(snrSnd2Adapter, { mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: m15.slice(Math.max(0, i - 499), i + 1), now, zones: [],
+      news: { archiveAvailable: false, items: [], upcoming: [] }, htf: { H1: h1, H4: h4 }, params: {}, state });
+    assert.deepEqual(res.violations, []);
+    for (const e of res.events) {
+      assert.ok(e.details!.side === 'long' ? (e.details!.stop_loss as number) < e.price : (e.details!.stop_loss as number) > e.price);
+      assert.equal(e.details!.max_bars, 96);
+    }
+  }
+});

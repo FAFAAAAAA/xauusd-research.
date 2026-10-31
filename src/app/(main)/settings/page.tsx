@@ -31,10 +31,6 @@ export default function Settings() {
   return (
     <div className="stack">
       <PageHead title="Atur" />
-      <Link href="/strategi" className="group row between" style={{ color: 'inherit' }}>
-        <span><h2>Strategi</h2><span className="mute small">Tambah, impor dari file atau AI lain, hapus</span></span>
-        <span className="mute">›</span>
-      </Link>
       <HistoricalData />
       <Telegram s={s} reload={load} />
       <General s={s} reload={load} />

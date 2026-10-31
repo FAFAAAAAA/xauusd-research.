@@ -1,7 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades } from '@/components/ResultCharts';
@@ -145,7 +144,9 @@ export default function Analytics() {
                 {fresh ? <>
                 <ReportButton filename={`backtest-xauusd-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: String(cfgSel ?? '').startsWith('custom ')
+                  rules: String(cfgSel ?? '').startsWith('snr_snd_tv v2')
+                    ? 'Entry: rejection / sweep / break-retest M15 di zona SND H4/H1 searah EMA50/200 H4 · SL: luar candle/zona + 0,15×ATR M15 · maks 1 posisi, tutup setelah 96 candle'
+                    : String(cfgSel ?? '').startsWith('custom ')
                     ? 'Strategi buatan sendiri (aturan di menu Strategi) · entry di open M15 berikutnya'
                     : String(cfgSel ?? '').startsWith('snr_snd_tv')
                     ? 'Entry: rejection M15 di zona supply/demand H4/H1 dekat SNR H4, searah EMA50/200 H4 · SL: luar zona + 0,15×ATR M15'
@@ -263,10 +264,7 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 
 type YearStatus = { year: number; state: 'wait' | 'run' | 'done' | 'skip' | 'fail'; note?: string };
 
-const PER_WEEK: Record<string, number> = { donchianH1: 1.37, london: 0.95, newYork: 1.08, donchianM30: 3.27 }; // research 2018–2026, BUY+SELL
-
 function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string) => string[] }) {
-  const [bp, setBp] = useState<Record<string, boolean>>({ donchianH1: true, london: true, newYork: true, donchianM30: false, allowBuy: true, allowSell: true });
   const [sources, setSources] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
   const [cov, setCov] = useState<any[]>([]);
@@ -281,9 +279,11 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   useEffect(() => {
     call<any[]>('/api/sources').then((s) => { setSources(s); if (s[0]) setF((x) => ({ ...x, source: x.source || s.find((y: any) => !y.is_test)?.id || s[0].id })); }).catch(() => {});
     call<any[]>('/api/strategies').then((s) => {
-      const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active');
+      const ORDER = ['snr_snd_mtf_v2', 'snr_snd_mtf_v1', 'breakout_v02'];
+      const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active' && ORDER.includes(x.adapter_key))
+        .sort((a: any, b: any) => ORDER.indexOf(a.adapter_key) - ORDER.indexOf(b.adapter_key));
       setStrategies(usable);
-      const pref = usable.find((x: any) => x.adapter_key === 'breakout_v02') ?? usable[usable.length - 1];
+      const pref = usable[0];
       if (pref) setF((x) => ({ ...x, strategy: x.strategy || pref.id }));
     }).catch(() => {});
     call<any[]>('/api/sources/coverage').then(setCov).catch(() => {});
@@ -297,12 +297,9 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const list = years.filter((y) => y >= y1 && y <= y2);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const strat = strategies.find((x: any) => x.id === f.strategy);
-  const isBreakout = strat?.adapter_key === 'breakout_v02';
-  const params: Record<string, boolean> = isBreakout ? bp : {};
+  const params: Record<string, boolean> = {};
   const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}`;
   const existing = existingFor(cfgKey);
-  const sidesShare = (bp.allowBuy ? 0.65 : 0) + (bp.allowSell ? 0.35 : 0);
-  const perWeek = Object.entries(PER_WEEK).reduce((a, [k, v]) => a + (bp[k] ? v : 0), 0) * sidesShare;
   const body = (from: string, to: string) => ({ params,
     source_id: f.source, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3],
     size: Number(f.size), risk_usd: f.risk.trim() ? Number(f.risk) : null,
@@ -345,22 +342,9 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
         <p className="mute small">Setiap tahun diuji dengan RR 1:1, 1:2, dan 1:3.</p>
       </div>
       {strategies.length ? (
-        <label className="field"><span className="row between">Strategi <Link href="/strategi" style={{ fontSize: 13 }}>Tambah / kelola strategi</Link></span><select value={f.strategy} onChange={set('strategy')}>
-          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (disarankan)' : s.adapter_key === 'snr_h4h1_m15' ? 'SNR v0.1 (sentuh zona)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'Indikator TradingView kamu (SNR + SND)' : s.adapter_key === 'custom_v1' ? s.version : `${s.strategy_key} ${s.version}`}</option>)}
+        <label className="field">Strategi<select value={f.strategy} onChange={set('strategy')}>
+          {strategies.map((s) => <option key={s.id} value={s.id}>{s.adapter_key === 'snr_snd_mtf_v2' ? 'SNR + SND v2 (strategy Pine kamu)' : s.adapter_key === 'snr_snd_mtf_v1' ? 'SNR + SND v1 (indikator Pine kamu)' : s.adapter_key === 'breakout_v02' ? 'Breakout v0.2 (hasil riset)' : `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
-      ) : null}
-      {isBreakout ? (
-        <div className="stack tight">
-          <span className="label">Bagian strategi</span>
-          <label className="switch">Breakout H1 (40 candle)<input type="checkbox" checked={bp.donchianH1} onChange={(e) => setBp({ ...bp, donchianH1: e.target.checked })} /></label>
-          <label className="switch">Breakout sesi London<input type="checkbox" checked={bp.london} onChange={(e) => setBp({ ...bp, london: e.target.checked })} /></label>
-          <label className="switch">Breakout sesi New York<input type="checkbox" checked={bp.newYork} onChange={(e) => setBp({ ...bp, newYork: e.target.checked })} /></label>
-          <label className="switch">Breakout M30 (lebih sering, lebih berisiko)<input type="checkbox" checked={bp.donchianM30} onChange={(e) => setBp({ ...bp, donchianM30: e.target.checked })} /></label>
-          <span className="label" style={{ marginTop: 6 }}>Arah</span>
-          <label className="switch">BUY<input type="checkbox" checked={bp.allowBuy} onChange={(e) => setBp({ ...bp, allowBuy: e.target.checked })} /></label>
-          <label className="switch">SELL<input type="checkbox" checked={bp.allowSell} onChange={(e) => setBp({ ...bp, allowSell: e.target.checked })} /></label>
-          <p className="mute small">Perkiraan ±{perWeek.toFixed(1)} trade per minggu (dari data 2018–2026).</p>
-        </div>
       ) : null}
       {sources.length > 1 ? (
         <label className="field">Data<select value={f.source} onChange={set('source')}>{sources.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_test ? ' (tes)' : ''}</option>)}</select></label>
@@ -394,7 +378,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       {!sources.length ? <div className="notice">Impor data M15 dulu di Atur → Data harga.</div> : null}
       {busy && !custom
         ? <button className="btn block" onClick={() => { stop.current = true; }}>Berhenti setelah tahun ini</button>
-        : <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy || (!custom && !list.length) || (isBreakout && (!(bp.allowBuy || bp.allowSell) || !(bp.donchianH1 || bp.london || bp.newYork || bp.donchianM30)))}>
+        : <button className="btn primary block" onClick={run} disabled={busy || !f.source || !f.strategy || (!custom && !list.length)}>
             {busy ? 'Menghitung…' : custom ? 'Jalankan backtest' : list.length > 1 ? `Jalankan ${y1}–${y2} (${list.length} tahun)` : `Jalankan ${y1}`}
           </button>}
       {err ? <div className="error">{err}</div> : null}
@@ -529,7 +513,8 @@ function configKey(s: any) {
 }
 function configLabel(s: any) {
   const strat = String(s.strategy ?? 'strategi');
-  if (strat === 'snr_snd_tv v1') return 'Indikator TradingView kamu (SNR + SND)';
+  if (strat === 'snr_snd_tv v2') return 'SNR + SND v2 (strategy Pine kamu)';
+  if (strat === 'snr_snd_tv v1') return 'SNR + SND v1 (indikator Pine kamu)';
   if (strat.startsWith('custom ')) return strat.slice(7);
   if (!strat.startsWith('breakout')) return strat === 'snr h4h1m15-v0.1' ? 'SNR v0.1 (sentuh zona)' : strat;
   const p = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowBuy: true, allowSell: true, ...paramsOf(s) };

@@ -180,7 +180,8 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       // Fixed $ risk: lot so that (entry fill → SL) × lot × contract = riskUsd. Not rounded to broker lot steps.
       const lot = riskUsd ? Math.round((riskUsd / (risk * costs.contractSize)) * 1e4) / 1e4 : size;
       if (!(lot > 0)) { skipped.sl_tidak_valid++; continue; }
-      const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size: lot }, costs);
+      const maxBars = Number(m.ev.details?.max_bars) || undefined; // strategy time exit (e.g. Pine maxHoldBars)
+      const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size: lot, maxBarsInTrade: maxBars }, costs);
       busy.set(slot, r.exitTime ?? Infinity);
       const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.details?.slot ?? `${m.ev.zone?.low}-${m.ev.zone?.high}`}`;
       trades.push({

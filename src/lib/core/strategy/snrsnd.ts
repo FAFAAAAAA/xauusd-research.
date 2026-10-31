@@ -37,7 +37,7 @@ export function readSnrSndParams(p: Readonly<Record<string, unknown>> = {}): Snr
 }
 
 /** Pine ta.atr(14): RMA of true range seeded with the SMA of the first `n` values; first TR = high − low. */
-function atrPine(c: readonly Candle[], n: number): number[] {
+export function atrPine(c: readonly Candle[], n: number): number[] {
   const out = new Array<number>(c.length).fill(NaN);
   let sum = 0, rma = NaN;
   for (let i = 0; i < c.length; i++) {
@@ -49,7 +49,7 @@ function atrPine(c: readonly Candle[], n: number): number[] {
   return out;
 }
 /** Pine ta.ema: alpha = 2/(n+1), seeded with the first value. */
-function emaPine(v: readonly number[], n: number): number {
+export function emaPine(v: readonly number[], n: number): number {
   if (!v.length) return NaN;
   const a = 2 / (n + 1);
   let e = v[0];
