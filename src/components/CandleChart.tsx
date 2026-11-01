@@ -24,17 +24,21 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
 
   useEffect(() => {
     if (!box.current) return;
+    // colours follow the theme tokens (light / dark)
+    const css = getComputedStyle(box.current);
+    const v = (k: string, d: string) => css.getPropertyValue(k).trim() || d;
+    const up = v('--up', '#12805c'), dn = v('--down', '#c2410c');
     const c = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: '#ffffff' }, textColor: '#8a94a6', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" },
-      grid: { vertLines: { color: '#f2f4f7' }, horzLines: { color: '#f2f4f7' } },
+      layout: { background: { type: ColorType.Solid, color: v('--surface', '#ffffff') }, textColor: v('--mute', '#8a94a6'), fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" },
+      grid: { vertLines: { color: v('--sunk', '#f2f4f7') }, horzLines: { color: v('--sunk', '#f2f4f7') } },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: '#e4e7ec' },
-      timeScale: { borderColor: '#e4e7ec', timeVisible: true, secondsVisible: false, rightOffset: 6 },
+      rightPriceScale: { borderColor: v('--line', '#e4e7ec') },
+      timeScale: { borderColor: v('--line', '#e4e7ec'), timeVisible: true, secondsVisible: false, rightOffset: 6 },
     });
     series.current = c.addCandlestickSeries({
-      upColor: '#12805c', borderUpColor: '#12805c', wickUpColor: '#12805c',
-      downColor: '#c2410c', borderDownColor: '#c2410c', wickDownColor: '#c2410c',
+      upColor: up, borderUpColor: up, wickUpColor: up,
+      downColor: dn, borderDownColor: dn, wickDownColor: dn,
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
     });
     chart.current = c;
@@ -48,7 +52,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     if (!s) return;
     s.setData(candles.map((c) => ({ time: shift(c.time), open: c.open, high: c.high, low: c.low, close: c.close })));
     const m: SeriesMarker<UTCTimestamp>[] = markers
-      .map((x) => ({ time: shift(x.time), position: x.position === 'above' ? 'aboveBar' as const : 'belowBar' as const, shape: x.shape, color: '#1b2433', text: x.text }))
+      .map((x) => ({ time: shift(x.time), position: x.position === 'above' ? 'aboveBar' as const : 'belowBar' as const, shape: x.shape, color: box.current ? (getComputedStyle(box.current).getPropertyValue('--ink').trim() || '#1b2433') : '#1b2433', text: x.text }))
       .sort((a, b) => a.time - b.time);
     s.setMarkers(m);
     if (fitKey !== lastFit.current) { chart.current?.timeScale().fitContent(); lastFit.current = fitKey; }

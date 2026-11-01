@@ -59,18 +59,29 @@ function useSave(reload: () => void) {
 
 function General({ s, reload }: { s: any; reload: () => void }) {
   const { msg, save } = useSave(reload);
-  const [warm, setWarm] = useState(String(s.replay?.warmup_candles ?? 300));
+  // theme is per device (browser storage); 'auto' follows the iPhone light/dark setting
+  const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>(() => {
+    try { const t = localStorage.getItem('xau.theme'); return t === 'light' || t === 'dark' ? t : 'auto'; } catch { return 'auto'; }
+  });
+  const pickTheme = (t: 'auto' | 'light' | 'dark') => {
+    setTheme(t);
+    try { if (t === 'auto') localStorage.removeItem('xau.theme'); else localStorage.setItem('xau.theme', t); } catch { /* storage blocked */ }
+    if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  };
+  const tzLabel = s.timezone === 'Asia/Seoul' ? 'Seoul' : s.timezone === 'America/New_York' ? 'New York' : 'UTC';
   return (
-    <Group id="tampilan" title="Zona waktu" sub={s.timezone === 'Asia/Seoul' ? 'Seoul' : s.timezone === 'America/New_York' ? 'New York' : 'UTC'}>
+    <Group id="tampilan" title="Tampilan" sub={`${theme === 'auto' ? 'Tema otomatis' : theme === 'dark' ? 'Gelap' : 'Terang'} · ${tzLabel}`}>
+      <span className="label">Tema</span>
+      <div className="seg" role="group" aria-label="Tema">
+        {([['auto', 'Otomatis'], ['light', 'Terang'], ['dark', 'Gelap']] as const).map(([v, l]) =>
+          <button key={v} aria-pressed={theme === v} onClick={() => pickTheme(v)}>{l}</button>)}
+      </div>
+      <span className="label">Zona waktu</span>
       <div className="seg" role="group" aria-label="Zona waktu">
         {[['UTC', 'UTC'], ['Asia/Seoul', 'Seoul'], ['America/New_York', 'New York']].map(([v, l]) =>
           <button key={v} aria-pressed={s.timezone === v} onClick={() => save({ timezone: v })}>{l}</button>)}
       </div>
-      <details className="more">
-        <summary>Lanjutan</summary>
-        <label className="field">Candle riwayat di chart replay<input inputMode="numeric" value={warm} onChange={(e) => setWarm(e.target.value)} /></label>
-        <button className="btn sm" onClick={() => save({ replay: { ...s.replay, warmup_candles: Number(warm) || 300 } })}>Simpan</button>
-      </details>
+      <p className="mute small">Pasang di iPhone seperti aplikasi: buka di Safari → tombol Bagikan → Tambah ke Layar Utama.</p>
       {msg ? <span className="small mute">{msg}</span> : null}
     </Group>
   );
