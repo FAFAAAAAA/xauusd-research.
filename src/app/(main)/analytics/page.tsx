@@ -375,7 +375,7 @@ const STRAT_LABEL: Record<string, string> = {
   rbr_dbd_v1: 'RBR / DBD (zona base H1, searah tren H4)', snr_snd_mtf_v2: 'SNR + SND v2 (strategy Pine kamu)', snr_snd_mtf_v1: 'SNR + SND v1 (indikator Pine kamu)',
   breakout_v02: 'Breakout v0.2 (hasil riset)',
 };
-const FORM_KEY = 'xau.backtestForm.v2';
+const FORM_KEY = 'xau.backtestForm.v3';
 const FORM_SAVED = ['spread', 'slippage', 'commission', 'swapLong', 'swapShort', 'risk', 'capital', 'ambiguity'] as const;
 const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 
@@ -383,7 +383,7 @@ const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.50', slippage: '0.30', commission: '10', swapLong: '67', swapShort: '-25', risk: '10', capital: '1000', ambiguity: 'worst' });
+  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.12', slippage: '0.10', commission: '5', swapLong: '67', swapShort: '-25', risk: '10', capital: '1000', ambiguity: 'worst' });
   // Remember costs / risk / capital in this browser (convenience only; falls back to defaults if storage is unavailable).
   const loaded = useRef(false);
   useEffect(() => {

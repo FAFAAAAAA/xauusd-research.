@@ -25,7 +25,7 @@ const zoneLo = (z?: { low: number; high: number } | null) => { const a = fin(z?.
 const zoneHi = (z?: { low: number; high: number } | null) => { const a = fin(z?.low), b = fin(z?.high); return a == null || b == null ? b ?? a : Math.max(a, b); };
 
 export const BACKTEST_DEFAULT_COSTS: CostConfig = {
-  spread: 0.50, slippage: 0.30, commissionPerUnit: 10, ambiguityPolicy: 'worst', contractSize: 100,   // worst-case gold costs (owner's choice)
+  spread: 0.12, slippage: 0.10, commissionPerUnit: 5, ambiguityPolicy: 'worst', contractSize: 100,   // average broker costs (owner's choice, 1 Nov 2026)
 };
 
 export interface BacktestInput {
