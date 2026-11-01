@@ -375,15 +375,26 @@ const STRAT_LABEL: Record<string, string> = {
   rbr_dbd_v1: 'RBR / DBD (zona base H1, searah tren H4)', snr_snd_mtf_v2: 'SNR + SND v2 (strategy Pine kamu)', snr_snd_mtf_v1: 'SNR + SND v1 (indikator Pine kamu)',
   breakout_v02: 'Breakout v0.2 (hasil riset)',
 };
-const FORM_KEY = 'xau.backtestForm.v1';
+const FORM_KEY = 'xau.backtestForm.v2';
 const FORM_SAVED = ['spread', 'slippage', 'commission', 'swapLong', 'swapShort', 'risk', 'capital', 'ambiguity'] as const;
+/** XAUUSD costs per 1 lot (100 oz) from broker pages, checked 1 Nov 2026. Swap: − = you pay, + = you receive, per night. */
+const BROKER_COSTS: [string, string, string, string, string][] = [
+  ['Afterprime', '—', '—', '−67,0', '+27,1'],
+  ['BlackBull (Prime)', '0,12*', '—', '−61,1', '+23,1'],
+  ['RoboForex (Pro)', '0,18', '$0', '−60', '+19'],
+  ['XBTFX (Pro)', '—', '± $11', '−81,1', '+32,5'],
+  ['IC Markets (Raw)', '0,09–0,12', '$7', '—', '—'],
+  ['Pepperstone (Razor)', 'dari 0,08', '$7', '—', '—'],
+  ['Tickmill (Raw)', '0,09', '$6', '—', '—'],
+  ['Eightcap', 'min 0,12', '$0', '—', '—'],
+];
 const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 
 /** One strategy → every chosen pair, one year per request (sequential), RR 1:1/1:2/1:3 each. */
 function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.50', slippage: '0.30', commission: '10', swapLong: '0', swapShort: '0', risk: '10', capital: '1000', ambiguity: 'worst' });
+  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.50', slippage: '0.30', commission: '10', swapLong: '67', swapShort: '-25', risk: '10', capital: '1000', ambiguity: 'worst' });
   // Remember costs / risk / capital in this browser (convenience only; falls back to defaults if storage is unavailable).
   const loaded = useRef(false);
   useEffect(() => {
@@ -516,10 +527,13 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           <label className="field">Spread XAUUSD ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
           <label className="field">Slippage XAUUSD ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
           <label className="field">Komisi XAUUSD per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
-          <label className="field">Swap BUY per lot per malam ($ biaya)<input inputMode="decimal" value={f.swapLong} onChange={set('swapLong')} /></label>
-          <label className="field">Swap SELL per lot per malam ($ biaya)<input inputMode="decimal" value={f.swapShort} onChange={set('swapShort')} /></label>
+          <label className="field">Swap BUY per lot per malam ($, + bayar · − dapat)<input inputMode="decimal" value={f.swapLong} onChange={set('swapLong')} /></label>
+          <label className="field">Swap SELL per lot per malam ($, + bayar · − dapat)<input inputMode="decimal" value={f.swapShort} onChange={set('swapShort')} /></label>
           <label className="field">TP & SL kena di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Hitung sebagai SL</option><option value="best">Hitung sebagai TP</option><option value="skip">Lewati</option></select></label>
         </div>
+        <p className="mute small">Biaya XAUUSD per broker (1 lot, cek 1 Nov 2026). Swap bawaan = rata-rata: BUY bayar $67, SELL dapat $25 (isi −25). * = sekali lihat.</p>
+        <div className="tablewrap"><table><thead><tr><th>Broker</th><th>Spread</th><th>Komisi</th><th>Swap BUY</th><th>Swap SELL</th></tr></thead>
+          <tbody>{BROKER_COSTS.map((r) => <tr key={r[0]}>{r.map((c, i) => <td key={i}>{c}</td>)}</tr>)}</tbody></table></div>
       </details>
       {!sets.length ? <div className="notice">{markets.length ? 'Data belum siap.' : 'Memuat daftar pair…'}</div> : null}
       {busy
