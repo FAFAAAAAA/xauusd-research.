@@ -1,5 +1,5 @@
 import { aggregateCandles } from '../timeframes';
-import type { Candle } from '../types';
+import { TIMEFRAME_MS, type Candle } from '../types';
 import { findPivots, trendFromPivots } from './snr';
 import type { StrategyAdapter, StrategyEventDraft } from './adapter';
 
@@ -46,8 +46,10 @@ export interface BreakoutParams {
   momShape: boolean; momSize: boolean; momAvg: boolean;
   /** Trend from Supertrend(10, 3) on closed candles instead of EMAs: every selected timeframe must agree (research). */
   stH4: boolean; stH1: boolean; stD1: boolean;
+  /** Level part on M30 / M15 candles instead of H1 (same candle counts, ATR of that timeframe). Research. */
+  lvlM30: boolean; lvlM15: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false, stH4: false, stH1: false, stD1: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false, stH4: false, stH1: false, stD1: false, lvlM30: false, lvlM15: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -225,8 +227,12 @@ export const breakoutAdapter: StrategyAdapter = {
     }
 
     // ---- L (optional): breakout of an H1 swing level that was touched 2–3 times
-    if (p.levelTouch && now % H === 0 && h1[h1.length - 1].time + H === now && h1.length > 60) {
-      const c = h1.slice(-200), n = c.length, i = n - 1, P = 3;
+    const lvTf = p.lvlM15 ? 'M15' : p.lvlM30 ? 'M30' : 'H1';
+    const lvMs = TIMEFRAME_MS[lvTf];
+    const lvC: readonly Candle[] = lvTf === 'H1' ? h1 : ctx.timeframe === lvTf ? m
+      : TIMEFRAME_MS[lvTf] > TIMEFRAME_MS[ctx.timeframe] ? aggregateCandles(m, ctx.timeframe, lvTf, 'utc', false) : [];
+    if (p.levelTouch && now % lvMs === 0 && lvC.length > 60 && lvC[lvC.length - 1].time + lvMs === now) {
+      const c = lvC.slice(-200), n = c.length, i = n - 1, P = 3;
       const at = atrSeriesEwm(c, 14);
       for (const side of [1, -1] as const) {
         const ext = (k: number) => (side > 0 ? c[k].high : c[k].low);
@@ -243,7 +249,7 @@ export const breakoutAdapter: StrategyAdapter = {
             if (near) { if (j - last >= 3) touches++; last = j; }
           }
           if (early) continue;
-          if (touches >= 2 && touches <= 3) emit('LVL', side > 0 ? 'long' : 'short', lv - side * 1.5 * at[i], `tembus level H1 yang disentuh ${touches}×`, { level: lv, touches, momOk: !useMom || momentumOk(c, i, side, at[i], p) });
+          if (touches >= 2 && touches <= 3) emit('LVL', side > 0 ? 'long' : 'short', lv - side * 1.5 * at[i], `tembus level ${lvTf} yang disentuh ${touches}×`, { level: lv, touches, momOk: !useMom || momentumOk(c, i, side, at[i], p) });
           break;                                                         // only the oldest level broken on this candle
         }
       }
