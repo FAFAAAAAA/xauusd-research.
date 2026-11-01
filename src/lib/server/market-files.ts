@@ -4,7 +4,7 @@ import { gunzipSync } from 'node:zlib';
 import type { Db } from './db';
 import { aggregateCandles } from '../core/timeframes';
 import { INSTRUMENTS, instrumentSpec } from '../core/instruments';
-import type { Candle, Timeframe } from '../core/types';
+import { TIMEFRAME_MS, type Candle, type Timeframe } from '../core/types';
 
 /**
  * Price data bundled with the website (data/market/<SYMBOL>_<TF>.bin.gz, packed by scripts/pack-market-data.mjs).
@@ -12,7 +12,8 @@ import type { Candle, Timeframe } from '../core/types';
  * UTC alignment the database path uses. Datasets appear in the app as market_data_sources rows whose
  * broker_symbol is "file:<SYMBOL>:<TF>" so backtest sessions keep their usual foreign keys.
  */
-export interface DatasetInfo { key: string; symbol: string; tf: 'M15' | 'M30'; first: number; last: number; candles: number }
+export type BaseTf = 'M5' | 'M15' | 'M30';
+export interface DatasetInfo { key: string; symbol: string; tf: BaseTf; first: number; last: number; candles: number }
 
 const DIR = join(process.cwd(), 'data', 'market');
 let manifest: Record<string, DatasetInfo> | null = null;
@@ -51,7 +52,7 @@ export function datasetCandles(symbol: string, tf: string): Candle[] {
 const lowerBound = (a: readonly Candle[], t: number) => { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m].time < t) lo = m + 1; else hi = m; } return lo; };
 
 /** Candle access with the same contract as the database helpers (closed candles only, ascending). */
-export function fileProvider(symbol: string, base: 'M15' | 'M30') {
+export function fileProvider(symbol: string, base: BaseTf) {
   const all = () => datasetCandles(symbol, base);
   const tfCache = new Map<string, Candle[]>();
   const series = (tf: Timeframe, from: number, to: number): Candle[] => {
@@ -67,7 +68,7 @@ export function fileProvider(symbol: string, base: 'M15' | 'M30') {
     return agg;
   };
   return {
-    has: (tf: Timeframe) => tf === base || ['M30', 'H1', 'H4', 'D1'].includes(tf) && (base === 'M15' || tf !== 'M30'),
+    has: (tf: Timeframe) => tf === base || (['M15', 'M30', 'H1', 'H4', 'D1'].includes(tf) && TIMEFRAME_MS[tf] > TIMEFRAME_MS[base]),
     upTo: (tf: Timeframe, t: number, limit: number) => { const a = all(); const e = lowerBound(a, t + 1); return tf === base ? a.slice(Math.max(0, e - limit), e) : []; },
     between: (tf: Timeframe, from: number, to: number) => series(tf, from, to),
   };
@@ -96,7 +97,7 @@ export function ensureDatasetSources(db: Db): Promise<Map<string, string>> {
   return ensured;
 }
 
-export function parseFileSource(brokerSymbol: string | null | undefined): { symbol: string; tf: 'M15' | 'M30' } | null {
-  const m = /^file:([A-Z0-9]+):(M15|M30)$/.exec(brokerSymbol ?? '');
-  return m ? { symbol: m[1], tf: m[2] as 'M15' | 'M30' } : null;
+export function parseFileSource(brokerSymbol: string | null | undefined): { symbol: string; tf: BaseTf } | null {
+  const m = /^file:([A-Z0-9]+):(M5|M15|M30)$/.exec(brokerSymbol ?? '');
+  return m ? { symbol: m[1], tf: m[2] as BaseTf } : null;
 }

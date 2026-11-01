@@ -265,6 +265,14 @@ Mesin website, emas, RR 1:2, $10, biaya termasuk — M15 2018–2026 | M30 2010�
 
 **Pembersihan website (1 Nov 2026):** menu Backtest dan daftar hasil hanya menampilkan strategi **satu metode** (Metode 1–6, 1 slot; Metode 1 · Level H1 diuji 2–3× paling stabil). Versi gabungan v0.5–v0.8 disembunyikan. Strategi lain tetap ada di kode dan hasil lamanya tetap di database, hanya disembunyikan (`STRAT_ORDER` / `VISIBLE_STRATEGIES` di `analytics/page.tsx`).
 
+## 5p. Data emas tambahan 2004–2026 (M5, M15, M30)
+
+File dari pemilik (`XAU_5m/15m/30m_data.csv`, pemisah `;`) memakai **waktu server broker EET/EEST** (UTC+2 musim dingin, UTC+3 musim panas, ikut jadwal DST Eropa). Diubah ke UTC dengan zona `Europe/Athens`; dicek terhadap data forexsb (UTC) di 8 bulan berbeda, selisih median 0,02–0,2 (beda feed), jadi jam sudah cocok.
+- **XAUUSD M15 & M30**: data baru dipakai untuk 2004-06 sampai sebelum data forexsb mulai; sesudahnya tetap forexsb (hasil lama tidak berubah). Sekarang 2004–Okt 2026.
+- **XAUUSD M5** (baru): 2004-06 sampai 30 Jan 2026, hanya dari file pemilik. Ada lubang data 13 Sep–15 Okt 2025 dan 13–22 Jan 2026.
+- File M1 (333 MB) tidak dimasukkan karena terlalu besar untuk server; H1/H4/D1/W/MN tidak perlu karena dibentuk dari data dasar.
+Uji buta Metode 1 di M15 2005–2017 (data yang belum pernah dipakai): 398 trade, win 39,7%, +$674 (RR 1:2, $10), 11 dari 13 tahun untung.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

@@ -359,7 +359,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const strat = strategies.find((x: any) => x.id === f.strategy);
   const params: Record<string, boolean> = {};
-  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${f.tf === 'M30' ? '|M30' : ''}`;
+  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${f.tf !== 'M15' ? `|${f.tf}` : ''}`;
   const yearsFor = (m: any) => list.filter((y) => y >= yearOf(m.first) && y <= yearOf(m.last));
   const togglePair = (sym: string) => setSel((cur) => {
     const base = cur ?? sets.map((m) => m.symbol);
@@ -419,8 +419,9 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       <div className="stack tight">
         <span className="label">Data</span>
         <div className="seg" role="group" aria-label="Timeframe data">
-          <button aria-pressed={f.tf === 'M15'} onClick={() => setF((x) => ({ ...x, tf: 'M15', y1: '', y2: '' }))}>M15 · sejak 2017/18</button>
-          <button aria-pressed={f.tf === 'M30'} onClick={() => setF((x) => ({ ...x, tf: 'M30', y1: '', y2: '' }))}>M30 · sejak 2010</button>
+          <button aria-pressed={f.tf === 'M5'} onClick={() => setF((x) => ({ ...x, tf: 'M5', y1: '', y2: '' }))}>M5 · emas 2004–Jan 2026</button>
+          <button aria-pressed={f.tf === 'M15'} onClick={() => setF((x) => ({ ...x, tf: 'M15', y1: '', y2: '' }))}>M15 · emas sejak 2004</button>
+          <button aria-pressed={f.tf === 'M30'} onClick={() => setF((x) => ({ ...x, tf: 'M30', y1: '', y2: '' }))}>M30 · emas sejak 2004</button>
         </div>
       </div>
       <div className="stack tight">
@@ -598,11 +599,11 @@ const dataTf = (s: any) => String(s.cost_config?.data_tf ?? 'M15');
 const symOf = (s: any) => String(s.symbol ?? s.cost_config?.symbol ?? 'XAUUSD');
 function configKey(s: any) {
   const p = paramsOf(s);
-  return `${s.strategy ?? '?'}|${Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join(',')}${dataTf(s) === 'M30' ? '|M30' : ''}`;
+  return `${s.strategy ?? '?'}|${Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join(',')}${dataTf(s) !== 'M15' ? `|${dataTf(s)}` : ''}`;
 }
 function configLabel(s: any) {
   const base = configLabelBase(s);
-  return dataTf(s) === 'M30' ? `${base} · data M30` : base;
+  return dataTf(s) !== 'M15' ? `${base} · data ${dataTf(s)}` : base;
 }
 function configLabelBase(s: any) {
   const strat = String(s.strategy ?? 'strategi');

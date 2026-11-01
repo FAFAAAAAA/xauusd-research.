@@ -100,9 +100,9 @@
  "XAUUSD_M30": {
   "symbol": "XAUUSD",
   "tf": "M30",
-  "first": 1264042800000,
+  "first": 1086926400000,
   "last": 1793392200000,
-  "candles": 200000
+  "candles": 263273
  },
  "BTCUSD_M30": {
   "symbol": "BTCUSD",
@@ -128,9 +128,9 @@
  "XAUUSD_M15": {
   "symbol": "XAUUSD",
   "tf": "M15",
-  "first": 1526530500000,
+  "first": 1086927300000,
   "last": 1793393100000,
-  "candles": 200000
+  "candles": 515106
  },
  "USDCAD_M30": {
   "symbol": "USDCAD",
@@ -138,5 +138,12 @@
   "first": 1287397800000,
   "last": 1793392200000,
   "candles": 200000
+ },
+ "XAUUSD_M5": {
+  "symbol": "XAUUSD",
+  "tf": "M5",
+  "first": 1086927300000,
+  "last": 1769810100000,
+  "candles": 1443451
  }
 }
