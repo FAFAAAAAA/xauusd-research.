@@ -1,10 +1,11 @@
 //@version=5
 // XAU v2 · Breakout volatilitas — sama dengan backtest website (README 5q). Pasang di chart XAUUSD timeframe 15 menit.
 // Sinyal hanya di candle M15 yang sudah TUTUP. Tidak ada order otomatis: kamu pasang order sendiri.
-//  Level hari ini (hari UTC): open hari ini ± 0,5 × range kemarin (high − low).
+//  Level hari ini (hari UTC): open hari ini ± 0,5 × range kemarin (high − low). Hari Senin (dan Minggu malam) memakai range JUMAT:
+//  sesi Minggu yang pendek tidak dihitung sebagai "kemarin".
 //  BUY : close M15 menembus level atas dari bawah, tren naik. SELL: kebalikannya, tren turun.
 //  Maks 1 sinyal per arah per blok 4 jam UTC (00/04/08/12/16/20).
-//  SL  : level ∓ 0,75 × ATR14 D1. TP = 2 × jarak SL (RR 1:2). Entry di open candle berikutnya.
+//  SL  : level ∓ 0,35 × ATR14 D1. TP = 2 × jarak SL (RR 1:2). Entry di open candle berikutnya.
 //  Tren (aturan 1): BUY  jika close H4 > EMA50 > EMA200 (H4) dan close D1 > EMA50 (D1)
 //                   SELL jika close H4 < EMA50 < EMA200 (H4), close D1 < EMA50 (D1) dan EMA50 D1 < EMA200 D1
 // Catatan: H4/D1 diambil dari candle TradingView broker kamu (jam tutupnya bisa beda dari UTC), jadi sesekali sinyal bisa
@@ -15,7 +16,7 @@ secret  = input.string("", "Secret webhook website (kosongkan kalau tidak pakai 
 asJson  = input.bool(false, "Pesan alert format JSON (untuk webhook website)")
 showLv  = input.bool(true, "Tampilkan level hari ini")
 volK    = 0.5
-slAtr   = 0.75
+slAtr   = 0.35
 rr      = 2.0
 
 // ---- tren dari candle H4 / D1 yang sudah tutup (tanpa melihat masa depan)
@@ -31,7 +32,9 @@ var float curH = na
 var float curL = na
 var float prevRange = na
 if dayId != dayId[1]
-    prevRange := curH - curL
+    // hari yang baru selesai = hari Minggu? jangan dipakai sebagai "kemarin" (tetap pakai range Jumat)
+    if dayofweek(time[1], "UTC") != dayofweek.sunday
+        prevRange := curH - curL
     dOpen := open
     curH := high
     curL := low

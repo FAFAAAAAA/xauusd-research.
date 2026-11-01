@@ -318,3 +318,17 @@ Hasil lengkap: `TEST_RESULTS.md`. Semua fixture uji bertanda TEST dan memakai ta
 - **Indikator TradingView** `public/pine/xau_v1.pine` (chart H1) dan `xau_v2.pine` (chart M15): aturan sama dengan backtest. Logika dicek ulang di Python terhadap trade website 2024–2025: v1 101/101 sinyal sama; v2 325/326 sama (5 sinyal tambahan di candle terakhir sebelum jeda pasar, yang dilewati backtest karena entry > 1 jam). Di TradingView, H4/D1 memakai candle broker (jam tutup bisa beda dari UTC), jadi sesekali beda.
 - Alert `alert()`: teks biasa (notifikasi HP, paket gratis) atau JSON untuk webhook website (`extra: {side, sl, tp}`); pesan Telegram LIVE lalu berisi entry ≈ close, SL, TP, RR dan lot dari rencana risiko. Tidak ada order otomatis.
 - Beranda: ringkasan jurnal bulan ini, sinyal live terakhir, koneksi, berita.
+
+## 5s. v2 versi volbreak-v4 (1 Nov 2026)
+
+Dua perubahan atas permintaan pemilik (trade harus selesai di TP atau SL, sebaiknya dalam sehari):
+1. **Hari Senin memakai range Jumat.** Sebelumnya "kemarin" untuk Senin adalah sesi Minggu (±1–2 jam, range rata-rata 0,27 × ATR D1 vs 1,12 di hari biasa), sehingga level terlalu dekat dengan open: 34% trade v2 terjadi hari Senin dengan hasil hampir nol.
+2. **SL = level ∓ 0,35 × ATR14 D1** (dulu 0,75). TP tetap 2 × jarak SL, tanpa penutupan paksa.
+
+Mesin website, 2004–2026, biaya rata-rata broker (spread 0,12, slippage 0,10, komisi $5) + swap BUY −$67 / SELL +$25, risiko $10:
+| | trade/bulan | win | total | PF | DD | selesai < 24 jam | 2004–17 | 2018–26 |
+|---|---|---|---|---|---|---|---|---|
+| volbreak-v3 | 10,1 | 40,4% | +$1.976 | 1,11 | $1.319 | 29% | −$736 | +$2.712 |
+| **volbreak-v4** | 8,0 | 39,5% | **+$1.899** | 1,13 | **$562** | **70%** (median 13,5 jam) | **+$385** | +$1.514 |
+
+Diuji juga dan ditolak: aturan 1 yang disederhanakan (semua varian lebih banyak trade tapi untung turun; tanpa D1 hanya menambah SELL dengan win 31,8%), UT Bot sebagai tren, penutupan sebelum rollover (bertentangan dengan aturan TP/SL). volbreak-v3 dipensiunkan; hasil lamanya tetap di database tetapi disembunyikan.

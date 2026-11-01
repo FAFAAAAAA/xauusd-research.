@@ -27,7 +27,7 @@ export const METHODS: MethodMeta[] = [
     params: { ...OFF, nH1: true, nH4: true } },
 ];
 // v2 has its own adapter (volbreak.ts); listed here for labels, report rules and the DB row.
-METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v3', label: 'v2 · Breakout volatilitas', custom: true, params: {},
-  rules: `Close M15 di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL) · maks 1 entry per arah per blok 4 jam · SL level ∓ 0,75×ATR D1 · ${TREND} · tanpa batas posisi terbuka` });
+METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v4', label: 'v2 · Breakout volatilitas', custom: true, params: {},
+  rules: `Close M15 di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL); hari Senin memakai range Jumat (sesi Minggu tidak dihitung) · maks 1 entry per arah per blok 4 jam · SL level ∓ 0,35×ATR D1, TP 2× jarak SL · ${TREND} · tanpa batas posisi terbuka` });
 export const methodByKey = (k: string) => METHODS.find((m) => m.adapterKey === k);
 export const methodByStrategy = (s: string) => METHODS.find((m) => `metode ${m.version}` === s);

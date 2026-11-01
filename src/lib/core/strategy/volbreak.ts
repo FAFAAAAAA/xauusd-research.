@@ -5,10 +5,11 @@ import { atrLastEwm, emaLast, utBotDir } from './breakout';
 /**
  * v2 · Breakout volatilitas (README 5q). UTC days, closed candles only.
  *  Levels for today: up = today's open + 0.5 × yesterday's range (D1 high − low), down = today's open − 0.5 × that range.
+ *  "Yesterday" skips Sunday's short session (owner's choice, 1 Nov 2026): on Monday (and Sunday evening) Friday's range is used.
  *  BUY : the first base candle (M15) of the day that CLOSES above `up` (previous base close ≤ up), with the trend up.
  *  SELL: mirror below `down`. One signal per direction per 4-hour block (UTC 00/04/08/12/16/20), so a new entry is allowed
  *  after a stop-out later the same day.
- *  SL = level ∓ 0.75 × ATR14(D1). Entry at the next base open; TP = RR × risk (engine). No cap on open positions (each signal its own slot).
+ *  SL = level ∓ 0.35 × ATR14(D1) (was 0.75 until volbreak-v3; owner wants trades to finish within about a day, TP/SL only). Entry at the next base open; TP = RR × risk (engine). No cap on open positions (each signal its own slot).
  *  Trend (aturan 1): BUY if H4 close > EMA50 > EMA200 (H4) and D1 close > EMA50 (D1);
  *                    SELL if H4 close < EMA50 < EMA200, D1 close < EMA50 and EMA50 (D1) < EMA200 (D1).
  * Parameters (numbers, optional): volK (0.5), volSlAtr (0.75). Chosen in README 5q (2.2 → 3.1 trades/month, total kept).
@@ -31,7 +32,8 @@ export const volBreakAdapter: StrategyAdapter = {
     if (!bar || !prev || !h4?.length || !d1?.length || d1.length < 210 || h4.length < 210) return [];
     const st = ctx.state as St;
     const k = typeof ctx.params.volK === 'number' ? (ctx.params.volK as number) : 0.5;
-    const slAtr = typeof ctx.params.volSlAtr === 'number' ? (ctx.params.volSlAtr as number) : 0.75;
+    const slAtr = typeof ctx.params.volSlAtr === 'number' ? (ctx.params.volSlAtr as number) : 0.35;
+    const skipSun = ctx.params.volSunday !== true;   // default: Sunday's short session is never "yesterday" (Monday uses Friday)
 
     // trend from closed H4/D1 candles
     const tk = `${h4[h4.length - 1].time}|${d1[d1.length - 1].time}`;
@@ -47,8 +49,10 @@ export const volBreakAdapter: StrategyAdapter = {
     // today's open = open of the first base candle of the UTC day
     const day = Math.floor(bar.time / DAY) * DAY;
     if (st.day !== day) { st.day = day; st.open = bar.open; st.used = {}; }
-    const y: Candle = d1[d1.length - 1];
-    if (y.time + DAY > day) return [];                      // yesterday's D1 candle must be closed (it always is at day start)
+    let yi = d1.length - 1;
+    if (skipSun) while (yi > 0 && new Date(d1[yi].time).getUTCDay() === 0) yi--;
+    const y: Candle = d1[yi];
+    if (!y || y.time + DAY > day) return [];                      // yesterday's D1 candle must be closed (it always is at day start)
     const range = y.high - y.low, atr = atrLastEwm(d1.slice(-400), 14);
     if (!(range > 0) || !Number.isFinite(atr)) return [];
     const upL = st.open! + k * range, dnL = st.open! - k * range;

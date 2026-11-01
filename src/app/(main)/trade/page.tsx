@@ -11,7 +11,7 @@ const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')))
 // Backtest reference (average broker costs + swap, 2004–2026, RR 1:2): what live results should be compared with.
 const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v1: { win: 0.406, perMonth: 3.5, label: 'v1 · Level H1' },
-  v2: { win: 0.404, perMonth: 10.1, label: 'v2 · Breakout volatilitas' },
+  v2: { win: 0.395, perMonth: 8.0, label: 'v2 · Breakout volatilitas' },
 };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };

@@ -385,7 +385,7 @@ test('v2 volatility breakout: registered; BUY when close crosses today open + 0.
   const { volBreakAdapter } = await import('../src/lib/core/strategy/volbreak');
   assert.equal(getAdapter('metode_volbreak'), volBreakAdapter);
   const D = 86_400_000, H4 = 4 * 3_600_000;
-  const day0 = Date.UTC(2030, 5, 3);
+  const day0 = Date.UTC(2030, 5, 4);   // a Tuesday (Monday uses Friday's range, see the next test)
   const d1: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: day0 - (260 - i) * D, open: 100 + i, high: 101 + i + (i === 259 ? 9 : 0), low: 99 + i, close: 100.5 + i, volume: 0 }));
   const h4: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: day0 - (260 - i) * H4, open: 300 + i, high: 301 + i, low: 299 + i, close: 300.5 + i, volume: 0 }));
   const y = d1[d1.length - 1]; const range = y.high - y.low;               // 11
@@ -401,4 +401,30 @@ test('v2 volatility breakout: registered; BUY when close crosses today open + 0.
   assert.equal(ev[0].details?.side, 'long');
   assert.equal(ev[0].candleTime, m[3].time);
   assert.equal(ev[0].details?.level, lvl);
+  // SL = level − 0.35 × ATR14 D1
+  assert.ok(Number(ev[0].details?.stop_loss) < lvl && Number(ev[0].details?.stop_loss) > lvl - 1.5);
+});
+
+test('v2: on Monday the Sunday session is skipped, Friday range is used', async () => {
+  const { volBreakAdapter } = await import('../src/lib/core/strategy/volbreak');
+  const D = 86_400_000, H4 = 4 * 3_600_000;
+  const mon = Date.UTC(2030, 5, 3);                                           // Monday
+  const d1: Candle[] = [];
+  for (let i = 300; i >= 1; i--) {
+    const t = mon - i * D, dow = new Date(t).getUTCDay();
+    if (dow === 6) continue;                                                  // no Saturday candle
+    const k = 300 - i, sun = dow === 0;
+    d1.push({ time: t, open: 100 + k, high: 101 + k + (sun ? 0 : 9), low: 99 + k, close: 100.5 + k, volume: 0 });  // Sunday range 2, weekdays 11
+  }
+  const h4: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: mon - (260 - i) * H4, open: 300 + i, high: 301 + i, low: 299 + i, close: 300.5 + i, volume: 0 }));
+  const mk = (i: number, o: number, c: number): Candle => ({ time: mon + i * M15, open: o, high: Math.max(o, c) + 0.1, low: Math.min(o, c) - 0.1, close: c, volume: 0 });
+  const m = [mk(-1, 399, 399.5), mk(0, 400, 401.5), mk(1, 401.5, 403), mk(2, 403, 406)];   // Sunday level would be 401, Friday level 405.5
+  const st = {}; const ev: StrategyEventDraft[] = [];
+  for (let i = 1; i < m.length; i++) {
+    const w = m.slice(0, i + 1);
+    ev.push(...volBreakAdapter.evaluate({ mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: w, now: w[w.length - 1].time + M15, zones: [], news: {} as never, htf: { H4: h4, D1: d1 }, params: {}, state: st }));
+  }
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].candleTime, m[3].time);
+  assert.equal(ev[0].details?.level, 405.5);
 });
