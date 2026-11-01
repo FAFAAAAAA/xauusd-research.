@@ -274,6 +274,16 @@ File dari pemilik (`XAU_5m/15m/30m_data.csv`, pemisah `;`) memakai **waktu serve
 - File M1 (333 MB) tidak dimasukkan karena terlalu besar untuk server; H1/H4/D1/W/MN tidak perlu karena dibentuk dari data dasar.
 Uji buta Metode 1 di M15 2005–2017 (data yang belum pernah dipakai): 398 trade, win 39,7%, +$674 (RR 1:2, $10), 11 dari 13 tahun untung.
 
+## 5q. v2 · Breakout volatilitas (`metode_volbreak`)
+
+Kode: `src/lib/core/strategy/volbreak.ts`. Hari = hari UTC, hanya candle yang sudah tutup.
+- Level hari ini: **open hari ini ± 0,5 × range kemarin** (high − low D1 kemarin).
+- **BUY**: candle M15 pertama hari itu yang close di atas level atas (close sebelumnya ≤ level), searah tren aturan 1. **SELL** kebalikannya. Satu sinyal per arah per hari.
+- **SL** = level ∓ 1 × ATR14 D1. Entry open M15 berikutnya, TP = RR × risiko, 1 posisi. Parameter opsional `volK` (0,5) dan `volSlAtr` (1).
+Dipilih dari ±10 ide baru yang masing-masing diuji sekali (tanpa disetel). Mesin website, emas M15 2004–2026, RR 1:2, $10, biaya termasuk: 587 trade (±2,2/bulan), win 41,9%, **+$1.464**, drawdown $144; 2004–2017 +$738 (40,8%), 2018–2026 +$726 (43,4%); 19 dari 22 tahun untung (rugi: 2008 −$22, 2015 −$113, 2021 −$71). Pembanding v1: 692 trade, 40,3%, +$1.317, DD $160.
+Temuan riset: masuk searah tren aturan 1 pada jam tetap (13:00 UTC, SL 1×ATR D1) juga memberi ±+$1.700 — sumber untung utama adalah filter tren + SL lebar, pemicu breakout hanya menambah sedikit.
+Website menampilkan **v1** dan **v2**.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.

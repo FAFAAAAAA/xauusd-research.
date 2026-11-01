@@ -134,7 +134,7 @@ export const breakoutV08Adapter: StrategyAdapter = {
 };
 
 /** One adapter per single method (see methods-meta.ts): v0.8 with only that part switched on and one shared slot. */
-export const methodAdapters: StrategyAdapter[] = METHODS.map((m) => ({
+export const methodAdapters: StrategyAdapter[] = METHODS.filter((m) => !m.custom).map((m) => ({
   ...breakoutV08Adapter,
   key: m.adapterKey,
   name: m.label,

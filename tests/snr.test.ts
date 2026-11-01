@@ -380,3 +380,25 @@ test('breakout v0.8: registered; base = ≥3 overlapping candles within 1.5×ATR
   assert.equal(findBase(noOverlap, 5, p), null, 'touching candles overlap 0%');
   assert.equal(findBase([...trend, ...base], 2, p, base[0].time), null, 'candles up to the breakout candle are excluded');
 });
+
+test('v2 volatility breakout: registered; BUY when close crosses today open + 0.5 × yesterday range in an uptrend', async () => {
+  const { volBreakAdapter } = await import('../src/lib/core/strategy/volbreak');
+  assert.equal(getAdapter('metode_volbreak'), volBreakAdapter);
+  const D = 86_400_000, H4 = 4 * 3_600_000;
+  const day0 = Date.UTC(2030, 5, 3);
+  const d1: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: day0 - (260 - i) * D, open: 100 + i, high: 101 + i + (i === 259 ? 9 : 0), low: 99 + i, close: 100.5 + i, volume: 0 }));
+  const h4: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: day0 - (260 - i) * H4, open: 300 + i, high: 301 + i, low: 299 + i, close: 300.5 + i, volume: 0 }));
+  const y = d1[d1.length - 1]; const range = y.high - y.low;               // 11
+  const open = 400, lvl = open + 0.5 * range;                                // 405.5
+  const mk = (i: number, o: number, c: number): Candle => ({ time: day0 + i * M15, open: o, high: Math.max(o, c) + 0.1, low: Math.min(o, c) - 0.1, close: c, volume: 0 });
+  const m = [mk(-1, 399, 399.5), mk(0, open, 403), mk(1, 403, 405), mk(2, 405, 406), mk(3, 406, 404), mk(4, 404, 407)];
+  const st = {}; const ev: StrategyEventDraft[] = [];
+  for (let i = 1; i < m.length; i++) {
+    const w = m.slice(0, i + 1);
+    ev.push(...volBreakAdapter.evaluate({ mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: w, now: w[w.length - 1].time + M15, zones: [], news: {} as never, htf: { H4: h4, D1: d1 }, params: {}, state: st }));
+  }
+  assert.equal(ev.length, 1, 'only the first cross of the day');
+  assert.equal(ev[0].details?.side, 'long');
+  assert.equal(ev[0].candleTime, m[3].time);
+  assert.equal(ev[0].details?.level, lvl);
+});

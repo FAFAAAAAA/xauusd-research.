@@ -2,7 +2,7 @@
  * Single-method strategies ("satu metode per versi"): each is ONE part of Breakout v0.8 on its own, with ONE slot
  * (at most one open position). Same trend filter family as v0.8. Shared by the server (registry/DB rows) and the UI (labels).
  */
-export interface MethodMeta { adapterKey: string; version: string; label: string; rules: string; params: Record<string, boolean> }
+export interface MethodMeta { adapterKey: string; version: string; label: string; rules: string; params: Record<string, boolean>; /** own adapter (not a part of v0.8) */ custom?: boolean }
 const OFF = { donchianH1: false, newYork: false, levelTouch: false, nH1: false, nH4: false, baseH4: false, baseH1: false };
 const TREND = 'BUY: H4 close > EMA50 > EMA200 & D1 close > EMA50 · SELL kebalikannya + EMA50 D1 < EMA200';
 const TREND_EMA = 'BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1';
@@ -26,5 +26,8 @@ export const METHODS: MethodMeta[] = [
     rules: `A-B-C di H1/H4 (swing = pantulan 3×ATR, C di atas A untuk BUY) · close M15 menembus B · SL di C · ${TREND_EMA} · 1 posisi`,
     params: { ...OFF, nH1: true, nH4: true } },
 ];
+// v2 has its own adapter (volbreak.ts); listed here for labels, report rules and the DB row.
+METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v1', label: 'v2 · Breakout volatilitas', custom: true, params: {},
+  rules: `Close M15 pertama di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL) · 1 trade per arah per hari · SL level ∓ 1×ATR D1 · ${TREND} · 1 posisi` });
 export const methodByKey = (k: string) => METHODS.find((m) => m.adapterKey === k);
 export const methodByStrategy = (s: string) => METHODS.find((m) => `metode ${m.version}` === s);
