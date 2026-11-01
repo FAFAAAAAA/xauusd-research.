@@ -80,7 +80,6 @@ export default function Dashboard() {
         ) : <p className="mute">Kalender belum diisi. <Link href="/news">Impor di Berita</Link></p>}
       </section>
 
-      <p className="mute small" style={{ textAlign: 'center' }}><Link href="/replay">Replay historis</Link></p>
     </div>
   );
 }

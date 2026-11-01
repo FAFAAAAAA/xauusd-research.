@@ -22,9 +22,9 @@ export default function Settings() {
       <TradingView s={s} />
       <General s={s} reload={load} />
       <details className="group">
-        <summary><span><h2>Lanjutan</h2><span className="s">Data riset, berita, replay, zona, impor, log error</span></span></summary>
+        <summary><span><h2>Lanjutan</h2><span className="s">Data riset, berita, zona, impor, log error</span></span></summary>
         <div className="body">
-          <div className="row"><Link className="btn sm" href="/news">Berita ekonomi</Link><Link className="btn sm" href="/replay">Replay historis</Link></div>
+          <div className="row"><Link className="btn sm" href="/news">Berita ekonomi</Link></div>
           <HistoricalData />
           <Zones />
           <OtherImports />
