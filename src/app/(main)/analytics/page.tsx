@@ -17,6 +17,14 @@ const PROFILE: Record<string, string> = {
 const EXIT: Record<string, string> = { tp: 'Kena TP', sl: 'Kena SL', ambiguous_worst: 'TP & SL 1 candle (dihitung SL)', ambiguous_best: 'TP & SL 1 candle (dihitung TP)', ambiguous_skipped: 'Dilewati', time: 'Waktu habis', open: 'Masih terbuka', imported: 'Impor' };
 const money = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? `${n >= 0 ? '+' : '−'}$${Math.abs(n).toFixed(2)}` : '—');
 /** 0.75 → "45 mnt", 16.4 → "16 jam", 50 → "2 hari 2 jam" */
+/** ms from a DB timestamp (number, ISO, or Postgres text like "2025-01-01 00:00:00+00", which Safari can't parse). */
+const tsMs = (v: unknown): number => {
+  if (typeof v === 'number') return v;
+  if (v instanceof Date) return v.getTime();
+  const s = String(v ?? '').trim().replace(' ', 'T').replace(/([+-]\d\d)$/, '$1:00');
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t : NaN;
+};
 const hrs = (h: unknown) => {
   if (typeof h !== 'number' || !Number.isFinite(h)) return '—';
   if (h < 1) return `${Math.max(1, Math.round(h * 60))} mnt`;
@@ -142,11 +150,12 @@ export default function Analytics() {
                   <p>{sum.pnl > 0 ? 'Untung' : sum.pnl < 0 ? 'Rugi' : 'Impas'} dari <strong>{sum.trades} trade</strong>: <strong className="pos">{sum.wins} menang</strong>, <strong className="neg">{sum.losses} kalah</strong>.</p>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
                   <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Butuh ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}% agar impas</span></div>
+                  <p className="ex">Win rate = persentase trade yang kena TP. Dengan RR 1:{curRr}, satu kemenangan menutup {curRr} kekalahan, jadi cukup menang di atas {curRr ? Math.round(100 / (1 + curRr)) : '—'}% untuk tidak rugi.</p>
                   {m && fresh ? <><div className="facts">
-                    <div><span className="label">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
-                    <div><span className="label">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
-                    <div><span className="label">Turun terdalam</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
-                    <div><span className="label">Kalah beruntun</span><strong>{m.maxConsecutiveLosses}×</strong></div>
+                    <div><span className="label">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong><span className="ex">Untung rata-rata satu trade yang kena TP (sudah dipotong biaya).</span></div>
+                    <div><span className="label">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong><span className="ex">Rugi rata-rata satu trade yang kena SL, kira-kira sebesar risiko per trade.</span></div>
+                    <div><span className="label">Turun terdalam</span><strong className="neg">{money(-m.maxDrawdown)}</strong><span className="ex">Penurunan saldo terbesar dari titik tertinggi sebelum naik lagi (drawdown). Siapkan modal untuk menahan ini.</span></div>
+                    <div><span className="label">Kalah beruntun</span><strong>{m.maxConsecutiveLosses}×</strong><span className="ex">Jumlah SL berturut-turut paling panjang yang pernah terjadi.</span></div>
                   </div>
                   {m.avgHoldHours != null ? (
                     <div className="hold">
@@ -156,11 +165,12 @@ export default function Analytics() {
                         <div className="pos"><strong>{hrs(m.avgHoldWinHours)}</strong><span>sampai TP</span></div>
                         <div className="neg"><strong>{hrs(m.avgHoldLossHours)}</strong><span>sampai SL</span></div>
                       </div>
+                      <span className="ex">Waktu dari entry sampai posisi ditutup (kena TP atau SL), termasuk malam dan akhir pekan.</span>
                     </div>
                   ) : null}
                   {(() => {
                     // trade frequency over the tested calendar time of the chosen results (sum of their periods)
-                    const days = picked.reduce((a: number, s: any) => a + Math.max(0, (Date.parse(s.period_end) - Date.parse(s.period_start)) / 86_400_000), 0);
+                    const days = picked.reduce((a: number, s: any) => a + Math.max(0, (tsMs(s.period_end) - tsMs(s.period_start)) / 86_400_000 || 0), 0);
                     if (!(days > 0) || !sum.trades) return null;
                     const f = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
                     return (
@@ -172,19 +182,20 @@ export default function Analytics() {
                           <div><strong>{f(sum.trades / (days / 30.44))}</strong><span>per bulan</span></div>
                         </div>
                         <span className="small mute">Posisi terbuka bersamaan paling banyak: <strong>{m.maxOpenPositions}</strong></span>
+                        <span className="ex">Rata-rata dari seluruh periode yang dipilih. Ada minggu tanpa trade dan ada minggu yang ramai. Posisi bersamaan = berapa trade yang pernah terbuka pada saat yang sama; total risiko saat itu = jumlah posisi × risiko per trade.</span>
                       </div>
                     );
                   })()}
                   <details className="more">
                     <summary>Angka lain</summary>
                     <dl className="kv">
-                      <dt>Total dari trade menang</dt><dd className="pos">{money(m.grossProfit)}</dd>
-                      <dt>Total dari trade kalah</dt><dd className="neg">{money(-m.grossLoss)}</dd>
-                      <dt>Profit factor</dt><dd>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</dd>
-                      <dt>Rata-rata per trade</dt><dd>{money(m.expectancy)}</dd>
-                      <dt>Menang beruntun</dt><dd>{m.maxConsecutiveWins}×</dd>
-                      <dt>Lama posisi (median)</dt><dd>{hrs(m.medianHoldHours)}</dd>
-                      <dt>Zona bertahan / jebol</dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd>
+                      <dt>Total dari trade menang<span className="ex">Jumlah semua untung dari trade yang kena TP.</span></dt><dd className="pos">{money(m.grossProfit)}</dd>
+                      <dt>Total dari trade kalah<span className="ex">Jumlah semua rugi dari trade yang kena SL.</span></dt><dd className="neg">{money(-m.grossLoss)}</dd>
+                      <dt>Profit factor<span className="ex">Total menang ÷ total kalah. Di atas 1 = untung; 1,3 ke atas tergolong baik.</span></dt><dd>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</dd>
+                      <dt>Rata-rata per trade<span className="ex">Hasil bersih rata-rata satu trade (menang dan kalah digabung). Ini “keunggulan” strategi per trade.</span></dt><dd>{money(m.expectancy)}</dd>
+                      <dt>Menang beruntun<span className="ex">Jumlah TP berturut-turut paling panjang.</span></dt><dd>{m.maxConsecutiveWins}×</dd>
+                      <dt>Lama posisi (median)<span className="ex">Nilai tengah lama posisi: separuh trade selesai lebih cepat dari ini.</span></dt><dd>{hrs(m.medianHoldHours)}</dd>
+                      {String(cfgSel ?? '').startsWith('snr') ? <><dt>Zona bertahan / jebol<span className="ex">Khusus strategi zona SNR: berapa kali zona menahan harga dan berapa kali ditembus.</span></dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd></> : null}
                     </dl>
                   </details></> : <div className="facts"><div><span className="label">Memuat detail…</span></div></div>}
                 </section>
