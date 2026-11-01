@@ -13,6 +13,7 @@ const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')))
 const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v1: { win: 0.406, perMonth: 3.5, label: 'v1 · Level H1' },
   v2: { win: 0.395, perMonth: 8.0, label: 'v2 · Breakout volatilitas' },
+  v3: { win: 0.404, perMonth: 4.1, label: 'v3 · BOS H1' },
 };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
@@ -63,7 +64,7 @@ export default function TradePage() {
   const signals = (d.events as any[]).map((e) => ({ e, s: liveSignalFrom(e.extra, e.price) })).filter((x) => x.s);
   const openT = j.trades.filter((t) => t.result === 'open');
   const closedT = j.trades.filter((t) => t.result !== 'open');
-  const stratOf = (label: string) => (label.startsWith('v1') ? 'v1' : label.startsWith('v2') ? 'v2' : 'lain');
+  const stratOf = (label: string) => (label.startsWith('v1') ? 'v1' : label.startsWith('v2') ? 'v2' : label.startsWith('v3') ? 'v3' : 'lain');
 
   return (
     <div className="stack">
@@ -99,7 +100,7 @@ export default function TradePage() {
         {draft ? (
           <div className="stack tight" style={{ marginTop: 10 }}>
             <div className="row">
-              <div className="seg">{(['v1', 'v2', 'lain'] as const).map((s) => <button key={s} aria-pressed={draft.strategy === s} onClick={() => setDraft({ ...draft, strategy: s })}>{s}</button>)}</div>
+              <div className="seg">{(['v1', 'v2', 'v3', 'lain'] as const).map((s) => <button key={s} aria-pressed={draft.strategy === s} onClick={() => setDraft({ ...draft, strategy: s })}>{s}</button>)}</div>
               <div className="seg">{(['BUY', 'SELL'] as const).map((s) => <button key={s} aria-pressed={draft.side === s} onClick={() => setDraft({ ...draft, side: s })}>{s}</button>)}</div>
             </div>
             <div className="grid two">
@@ -118,7 +119,7 @@ export default function TradePage() {
           <table>
             <thead><tr><th></th><th>Trade selesai</th><th>Win</th><th>Win backtest</th><th>Hasil</th><th>Rata-rata</th></tr></thead>
             <tbody>
-              {(['v1', 'v2', 'all'] as const).map((k) => {
+              {(['v1', 'v2', 'v3', 'all'] as const).map((k) => {
                 const s = j.stats[k];
                 return (
                   <tr key={k}>
@@ -174,7 +175,7 @@ export default function TradePage() {
         <p className="mute small" style={{ marginTop: 8 }}>Hasil trade dihitung dari harga keluar × lot × 100 (belum termasuk komisi & swap broker).</p>
       </section>
 
-      <p className="mute small" style={{ textAlign: 'center' }}>Sinyal datang dari indikator TradingView v1/v2 — cara pasang di <Link href="/settings#tradingview">Atur → TradingView</Link>.</p>
+      <p className="mute small" style={{ textAlign: 'center' }}>Sinyal datang dari indikator TradingView v1/v2 (v3 belum punya indikator) — cara pasang di <Link href="/settings#tradingview">Atur → TradingView</Link>.</p>
     </div>
   );
 }

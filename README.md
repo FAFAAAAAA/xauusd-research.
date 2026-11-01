@@ -354,8 +354,10 @@ TradingView webhook butuh paket Essential (±Rp 400 rb/bulan; paket gratis bahka
 - Website mengambil XAU/USD dari Twelve Data (API key gratis; env `TWELVEDATA_API_KEY` atau disimpan di Atur): M15 (400), H1 (5000 → H4 UTC) dan D1 (1100), lalu menjalankan **adapter v2 yang sama dengan backtest** atas candle M15 hari ini; sinyal pada candle tertutup terakhir → event LIVE (dedupe) + Telegram dengan entry ≈ close, SL, TP 1:2, lot dari rencana risiko, tombol salin. 3 panggilan API per 15 menit (±288/hari, batas gratis 800).
 - Harga Twelve Data bisa sedikit berbeda dari broker. Tidak ada order ke broker.
 
-## 5w. Kandidat v3 · BOS H1 (disimpan, belum dipasang di website — 1 Nov 2026)
-Status: **disimpan dulu**. Belum ada di mesin backtest website, Pine, Telegram, atau EA. Angka di bawah dari skrip riset Python (`scripts/research/v3_bos_h1.py`), perlu dicek ulang di mesin website sebelum dipakai.
+## 5w. v3 · BOS H1 (`metode_bos_h1`, versi `bos-h1-v1`) — dipasang di website 2 Nov 2026
+Status: **ada di mesin backtest website** (menu Backtest), jurnal (pilihan v3) dan kalkulator risiko. Belum ada Pine/TradingView, sinyal live, Telegram otomatis, atau EA. Adapter: `src/lib/core/strategy/bosh1.ts`.
+
+Mesin website (2004–2026, biaya rata-rata + swap, $10/trade): 1.073 trade · 4,1/bln · win 40,4% · **+$1.432** · DD 25R ($250) · 2004–17 +$527 · 2018–26 +$905 · median hold 14,8 jam, 63% < 24 jam. Skrip riset Python (`scripts/research/v3_bos_h1.py`) memberi +$1.289 untuk aturan yang sama (beda kecil: ATR & batas tahun).
 
 Aturan (RR 1:2 tetap, keluar hanya di TP atau SL, tanpa batas posisi):
 - Swing H1: pivot 3 candle kiri & kanan, dipakai setelah terkonfirmasi; urutan swing selang-seling (high/low).

@@ -428,3 +428,32 @@ test('v2: on Monday the Sunday session is skipped, Friday range is used', async 
   assert.equal(ev[0].candleTime, m[3].time);
   assert.equal(ev[0].details?.level, 405.5);
 });
+
+test('v3 BOS H1: registered; BUY when M15 closes above swing high B after a higher low C, SL = C − 0.1 ATR', async () => {
+  const { bosH1Adapter } = await import('../src/lib/core/strategy/bosh1');
+  assert.equal(getAdapter('metode_bos_h1'), bosH1Adapter);
+  const D = 86_400_000, H4 = 4 * 3_600_000, H = 3_600_000;
+  const t0 = Date.UTC(2030, 5, 4);
+  const d1: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: t0 - (260 - i) * D, open: 100 + i, high: 101 + i, low: 99 + i, close: 100.5 + i, volume: 0 }));
+  const h4: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: t0 - (260 - i) * H4, open: 300 + i, high: 301 + i, low: 299 + i, close: 300.5 + i, volume: 0 }));
+  // H1 path: down to A (100) at bar 10, up to B (110) at bar 20, down to C (104, higher low) at bar 30, up to 109 at bar 36
+  const knots: Array<[number, number]> = [[0, 105], [10, 100], [20, 110], [30, 104], [36, 109]];
+  const mid = (i: number) => { for (let k = 1; k < knots.length; k++) { const [a, pa] = knots[k - 1], [b, pb] = knots[k]; if (i <= b) return pa + (pb - pa) * (i - a) / (b - a); } return 109; };
+  const h1: Candle[] = Array.from({ length: 37 }, (_, i) => ({ time: t0 + i * H, open: mid(i), high: mid(i) + 0.5, low: mid(i) - 0.5, close: mid(i), volume: 0 }));
+  const B = 110.5, C = 103.5;
+  const after = t0 + 37 * H;                                                   // all 37 H1 candles closed by now
+  const mk = (i: number, o: number, c: number): Candle => ({ time: after + i * M15, open: o, high: Math.max(o, c) + 0.1, low: Math.min(o, c) - 0.1, close: c, volume: 0 });
+  const m = [mk(0, 109, 109.6), mk(1, 109.6, 110.2), mk(2, 110.2, 110.9), mk(3, 110.9, 110.3), mk(4, 110.3, 111.2)];
+  const st = {}; const ev: StrategyEventDraft[] = [];
+  for (let i = 1; i < m.length; i++) {
+    const w = m.slice(0, i + 1);
+    ev.push(...bosH1Adapter.evaluate({ mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: w, now: w[w.length - 1].time + M15, zones: [], news: {} as never, htf: { H1: h1, H4: h4, D1: d1 }, params: {}, state: st }));
+  }
+  assert.equal(ev.length, 1, 'one trade per level B');
+  assert.equal(ev[0].details?.side, 'long');
+  assert.equal(ev[0].candleTime, m[2].time);
+  assert.equal(ev[0].details?.level, B);
+  assert.equal(ev[0].details?.swing_c, C);
+  const sl = Number(ev[0].details?.stop_loss);
+  assert.ok(sl < C && sl > C - 0.5, `SL just below C (${sl})`);
+});

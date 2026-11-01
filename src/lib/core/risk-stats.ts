@@ -2,14 +2,14 @@
  * Risk statistics of the live strategies, from the website engine backtest (XAUUSD M15, 2004–2026, RR 1:2,
  * average broker costs: spread 0.12, slippage 0.10, commission $5/lot, swap BUY −$67 / SELL +$25 per lot per night).
  * All "R" values are in units of the risk per trade (1R = the planned loss when SL is hit).
- * Generated 1 Nov 2026 from v1 = metode level-v2 and v2 = metode volbreak-v4. Update when the strategies change.
+ * Generated 1 Nov 2026 from v1 = metode level-v2 and v2 = metode volbreak-v4; v3 = metode bos-h1-v1 added 2 Nov 2026. Update when the strategies change.
  */
 export interface RiskStats {
   trades: number; years: number; perMonth: number; winRate: number; avgR: number; perMonthR: number;
   maxDdR: number; maxLossStreak: number; worstMonthR: number; bestMonthR: number; negMonthsPct: number;
   worstYearR: number; worst12mR: number; maxOpen: number; medianSl: number; p25Sl: number; p75Sl: number;
 }
-export const RISK_STATS: Record<'v1' | 'v2' | 'v1v2', RiskStats> = {
+export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2', RiskStats> = {
   "v1": {
     "trades": 941,
     "years": 22.3,
@@ -48,6 +48,11 @@ export const RISK_STATS: Record<'v1' | 'v2' | 'v1v2', RiskStats> = {
     "p25Sl": 5.06,
     "p75Sl": 10.11
   },
+  "v3": {
+    "trades": 1073, "years": 21.7, "perMonth": 4.13, "winRate": 0.4045, "avgR": 0.1335, "perMonthR": 0.551,
+    "maxDdR": 25.0, "maxLossStreak": 12, "worstMonthR": -6.5, "bestMonthR": 13.4, "negMonthsPct": 0.483,
+    "worstYearR": -15.4, "worst12mR": -16.3, "maxOpen": 4, "medianSl": 8.66, "p25Sl": 5.64, "p75Sl": 13.14
+  },
   "v1v2": {
     "trades": 3101,
     "years": 22.4,
@@ -68,6 +73,6 @@ export const RISK_STATS: Record<'v1' | 'v2' | 'v1v2', RiskStats> = {
     "p75Sl": 10.73
   }
 };
-export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 · Level H1', v2: 'v2 · Breakout volatilitas', v1v2: 'v1 + v2 bersamaan' };
+export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 · Level H1', v2: 'v2 · Breakout volatilitas', v3: 'v3 · BOS H1', v1v2: 'v1 + v2 bersamaan' };
 /** Owner-facing rule: the historical max drawdown should stay at or below this share of the capital. */
 export const IDEAL_DD_SHARE = 0.4;
