@@ -233,10 +233,13 @@ export const breakoutAdapter: StrategyAdapter = {
       : TIMEFRAME_MS[lvTf] > TIMEFRAME_MS[ctx.timeframe] ? aggregateCandles(m, ctx.timeframe, lvTf, 'utc', false) : [];
     if (p.levelTouch && now % lvMs === 0 && lvC.length > 60 && lvC[lvC.length - 1].time + lvMs === now) {
       const c = lvC.slice(-200), n = c.length, i = n - 1, P = 3;
+      // research knobs (defaults = v1): touch range and how far back a level may be
+      const num = (k: string, d: number) => (typeof ctx.params[k] === 'number' ? (ctx.params[k] as number) : d);
+      const tMin = num('lvlMinTouch', 2), tMax = num('lvlMaxTouch', 3), back = num('lvlLookback', 119);
       const at = atrSeriesEwm(c, 14);
       for (const side of [1, -1] as const) {
         const ext = (k: number) => (side > 0 ? c[k].high : c[k].low);
-        for (let k = Math.max(P, i - 119); k + P < i; k++) {          // oldest pivot first
+        for (let k = Math.max(P, i - back); k + P < i; k++) {          // oldest pivot first
           let isPiv = true;
           for (let q = k - P; q <= k + P && isPiv; q++) if (side * (ext(q) - ext(k)) > 0) isPiv = false;
           if (!isPiv) continue;
@@ -249,7 +252,7 @@ export const breakoutAdapter: StrategyAdapter = {
             if (near) { if (j - last >= 3) touches++; last = j; }
           }
           if (early) continue;
-          if (touches >= 2 && touches <= 3) emit('LVL', side > 0 ? 'long' : 'short', lv - side * 1.5 * at[i], `tembus level ${lvTf} yang disentuh ${touches}×`, { level: lv, touches, momOk: !useMom || momentumOk(c, i, side, at[i], p) });
+          if (touches >= tMin && touches <= tMax) emit('LVL', side > 0 ? 'long' : 'short', lv - side * 1.5 * at[i], `tembus level ${lvTf} yang disentuh ${touches}×`, { level: lv, touches, momOk: !useMom || momentumOk(c, i, side, at[i], p) });
           break;                                                         // only the oldest level broken on this candle
         }
       }
