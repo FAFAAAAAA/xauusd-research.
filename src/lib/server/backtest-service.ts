@@ -66,9 +66,8 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     between: (t: Timeframe, a: number, b: number) => (fp ? Promise.resolve(fp.between(t, a, b)) : repo.candlesBetween(db, v.sourceId, t, a, b)),
   };
   // Costs: XAUUSD keeps the editable website defaults; other instruments use their own estimates (only the TP/SL-ambiguity rule is editable).
-  const costs: CostConfig = symbol === 'XAUUSD'
-    ? { ...BACKTEST_DEFAULT_COSTS, ...(v.costs ?? {}) }
-    : { ...BACKTEST_DEFAULT_COSTS, ...instrumentCosts(symbol), ...(v.costs?.ambiguityPolicy ? { ambiguityPolicy: v.costs.ambiguityPolicy } : {}) };
+  // Owner's choice (1 Nov 2026): the same costs from the form for every pair; contract size still per instrument.
+  const costs: CostConfig = { ...BACKTEST_DEFAULT_COSTS, contractSize: instrumentCosts(symbol).contractSize, ...(v.costs ?? {}) };
   const sv = v.strategyVersionId ? await repo.getStrategyVersion(db, v.strategyVersionId) : await repo.defaultStrategyVersion(db);
   const adapter = getAdapter(sv?.adapter_key);
   if (!sv || !adapter.configured) throw new HttpError(422, 'Strategi belum dikonfigurasi');
