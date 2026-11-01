@@ -318,7 +318,7 @@ type PairStatus = { symbol: string; label: string; years: number[]; done: number
 // (= Metode 1 · Level H1 diuji 2–3×, 1 slot). All other strategies stay in the code and their results stay in the
 // database, they are only hidden.
 const STRAT_ORDER = ['metode_level', 'metode_volbreak'];
-const VISIBLE_STRATEGIES = new Set(['metode level-v1', 'metode volbreak-v1']);
+const VISIBLE_STRATEGIES = new Set(['metode level-v1', 'metode volbreak-v2']);
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
@@ -417,14 +417,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           {strategies.map((s) => <option key={s.id} value={s.id}>{STRAT_LABEL[s.adapter_key] ?? `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : null}
-      <div className="stack tight">
-        <span className="label">Data</span>
-        <div className="seg" role="group" aria-label="Timeframe data">
-          <button aria-pressed={f.tf === 'M5'} onClick={() => setF((x) => ({ ...x, tf: 'M5', y1: '', y2: '' }))}>M5 · emas 2004–Jan 2026</button>
-          <button aria-pressed={f.tf === 'M15'} onClick={() => setF((x) => ({ ...x, tf: 'M15', y1: '', y2: '' }))}>M15 · emas 2004–Okt 2026</button>
-          <button aria-pressed={f.tf === 'M30'} onClick={() => setF((x) => ({ ...x, tf: 'M30', y1: '', y2: '' }))}>M30 · emas 2004–Okt 2026</button>
-        </div>
-      </div>
+      <p className="mute small" style={{ margin: 0 }}>Timeframe mengikuti strategi: entry dikonfirmasi close candle M15, level &amp; tren dari H1/H4/D1. Data emas M15 2004–2026.</p>
       <div className="stack tight">
         <div className="row between"><span className="label">Pair ({chosen.length}/{sets.length})</span>
           <button className="btn sm ghost" onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>

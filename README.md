@@ -282,7 +282,8 @@ Kode: `src/lib/core/strategy/volbreak.ts`. Hari = hari UTC, hanya candle yang su
 - **SL** = level ∓ 1 × ATR14 D1. Entry open M15 berikutnya, TP = RR × risiko, 1 posisi. Parameter opsional `volK` (0,5) dan `volSlAtr` (1).
 Dipilih dari ±10 ide baru yang masing-masing diuji sekali (tanpa disetel). Mesin website, emas M15 2004–2026, RR 1:2, $10, biaya termasuk: 587 trade (±2,2/bulan), win 41,9%, **+$1.464**, drawdown $144; 2004–2017 +$738 (40,8%), 2018–2026 +$726 (43,4%); 19 dari 22 tahun untung (rugi: 2008 −$22, 2015 −$113, 2021 −$71). Pembanding v1: 692 trade, 40,3%, +$1.317, DD $160.
 Temuan riset: masuk searah tren aturan 1 pada jam tetap (13:00 UTC, SL 1×ATR D1) juga memberi ±+$1.700 — sumber untung utama adalah filter tren + SL lebar, pemicu breakout hanya menambah sedikit.
-Website menampilkan **v1** dan **v2**.
+**Pembaruan v2 (1 Nov 2026, versi `volbreak-v2`)**: SL 0,75×ATR D1 (dulu 1×) dan boleh masuk lagi: maksimal 1 entry per arah per blok 4 jam UTC (dulu 1 per hari). Dipilih dari 18 variasi (k 0,25/0,35/0,5 × SL 0,5/0,75/1 × 1/hari atau per 4 jam). Mesin website, M15 2004–2026: 806 trade (±3,0/bulan), win 40,3%, **+$1.608**, drawdown $154; 2004–2017 +$724 (38,9%), 2018–2026 +$885 (42,3%); 18 dari 22 tahun untung. Versi lama `volbreak-v1` diberi status retired (hasil lamanya tetap ada).
+Website menampilkan **v1** dan **v2**. **Pilihan "Data" (M5/M15/M30) dihapus dari halaman Backtest**: timeframe mengikuti strategi (konfirmasi close M15, level & tren dari H1/H4/D1), jadi backtest selalu memakai data M15. Data M5/M30 tetap disimpan untuk riset.
 
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.

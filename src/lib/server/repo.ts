@@ -202,6 +202,8 @@ export async function getStrategyVersion(db: Db, id: string | null): Promise<Str
 }
 /** Strategies implemented in code that must exist in the DB (idempotent; also shipped as a migration). */
 export async function ensureBuiltinStrategies(db: Db) {
+  // v2 rules changed on 1 Nov 2026 (SL 0.75×ATR, re-entry per 4h): the first version is kept for its old results but retired.
+  await db.query(`update strategy_versions set status = 'retired' where strategy_key = 'metode' and version = 'volbreak-v1' and status <> 'retired' returning id`);
   for (const m of METHODS) {
     await db.query(
       `insert into strategy_versions (strategy_key, version, adapter_key, status, is_test, description)

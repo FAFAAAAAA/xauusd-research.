@@ -6,11 +6,12 @@ import { atrLastEwm, emaLast } from './breakout';
  * v2 · Breakout volatilitas (README 5q). UTC days, closed candles only.
  *  Levels for today: up = today's open + 0.5 × yesterday's range (D1 high − low), down = today's open − 0.5 × that range.
  *  BUY : the first base candle (M15) of the day that CLOSES above `up` (previous base close ≤ up), with the trend up.
- *  SELL: mirror below `down`. One signal per direction per day (the first one the trend allows).
- *  SL = level ∓ 1 × ATR14(D1). Entry at the next base open; TP = RR × risk (engine). One position (slot 'one').
+ *  SELL: mirror below `down`. One signal per direction per 4-hour block (UTC 00/04/08/12/16/20), so a new entry is allowed
+ *  after a stop-out later the same day.
+ *  SL = level ∓ 0.75 × ATR14(D1). Entry at the next base open; TP = RR × risk (engine). One position (slot 'one').
  *  Trend (aturan 1): BUY if H4 close > EMA50 > EMA200 (H4) and D1 close > EMA50 (D1);
  *                    SELL if H4 close < EMA50 < EMA200, D1 close < EMA50 and EMA50 (D1) < EMA200 (D1).
- * Parameters (numbers, optional): volK (0.5), volSlAtr (1).
+ * Parameters (numbers, optional): volK (0.5), volSlAtr (0.75). Chosen in README 5q (2.2 → 3.1 trades/month, total kept).
  */
 interface St { tk?: string; up?: boolean; dn?: boolean; day?: number; open?: number; used?: Record<string, 1> }
 const DAY = 86_400_000;
@@ -30,7 +31,7 @@ export const volBreakAdapter: StrategyAdapter = {
     if (!bar || !prev || !h4?.length || !d1?.length || d1.length < 210 || h4.length < 210) return [];
     const st = ctx.state as St;
     const k = typeof ctx.params.volK === 'number' ? (ctx.params.volK as number) : 0.5;
-    const slAtr = typeof ctx.params.volSlAtr === 'number' ? (ctx.params.volSlAtr as number) : 1;
+    const slAtr = typeof ctx.params.volSlAtr === 'number' ? (ctx.params.volSlAtr as number) : 0.75;
 
     // trend from closed H4/D1 candles
     const tk = `${h4[h4.length - 1].time}|${d1[d1.length - 1].time}`;
@@ -56,8 +57,9 @@ export const volBreakAdapter: StrategyAdapter = {
       const lv = side > 0 ? upL : dnL;
       if (!(side * (bar.close - lv) > 0 && side * (prev.close - lv) <= 0)) continue;
       if (!(side > 0 ? st.up : st.dn)) continue;
-      if (used[side]) continue;
-      used[side] = 1;
+      const key = `${side}:${Math.floor(bar.time / (4 * 3_600_000))}`;   // one entry per direction per 4-hour block
+      if (used[key]) continue;
+      used[key] = 1;
       const sl = lv - side * slAtr * atr;
       out.push({
         type: 'SETUP_CONFIRMED', candleTime: bar.time, price: bar.close, zone: null,
