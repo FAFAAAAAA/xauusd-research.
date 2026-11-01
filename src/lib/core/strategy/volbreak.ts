@@ -8,7 +8,7 @@ import { atrLastEwm, emaLast } from './breakout';
  *  BUY : the first base candle (M15) of the day that CLOSES above `up` (previous base close ≤ up), with the trend up.
  *  SELL: mirror below `down`. One signal per direction per 4-hour block (UTC 00/04/08/12/16/20), so a new entry is allowed
  *  after a stop-out later the same day.
- *  SL = level ∓ 0.75 × ATR14(D1). Entry at the next base open; TP = RR × risk (engine). One position (slot 'one').
+ *  SL = level ∓ 0.75 × ATR14(D1). Entry at the next base open; TP = RR × risk (engine). No cap on open positions (each signal its own slot).
  *  Trend (aturan 1): BUY if H4 close > EMA50 > EMA200 (H4) and D1 close > EMA50 (D1);
  *                    SELL if H4 close < EMA50 < EMA200, D1 close < EMA50 and EMA50 (D1) < EMA200 (D1).
  * Parameters (numbers, optional): volK (0.5), volSlAtr (0.75). Chosen in README 5q (2.2 → 3.1 trades/month, total kept).
@@ -65,7 +65,7 @@ export const volBreakAdapter: StrategyAdapter = {
         type: 'SETUP_CONFIRMED', candleTime: bar.time, price: bar.close, zone: null,
         confirmations: { trend: side > 0 ? 'Naik (H4 & D1)' : 'Turun (H4 & D1)' },
         status: `${side > 0 ? 'BUY' : 'SELL'} — close menembus open hari ini ${side > 0 ? '+' : '−'} ${k} × range kemarin (${lv.toFixed(2)}); SL ${slAtr}×ATR D1`,
-        details: { side: side > 0 ? 'long' : 'short', stop_loss: Number(sl.toFixed(4)), slot: 'one', component: 'volbreak', level: lv, day_open: st.open, prev_range: range },
+        details: { side: side > 0 ? 'long' : 'short', stop_loss: Number(sl.toFixed(4)), slot: `vb:${side}@${bar.time}`, component: 'volbreak', level: lv, day_open: st.open, prev_range: range },
       });
     }
     return out.slice(0, 1);

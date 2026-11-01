@@ -7,8 +7,8 @@ const OFF = { donchianH1: false, newYork: false, levelTouch: false, nH1: false, 
 const TREND = 'BUY: H4 close > EMA50 > EMA200 & D1 close > EMA50 · SELL kebalikannya + EMA50 D1 < EMA200';
 const TREND_EMA = 'BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1';
 export const METHODS: MethodMeta[] = [
-  { adapterKey: 'metode_level', version: 'level-v1', label: 'v1 · Level H1 diuji 2–3×',
-    rules: `Swing high/low H1 yang sudah disentuh 2–3× ditembus close H1 pertama (candle momentum, badan ≥ 1×ATR) · entry open M15 berikutnya · SL level ∓ 1,5×ATR H1 · ${TREND} · 1 posisi`,
+  { adapterKey: 'metode_level', version: 'level-v2', label: 'v1 · Level H1 diuji 2–3×',
+    rules: `Swing high/low H1 yang sudah disentuh 2–3× ditembus close H1 pertama (candle momentum, badan ≥ 1×ATR) · entry open M15 berikutnya · SL level ∓ 1,5×ATR H1 · ${TREND} · tanpa batas posisi terbuka`,
     params: { ...OFF, levelTouch: true } },
   { adapterKey: 'metode_donchian', version: 'h1-40-v1', label: 'Metode 2 · Breakout H1 40 candle',
     rules: `Close H1 di atas high / di bawah low 40 candle H1 sebelumnya (candle momentum) · SL close ∓ 2,5×ATR H1 · ${TREND} · 1 posisi`,
@@ -27,7 +27,7 @@ export const METHODS: MethodMeta[] = [
     params: { ...OFF, nH1: true, nH4: true } },
 ];
 // v2 has its own adapter (volbreak.ts); listed here for labels, report rules and the DB row.
-METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v2', label: 'v2 · Breakout volatilitas', custom: true, params: {},
-  rules: `Close M15 di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL) · maks 1 entry per arah per blok 4 jam · SL level ∓ 0,75×ATR D1 · ${TREND} · 1 posisi` });
+METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v3', label: 'v2 · Breakout volatilitas', custom: true, params: {},
+  rules: `Close M15 di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL) · maks 1 entry per arah per blok 4 jam · SL level ∓ 0,75×ATR D1 · ${TREND} · tanpa batas posisi terbuka` });
 export const methodByKey = (k: string) => METHODS.find((m) => m.adapterKey === k);
 export const methodByStrategy = (s: string) => METHODS.find((m) => `metode ${m.version}` === s);

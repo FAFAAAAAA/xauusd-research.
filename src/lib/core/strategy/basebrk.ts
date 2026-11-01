@@ -129,14 +129,17 @@ export const breakoutV08Adapter: StrategyAdapter = {
     const a = breakoutV07Adapter.evaluate({ ...ctx, state: (s.v7 ??= {}) });
     const evs = [...a, ...baseEvaluate(ctx, (s.b ??= {}), readBaseParams(ctx.params))];
     // oneSlot: every part shares one slot → at most one open position for the whole strategy
-    return ctx.params.oneSlot === true ? evs.map((e) => ({ ...e, details: { ...e.details, slot: 'one' } })) : evs;
+    if (ctx.params.oneSlot === true) return evs.map((e) => ({ ...e, details: { ...e.details, slot: 'one' } }));
+    // noLimit: every signal gets its own slot → no cap on open positions
+    if (ctx.params.noLimit === true) return evs.map((e) => ({ ...e, details: { ...e.details, slot: `${String(e.details?.slot ?? 'x')}@${e.candleTime}` } }));
+    return evs;
   },
 };
 
-/** One adapter per single method (see methods-meta.ts): v0.8 with only that part switched on and one shared slot. */
+/** One adapter per single method (see methods-meta.ts): v0.8 with only that part switched on, no cap on open positions (owner's choice, 1 Nov 2026). */
 export const methodAdapters: StrategyAdapter[] = METHODS.filter((m) => !m.custom).map((m) => ({
   ...breakoutV08Adapter,
   key: m.adapterKey,
   name: m.label,
-  evaluate: (ctx) => breakoutV08Adapter.evaluate({ ...ctx, params: { ...m.params, ...ctx.params, oneSlot: true } }),
+  evaluate: (ctx) => breakoutV08Adapter.evaluate({ ...ctx, params: { ...m.params, ...ctx.params, noLimit: true } }),
 }));

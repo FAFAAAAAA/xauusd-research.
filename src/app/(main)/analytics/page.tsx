@@ -318,7 +318,7 @@ type PairStatus = { symbol: string; label: string; years: number[]; done: number
 // (= Metode 1 · Level H1 diuji 2–3×, 1 slot). All other strategies stay in the code and their results stay in the
 // database, they are only hidden.
 const STRAT_ORDER = ['metode_level', 'metode_volbreak'];
-const VISIBLE_STRATEGIES = new Set(['metode level-v1', 'metode volbreak-v2']);
+const VISIBLE_STRATEGIES = new Set(['metode level-v2', 'metode volbreak-v3']);
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
