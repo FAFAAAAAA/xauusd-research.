@@ -35,6 +35,8 @@ export interface BacktestInput {
   params?: Record<string, unknown>;
   /** Fixed dollar risk per trade (entry→SL). When set, the lot is computed per trade; `size` is ignored. */
   riskUsd?: number | null;
+  /** Starting capital the owner entered (display only: % growth on the results page; does not change the simulation). */
+  capital?: number | null;
 }
 
 const EMPTY_NEWS: NewsSnapshot = { archiveAvailable: false, items: [], upcoming: [] };
@@ -141,7 +143,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     const id = await repo.createBacktestSession(db, {
       name: v.name?.trim() || `${symbol} ${tf} ${new Date(v.from).toISOString().slice(0, 10)} → ${new Date(v.to).toISOString().slice(0, 10)} RR 1:${rr}`,
       strategyVersionId: sv.id, sourceId: v.sourceId, instrumentId, timeframe: tf, profile: 'snr_trend_momentum',
-      costConfig: { run_id: runId, strategy_params: v.params ?? {}, symbol, data_tf: tf, ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), rr, entry: `open ${tf} berikutnya`, max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
+      costConfig: { run_id: runId, strategy_params: v.params ?? {}, symbol, data_tf: tf, ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), ...(v.capital && v.capital > 0 ? { capital: v.capital } : {}), rr, entry: `open ${tf} berikutnya`, max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
       isTest, notes: `Mesin backtest website. Strategi ${label}. RR 1:${rr}.`,
     });
     sessions.push({ rr, id });

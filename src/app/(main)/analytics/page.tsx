@@ -232,6 +232,7 @@ export default function Analytics() {
                   rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
                   metrics: m, trades: d.trades, yearRows: rows, rrOf: rrNum, tz,
                 } : null)} />
+                <CapitalGrowth key={key} trades={closedTrades(d.trades)} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
                 <section className="group">
                   <h2>Grafik saldo</h2>
                   <EquityChart trades={closedTrades(d.trades)} tz={tz} />
@@ -358,7 +359,7 @@ const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', risk: '10', ambiguity: 'worst' });
+  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', risk: '10', capital: '1000', ambiguity: 'worst' });
   const [sel, setSel] = useState<string[] | null>(null); // null = all pairs
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);
@@ -393,7 +394,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
     return next.length === sets.length ? null : next;
   });
   const body = (m: any, from: string, to: string) => ({ params,
-    source_id: m.source_id, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null,
+    source_id: m.source_id, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null, capital: f.capital.trim() ? Number(f.capital) : null,
     costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
   });
 
@@ -465,6 +466,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           <label className="field">Sampai tanggal<input type="date" value={f.to} onChange={set('to')} /></label>
         </div>
       )}
+      <label className="field">Modal awal ($)<input inputMode="decimal" value={f.capital} onChange={set('capital')} placeholder="1000" /></label>
       <label className="field">Risiko per trade ($)<input inputMode="decimal" value={f.risk} onChange={set('risk')} placeholder="10" /></label>
       <label className="switch">Lewati tahun yang sudah ada hasilnya<input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} /></label>
       <details className="more">
@@ -754,6 +756,55 @@ function YearTable({ sessions, selected, tz, onSelect, onDeleted }: {
           <RunPicker sessions={sessions} selected={selected} tz={tz} onSelect={onSelect} onDeleted={onDeleted} />
         </details>
       ) : null}
+    </section>
+  );
+}
+
+
+/** Capital growth from the backtest trades: fixed $ risk per trade (as simulated), scaled to the risk the owner types here. */
+function CapitalGrowth({ trades, baseRisk, startCapital }: { trades: { entry: number; exit: number; pnl: number }[]; baseRisk: number | null; startCapital: number | null }) {
+  const [cap, setCap] = useState(String(startCapital ?? 1000));
+  const [risk, setRisk] = useState(String(baseRisk ?? 10));
+  const c0 = Number(cap.replace(',', '.')), r = Number(risk.replace(',', '.'));
+  if (!trades.length) return null;
+  const ok = c0 > 0 && r > 0 && !!baseRisk;
+  const k = ok ? r / baseRisk! : 1;
+  const pct = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
+  const usd = (x: number) => `${x < 0 ? '−' : ''}$${Math.abs(x).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  let eq = c0, peak = c0, ddPct = 0, ddUsd = 0;
+  const years = new Map<number, { start: number; pnl: number; n: number }>();
+  for (const t of trades) {
+    const y = new Date(t.exit).getUTCFullYear();
+    if (!years.has(y)) years.set(y, { start: eq, pnl: 0, n: 0 });
+    const p = t.pnl * k; eq += p;
+    const row = years.get(y)!; row.pnl += p; row.n++;
+    if (eq > peak) peak = eq;
+    if (peak - eq > ddUsd) { ddUsd = peak - eq; ddPct = (peak - eq) / peak * 100; }
+  }
+  const total = eq - c0, rows = [...years.entries()].sort((a, b) => a[0] - b[0]);
+  const nYears = Math.max(1, (trades[trades.length - 1].exit - trades[0].entry) / (365.25 * 86_400_000));
+  return (
+    <section className="group">
+      <h2>Perkembangan modal</h2>
+      <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+        <label className="field" style={{ flex: '1 1 140px' }}>Modal awal ($)<input id="cg-capital" inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
+        <label className="field" style={{ flex: '1 1 140px' }}>Risiko per trade ($)<input id="cg-risk" inputMode="decimal" value={risk} onChange={(e) => setRisk(e.target.value)} /></label>
+      </div>
+      {!baseRisk ? <p className="mute small">Backtest ini memakai lot tetap, jadi perkembangan modal tidak bisa dihitung ulang.</p> : !ok ? <p className="mute small">Isi modal dan risiko lebih dari 0.</p> : <>
+        <p className="mute small" style={{ margin: 0 }}>Risiko {pct(r / c0 * 100).replace('+', '')} dari modal awal per trade, tetap ${r.toLocaleString('en-US')} setiap trade (tidak diputar).</p>
+        <div className="facts">
+          <div><span className="label">Modal akhir</span><strong className={total >= 0 ? 'pos' : 'neg'}>{usd(eq)}</strong></div>
+          <div><span className="label">Kenaikan modal</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100)}</strong></div>
+          <div><span className="label">Rata-rata per tahun</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100 / nYears)}</strong></div>
+          <div><span className="label">Turun terdalam</span><strong className="neg">−{ddPct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}% ({usd(ddUsd)})</strong></div>
+        </div>
+        <div className="tablewrap" style={{ overflowX: 'auto' }}>
+          <table className="tbl"><thead><tr><th>Tahun</th><th>Trade</th><th>Modal awal tahun</th><th>Untung/rugi</th><th>% tahun itu</th></tr></thead>
+            <tbody>{rows.map(([y, v]) => (
+              <tr key={y}><td>{y}</td><td>{v.n}</td><td>{usd(v.start)}</td><td className={v.pnl >= 0 ? 'pos' : 'neg'}>{v.pnl >= 0 ? '+' : ''}{usd(v.pnl)}</td><td className={v.pnl >= 0 ? 'pos' : 'neg'}>{pct(v.pnl / v.start * 100)}</td></tr>
+            ))}</tbody></table>
+        </div>
+      </>}
     </section>
   );
 }
