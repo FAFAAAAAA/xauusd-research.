@@ -20,6 +20,7 @@ export default function Settings() {
       <PageHead title="Atur" />
       <Telegram s={s} reload={load} />
       <TradingView s={s} />
+      <EaSetup tz={s.timezone} />
       <General s={s} reload={load} />
       <details className="group">
         <summary><span><h2>Lanjutan</h2><span className="s">Data riset, berita, zona, impor, log error</span></span></summary>
@@ -158,6 +159,38 @@ function Telegram({ s, reload }: { s: any; reload: () => void }) {
             {l.status === 'failed' ? <button className="btn sm" onClick={() => retry(l.id)}>Ulangi</button> : null}</div>))}</div>
           : <p className="mute small">Belum ada.</p>}
       </details>
+    </Group>
+  );
+}
+
+function EaSetup({ tz }: { tz: string }) {
+  const [info, setInfo] = useState<any>(null);
+  const [key, setKey] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const load = () => call<any>('/api/ea/key').then(setInfo).catch((e) => setErr(e.message));
+  useEffect(() => { load(); }, []);
+  const make = async () => {
+    if (info?.configured && !window.confirm('Buat kunci baru? Kunci lama di EA langsung tidak berlaku.')) return;
+    try { const r = await call<any>('/api/ea/key', { method: 'POST' }); setKey(r.key); load(); } catch (e) { setErr((e as Error).message); }
+  };
+  const last = info?.lastReport as { at: number; event: string } | null;
+  return (
+    <Group id="ea" title="EA MetaTrader 5 (v2 otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
+      <p className="mute small">EA berjalan di MetaTrader 5 (PC atau VPS) dan memasang order v2 dengan SL & TP di broker. Setiap entry dan TP/SL dilaporkan ke Jurnal dan Telegram. Website tidak pernah mengirim order.</p>
+      <div className="row">
+        <a className="btn sm primary" href="/ea/XAU_v2_EA.mq5" download>Unduh EA (XAU_v2_EA.mq5)</a>
+        <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
+      </div>
+      {key ? <div className="notice"><strong>Kunci EA (salin sekarang, hanya ditampilkan sekali):</strong><div className="num" style={{ wordBreak: 'break-all', marginTop: 4 }}>{key}</div>
+        <button className="btn sm" style={{ marginTop: 6 }} onClick={() => navigator.clipboard?.writeText(key)}>Salin</button></div> : null}
+      {err ? <div className="error">{err}</div> : null}
+      <dl className="kv"><dt>Alamat laporan</dt><dd style={{ wordBreak: 'break-all' }}>{info?.reportUrl ?? 'Isi APP_BASE_URL di Vercel'}</dd></dl>
+      <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <li>Di MetaTrader 5 (komputer): File → Open Data Folder → MQL5 → Experts → salin file EA → klik kanan Navigator → Refresh.</li>
+        <li>Tools → Options → Expert Advisors → centang <strong>Allow WebRequest for listed URL</strong> → tambahkan alamat website (tanpa /api/…).</li>
+        <li>Buka chart XAUUSD (timeframe bebas), seret EA ke chart, aktifkan <strong>Algo Trading</strong>. Isi: Risiko %, Alamat laporan, Kunci EA.</li>
+        <li><strong>Coba di akun demo dulu</strong> minimal 2–4 minggu. Cek bahwa entry, SL, TP muncul di Jurnal dan Telegram.</li>
+      </ol>
     </Group>
   );
 }

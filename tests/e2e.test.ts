@@ -442,3 +442,24 @@ test('14. Custom strategy: create from definition, backtest, delete with results
   assert.equal(await repo.setStrategyStatus(db, builtin.id, 'retired'), true);
   assert.equal(await repo.setStrategyStatus(db, builtin.id, 'active'), true);
 });
+
+test('15. EA report: key auth, open + close written to the journal, Telegram sent, duplicates ignored', async () => {
+  const { newEaKey, handleEaReport } = await import('../src/lib/server/ea-service');
+  await repo.updateTelegramSettings(db, { live_enabled: true });
+  mode = 'ok'; sent.length = 0;
+  const key = await newEaKey(db);
+  const bad = await handleEaReport(db, JSON.stringify({ key: 'wrong-key-123', event: 'open', ticket: '1' }));
+  assert.equal(bad.status, 401);
+  const open = { key, event: 'open', ticket: '777', side: 'BUY', price: 2000.5, sl: 1995, tp: 2011.5, lot: 0.02, time: 1893456000 };
+  const r1 = await handleEaReport(db, JSON.stringify(open), { fetchImpl: fakeFetch });
+  assert.equal(r1.status, 200); assert.equal(r1.body.telegram, 'sent');
+  assert.equal((await handleEaReport(db, JSON.stringify(open), { fetchImpl: fakeFetch })).body.duplicate, true);
+  const close = { key, event: 'close', ticket: '777', side: 'BUY', price: 2011.4, profit: 21.73, reason: 'tp', lot: 0.02, time: 1893470000 };
+  const r2 = await handleEaReport(db, JSON.stringify(close), { fetchImpl: fakeFetch });
+  assert.equal(r2.status, 200);
+  const j = await repo.getAppSetting<any[]>(db, 'live_journal', []);
+  const t = j.find((x) => x.id === 'ea-777');
+  assert.equal(t.result, 'tp'); assert.equal(t.exit, 2011.4); assert.equal(t.pnl, 21.73); assert.equal(t.strategy, 'v2'); assert.equal(t.openedAt, 1893456000000);
+  assert.equal(sent.length, 2);
+  assert.match(String(sent[1].body.text), /ditutup \(TP\)/);
+});
