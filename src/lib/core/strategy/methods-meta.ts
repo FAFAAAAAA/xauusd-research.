@@ -7,7 +7,7 @@ const OFF = { donchianH1: false, newYork: false, levelTouch: false, nH1: false, 
 const TREND = 'BUY: H4 close > EMA50 > EMA200 & D1 close > EMA50 · SELL kebalikannya + EMA50 D1 < EMA200';
 const TREND_EMA = 'BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1';
 export const METHODS: MethodMeta[] = [
-  { adapterKey: 'metode_level', version: 'level-v1', label: 'Metode 1 · Level H1 diuji 2–3×',
+  { adapterKey: 'metode_level', version: 'level-v1', label: 'v1 · Level H1 diuji 2–3×',
     rules: `Swing high/low H1 yang sudah disentuh 2–3× ditembus close H1 pertama (candle momentum, badan ≥ 1×ATR) · entry open M15 berikutnya · SL level ∓ 1,5×ATR H1 · ${TREND} · 1 posisi`,
     params: { ...OFF, levelTouch: true } },
   { adapterKey: 'metode_donchian', version: 'h1-40-v1', label: 'Metode 2 · Breakout H1 40 candle',

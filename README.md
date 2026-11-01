@@ -263,7 +263,7 @@ Mesin website, emas, RR 1:2, $10, biaya termasuk — M15 2018–2026 | M30 2010�
 | 5 Breakout Base H1 | 1,1 | 39,3% | +$759 | $241 | 36,5% / +$259 |
 | 6 Pola N H1/H4 | 0,4 | 43,0% | +$452 | $122 | 35,8% / +$98 |
 
-**Pembersihan website (1 Nov 2026):** menu Backtest dan daftar hasil hanya menampilkan strategi **satu metode** (Metode 1–6, 1 slot; Metode 1 · Level H1 diuji 2–3× paling stabil). Versi gabungan v0.5–v0.8 disembunyikan. Strategi lain tetap ada di kode dan hasil lamanya tetap di database, hanya disembunyikan (`STRAT_ORDER` / `VISIBLE_STRATEGIES` di `analytics/page.tsx`).
+**Pembersihan website (1 Nov 2026):** menu Backtest dan daftar hasil hanya menampilkan **satu strategi: v1 · Level H1 diuji 2–3×** (= Metode 1, 1 slot), yang terbaik dari 42 strategi yang diuji. Semua strategi lain disembunyikan. Strategi lain tetap ada di kode dan hasil lamanya tetap di database, hanya disembunyikan (`STRAT_ORDER` / `VISIBLE_STRATEGIES` di `analytics/page.tsx`).
 
 ## 5p. Data emas tambahan 2004–2026 (M5, M15, M30)
 
