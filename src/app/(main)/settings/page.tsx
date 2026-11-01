@@ -7,19 +7,6 @@ import { FileText } from '@/components/FileText';
 import { TIMEFRAMES } from '@/lib/core/types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const ALERT_EXAMPLE = `{
-  "secret": "<TRADINGVIEW_WEBHOOK_SECRET>",
-  "event_id": "{{ticker}}-{{interval}}-{{timenow}}-SNR_NEAR",
-  "symbol": "{{exchange}}:{{ticker}}",
-  "timeframe": "{{interval}}",
-  "event_type": "SNR_NEAR",
-  "timestamp": "{{timenow}}",
-  "price": {{close}},
-  "zone": { "low": 0, "high": 0, "kind": "support" },
-  "strategy_version": "snr-dev",
-  "source": "tradingview",
-  "mode": "LIVE"
-}`;
 
 export default function Settings() {
   const [s, setS] = useState<any>(() => peek('/api/settings'));
@@ -31,13 +18,19 @@ export default function Settings() {
   return (
     <div className="stack">
       <PageHead title="Atur" />
-      <HistoricalData />
       <Telegram s={s} reload={load} />
-      <General s={s} reload={load} />
       <TradingView s={s} />
-      <Zones />
-      <OtherImports />
-      <Errors />
+      <General s={s} reload={load} />
+      <details className="group">
+        <summary><span><h2>Lanjutan</h2><span className="s">Data riset, berita, replay, zona, impor, log error</span></span></summary>
+        <div className="body">
+          <div className="row"><Link className="btn sm" href="/news">Berita ekonomi</Link><Link className="btn sm" href="/replay">Replay historis</Link></div>
+          <HistoricalData />
+          <Zones />
+          <OtherImports />
+          <Errors />
+        </div>
+      </details>
     </div>
   );
 }
@@ -161,13 +154,30 @@ function Telegram({ s, reload }: { s: any; reload: () => void }) {
 function TradingView({ s }: { s: any }) {
   const tv = s.tradingview;
   const [logs, setLogs] = useState<any[] | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
   useEffect(() => { call<any[]>('/api/webhooks/logs').then(setLogs).catch(() => setLogs([])); }, []);
+  const copy = async (file: string, label: string) => {
+    try {
+      const txt = await (await fetch(`/pine/${file}`, { cache: 'no-store' })).text();
+      await navigator.clipboard.writeText(txt);
+      setMsg(`${label} tersalin. Tempel di TradingView → Pine Editor.`);
+    } catch { setMsg('Gagal menyalin. Buka tautan file lalu salin manual.'); }
+  };
   return (
-    <Group id="tradingview" title="TradingView (live)" sub={tv.secretConfigured ? 'Siap menerima alert' : 'Belum diatur'}>
-      <p className="mute small">Untuk trading live nanti. Alert TradingView dikirim ke link ini, lalu bot meneruskannya ke Telegram.</p>
-      <dl className="kv"><dt>Link webhook</dt><dd style={{ wordBreak: 'break-all' }}>{tv.webhookUrl ?? 'Isi APP_BASE_URL di Vercel'}</dd>
-        <dt>Secret</dt><dd>{tv.secretConfigured ? 'Sudah diatur' : 'Belum diatur'}</dd></dl>
-      <details className="more"><summary>Contoh isi pesan alert</summary><pre>{ALERT_EXAMPLE}</pre></details>
+    <Group id="tradingview" title="TradingView & sinyal" sub={tv.secretConfigured ? 'Webhook siap' : 'Indikator v1 & v2'}>
+      <div className="row">
+        <button className="btn sm primary" onClick={() => copy('xau_v1.pine', 'Indikator v1')}>Salin indikator v1</button>
+        <button className="btn sm primary" onClick={() => copy('xau_v2.pine', 'Indikator v2')}>Salin indikator v2</button>
+      </div>
+      {msg ? <div className="notice">{msg}</div> : null}
+      <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <li>Chart <strong>XAUUSD</strong> broker kamu: v1 di <strong>1 jam</strong>, v2 di <strong>15 menit</strong>.</li>
+        <li>Pine Editor → tempel → <strong>Add to chart</strong>.</li>
+        <li>Alert → kondisi: nama indikator → <strong>Any alert() function call</strong> → notifikasi aplikasi.</li>
+        <li><strong>Opsional (Telegram + lot):</strong> paket TradingView dengan webhook. Isi Secret di pengaturan indikator, centang &quot;format JSON&quot;, isi Webhook URL di bawah.</li>
+      </ol>
+      <dl className="kv"><dt>Webhook URL</dt><dd style={{ wordBreak: 'break-all' }}>{tv.webhookUrl ?? 'Isi APP_BASE_URL di Vercel'}</dd>
+        <dt>Secret</dt><dd>{tv.secretConfigured ? 'Sudah diatur' : 'Belum (TRADINGVIEW_WEBHOOK_SECRET di Vercel)'}</dd></dl>
       <details className="more">
         <summary>Riwayat alert</summary>
         {!logs ? <Loading what="riwayat" /> : logs.length ? <div className="list">{logs.slice(0, 30).map((l) => (

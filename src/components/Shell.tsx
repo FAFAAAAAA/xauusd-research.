@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const I = {
   home: <path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" />,
+  calc: <><rect x="6" y="3.5" width="12" height="17" rx="2" /><path d="M9 7.5h6M9 12h.01M12 12h.01M15 12h.01M9 15.5h.01M12 15.5h.01M15 15.5h.01" /></>,
   trade: <path d="M7 17V5M4 8l3-3 3 3M17 7v12M14 16l3 3 3-3" />,
   replay: <><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" fill="currentColor" stroke="none" /></>,
   results: <path d="M5 19V11M10 19V6M15 19v-5M20 19V9" />,
@@ -14,8 +15,8 @@ const I = {
 const ITEMS = [
   { href: '/', label: 'Beranda', icon: I.home },
   { href: '/trade', label: 'Trade', icon: I.trade },
+  { href: '/calculator', label: 'Kalkulator', icon: I.calc },
   { href: '/analytics', label: 'Hasil', icon: I.results },
-  { href: '/news', label: 'Berita', icon: I.news },
   { href: '/settings', label: 'Atur', icon: I.settings },
 ];
 

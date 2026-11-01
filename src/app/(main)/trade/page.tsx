@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, fmt, peek, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
-import { RiskCalculator } from '@/components/RiskCalculator';
+import Link from 'next/link';
 import { liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/lib/core/journal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -28,22 +28,7 @@ export default function TradePage() {
   }, []);
   useEffect(() => { load(); const t = setInterval(load, 60_000); return () => clearInterval(t); }, [load]);
 
-  // risk plan (saved on the server: Telegram signals use it for the lot)
-  const [cap, setCap] = useState(''); const [rp, setRp] = useState(''); const [saved, setSaved] = useState<string | null>(null);
-  useEffect(() => { if (d?.risk && cap === '' && rp === '') { setCap(String(d.risk.capital)); setRp(String(d.risk.riskPct)); } }, [d, cap, rp]);
-  const riskUsd = (num(cap) * num(rp)) / 100;
-  const saveRisk = async () => {
-    setSaved(null);
-    try { const r = await call<any>('/api/live', { method: 'PUT', json: { capital: num(cap), riskPct: num(rp) } }); setD((x: any) => ({ ...x, risk: r.risk })); setSaved('Tersimpan'); }
-    catch (e) { setSaved((e as Error).message); }
-  };
-
-  // calculator
-  const [cSide, setCSide] = useState<'BUY' | 'SELL'>('BUY'); const [cEntry, setCEntry] = useState(''); const [cSl, setCSl] = useState('');
-  const ce = num(cEntry), cs = num(cSl);
-  const cOk = ce > 0 && cs > 0 && (cSide === 'BUY' ? cs < ce : cs > ce);
-  const calc = cOk && riskUsd > 0 ? lotFor(riskUsd, ce, cs) : null;
-  const cTp = cOk ? ce + (cSide === 'BUY' ? 2 : -2) * Math.abs(ce - cs) : NaN;
+  const riskUsd = d?.risk ? (d.risk.capital * d.risk.riskPct) / 100 : NaN;
 
   // journal form
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -82,46 +67,11 @@ export default function TradePage() {
 
   return (
     <div className="stack">
-      <PageHead title="Trade" sub="Sinyal live, lot, dan jurnal. Order tetap kamu pasang sendiri." />
+      <PageHead title="Trade" sub="Sinyal live dan jurnal. Order tetap kamu pasang sendiri." />
 
-      <section className="group">
-        <h2>Rencana risiko</h2>
-        <div className="grid two" style={{ marginTop: 8 }}>
-          <label className="field">Modal ($)<input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
-          <label className="field">Risiko per trade (%)<input inputMode="decimal" value={rp} onChange={(e) => setRp(e.target.value)} /></label>
-        </div>
-        <div className="row between" style={{ marginTop: 10 }}>
-          <span>Risiko per trade: <strong>{Number.isFinite(riskUsd) ? `$${riskUsd.toFixed(2)}` : '—'}</strong></span>
-          <button className="btn sm primary" onClick={saveRisk}>Simpan</button>
-        </div>
-        {saved ? <p className="mute small">{saved}</p> : null}
-        <p className="mute small">Dipakai untuk menghitung lot di sinyal Telegram dan di bawah.</p>
-      </section>
-
-      <section className="group">
-        <h2>Kalkulator lot</h2>
-        <div className="seg" style={{ marginTop: 8 }}>
-          {(['BUY', 'SELL'] as const).map((s) => <button key={s} aria-pressed={cSide === s} onClick={() => setCSide(s)}>{s}</button>)}
-        </div>
-        <div className="grid two" style={{ marginTop: 10 }}>
-          <label className="field">Entry<input inputMode="decimal" value={cEntry} onChange={(e) => setCEntry(e.target.value)} placeholder="mis. 2650.50" /></label>
-          <label className="field">Stop loss<input inputMode="decimal" value={cSl} onChange={(e) => setCSl(e.target.value)} placeholder="mis. 2642.00" /></label>
-        </div>
-        {cEntry && cSl && !cOk ? <p className="error" style={{ marginTop: 10 }}>SL harus {cSide === 'BUY' ? 'di bawah' : 'di atas'} entry.</p> : null}
-        {calc ? (
-          <div className="facts">
-            <div><span className="mute small">Lot</span><strong>{calc.lot > 0 ? calc.lot.toFixed(2) : '< 0,01'}</strong></div>
-            <div><span className="mute small">Risiko sebenarnya</span><strong>${calc.risk.toFixed(2)}</strong></div>
-            <div><span className="mute small">TP (RR 1:2)</span><strong>{px(cTp)}</strong></div>
-            <div><span className="mute small">Jarak SL</span><strong>{calc.dist.toFixed(2)}</strong></div>
-          </div>
-        ) : null}
-        {calc && calc.lot > 0 ? (
-          <button className="btn sm" style={{ marginTop: 12 }} onClick={() => openDraft({ side: cSide, entry: cEntry, sl: cSl, tp: cTp.toFixed(2), lot: calc.lot.toFixed(2) })}>Catat ke jurnal</button>
-        ) : null}
-      </section>
-
-      <RiskCalculator />
+      <div className="notice small">
+        Rencana risiko: modal <strong>${d.risk.capital}</strong> · risiko <strong>{d.risk.riskPct}%</strong> (${riskUsd.toFixed(2)} per trade) · <Link href="/calculator">ubah di Kalkulator</Link>
+      </div>
 
       <section className="group">
         <h2>Sinyal live</h2>
@@ -224,43 +174,7 @@ export default function TradePage() {
         <p className="mute small" style={{ marginTop: 8 }}>Hasil trade dihitung dari harga keluar × lot × 100 (belum termasuk komisi & swap broker).</p>
       </section>
 
-      <TradingViewSetup webhook={d.webhook} />
+      <p className="mute small" style={{ textAlign: 'center' }}>Sinyal datang dari indikator TradingView v1/v2 — cara pasang di <Link href="/settings#tradingview">Atur → TradingView</Link>.</p>
     </div>
-  );
-}
-
-function TradingViewSetup({ webhook }: { webhook: { configured: boolean; url: string | null; last: { status: string; error: string | null } | null } }) {
-  const [msg, setMsg] = useState<string | null>(null);
-  const copy = async (file: string, label: string) => {
-    try {
-      const txt = await (await fetch(`/pine/${file}`, { cache: 'no-store' })).text();
-      await navigator.clipboard.writeText(txt);
-      setMsg(`${label} tersalin. Tempel di TradingView → Pine Editor.`);
-    } catch { setMsg('Gagal menyalin. Buka tautan file lalu salin manual.'); }
-  };
-  return (
-    <details className="group">
-      <summary><span><h2>Pasang sinyal di TradingView</h2><span className="s">Indikator v1 & v2, notifikasi HP atau Telegram</span></span></summary>
-      <div className="body">
-        <div className="row">
-          <button className="btn sm primary" onClick={() => copy('xau_v1.pine', 'Indikator v1')}>Salin indikator v1</button>
-          <button className="btn sm primary" onClick={() => copy('xau_v2.pine', 'Indikator v2')}>Salin indikator v2</button>
-        </div>
-        <p className="mute small">Atau buka: <a href="/pine/xau_v1.pine" target="_blank" rel="noreferrer">xau_v1.pine</a> · <a href="/pine/xau_v2.pine" target="_blank" rel="noreferrer">xau_v2.pine</a></p>
-        {msg ? <div className="notice">{msg}</div> : null}
-        <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <li>Buka TradingView, chart <strong>XAUUSD</strong> broker kamu. v1 di timeframe <strong>1 jam</strong>, v2 di <strong>15 menit</strong>.</li>
-          <li>Pine Editor → tempel kode → <strong>Add to chart</strong>. Label BUY/SELL dengan SL & TP muncul di candle yang sudah tutup.</li>
-          <li>Buat alert: kondisi = nama indikator → <strong>Any alert() function call</strong> → aktifkan notifikasi aplikasi.</li>
-          <li><strong>Opsional (Telegram + lot otomatis):</strong> butuh paket TradingView yang punya webhook. Di pengaturan indikator isi Secret, centang &quot;format JSON&quot;, lalu di alert isi Webhook URL di bawah.</li>
-        </ol>
-        <div className="list">
-          <div className="item"><span className="t">Webhook URL</span><span className="end" style={{ wordBreak: 'break-all' }}>{webhook.url ?? 'Isi APP_BASE_URL di Vercel'}</span></div>
-          <div className="item"><span className="t">Secret di server</span><span className="end">{webhook.configured ? 'Sudah diatur' : 'Belum (TRADINGVIEW_WEBHOOK_SECRET di Vercel)'}</span></div>
-          <div className="item"><span className="t">Alert terakhir</span><span className="end">{webhook.last ? (webhook.last.status === 'accepted' ? 'Diterima' : `${webhook.last.status}${webhook.last.error ? ` · ${webhook.last.error}` : ''}`) : '—'}</span></div>
-        </div>
-        <p className="mute small">Secret sama dengan nilai TRADINGVIEW_WEBHOOK_SECRET di Vercel. Jangan bagikan ke siapa pun.</p>
-      </div>
-    </details>
   );
 }

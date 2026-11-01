@@ -66,7 +66,7 @@ export default function Dashboard() {
       </section>
 
       <section className="group">
-        <h2>Berita penting minggu ini</h2>
+        <div className="row between"><h2>Berita penting minggu ini</h2><Link className="btn sm ghost" href="/news">Semua</Link></div>
         {d.upcomingNews.length ? (
           <div className="list">
             {d.upcomingNews.slice(0, 4).map((n: any) => (
