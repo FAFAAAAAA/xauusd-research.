@@ -268,9 +268,9 @@ Mesin website, emas, RR 1:2, $10, biaya termasuk — M15 2018–2026 | M30 2010�
 ## 5p. Data emas tambahan 2004–2026 (M5, M15, M30)
 
 File dari pemilik (`XAU_5m/15m/30m_data.csv`, pemisah `;`) memakai **waktu server broker EET/EEST** (UTC+2 musim dingin, UTC+3 musim panas, ikut jadwal DST Eropa). Diubah ke UTC dengan zona `Europe/Athens`; dicek terhadap data forexsb (UTC) di 8 bulan berbeda, selisih median 0,02–0,2 (beda feed), jadi jam sudah cocok.
-- **XAUUSD M5, M15 & M30 sekarang 100% dari file pemilik** (atas permintaan pemilik, tidak lagi disambung dengan forexsb): Jun 2004 – 30 Jan 2026. Data forexsb Feb–Okt 2026 tidak dipakai lagi untuk emas. Hasil backtest emas lama di website dibuat dengan data forexsb, jadi bisa sedikit berbeda dari backtest baru.
-- Acuan baru **v1** (Metode 1) di data ini, RR 1:2, $10: M15 2004–2026 → 668 trade (±0,6/minggu), win 40,3%, +$1.258, drawdown $160, 20 dari 23 tahun untung; 2004–2017 +$632 (39,1%), 2018–2026 +$626 (42,3%). M5 hampir sama: 666 trade, 40,2%, +$1.249.
-- Ada lubang data 13 Sep–15 Okt 2025 dan 13–22 Jan 2026.
+- **XAUUSD M15 & M30 = file pemilik sebagai dasar**, lalu (atas permintaan pemilik) lubang data yang benar-benar kosong (> 6 jam di luar akhir pekan, mis. 13 Sep–15 Okt 2025 dan 13–22 Jan 2026) dan periode sesudah 30 Jan 2026 ditambal dari forexsb (jam sudah sama-sama UTC, selisih harga 0,02–0,2). M15: 2.926 candle tambalan di dalam data + 17.786 candle Feb–Okt 2026. Jeda harian dan akhir pekan tidak diisi.
+- **XAUUSD M5**: hanya file pemilik (Jun 2004 – 30 Jan 2026); tidak ada sumber M5 lain, jadi lubangnya tetap.
+- Acuan **v1** (Metode 1) di M15 2004–Okt 2026, RR 1:2, $10: 694 trade (±0,6/minggu), win 40,3%, +$1.326, drawdown $160, 20 dari 23 tahun untung; 2004–2017 +$632 (39,1%), 2018–2026 +$694 (42,3%).
 - File M1 (333 MB) tidak dimasukkan karena terlalu besar untuk server; H1/H4/D1/W/MN tidak perlu karena dibentuk dari data dasar.
 Uji buta Metode 1 di M15 2005–2017 (data yang belum pernah dipakai): 398 trade, win 39,7%, +$674 (RR 1:2, $10), 11 dari 13 tahun untung.
 
