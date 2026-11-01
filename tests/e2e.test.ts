@@ -247,6 +247,18 @@ test('8. TradingView webhook: auth, validation, dedupe, LIVE Telegram', async ()
   const live = await repo.listEvents(db, { mode: 'LIVE' });
   assert.equal(live.length, 1);
   assert.equal(live[0].replay_session_id, null);
+
+  // v1/v2 Pine indicator payload (timestamp in ms, extra side/sl/tp) → Telegram shows entry/SL/TP and the lot from the saved risk plan
+  await repo.setAppSetting(db, 'live_risk', { capital: 1000, riskPct: 1 });
+  const sig = { ...payload, event_id: `TEST-v2-${now}`, timeframe: '15', event_type: 'SETUP_CONFIRMED', timestamp: now - 10_000, price: 2001,
+    zone: { low: 1999, high: 1999, kind: 'resistance' }, strategy_version: 'v2 · Breakout volatilitas', extra: { side: 'BUY', sl: 1996, tp: 2011 } };
+  const r2 = await handleTradingViewWebhook(db, JSON.stringify(sig), '127.0.0.1', { fetchImpl: fakeFetch });
+  assert.equal(r2.status, 200);
+  assert.equal(r2.body.telegram, 'sent');
+  const txt = String(sent[sent.length - 1].body.text);
+  assert.match(txt, /XAUUSD — BUY/); assert.match(txt, /SL:<\/b> 1996\.00/); assert.match(txt, /Lot:<\/b> 0\.02/);
+  const ev = (await repo.listEvents(db, { mode: 'LIVE' })).find((e) => e.strategy_version_label.startsWith('v2'));
+  assert.deepEqual(ev?.extra, { side: 'BUY', sl: 1996, tp: 2011 });
 });
 
 test('9. Telegram failure, retry and idempotency are logged honestly', async () => {

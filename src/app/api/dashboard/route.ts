@@ -4,6 +4,7 @@ import { resolveCredentials } from '@/lib/server/telegram';
 import { getConfig } from '@/lib/server/config';
 import { toMs } from '@/lib/server/db';
 import { eventAsOf } from '@/lib/core/news';
+import { journalStats, liveSignalFrom, type JournalTrade } from '@/lib/core/journal';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,10 @@ export async function GET() {
     const upcoming = (await repo.economicEventsInWindow(db, now, now + 7 * 86_400_000))
       .map((e) => eventAsOf(e, now)).filter(Boolean).slice(0, 6);
     const replays = await repo.listReplays(db, 5);
+    const jr = await repo.getAppSetting<JournalTrade[]>(db, 'live_journal', []);
+    const journal = Array.isArray(jr) ? jr : [];
+    const monthStart = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), 1);
+    const lastSignal = live.map((e) => ({ e, s: liveSignalFrom(e.extra, e.price) })).find((x) => x.s) ?? null;
     return {
       timezone: tz,
       tradingview: {
@@ -38,6 +43,12 @@ export async function GET() {
       upcomingNews: upcoming,
       coverage,
       replays,
+      trading: {
+        open: journal.filter((t) => t.result === 'open').length,
+        month: journalStats(journal.filter((t) => (t.closedAt ?? 0) >= monthStart)),
+        all: journalStats(journal),
+        lastSignal: lastSignal ? { time: lastSignal.e.event_time, label: lastSignal.e.strategy_version_label, ...lastSignal.s } : null,
+      },
     };
   });
 }

@@ -307,3 +307,14 @@ npm run test:e2e  # 10 skenario end-to-end terhadap PostgreSQL sungguhan (butuh 
                   # set PGHOST/PGPORT/PGUSER). Telegram HTTP diganti stub perekam.
 ```
 Hasil lengkap: `TEST_RESULTS.md`. Semua fixture uji bertanda TEST dan memakai tanggal sintetis tahun 2030 agar tidak tertukar dengan data pasar nyata.
+
+## 5r. Persiapan live trade (1 Nov 2026)
+
+- **Menu Trade** (menggantikan Replay di menu bawah; Replay masih ada di tautan bawah Beranda):
+  - **Rencana risiko**: modal + risiko % per trade, disimpan di server (`app_settings.live_risk`). Dipakai untuk lot di sinyal Telegram.
+  - **Kalkulator lot**: entry + SL → lot (dibulatkan ke bawah ke 0,01 supaya risiko tidak lewat rencana), risiko sebenarnya, TP 1:2.
+  - **Sinyal live**: event LIVE dari TradingView yang membawa `extra.side/sl/tp`.
+  - **Jurnal**: trade manual pemilik (`app_settings.live_journal`, maks 3000). Tutup dengan TP / SL / impas / harga manual. Ringkasan win rate & rata-rata R per metode, dibandingkan dengan win rate backtest (v1 40,6%, v2 40,4%, biaya rata-rata broker + swap).
+- **Indikator TradingView** `public/pine/xau_v1.pine` (chart H1) dan `xau_v2.pine` (chart M15): aturan sama dengan backtest. Logika dicek ulang di Python terhadap trade website 2024–2025: v1 101/101 sinyal sama; v2 325/326 sama (5 sinyal tambahan di candle terakhir sebelum jeda pasar, yang dilewati backtest karena entry > 1 jam). Di TradingView, H4/D1 memakai candle broker (jam tutup bisa beda dari UTC), jadi sesekali beda.
+- Alert `alert()`: teks biasa (notifikasi HP, paket gratis) atau JSON untuk webhook website (`extra: {side, sl, tp}`); pesan Telegram LIVE lalu berisi entry ≈ close, SL, TP, RR dan lot dari rencana risiko. Tidak ada order otomatis.
+- Beranda: ringkasan jurnal bulan ini, sinyal live terakhir, koneksi, berita.

@@ -2,16 +2,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { call, fmt, peek, px } from '@/components/client';
-import { ErrorBox, Loading, ModeTag, PageHead, Status } from '@/components/Status';
+import { ErrorBox, Loading, PageHead, Status } from '@/components/Status';
 import { CATEGORY_LABEL } from '@/lib/core/news';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Dash = any;
 
-const EVENT_LABEL: Record<string, string> = {
-  SNR_NEAR: 'Mendekati zona', SNR_TOUCH: 'Menyentuh zona', SNR_BREAKOUT: 'Breakout', SNR_RETEST: 'Retest',
-  SETUP_CONFIRMED: 'Setup entry', SETUP_INVALIDATED: 'Setup batal',
-};
 
 export default function Dashboard() {
   const [d, setD] = useState<Dash | null>(() => peek<Dash>('/api/dashboard'));
@@ -23,44 +19,33 @@ export default function Dashboard() {
   const tz = d.timezone;
   const tg = d.telegram;
   const tv = d.tradingview;
-  const real = (d.coverage as any[]).filter((c) => !c.is_test);
-  const tfOf = (tf: string) => real.some((c) => c.timeframe === tf);
   const tgOk = tg.tokenConfigured && tg.chatConfigured && tg.lastTest?.ok;
-  const steps = [
-    { t: 'Impor data M15', d: 'File CSV harga emas per 15 menit', done: tfOf('M15'), href: '/settings#data' },
-    { t: 'Bentuk H1, H4 dan D1', d: 'Satu tombol di Atur → Data harga', done: tfOf('H1') && tfOf('H4') && tfOf('D1'), href: '/settings#data' },
-    { t: 'Jalankan backtest', d: 'Lihat hasil RR 1:1, 1:2, 1:3', done: d.eventCounts.BACKTEST > 0, href: '/analytics' },
-    { t: 'Hubungkan Telegram', d: 'Supaya bot bisa kirim sinyal', done: !!tgOk, href: '/settings#telegram' },
-  ];
-  const allDone = steps.every((s) => s.done);
-  const events = [...d.liveEvents, ...d.backtestEvents].sort((a: any, b: any) => b.event_time - a.event_time).slice(0, 5);
-
+  const tr = d.trading;
+  const sig = tr.lastSignal;
+  const money = (n: number) => `${n < 0 ? '−' : n > 0 ? '+' : ''}$${Math.abs(n).toFixed(2)}`;
   return (
     <div className="stack">
       <PageHead title="Beranda" />
 
-      {d.latestCandle ? (
-        <section className="hero">
-          <span className="label">Harga terakhir di data kamu</span>
-          <span className="price">{px(d.latestCandle.close)}</span>
-          <span className="mute small">{fmt(d.latestCandle.time, tz)} · {d.latestCandle.timeframe} · {d.latestCandle.source}</span>
-        </section>
-      ) : null}
+      <section className="hero">
+        <span className="label">Bulan ini (jurnal live)</span>
+        <span className={`price ${tr.month.pnl > 0 ? 'pos' : tr.month.pnl < 0 ? 'neg' : ''}`}>{money(tr.month.pnl)}</span>
+        <span className="mute small">{tr.month.closed} trade selesai{tr.month.winRate != null ? ` · win ${(tr.month.winRate * 100).toFixed(0)}%` : ''} · {tr.open} posisi terbuka</span>
+        <div className="row" style={{ marginTop: 10 }}><Link className="btn sm primary" href="/trade">Buka Trade</Link><Link className="btn sm" href="/analytics">Hasil backtest</Link></div>
+      </section>
 
-      {!allDone ? (
-        <section className="group">
-          <h2>Langkah memulai</h2>
-          <ol className="steps">
-            {steps.map((s, i) => (
-              <li key={s.t} className={s.done ? 'done' : ''}>
-                <span className="check" aria-hidden>{s.done ? '✓' : i + 1}</span>
-                <span><span className="t" style={{ fontWeight: 600, display: 'block' }}>{s.t}</span><span className="mute small">{s.d}</span></span>
-                {s.done ? <span className="mute small">Selesai</span> : <Link className="btn sm" href={s.href}>Buka</Link>}
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
+      <section className="group">
+        <h2>Sinyal live terakhir</h2>
+        {sig ? (
+          <div className="item" style={{ marginTop: 8 }}>
+            <span style={{ minWidth: 0 }}>
+              <span className="t" style={{ display: 'block' }}>{sig.label}</span>
+              <span className="d">{fmt(sig.time, tz)} · Entry ≈ {px(sig.entry)} · SL {px(sig.sl)} · TP {px(sig.tp)}</span>
+            </span>
+            <span className={`tag ${sig.side === 'BUY' ? 'buy' : 'sell'}`}>{sig.side}</span>
+          </div>
+        ) : <p className="mute" style={{ marginTop: 8 }}>Belum ada. Pasang indikator v1/v2 di TradingView (menu Trade).</p>}
+      </section>
 
       <section className="group">
         <h2>Koneksi</h2>
@@ -81,23 +66,6 @@ export default function Dashboard() {
       </section>
 
       <section className="group">
-        <h2>Sinyal terbaru</h2>
-        {events.length ? (
-          <div className="list">
-            {events.map((e: any) => (
-              <div key={e.id} className="item">
-                <span style={{ minWidth: 0 }}>
-                  <span className="t" style={{ display: 'block' }}>{EVENT_LABEL[e.event_type] ?? e.event_type}</span>
-                  <span className="d">{fmt(e.event_time, tz)} · {px(e.price)}</span>
-                </span>
-                <ModeTag mode={e.mode} test={e.is_test} />
-              </div>
-            ))}
-          </div>
-        ) : <p className="mute">Belum ada sinyal. Sinyal muncul dari replay, backtest, atau alert TradingView.</p>}
-      </section>
-
-      <section className="group">
         <h2>Berita penting minggu ini</h2>
         {d.upcomingNews.length ? (
           <div className="list">
@@ -111,6 +79,8 @@ export default function Dashboard() {
           </div>
         ) : <p className="mute">Kalender belum diisi. <Link href="/news">Impor di Berita</Link></p>}
       </section>
+
+      <p className="mute small" style={{ textAlign: 'center' }}><Link href="/replay">Replay historis</Link></p>
     </div>
   );
 }

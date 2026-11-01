@@ -1,0 +1,74 @@
+//@version=5
+// XAU v2 · Breakout volatilitas — sama dengan backtest website (README 5q). Pasang di chart XAUUSD timeframe 15 menit.
+// Sinyal hanya di candle M15 yang sudah TUTUP. Tidak ada order otomatis: kamu pasang order sendiri.
+//  Level hari ini (hari UTC): open hari ini ± 0,5 × range kemarin (high − low).
+//  BUY : close M15 menembus level atas dari bawah, tren naik. SELL: kebalikannya, tren turun.
+//  Maks 1 sinyal per arah per blok 4 jam UTC (00/04/08/12/16/20).
+//  SL  : level ∓ 0,75 × ATR14 D1. TP = 2 × jarak SL (RR 1:2). Entry di open candle berikutnya.
+//  Tren (aturan 1): BUY  jika close H4 > EMA50 > EMA200 (H4) dan close D1 > EMA50 (D1)
+//                   SELL jika close H4 < EMA50 < EMA200 (H4), close D1 < EMA50 (D1) dan EMA50 D1 < EMA200 D1
+// Catatan: H4/D1 diambil dari candle TradingView broker kamu (jam tutupnya bisa beda dari UTC), jadi sesekali sinyal bisa
+// beda sedikit dengan backtest website.
+indicator("XAU v2 · Breakout volatilitas", overlay = true, max_labels_count = 200, max_lines_count = 400)
+
+secret  = input.string("", "Secret webhook website (kosongkan kalau tidak pakai webhook)")
+asJson  = input.bool(false, "Pesan alert format JSON (untuk webhook website)")
+showLv  = input.bool(true, "Tampilkan level hari ini")
+volK    = 0.5
+slAtr   = 0.75
+rr      = 2.0
+
+// ---- tren dari candle H4 / D1 yang sudah tutup (tanpa melihat masa depan)
+[h4c, e50, e200] = request.security(syminfo.tickerid, "240", [close[1], ta.ema(close, 50)[1], ta.ema(close, 200)[1]], lookahead = barmerge.lookahead_on)
+[d1c, d50, d200, datr] = request.security(syminfo.tickerid, "D", [close[1], ta.ema(close, 50)[1], ta.ema(close, 200)[1], ta.rma(ta.tr(true), 14)[1]], lookahead = barmerge.lookahead_on)
+trendUp = h4c > e50 and e50 > e200 and d1c > d50
+trendDn = h4c < e50 and e50 < e200 and d1c < d50 and d50 < d200
+
+// ---- hari UTC: open hari ini dan range kemarin
+dayId = math.floor(time / 86400000)
+var float dOpen = na
+var float curH = na
+var float curL = na
+var float prevRange = na
+if dayId != dayId[1]
+    prevRange := curH - curL
+    dOpen := open
+    curH := high
+    curL := low
+else
+    curH := math.max(curH, high)
+    curL := math.min(curL, low)
+upL = dOpen + volK * prevRange
+dnL = dOpen - volK * prevRange
+plot(showLv ? upL : na, "Level atas", color.new(color.green, 30), 1, plot.style_linebr)
+plot(showLv ? dnL : na, "Level bawah", color.new(color.red, 30), 1, plot.style_linebr)
+
+// ---- sinyal (maks 1 per arah per blok 4 jam UTC)
+blk = math.floor(time / (4 * 3600000))
+var int usedBuy = -1
+var int usedSell = -1
+f_msg(sideTxt, lv, sl, tp) =>
+    if asJson
+        "{\"secret\":\"" + secret + "\",\"event_id\":\"v2-" + str.tostring(time) + "-" + sideTxt + "\",\"symbol\":\"XAUUSD\",\"timeframe\":\"15\",\"event_type\":\"SETUP_CONFIRMED\",\"timestamp\":" + str.tostring(time_close) + ",\"price\":" + str.tostring(close, "#.###") + ",\"zone\":{\"low\":" + str.tostring(lv, "#.###") + ",\"high\":" + str.tostring(lv, "#.###") + ",\"kind\":\"" + (sideTxt == "BUY" ? "resistance" : "support") + "\"},\"strategy_version\":\"v2 · Breakout volatilitas\",\"source\":\"tradingview\",\"mode\":\"LIVE\",\"extra\":{\"side\":\"" + sideTxt + "\",\"sl\":" + str.tostring(sl, "#.###") + ",\"tp\":" + str.tostring(tp, "#.###") + "}}"
+    else
+        "XAU v2 " + sideTxt + " | Entry ≈ " + str.tostring(close, "#.##") + " | SL " + str.tostring(sl, "#.##") + " | TP " + str.tostring(tp, "#.##") + " | jarak SL " + str.tostring(math.abs(close - sl), "#.##")
+
+ready = barstate.isconfirmed and not na(prevRange) and prevRange > 0 and not na(datr)
+buySig = ready and close > upL and close[1] <= upL and trendUp and usedBuy != blk
+sellSig = ready and close < dnL and close[1] >= dnL and trendDn and usedSell != blk and not buySig
+if buySig
+    usedBuy := blk
+    sl = upL - slAtr * datr
+    tp = close + rr * (close - sl)
+    label.new(bar_index, low, "BUY v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##"), style = label.style_label_up, color = color.green, textcolor = color.white, size = size.small)
+    line.new(bar_index, sl, bar_index + 12, sl, color = color.red)
+    line.new(bar_index, tp, bar_index + 12, tp, color = color.green)
+    alert(f_msg("BUY", upL, sl, tp), alert.freq_once_per_bar_close)
+if sellSig
+    usedSell := blk
+    sl = dnL + slAtr * datr
+    tp = close - rr * (sl - close)
+    label.new(bar_index, high, "SELL v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##"), style = label.style_label_down, color = color.red, textcolor = color.white, size = size.small)
+    line.new(bar_index, sl, bar_index + 12, sl, color = color.red)
+    line.new(bar_index, tp, bar_index + 12, tp, color = color.green)
+    alert(f_msg("SELL", dnL, sl, tp), alert.freq_once_per_bar_close)

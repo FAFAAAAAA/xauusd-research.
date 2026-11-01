@@ -6,6 +6,7 @@ import { sendTelegram, type FetchLike, type SendResult } from './telegram';
 import { redactSecret, safeEqual, SlidingWindowLimiter, validateWebhookPayload } from '../core/webhook';
 import { buildEventMessage } from '../core/telegram-format';
 import { NOT_CONFIGURED } from '../core/types';
+import { liveSignalFrom, lotFor, readLiveRisk } from '../core/journal';
 
 const memLimiter = new SlidingWindowLimiter(60, 60_000);
 export const MAX_BODY_BYTES = 16_384;
@@ -79,12 +80,19 @@ export async function handleTradingViewWebhook(db: Db, rawBody: string, ip: stri
       if (cooling) telegram = { status: 'cooldown' };
       else {
         const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
-        const msg = buildEventMessage({
+        const sig = liveSignalFrom(p.extra, p.price);
+        let trade;
+        if (sig) {
+          const r = readLiveRisk(await repo.getAppSetting(db, 'live_risk', null));
+          const l = lotFor((r.capital * r.riskPct) / 100, sig.entry, sig.sl);
+          trade = { ...sig, lot: l ? l.lot : null, riskUsd: l ? l.risk : null, riskPct: r.riskPct };
+        }
+        const msg = buildEventMessage({ trade,
           mode: 'LIVE', eventType: p.event_type, timeframe: p.timeframe, eventTime: p.timestamp, price: p.price,
           zoneLow: p.zone.low, zoneHigh: p.zone.high, zoneKind: p.zone.kind, confirmations,
           status: p.event_type === 'SETUP_CONFIRMED' ? 'Setup terkonfirmasi (menurut indikator)' : 'Menunggu konfirmasi entry',
           displayTimezone: tz, strategyLabel: p.strategy_version, isTest: p.source.toUpperCase().includes('TEST'),
-          linkUrl: cfg.appBaseUrl ? `${cfg.appBaseUrl}/?event=${id}` : null,
+          linkUrl: cfg.appBaseUrl ? (sig ? `${cfg.appBaseUrl}/trade` : `${cfg.appBaseUrl}/?event=${id}`) : null,
         });
         telegram = await sendTelegram(db, { deliveryKey: `live-event:${id}`, mode: 'LIVE', marketEventId: id, text: msg.text, button: msg.button }, { fetchImpl: opts.fetchImpl, cfg });
       }

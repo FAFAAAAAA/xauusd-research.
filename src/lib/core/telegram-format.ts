@@ -37,6 +37,8 @@ export interface TelegramEventMessage {
   strategyLabel: string;
   isTest?: boolean;
   linkUrl?: string | null;
+  /** LIVE signal from the v1/v2 Pine indicators: shown as entry / SL / TP / lot instead of the SNR zone */
+  trade?: { side: 'BUY' | 'SELL'; entry: number; sl: number; tp: number; lot: number | null; riskUsd: number | null; riskPct: number | null };
 }
 
 const fmtPrice = (n: number | null) => (n == null ? '—' : n.toFixed(2));
@@ -48,6 +50,27 @@ export function buildEventMessage(m: TelegramEventMessage): { text: string; butt
   const testTag = m.isTest ? '\n⚠️ <b>TEST FIXTURE</b> — data/aturan uji teknis\n' : '';
   const lines: string[] = [];
   if (m.mode === 'LIVE') {
+    const t = m.trade;
+    if (t) {
+      lines.push(
+        `${t.side === 'BUY' ? '🟢' : '🔴'} <b>XAUUSD — ${t.side}</b> · LIVE${testTag}`,
+        `<b>Strategi:</b> ${escapeHtml(m.strategyLabel)}`,
+        '',
+        `<b>Entry ≈</b> ${fmtPrice(t.entry)} <i>(harga close; isi di open candle berikutnya)</i>`,
+        `<b>SL:</b> ${fmtPrice(t.sl)}  (jarak ${Math.abs(t.entry - t.sl).toFixed(2)})`,
+        `<b>TP:</b> ${fmtPrice(t.tp)}  (RR 1:${(Math.abs(t.tp - t.entry) / Math.abs(t.entry - t.sl)).toFixed(1)})`,
+        t.lot != null && t.lot > 0 ? `<b>Lot:</b> ${t.lot.toFixed(2)}  (risiko ≈ $${(t.riskUsd ?? 0).toFixed(2)}${t.riskPct ? ` = ${t.riskPct}% modal` : ''})`
+          : t.lot === 0 ? '<b>Lot:</b> di bawah 0,01 — modal/risiko terlalu kecil untuk SL ini' : '<b>Lot:</b> atur modal & risiko di menu Trade',
+        '',
+        `<b>News:</b> ${c(m.confirmations.news)}`,
+        `<b>Waktu:</b> ${formatInTz(m.eventTime, m.displayTimezone)} (${escapeHtml(tzNote)})`,
+        '',
+        '<i>Sinyal dari indikator. Pasang order sendiri — tidak ada order otomatis.</i>',
+      );
+      const text = lines.join('\n');
+      const button = m.linkUrl && /^https:\/\//.test(m.linkUrl) ? { text: 'Buka menu Trade', url: m.linkUrl } : undefined;
+      return { text, button };
+    }
     lines.push(
       `🔔 <b>XAUUSD — LIVE</b>${testTag}`,
       '',

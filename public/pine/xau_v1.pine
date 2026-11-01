@@ -1,0 +1,96 @@
+//@version=5
+// XAU v1 · Level H1 diuji 2–3× — sama dengan backtest website. Pasang di chart XAUUSD timeframe 1 JAM (H1).
+// Sinyal hanya di candle H1 yang sudah TUTUP. Tidak ada order otomatis: kamu pasang order sendiri.
+//  Level  : swing high/low H1 (3 candle kiri-kanan) dalam 119 candle terakhir yang sudah disentuh 2–3×
+//           (sentuhan = high/low masuk 0,25 ATR dari level, jarak antar sentuhan ≥ 3 candle) dan belum pernah ditembus close.
+//           Dipakai level PALING TUA yang ditembus close candle ini.
+//  Entry  : close H1 menembus level itu dengan candle momentum (badan ≥ 1 × ATR14 H1), searah tren. Entry open candle berikutnya.
+//  SL     : level ∓ 1,5 × ATR14 H1. TP = 2 × jarak SL (RR 1:2).
+//  Tren (aturan 1): BUY  jika close H4 > EMA50 > EMA200 (H4) dan close D1 > EMA50 (D1)
+//                   SELL jika close H4 < EMA50 < EMA200 (H4), close D1 < EMA50 (D1) dan EMA50 D1 < EMA200 D1
+// Catatan: H4/D1 diambil dari candle TradingView broker kamu (jam tutupnya bisa beda dari UTC), jadi sesekali sinyal bisa
+// beda sedikit dengan backtest website.
+indicator("XAU v1 · Level H1 diuji 2–3×", overlay = true, max_bars_back = 300, max_labels_count = 200, max_lines_count = 400)
+
+secret  = input.string("", "Secret webhook website (kosongkan kalau tidak pakai webhook)")
+asJson  = input.bool(false, "Pesan alert format JSON (untuk webhook website)")
+histN   = input.int(2000, "Hitung sinyal untuk N candle terakhir (lebih kecil = lebih cepat)", minval = 200)
+P       = 3
+back    = 119
+tMin    = 2
+tMax    = 3
+rr      = 2.0
+
+[h4c, e50, e200] = request.security(syminfo.tickerid, "240", [close[1], ta.ema(close, 50)[1], ta.ema(close, 200)[1]], lookahead = barmerge.lookahead_on)
+[d1c, d50, d200] = request.security(syminfo.tickerid, "D", [close[1], ta.ema(close, 50)[1], ta.ema(close, 200)[1]], lookahead = barmerge.lookahead_on)
+trendUp = h4c > e50 and e50 > e200 and d1c > d50
+trendDn = h4c < e50 and e50 < e200 and d1c < d50 and d50 < d200
+atr = ta.rma(ta.tr(true), 14)
+
+// Level paling tua yang ditembus close candle ini (side 1 = high/BUY, -1 = low/SELL). Mengembalikan [level, sentuhan] atau [na, 0].
+f_level(side) =>
+    float res = na
+    int tc = 0
+    int oMax = math.min(back, bar_index - P)
+    if oMax >= P + 1
+        for o = oMax to P + 1
+            float lv = side > 0 ? high[o] : low[o]
+            bool piv = true
+            for q = o - P to o + P
+                float x = side > 0 ? high[q] : low[q]
+                if side * (x - lv) > 0
+                    piv := false
+                    break
+            if piv and side * (close - lv) > 0
+                bool early = false
+                int touches = 1
+                int last = o
+                if o - P - 1 >= 1
+                    for j = o - P - 1 to 1
+                        if side * (close[j] - lv) > 0
+                            early := true
+                            break
+                        bool near = side > 0 ? high[j] >= lv - 0.25 * atr[j] : low[j] <= lv + 0.25 * atr[j]
+                        if near
+                            if last - j >= 3
+                                touches += 1
+                            last := j
+                if not early
+                    // level paling tua yang ditembus ditemukan: berhenti di sini (backtest juga berhenti di level ini)
+                    res := touches >= tMin and touches <= tMax ? lv : na
+                    tc := touches
+                    break
+    [res, tc]
+
+f_msg(sideTxt, lv, sl, tp) =>
+    if asJson
+        "{\"secret\":\"" + secret + "\",\"event_id\":\"v1-" + str.tostring(time) + "-" + sideTxt + "\",\"symbol\":\"XAUUSD\",\"timeframe\":\"60\",\"event_type\":\"SETUP_CONFIRMED\",\"timestamp\":" + str.tostring(time_close) + ",\"price\":" + str.tostring(close, "#.###") + ",\"zone\":{\"low\":" + str.tostring(lv, "#.###") + ",\"high\":" + str.tostring(lv, "#.###") + ",\"kind\":\"" + (sideTxt == "BUY" ? "resistance" : "support") + "\"},\"strategy_version\":\"v1 · Level H1 diuji 2–3×\",\"source\":\"tradingview\",\"mode\":\"LIVE\",\"extra\":{\"side\":\"" + sideTxt + "\",\"sl\":" + str.tostring(sl, "#.###") + ",\"tp\":" + str.tostring(tp, "#.###") + "}}"
+    else
+        "XAU v1 " + sideTxt + " | Entry ≈ " + str.tostring(close, "#.##") + " | SL " + str.tostring(sl, "#.##") + " | TP " + str.tostring(tp, "#.##") + " | jarak SL " + str.tostring(math.abs(close - sl), "#.##")
+
+active = barstate.isconfirmed and bar_index >= last_bar_index - histN and not na(atr)
+float lvB = na
+float lvS = na
+if active and trendUp and close - open >= atr
+    [a, b] = f_level(1)
+    lvB := a
+if active and trendDn and open - close >= atr
+    [a, b] = f_level(-1)
+    lvS := a
+
+if not na(lvB)
+    sl = lvB - 1.5 * atr
+    tp = close + rr * (close - sl)
+    label.new(bar_index, low, "BUY v1\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##"), style = label.style_label_up, color = color.green, textcolor = color.white, size = size.small)
+    line.new(bar_index - 5, lvB, bar_index, lvB, color = color.orange, width = 2)
+    line.new(bar_index, sl, bar_index + 8, sl, color = color.red)
+    line.new(bar_index, tp, bar_index + 8, tp, color = color.green)
+    alert(f_msg("BUY", lvB, sl, tp), alert.freq_once_per_bar_close)
+if not na(lvS)
+    sl = lvS + 1.5 * atr
+    tp = close - rr * (sl - close)
+    label.new(bar_index, high, "SELL v1\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##"), style = label.style_label_down, color = color.red, textcolor = color.white, size = size.small)
+    line.new(bar_index - 5, lvS, bar_index, lvS, color = color.orange, width = 2)
+    line.new(bar_index, sl, bar_index + 8, sl, color = color.red)
+    line.new(bar_index, tp, bar_index + 8, tp, color = color.green)
+    alert(f_msg("SELL", lvS, sl, tp), alert.freq_once_per_bar_close)

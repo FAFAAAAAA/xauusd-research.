@@ -451,14 +451,17 @@ export interface EventRow {
   id: string; mode: Mode; event_type: EventType; timeframe: Timeframe; event_time: number; price: number;
   zone_low: number | null; zone_high: number | null; zone_kind: string | null; source: string; strategy_version_label: string;
   confirmations: Record<string, string>; replay_session_id: string | null; is_test: boolean;
+  /** TradingView alert `extra` (side / sl / tp from the v1/v2 Pine indicators); null for other events */
+  extra?: Record<string, unknown> | null;
 }
 const EVENT_COLS = `id, mode, event_type, timeframe, extract(epoch from event_time)*1000 as et, price::float8 as price,
-  zone_low::float8 as zone_low, zone_high::float8 as zone_high, zone_kind, source, strategy_version_label, confirmations, replay_session_id, is_test`;
+  zone_low::float8 as zone_low, zone_high::float8 as zone_high, zone_kind, source, strategy_version_label, confirmations, replay_session_id, is_test, payload->'extra' as extra`;
 const mapEvent = (r: Record<string, unknown>): EventRow => ({
   id: String(r.id), mode: r.mode as Mode, event_type: r.event_type as EventType, timeframe: r.timeframe as Timeframe,
   event_time: Number(r.et), price: Number(r.price), zone_low: toNum(r.zone_low), zone_high: toNum(r.zone_high),
   zone_kind: (r.zone_kind as string) ?? null, source: String(r.source), strategy_version_label: String(r.strategy_version_label),
   confirmations: (r.confirmations as Record<string, string>) ?? {}, replay_session_id: (r.replay_session_id as string) ?? null, is_test: Boolean(r.is_test),
+  extra: r.extra && typeof r.extra === 'object' ? (r.extra as Record<string, unknown>) : null,
 });
 export async function listEvents(db: Db, opts: { mode?: Mode; replaySessionId?: string; upTo?: number; limit?: number }): Promise<EventRow[]> {
   const r = await db.query<Record<string, unknown>>(

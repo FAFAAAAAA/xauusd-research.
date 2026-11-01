@@ -232,3 +232,27 @@ test('swap: rollover 21:00 UTC Mon–Fri, Wednesday counts 3, charged per lot pe
   assert.equal(r.costs.nights, 2);
   assert.ok(Math.abs((r.pnl ?? 0) - (20 - 2 * 20 * 0.1)) < 1e-9);
 });
+
+test('live trading: lot, journal validation, signal from alert extra, Telegram trade message', async () => {
+  const J = await import('../src/lib/core/journal');
+  const { buildEventMessage } = await import('../src/lib/core/telegram-format');
+  const l = J.lotFor(10, 2650, 2645)!;            // $5 SL → $500 per lot → 0.02 lot
+  assert.equal(l.lot, 0.02); assert.equal(l.risk, 10);
+  assert.equal(J.lotFor(10, 2650, 2600)!.lot, 0); // too small → 0 (rounded down)
+  assert.equal(J.lotFor(10, 2650, 2650), null);
+  assert.equal(typeof J.cleanTrade({ side: 'BUY', entry: 100, sl: 101, tp: 102, lot: 0.1, openedAt: 1 }, 'x'), 'string');
+  const t = J.cleanTrade({ strategy: 'v1', side: 'SELL', entry: 100, sl: 101, tp: 98, lot: 0.1, openedAt: 1, result: 'tp' }, 'x') as any;
+  assert.equal(t.exit, 98); assert.equal(t.pnl, 20);
+  const s = J.journalStats([t, { ...t, id: 'y', result: 'sl', exit: 101, pnl: -10 }, { ...t, id: 'z', result: 'open', pnl: null }], 'v1');
+  assert.equal(s.closed, 2); assert.equal(s.open, 1); assert.equal(s.winRate, 0.5); assert.equal(s.pnl, 10);
+  assert.ok(Math.abs((s.avgR ?? 0) - 0.5) < 1e-9);
+  assert.deepEqual(J.liveSignalFrom({ side: 'buy', sl: 95, tp: 110 }, 100), { side: 'BUY', entry: 100, sl: 95, tp: 110 });
+  assert.equal(J.liveSignalFrom({ side: 'BUY', sl: 105, tp: 110 }, 100), null);
+  assert.equal(J.liveSignalFrom(null, 100), null);
+  assert.deepEqual(J.readLiveRisk({ capital: -5, riskPct: 2 }), { capital: 1000, riskPct: 2 });
+  const msg = buildEventMessage({ mode: 'LIVE', eventType: 'SETUP_CONFIRMED', timeframe: 'M15', eventTime: Date.UTC(2026, 0, 5), price: 100, zoneLow: 99, zoneHigh: 99,
+    zoneKind: 'resistance', confirmations: {}, status: 'x', displayTimezone: 'UTC', strategyLabel: 'v2 · Breakout volatilitas',
+    trade: { side: 'BUY', entry: 100, sl: 95, tp: 110, lot: 0.02, riskUsd: 10, riskPct: 1 } });
+  assert.match(msg.text, /BUY/); assert.match(msg.text, /SL:<\/b> 95\.00/); assert.match(msg.text, /TP:<\/b> 110\.00/); assert.match(msg.text, /Lot:<\/b> 0\.02/);
+  assert.match(msg.text, /RR 1:2\.0/);
+});
