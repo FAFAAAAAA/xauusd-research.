@@ -12,7 +12,8 @@ export interface InstrumentSpec {
 }
 
 export const INSTRUMENTS: InstrumentSpec[] = [
-  { symbol: 'XAUUSD', label: 'XAUUSD (emas)', group: 'Emas', digits: 3, contractSize: 100, usdBase: false, spread: 0.30, slippage: 0.10, commission: 7 },
+  // Gold uses worst-case costs (owner's choice, 1 Nov 2026): spread 0.50, slippage 0.30 per fill, commission $10/lot round turn.
+  { symbol: 'XAUUSD', label: 'XAUUSD (emas)', group: 'Emas', digits: 3, contractSize: 100, usdBase: false, spread: 0.50, slippage: 0.30, commission: 10 },
   { symbol: 'EURUSD', label: 'EURUSD', group: 'Forex', digits: 5, contractSize: 100_000, usdBase: false, spread: 0.00005, slippage: 0.00002, commission: 7 },
   { symbol: 'GBPUSD', label: 'GBPUSD', group: 'Forex', digits: 5, contractSize: 100_000, usdBase: false, spread: 0.00008, slippage: 0.00002, commission: 7 },
   { symbol: 'USDJPY', label: 'USDJPY', group: 'Forex', digits: 3, contractSize: 100_000, usdBase: true, spread: 0.006, slippage: 0.002, commission: 7 },

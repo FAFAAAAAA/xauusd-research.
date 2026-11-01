@@ -373,7 +373,7 @@ const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.30', slippage: '0.10', commission: '7', risk: '10', capital: '1000', ambiguity: 'worst' });
+  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.50', slippage: '0.30', commission: '10', risk: '10', capital: '1000', ambiguity: 'worst' });
   const [sel, setSel] = useState<string[] | null>(null); // null = all pairs
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);

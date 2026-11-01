@@ -289,6 +289,9 @@ Website menampilkan **v1** dan **v2**. **Pilihan "Data" (M5/M15/M30) dihapus dar
 - v1: 941 trade (±3,5/bulan), win 40,0%, +$1.685, drawdown $229, maks 4 posisi bersamaan; 2004–2017 +$622, 2018–2026 +$1.064.
 - v2: 2.723 trade (±10/bulan), win 40,0%, +$5.182, drawdown $615, **maks 15 posisi bersamaan**; 2004–2017 +$1.451, 2018–2026 +$3.731.
 
+**Biaya emas = kemungkinan terburuk (1 Nov 2026, atas permintaan pemilik)**: default backtest XAUUSD sekarang spread **0,50**, slippage **0,30** per eksekusi (entry & SL), komisi **$10/lot** pulang-pergi (dulu 0,30 / 0,10 / $7). Hasil v1/v2 tanpa batas posisi, M15 2004–2026, RR 1:2, $10: v1 941 trade, win 38,6%, +$1.102 (2004–17 +$178, 2018–26 +$924); v2 2.722 trade, win 39,2%, +$4.188 (2004–17 +$964, 2018–26 +$3.223).
+**Swap (biaya inap) belum dihitung** mesin backtest. Perkiraan dampak (posisi v1 rata-rata 1,9 malam, v2 3,6 malam; Rabu 3×): swap −$20/lot/malam → v1 +$707, v2 +$2.682; −$40 → v1 +$311, v2 +$1.177; −$60 → v1 −$85, v2 −$329 (2004–2017 rugi mulai −$20). Pakai akun bebas swap atau periksa swap broker.
+
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.
 - RLS aktif di 20 tabel tanpa policy untuk `anon`/`authenticated`; aplikasi hanya terhubung dari server.
