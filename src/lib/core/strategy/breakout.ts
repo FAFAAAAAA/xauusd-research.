@@ -45,11 +45,11 @@ export interface BreakoutParams {
    *  momSize:  body ≥ 1 × ATR14 of that timeframe;  momAvg: body ≥ 1.5 × average body of the previous 20 candles. */
   momShape: boolean; momSize: boolean; momAvg: boolean;
   /** Trend from Supertrend(10, 3) on closed candles instead of EMAs: every selected timeframe must agree (research). */
-  stH4: boolean; stH1: boolean; stD1: boolean;
+  stH4: boolean; stH1: boolean; stD1: boolean; utH4: boolean;
   /** Level part on M30 / M15 candles instead of H1 (same candle counts, ATR of that timeframe). Research. */
   lvlM30: boolean; lvlM15: boolean; lvlM5: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false, stH4: false, stH1: false, stD1: false, lvlM30: false, lvlM15: false, lvlM5: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false, stH4: false, stH1: false, stD1: false, utH4: false, lvlM30: false, lvlM15: false, lvlM5: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -130,6 +130,21 @@ export function supertrendDir(c: readonly Candle[], per = 10, mult = 3): number 
   return t;
 }
 
+/** UT Bot Alerts (Pine v4, src = close, ATR = RMA): position of the last candle, 1 = above the trailing stop (up), -1 = below (down), 0 = not yet. */
+export function utBotDir(c: readonly Candle[], key = 3, per = 10): number {
+  if (c.length <= per) return 0;
+  let atr = 0, stop = 0, pos = 0;
+  for (let i = 0; i < c.length; i++) {
+    const x = c[i], pc = i ? c[i - 1].close : NaN;
+    const tr = i ? Math.max(x.high - x.low, Math.abs(x.high - pc), Math.abs(x.low - pc)) : x.high - x.low;
+    if (i < per) { atr += tr / per; if (i < per - 1) continue; } else atr = (atr * (per - 1) + tr) / per;
+    const src = x.close, nl = key * atr, p = stop;
+    stop = src > p && pc > p ? Math.max(p, src - nl) : src < p && pc < p ? Math.min(p, src + nl) : src > p ? src - nl : src + nl;
+    pos = pc < p && src > p ? 1 : pc > p && src < p ? -1 : pos;
+  }
+  return pos;
+}
+
 export const breakoutAdapter: StrategyAdapter = {
   key: BREAKOUT_KEY,
   name: 'Breakout v0.2 (H1 + London + New York, searah tren)',
@@ -165,6 +180,7 @@ export const breakoutAdapter: StrategyAdapter = {
         const dirs = [p.stH4 ? supertrendDir(h4) : null, p.stH1 ? supertrendDir(h1) : null, p.stD1 ? supertrendDir(d1) : null].filter((x) => x !== null);
         st.trend = dirs.every((x) => x === 1) ? 'up' : dirs.every((x) => x === -1) ? 'down' : 'none';
       }
+      if (p.utH4) { const u = utBotDir(h4, 3, 10); st.trend = u === 1 ? 'up' : u === -1 ? 'down' : 'none'; }
       st.d1bear = emaLast(d1c, 50) < emaLast(d1c, 200);
       st.d1atr = atrLastEwm(d1, 14);
       st.tk = tk;

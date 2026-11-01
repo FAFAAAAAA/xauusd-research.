@@ -1,6 +1,6 @@
 import type { Candle } from '../types';
 import type { StrategyAdapter, StrategyEventDraft } from './adapter';
-import { atrLastEwm, emaLast } from './breakout';
+import { atrLastEwm, emaLast, utBotDir } from './breakout';
 
 /**
  * v2 · Breakout volatilitas (README 5q). UTC days, closed candles only.
@@ -42,6 +42,7 @@ export const volBreakAdapter: StrategyAdapter = {
       const lc4 = h4c[h4c.length - 1], lcd = d1c[d1c.length - 1];
       st.up = lc4 > e50 && e50 > e200 && lcd > d50;
       st.dn = lc4 < e50 && e50 < e200 && lcd < d50 && d50 < d200;
+      if (ctx.params.utH4 === true) { const u = utBotDir(h4, 3, 10); st.up = u === 1; st.dn = u === -1; }   // UT Bot H4 replaces aturan 1
     }
     // today's open = open of the first base candle of the UTC day
     const day = Math.floor(bar.time / DAY) * DAY;
