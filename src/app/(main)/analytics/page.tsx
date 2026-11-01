@@ -375,6 +375,8 @@ const STRAT_LABEL: Record<string, string> = {
   rbr_dbd_v1: 'RBR / DBD (zona base H1, searah tren H4)', snr_snd_mtf_v2: 'SNR + SND v2 (strategy Pine kamu)', snr_snd_mtf_v1: 'SNR + SND v1 (indikator Pine kamu)',
   breakout_v02: 'Breakout v0.2 (hasil riset)',
 };
+const FORM_KEY = 'xau.backtestForm.v1';
+const FORM_SAVED = ['spread', 'slippage', 'commission', 'swapLong', 'swapShort', 'risk', 'capital', 'ambiguity'] as const;
 const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 
 /** One strategy → every chosen pair, one year per request (sequential), RR 1:1/1:2/1:3 each. */
@@ -382,6 +384,19 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
   const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.50', slippage: '0.30', commission: '10', swapLong: '0', swapShort: '0', risk: '10', capital: '1000', ambiguity: 'worst' });
+  // Remember costs / risk / capital in this browser (convenience only; falls back to defaults if storage is unavailable).
+  const loaded = useRef(false);
+  useEffect(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(FORM_KEY) ?? 'null');
+      if (v && typeof v === 'object') setF((cur) => ({ ...cur, ...Object.fromEntries(FORM_SAVED.filter((k) => typeof v[k] === 'string').map((k) => [k, v[k]])) }));
+    } catch { /* ignore */ }
+    loaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!loaded.current) return;
+    try { localStorage.setItem(FORM_KEY, JSON.stringify(Object.fromEntries(FORM_SAVED.map((k) => [k, (f as any)[k]])))); } catch { /* ignore */ }
+  }, [f]);
   const [sel, setSel] = useState<string[] | null>(null); // null = all pairs
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);
