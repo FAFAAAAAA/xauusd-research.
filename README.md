@@ -263,7 +263,7 @@ Mesin website, emas, RR 1:2, $10, biaya termasuk — M15 2018–2026 | M30 2010�
 | 5 Breakout Base H1 | 1,1 | 39,3% | +$759 | $241 | 36,5% / +$259 |
 | 6 Pola N H1/H4 | 0,4 | 43,0% | +$452 | $122 | 35,8% / +$98 |
 
-**Pembersihan website (1 Nov 2026):** menu Backtest dan daftar hasil hanya menampilkan **Metode 1 · Level H1 diuji 2–3×** (paling stabil) dan **Breakout v0.8** (paling sering trade). Strategi lain tetap ada di kode dan hasil lamanya tetap di database, hanya disembunyikan (`STRAT_ORDER` / `VISIBLE_STRATEGIES` di `analytics/page.tsx`).
+**Pembersihan website (1 Nov 2026):** menu Backtest dan daftar hasil hanya menampilkan strategi **satu metode** (Metode 1–6, 1 slot; Metode 1 · Level H1 diuji 2–3× paling stabil). Versi gabungan v0.5–v0.8 disembunyikan. Strategi lain tetap ada di kode dan hasil lamanya tetap di database, hanya disembunyikan (`STRAT_ORDER` / `VISIBLE_STRATEGIES` di `analytics/page.tsx`).
 
 ## 6. Keamanan
 - Login admin **nonaktif secara default** atas pilihan pemilik: siapa pun yang tahu URL dapat membuka dashboard dan mengubah pengaturan. Aktifkan dengan env `REQUIRE_LOGIN=true` + `ADMIN_PASSWORD` + `SESSION_SECRET` (cookie HttpOnly bertanda tangan HMAC). Webhook TradingView selalu diautentikasi secret; token Telegram tidak pernah dikirim ke browser.

@@ -314,10 +314,10 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 }
 
 type PairStatus = { symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
-// Website cleaned up (owner's choice): only Metode 1 (most stable) and v0.8 (most trades) can be run and are shown.
-// Older results stay in the database, they are only hidden.
-const STRAT_ORDER = ['metode_level', 'breakout_v08'];
-const VISIBLE_STRATEGIES = new Set(['metode level-v1', 'breakout v0.8']);
+// Website cleaned up (owner's choice): only single-method strategies ("satu metode per versi", 1 slot) can be run and are shown;
+// combined versions (v0.5–v0.8) are hidden. Older results stay in the database, they are only hidden.
+const STRAT_ORDER = METHODS.map((m) => m.adapterKey);
+const VISIBLE_STRATEGIES = new Set(METHODS.map((m) => `metode ${m.version}`));
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
