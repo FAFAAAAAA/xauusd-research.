@@ -14,9 +14,11 @@ export async function POST(req: Request) {
     if (from === null || to === null) throw new HttpError(422, 'Tanggal harus ISO, mis. 2019-01-01T00:00:00Z');
     const rr = Array.isArray(b.rr) ? (b.rr as unknown[]).map(Number).filter((x) => Number.isFinite(x) && x > 0) : undefined;
     const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : undefined);
+    const sw = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && Math.abs(x) <= 1000 ? x : undefined);
     const c = (b.costs ?? {}) as Record<string, unknown>;
     const costs = Object.fromEntries(Object.entries({
       spread: num(c.spread), slippage: num(c.slippage), commissionPerUnit: num(c.commissionPerUnit),
+      swapLong: sw(c.swapLong), swapShort: sw(c.swapShort),
       ambiguityPolicy: ['worst', 'best', 'skip'].includes(c.ambiguityPolicy as string) ? c.ambiguityPolicy : undefined,
     }).filter(([, v]) => v !== undefined));
     return runBacktest(db, {

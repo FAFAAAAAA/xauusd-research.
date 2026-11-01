@@ -227,7 +227,7 @@ export function buildReport(r: ReportInput): HTMLCanvasElement {
   heading('Pengaturan backtest');
   const lines = [
     r.rules,
-    `Spread ${cc.spread ?? '—'} · slippage ${cc.slippage ?? '—'} · komisi $${cc.commissionPerUnit ?? '—'}/lot · TP & SL di 1 candle: ${cc.ambiguityPolicy === 'best' ? 'dihitung TP' : cc.ambiguityPolicy === 'skip' ? 'dilewati' : 'dihitung SL'}`,
+    `Spread ${cc.spread ?? '—'} · slippage ${cc.slippage ?? '—'} · komisi $${cc.commissionPerUnit ?? '—'}/lot · swap BUY $${cc.swapLong ?? 0} / SELL $${cc.swapShort ?? 0} per lot per malam · TP & SL di 1 candle: ${cc.ambiguityPolicy === 'best' ? 'dihitung TP' : cc.ambiguityPolicy === 'skip' ? 'dilewati' : 'dihitung SL'}`,
     r.metrics?.avgHoldHours != null ? `Lama posisi rata-rata ${fmtH(r.metrics.avgHoldHours)} · sampai TP ${fmtH(r.metrics.avgHoldWinHours)} · sampai SL ${fmtH(r.metrics.avgHoldLossHours)}` : '',
     r.metrics?.maxOpenPositions != null ? `Posisi terbuka bersamaan paling banyak ${r.metrics.maxOpenPositions}` : '',
     `Waktu ditampilkan dalam zona ${r.tz}. Hasil simulasi historis, bukan jaminan profit.`,

@@ -373,7 +373,7 @@ const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.50', slippage: '0.30', commission: '10', risk: '10', capital: '1000', ambiguity: 'worst' });
+  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.50', slippage: '0.30', commission: '10', swapLong: '0', swapShort: '0', risk: '10', capital: '1000', ambiguity: 'worst' });
   const [sel, setSel] = useState<string[] | null>(null); // null = all pairs
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);
@@ -400,7 +400,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const strat = strategies.find((x: any) => x.id === f.strategy);
   const params: Record<string, boolean> = {};
-  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${f.tf !== 'M15' ? `|${f.tf}` : ''}`;
+  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${f.tf !== 'M15' ? `|${f.tf}` : ''}${swapTag(Number(f.swapLong) || 0, Number(f.swapShort) || 0)}`;
   const yearsFor = (m: any) => list.filter((y) => y >= yearOf(m.first) && y <= yearOf(m.last));
   const togglePair = (sym: string) => setSel((cur) => {
     const base = cur ?? sets.map((m) => m.symbol);
@@ -409,7 +409,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   });
   const body = (m: any, from: string, to: string) => ({ params,
     source_id: m.source_id, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null, capital: f.capital.trim() ? Number(f.capital) : null,
-    costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), ambiguityPolicy: f.ambiguity },
+    costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), swapLong: Number(f.swapLong) || 0, swapShort: Number(f.swapShort) || 0, ambiguityPolicy: f.ambiguity },
   });
 
   const run = async () => {
@@ -493,6 +493,8 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           <label className="field">Spread XAUUSD ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
           <label className="field">Slippage XAUUSD ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
           <label className="field">Komisi XAUUSD per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
+          <label className="field">Swap BUY per lot per malam ($ biaya)<input inputMode="decimal" value={f.swapLong} onChange={set('swapLong')} /></label>
+          <label className="field">Swap SELL per lot per malam ($ biaya)<input inputMode="decimal" value={f.swapShort} onChange={set('swapShort')} /></label>
           <label className="field">TP & SL kena di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Hitung sebagai SL</option><option value="best">Hitung sebagai TP</option><option value="skip">Lewati</option></select></label>
         </div>
       </details>
@@ -634,11 +636,15 @@ const dataTf = (s: any) => String(s.cost_config?.data_tf ?? 'M15');
 const symOf = (s: any) => String(s.symbol ?? s.cost_config?.symbol ?? 'XAUUSD');
 function configKey(s: any) {
   const p = paramsOf(s);
-  return `${s.strategy ?? '?'}|${Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join(',')}${dataTf(s) !== 'M15' ? `|${dataTf(s)}` : ''}`;
+  return `${s.strategy ?? '?'}|${Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join(',')}${dataTf(s) !== 'M15' ? `|${dataTf(s)}` : ''}${swapTag(s.cost_config?.swapLong, s.cost_config?.swapShort)}`;
 }
+/** Runs with swap are a separate result set (so they never mix with no-swap years). */
+function swapTag(a: unknown, b: unknown) { const x = Number(a) || 0, y = Number(b) || 0; return x || y ? `|swap ${x}/${y}` : ''; }
 function configLabel(s: any) {
   const base = configLabelBase(s);
-  return dataTf(s) !== 'M15' ? `${base} · data ${dataTf(s)}` : base;
+  const x = Number(s.cost_config?.swapLong) || 0, y = Number(s.cost_config?.swapShort) || 0;
+  const sw = x || y ? ` · swap $${x}/$${y}` : '';
+  return (dataTf(s) !== 'M15' ? `${base} · data ${dataTf(s)}` : base) + sw;
 }
 function configLabelBase(s: any) {
   const strat = String(s.strategy ?? 'strategi');

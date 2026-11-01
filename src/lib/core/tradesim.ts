@@ -17,6 +17,22 @@ export interface CostConfig {
   ambiguityPolicy: 'worst' | 'best' | 'skip';
   /** contract multiplier: account currency per 1.00 price move per 1 unit (e.g. 100 for 1 lot = 100 oz) */
   contractSize: number;
+  /** overnight swap COST per 1 unit of size per night (positive = you pay), BUY and SELL; 0 / missing = no swap */
+  swapLong?: number;
+  swapShort?: number;
+}
+
+/** Rollover at 21:00 UTC on Mon–Fri; Wednesday counts 3 nights (weekend). Returns nights charged between entry and exit. */
+export function swapNights(entry: number, exit: number): number {
+  if (!(exit > entry)) return 0;
+  const DAY = 86_400_000, ROLL = 21 * 3_600_000;
+  let n = 0;
+  for (let t = Math.floor((entry - ROLL) / DAY) * DAY + ROLL; t <= exit; t += DAY) {
+    if (t <= entry) continue;
+    const wd = new Date(t).getUTCDay();
+    if (wd >= 1 && wd <= 5) n += wd === 3 ? 3 : 1;
+  }
+  return n;
 }
 
 export const DEFAULT_COSTS: CostConfig = {
@@ -42,7 +58,7 @@ export interface TradeResult {
   pnl: number | null;
   pnlR: number | null;
   plannedRr: number;
-  costs: { spread: number; slippage: number; commission: number };
+  costs: { spread: number; slippage: number; commission: number; swap?: number; nights?: number };
 }
 
 /** Fill price of a market entry at `open`: longs pay the ask (+spread) and slippage, shorts sell the bid minus slippage. */
@@ -68,10 +84,13 @@ export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, c
 
   const finish = (t: number, px: number, reason: TradeResult['exitReason']): TradeResult => {
     const gross = (long ? px - entryPrice : entryPrice - px) * intent.size * cost.contractSize;
-    const pnl = gross - commission;
+    const rate = (long ? cost.swapLong : cost.swapShort) ?? 0;
+    const nights = rate ? swapNights(entryBar.time, t) : 0;
+    const swap = rate * nights * intent.size;
+    const pnl = gross - commission - swap;
     return {
       entryTime: entryBar.time, entryPrice, exitTime: t, exitPrice: px, exitReason: reason,
-      pnl, pnlR: pnl / (risk * intent.size * cost.contractSize), plannedRr, costs,
+      pnl, pnlR: pnl / (risk * intent.size * cost.contractSize), plannedRr, costs: rate ? { ...costs, swap, nights } : costs,
     };
   };
 

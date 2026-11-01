@@ -218,3 +218,17 @@ test('crypto: secret encryption round-trip, masking, sessions', async () => {
   assert.equal(await verifySession(tok.replace(/.$/, 'x'), 'sec', Date.now()), false);
   assert.equal(await verifySession(tok, 'sec', Date.now() + 5000), false);
 });
+
+test('swap: rollover 21:00 UTC Mon–Fri, Wednesday counts 3, charged per lot per night', async () => {
+  const { swapNights, simulateTrade } = await import('../src/lib/core/tradesim');
+  const H = 3_600_000, mon = Date.UTC(2024, 0, 1); // Monday
+  assert.equal(swapNights(mon + 10 * H, mon + 20 * H), 0);
+  assert.equal(swapNights(mon + 10 * H, mon + 22 * H), 1);
+  assert.equal(swapNights(mon + 10 * H, mon + 7 * 24 * H + 10 * H), 7); // a full week = 7 nights
+  assert.equal(swapNights(mon + 2 * 24 * H + 20 * H, mon + 2 * 24 * H + 22 * H), 3); // Wednesday
+  const bars = [0, 1, 2].map((d) => ({ time: mon + d * 24 * H + 12 * H, open: 100, high: d === 2 ? 103 : 100.5, low: 99.5, close: 100, volume: 0 }));
+  const cost = { spread: 0, slippage: 0, commissionPerUnit: 0, ambiguityPolicy: 'worst' as const, contractSize: 100, swapLong: 20 };
+  const r = simulateTrade(bars as any, { side: 'long', entryBarIndex: 0, stopLoss: 99, takeProfit: 102, size: 0.1 }, cost);
+  assert.equal(r.costs.nights, 2);
+  assert.ok(Math.abs((r.pnl ?? 0) - (20 - 2 * 20 * 0.1)) < 1e-9);
+});
