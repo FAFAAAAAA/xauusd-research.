@@ -47,9 +47,9 @@ export interface BreakoutParams {
   /** Trend from Supertrend(10, 3) on closed candles instead of EMAs: every selected timeframe must agree (research). */
   stH4: boolean; stH1: boolean; stD1: boolean;
   /** Level part on M30 / M15 candles instead of H1 (same candle counts, ATR of that timeframe). Research. */
-  lvlM30: boolean; lvlM15: boolean;
+  lvlM30: boolean; lvlM15: boolean; lvlM5: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false, stH4: false, stH1: false, stD1: false, lvlM30: false, lvlM15: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false, stH4: false, stH1: false, stD1: false, lvlM30: false, lvlM15: false, lvlM5: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -227,7 +227,7 @@ export const breakoutAdapter: StrategyAdapter = {
     }
 
     // ---- L (optional): breakout of an H1 swing level that was touched 2–3 times
-    const lvTf = p.lvlM15 ? 'M15' : p.lvlM30 ? 'M30' : 'H1';
+    const lvTf = p.lvlM5 ? 'M5' : p.lvlM15 ? 'M15' : p.lvlM30 ? 'M30' : 'H1';
     const lvMs = TIMEFRAME_MS[lvTf];
     const lvC: readonly Candle[] = lvTf === 'H1' ? h1 : ctx.timeframe === lvTf ? m
       : TIMEFRAME_MS[lvTf] > TIMEFRAME_MS[ctx.timeframe] ? aggregateCandles(m, ctx.timeframe, lvTf, 'utc', false) : [];
