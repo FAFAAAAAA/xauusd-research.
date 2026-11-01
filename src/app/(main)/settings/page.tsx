@@ -13,13 +13,15 @@ export default function Settings() {
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => { setErr(null); call<any>('/api/settings').then(setS).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { load(); }, [load]);
-  if (err) return <><PageHead title="Atur" /><ErrorBox error={err} retry={load} /></>;
-  if (!s) return <><PageHead title="Atur" /><Loading what="pengaturan" /></>;
+  if (err) return <><PageHead title="Settings" sub="Kelola koneksi, preferensi, dan sumber data workspace." /><ErrorBox error={err} retry={load} /></>;
+  if (!s) return <><PageHead title="Settings" sub="Kelola koneksi, preferensi, dan sumber data workspace." /><Loading what="pengaturan" /></>;
   return (
     <div className="stack">
-      <PageHead title="Atur" />
+      <PageHead title="Settings" sub="Kelola koneksi, preferensi, dan sumber data workspace." />
+      <span className="settings-section-title">Integrasi & notifikasi</span>
       <Telegram s={s} reload={load} />
       <TradingView s={s} />
+      <span className="settings-section-title">Preferensi workspace</span>
       <General s={s} reload={load} />
       <details className="group">
         <summary><span><h2>Lanjutan</h2><span className="s">Data riset, berita, zona, impor, log error</span></span></summary>

@@ -1,6 +1,8 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
+import AnalysisSummary from '@/components/AnalysisSummary';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
@@ -47,7 +49,21 @@ export default function Analytics() {
 
   const configs = d?.sessions?.length ? strategyConfigs(d.sessions) : [];
   const [cfg, setCfg] = useState<string | null>(null);
-  const [tab, setTab] = useState<'hasil' | 'jalan' | 'kelola'>('hasil');
+  const search = useSearchParams();
+  const router = useRouter();
+  const tab = search.get('view') === 'run' ? 'jalan' : search.get('view') === 'manage' ? 'kelola' : 'hasil';
+  const setTab = (value: 'hasil' | 'jalan' | 'kelola') => router.replace(value === 'jalan' ? '/analytics?view=run' : value === 'kelola' ? '/analytics?view=manage' : '/analytics', { scroll: false });
+  const requestedSession = search.get('session');
+  const openedSession = useRef<string | null>(null);
+  useEffect(() => {
+    if (!requestedSession || openedSession.current === requestedSession || !d?.sessions) return;
+    const session = d.sessions.find((s: any) => String(s.id) === requestedSession);
+    if (!session) return;
+    openedSession.current = requestedSession;
+    setCfg(configKey(session)); setPair(symOf(session));
+    setYear(periodLabel(session.period_start ?? null, session.period_end ?? null));
+    setRr(rrNum(session)); setDetail(null); setTradeLimit(10);
+  }, [requestedSession, d?.sessions]);
   const cfgSel = cfg && configs.some((c) => c.key === cfg) ? cfg : configs[0]?.key ?? null;
   const cfgSessions: any[] = d?.sessions?.length ? d.sessions.filter((s: any) => configKey(s) === cfgSel) : [];
   const pairs = pairSummaries(cfgSessions, rr);
@@ -102,20 +118,18 @@ export default function Analytics() {
   const hasRuns = rows.length > 0;
   return (
     <div className="stack">
-      <PageHead title="Backtest" sub="Uji strategi di data historis — terpisah dari trading live." />
-      {hasRuns ? (
-        <div className="seg scroll">
+      <PageHead title={tab === 'jalan' ? 'Backtest' : tab === 'kelola' ? 'Riwayat backtest' : 'Analytics'} sub={tab === 'jalan' ? 'Konfigurasi strategi, tentukan risiko, lalu jalankan pengujian.' : 'Pahami hasil strategi. Data historis, terpisah dari trading live.'} />
+      <div className="seg scroll" role="group" aria-label="Area backtest">
           {([['hasil', 'Hasil'], ['jalan', 'Jalankan backtest'], ['kelola', 'Kelola']] as const).map(([k, l]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}</button>)}
-        </div>
-      ) : null}
-
-      {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : !hasRuns ? (
-        <RunBacktest existingFor={() => []} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); }} />
+      </div>
+      {err ? <ErrorBox error={err} retry={load} /> : null}
+      {tab === 'jalan' ? (
+        <RunBacktest existingFor={(k, sym) => yearRows((d?.sessions ?? []).filter((s: any) => configKey(s) === k && symOf(s) === sym)).map((r) => r.label)} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); setTab('hasil'); window.scrollTo({ top: 0 }); }} />
+      ) : !d ? (!err ? <Loading what="hasil" /> : <section className="group empty-state"><h2>Hasil belum tersedia</h2><p>Muat ulang data untuk melihat performa dan riwayat yang tersimpan.</p></section>) : !hasRuns ? (
+        <section className="group empty-state"><h2>Belum ada hasil backtest</h2><p>Mulai pengujian strategi untuk melihat statistik, equity curve, dan riwayat perdagangan.</p><button className="btn primary" onClick={() => setTab('jalan')}>Buka pengaturan backtest</button></section>
       ) : (
         <>
-          {tab === 'jalan' ? (
-            <section className="group"><RunBacktest bare existingFor={(k, sym) => yearRows(d.sessions.filter((s: any) => configKey(s) === k && symOf(s) === sym)).map((r) => r.label)} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); setTab('hasil'); window.scrollTo({ top: 0 }); }} /></section>
-          ) : tab === 'kelola' ? (
+          {tab === 'kelola' ? (
             <section className="group stack">
               <DeleteAll sessions={d.sessions} current={d.sessions.filter((s: any) => configKey(s) === cfgSel)} currentLabel={configs.find((c) => c.key === cfgSel)?.label ?? ''} onDeleted={() => { setCfg(null); reloadAll(); window.scrollTo({ top: 0 }); }} />
               <RunPicker sessions={cfgSessions.filter((s: any) => symOf(s) === pairSel)} selected={cur ? String(cur.id) : ''} tz={tz}
@@ -125,6 +139,7 @@ export default function Analytics() {
           ) : (
           <>
           <section className="group stack">
+            <div><span className="eyebrow">RUANG LINGKUP ANALISIS</span><h2>Strategi & periode</h2></div>
             {configs.length > 1 ? (
               <label className="field">Strategi
                 <select value={cfgSel ?? ''} onChange={(e) => { setCfg(e.target.value); setPair(null); setYear(null); setDetail(null); }}>
@@ -162,60 +177,10 @@ export default function Analytics() {
               <section className="group empty-state"><h2>Belum ada trade</h2><p>Backtest ini tidak menghasilkan trade yang selesai.</p></section>
             ) : (
               <>
-                <section className="hero verdict">
-                  <span className="label">{pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
-                  <span className={`price ${tone(sum.pnl)}`}>{money(sum.pnl)}</span>
-                  <p>{sum.pnl > 0 ? 'Untung' : sum.pnl < 0 ? 'Rugi' : 'Impas'} dari <strong>{sum.trades} trade</strong>: <strong className="pos">{sum.wins} menang</strong>, <strong className="neg">{sum.losses} kalah</strong>.</p>
-                  <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
-                  <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Butuh ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}% agar impas</span></div>
-                  {m && fresh ? <><div className="facts">
-                    <div><span className="label">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
-                    <div><span className="label">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
-                    <div><span className="label">Turun terdalam</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
-                    <div><span className="label">Kalah beruntun</span><strong>{m.maxConsecutiveLosses}×</strong></div>
-                    <div><span className="label">Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
-                    <div><span className="label">Rata-rata per trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
-                  </div>
-                  {m.avgHoldHours != null ? (
-                    <div className="hold">
-                      <span className="label">Rata-rata lama posisi terbuka</span>
-                      <div className="hold3">
-                        <div><strong>{hrs(m.avgHoldHours)}</strong><span>semua trade</span></div>
-                        <div className="pos"><strong>{hrs(m.avgHoldWinHours)}</strong><span>sampai TP</span></div>
-                        <div className="neg"><strong>{hrs(m.avgHoldLossHours)}</strong><span>sampai SL</span></div>
-                      </div>
-                    </div>
-                  ) : null}
-                  {(() => {
-                    // trade frequency over the tested calendar time of the chosen results (sum of their periods)
-                    const days = picked.reduce((a: number, s: any) => a + Math.max(0, (tsMs(s.period_end) - tsMs(s.period_start)) / 86_400_000 || 0), 0);
-                    if (!(days > 0) || !sum.trades) return null;
-                    const f = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
-                    return (
-                      <div className="hold">
-                        <span className="label">Rata-rata jumlah trade</span>
-                        <div className="hold3">
-                          <div><strong>{f(sum.trades / (days * 5 / 7))}</strong><span>per hari bursa</span></div>
-                          <div><strong>{f(sum.trades / (days / 7))}</strong><span>per minggu</span></div>
-                          <div><strong>{f(sum.trades / (days / 30.44))}</strong><span>per bulan</span></div>
-                        </div>
-                        <span className="small mute">Posisi terbuka bersamaan paling banyak: <strong>{m.maxOpenPositions}</strong></span>
-                      </div>
-                    );
-                  })()}
-                  <details className="more">
-                    <summary>Angka lain</summary>
-                    <dl className="kv">
-                      <dt>Total dari trade menang</dt><dd className="pos">{money(m.grossProfit)}</dd>
-                      <dt>Total dari trade kalah</dt><dd className="neg">{money(-m.grossLoss)}</dd>
-                      <dt>Profit factor</dt><dd>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</dd>
-                      <dt>Rata-rata per trade</dt><dd>{money(m.expectancy)}</dd>
-                      <dt>Menang beruntun</dt><dd>{m.maxConsecutiveWins}×</dd>
-                      <dt>Lama posisi (median)</dt><dd>{hrs(m.medianHoldHours)}</dd>
-                      {String(cfgSel ?? '').startsWith('snr') ? <><dt>Zona bertahan / jebol</dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd></> : null}
-                    </dl>
-                  </details></> : <div className="facts"><div><span className="label">Memuat detail…</span></div></div>}
-                </section>
+                <AnalysisSummary sum={sum} metrics={fresh ? m : null}
+                  context={`${pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}${curYear} · RR 1:${curRr} · risiko ${picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade`}
+                  rr={curRr} days={picked.reduce((a: number, s: any) => a + Math.max(0, (tsMs(s.period_end) - tsMs(s.period_start)) / 86_400_000 || 0), 0)}
+                  hours={hrs} zoneOutcomes={String(cfgSel ?? '').startsWith('snr') ? d.zoneOutcomes : null} />
 
                 {fresh ? <>
                 <ReportButton filename={`backtest-${String(pairSel ?? 'xauusd').toLowerCase()}-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
@@ -256,7 +221,7 @@ export default function Analytics() {
                   <section className="group">
                     <h2>Hasil per kondisi pasar</h2>
                     <p className="mute small" style={{ margin: 0 }}>Kondisi saat entry, dari candle harian (ADX 14): ADX &lt; 20 = sideways; selain itu uptrend jika +DI &gt; −DI, downtrend jika sebaliknya.</p>
-                    <div className="tablewrap">
+                    <div className="tablewrap" tabIndex={0} role="region" aria-label="Tabel analisis, geser untuk melihat kolom lainnya">
                       <table><thead><tr><th>Kondisi</th><th>Trade</th><th>Win rate</th><th>Untung/rugi</th><th>Profit factor</th><th>Per trade</th></tr></thead>
                         <tbody>{(['up', 'down', 'sideways'] as const).map((k) => {
                           const g = d.byRegime.find((x: any) => x.key === k)?.metrics;
@@ -271,13 +236,14 @@ export default function Analytics() {
                 <CapitalGrowth key={key} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group">
+                  <h2>Performa berdasarkan periode</h2>
                   <PnlCalendar key={key} trades={closedTrades(d.trades)} tz={tz} />
                 </section>
 
                 {detail ? <TradeDetail d={detail} tz={tz} onClose={() => setDetail(null)} /> : null}
 
                 <section className="group">
-                  <div className="row between"><h2>Trade terakhir</h2><span className="mute small">{d.trades.length} total</span></div>
+                  <div className="row between"><h2>Riwayat perdagangan</h2><span className="mute small">{d.trades.length} total</span></div>
                   <div className="row" style={{ marginTop: 8 }}>
                     <button className="btn sm" onClick={() => setShowTrades((v) => !v)}>{showTrades ? 'Sembunyikan trade' : `Tampilkan trade (${d.trades.length})`}</button>
                     {!showTrades ? <a className="btn sm" href={`/api/analytics/export?kind=trades${key ? `&session=${key}` : ''}`}>Unduh CSV</a> : null}
@@ -323,7 +289,7 @@ function Stat({ label, v, cls = '' }: { label: string; v: React.ReactNode; cls?:
 
 function Breakdown({ title, rows, label = (k: string) => k, plain = false }: { title: string; rows: any[]; label?: (k: string) => string; plain?: boolean }) {
   const body = rows.length ? (
-    <div className="tablewrap"><table><thead><tr><th></th><th>Trade</th><th>Menang</th><th>Kalah</th><th>Win</th><th>P/L</th></tr></thead>
+    <div className="tablewrap" tabIndex={0} role="region" aria-label="Tabel analisis, geser untuk melihat kolom lainnya"><table><thead><tr><th></th><th>Trade</th><th>Menang</th><th>Kalah</th><th>Win</th><th>P/L</th></tr></thead>
       <tbody>{rows.map((r) => <tr key={r.key}><td>{label(r.key)}</td><td>{r.metrics.totalTrades}</td><td className="pos">{r.metrics.wins}</td><td className="neg">{r.metrics.losses}</td><td>{pct(r.metrics.winRate)}</td><td className={tone(r.metrics.totalPnl)}>{money(r.metrics.totalPnl)}</td></tr>)}</tbody></table></div>
   ) : <p className="mute small">Belum ada data.</p>;
   if (plain) return <div className="stack tight"><h3>{title}</h3>{body}</div>;
@@ -386,7 +352,7 @@ const FORM_SAVED = ['spread', 'slippage', 'commission', 'swapLong', 'swapShort',
 const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 
 /** One strategy → every chosen pair, one year per request (sequential), RR 1:1/1:2/1:3 each. */
-function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
+function RunBacktest({ onDone, existingFor }: { onDone: (configKey: string) => void; existingFor: (configKey: string, symbol: string) => string[] }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
   const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.12', slippage: '0.10', commission: '5', swapLong: '67', swapShort: '-25', risk: '10', capital: '1000', ambiguity: 'worst' });
@@ -417,7 +383,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
         .sort((a: any, b: any) => STRAT_ORDER.indexOf(a.adapter_key) - STRAT_ORDER.indexOf(b.adapter_key));
       setStrategies(usable);
       if (usable[0]) setF((x) => ({ ...x, strategy: x.strategy || usable[0].id }));
-    }).catch(() => {});
+    }).catch((e) => setErr(e.message));
   }, []);
   const strat = strategies.find((x: any) => x.id === f.strategy);
   const baseTf: string = (strat && methodByKey(strat.adapter_key)?.baseTf) || 'M15';   // the strategy decides its own base timeframe
@@ -477,9 +443,11 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const allSel = sel == null;
 
   return (
-    <section className={bare ? 'stack' : 'group stack'}>
+    <div className="stack backtest-form">
+      <section className="group stack">
+      <fieldset disabled={busy} className="stack">
+      <legend>01 / Pengaturan strategi</legend>
       <div className="stack tight">
-        {bare ? null : <h2>Jalankan backtest</h2>}
         <p className="mute small">Satu strategi diuji di semua pair yang dipilih, per tahun, dengan RR 1:1, 1:2, dan 1:3.</p>
       </div>
       {strategies.length ? (
@@ -490,7 +458,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       <p className="mute small" style={{ margin: 0 }}>{baseTf === 'M15' ? 'Timeframe mengikuti strategi: entry dikonfirmasi close candle M15, level & tren dari H1/H4/D1. Data emas M15 2004–2026.' : `Strategi scalping: entry di candle ${baseTf}, tren dari M15 ke atas. Data emas ${baseTf} 2004 – Jan 2026.`}</p>
       <div className="stack tight">
         <div className="row between"><span className="label">Pair ({chosen.length}/{sets.length})</span>
-          <button className="btn sm ghost" onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>
+          <button className="btn sm ghost" disabled={!sets.length} onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>
         <div className="chips">
           {sets.map((m) => (
             <button key={m.symbol} className="chip" aria-pressed={allSel || (sel ?? []).includes(m.symbol)} onClick={() => togglePair(m.symbol)}>
@@ -510,6 +478,11 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           <label className="field">Sampai tanggal<input type="date" value={f.to} onChange={set('to')} /></label>
         </div>
       )}
+      </fieldset>
+      </section>
+      <section className="group stack">
+      <fieldset disabled={busy} className="stack">
+      <legend>02 / Risiko & biaya</legend>
       <label className="field">Modal awal ($)<input inputMode="decimal" value={f.capital} onChange={set('capital')} placeholder="1000" /></label>
       <label className="field">Risiko per trade ($)<input inputMode="decimal" value={f.risk} onChange={set('risk')} placeholder="10" /></label>
       <label className="switch">Lewati tahun yang sudah ada hasilnya<input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} /></label>
@@ -525,15 +498,20 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           <label className="field">TP & SL kena di 1 candle<select value={f.ambiguity} onChange={set('ambiguity')}><option value="worst">Hitung sebagai SL</option><option value="best">Hitung sebagai TP</option><option value="skip">Lewati</option></select></label>
         </div>
       </details>
-      {!sets.length ? <div className="notice">{markets.length ? 'Data belum siap.' : 'Memuat daftar pair…'}</div> : null}
+      </fieldset>
+      </section>
+      <section className="group stack execution-panel">
+      <div><span className="eyebrow">03 / EKSEKUSI</span><h2>Jalankan pengujian</h2></div>
+      <p className="mute small">Hasil disimpan sebagai sesi backtest. Tidak ada order live yang dikirim.</p>
+      {!sets.length ? <div className="notice">{err ? 'Daftar pair belum dapat dimuat. Periksa pesan di bawah.' : markets.length ? 'Data belum siap.' : 'Memuat daftar pair…'}</div> : null}
       {busy
         ? <button className="btn block" onClick={() => { stop.current = true; }}>Berhenti setelah tahun ini</button>
         : <button className="btn primary block" onClick={run} disabled={!f.strategy || !chosen.length || (!custom && !list.length)}>
             {custom ? `Jalankan ${chosen.length} pair` : `Jalankan ${chosen.length} pair · ${y1 === y2 ? y1 : `${y1}–${y2}`}`}
           </button>}
-      {err ? <div className="error">{err}</div> : null}
+      {err ? <div className="error" role="alert">{err}</div> : null}
       {prog ? (
-        <div className="stack tight">
+        <div className="stack tight" role="status" aria-live="polite">
           <div className="row between small"><strong>{busy ? 'Sedang berjalan… biarkan halaman ini terbuka' : 'Selesai'}</strong><span className="mute">{finished}/{total} tahun</span></div>
           <div className="wlbar progress" aria-hidden><span style={{ width: `${(finished / Math.max(1, total)) * 100}%` }} /></div>
           <div className="list">
@@ -550,7 +528,8 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           </div>
         </div>
       ) : null}
-    </section>
+      </section>
+    </div>
   );
 }
 
@@ -817,7 +796,7 @@ function CapitalGrowth({ trades, tz, baseRisk, startCapital }: { trades: ClosedT
   const ok = c0 > 0 && r > 0 && !!baseRisk;
   const chart = (
     <section className="group">
-      <h2>Grafik saldo</h2>
+      <span className="eyebrow">EQUITY GROWTH</span><h2>Grafik saldo</h2>
       <EquityChart trades={trades} tz={tz} start={ok ? c0 : 0} scale={ok ? r / baseRisk! : 1} />
     </section>
   );
@@ -838,11 +817,15 @@ function CapitalGrowth({ trades, tz, baseRisk, startCapital }: { trades: ClosedT
   const nYears = Math.max(1, (trades[trades.length - 1].exit - trades[0].entry) / (365.25 * 86_400_000));
   return (<>
     <section className="group">
-      <h2>Perkembangan modal</h2>
+      <h2>Simulasi perkembangan modal</h2>
+      <p className="mute small">Penyesuaian tampilan dari trade yang sama. Tidak mengubah hasil backtest tersimpan.</p>
       <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
         <label className="field" style={{ flex: '1 1 140px' }}>Modal awal ($)<input id="cg-capital" inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
         <label className="field" style={{ flex: '1 1 140px' }}>Risiko per trade ($)<input id="cg-risk" inputMode="decimal" value={risk} onChange={(e) => setRisk(e.target.value)} /></label>
       </div>
+    </section>
+    <section className="group">
+      <h2>Proyeksi hasil modal</h2>
       {!baseRisk ? <p className="mute small">Backtest ini memakai lot tetap, jadi perkembangan modal tidak bisa dihitung ulang.</p> : !ok ? <p className="mute small">Isi modal dan risiko lebih dari 0.</p> : <>
         <p className="mute small" style={{ margin: 0 }}>Risiko {pct(r / c0 * 100).replace('+', '')} dari modal awal per trade, tetap ${r.toLocaleString('en-US')} setiap trade (tidak diputar).</p>
         <div className="facts">
@@ -851,7 +834,7 @@ function CapitalGrowth({ trades, tz, baseRisk, startCapital }: { trades: ClosedT
           <div><span className="label">Rata-rata per tahun</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100 / nYears)}</strong></div>
           <div><span className="label">Turun terdalam</span><strong className="neg">−{ddPct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}% ({usd(ddUsd)})</strong></div>
         </div>
-        <div className="tablewrap" style={{ overflowX: 'auto' }}>
+        <div className="tablewrap" tabIndex={0} role="region" aria-label="Proyeksi modal per tahun" style={{ overflowX: 'auto' }}>
           <table className="tbl"><thead><tr><th>Tahun</th><th>Trade</th><th>Modal awal tahun</th><th>Untung/rugi</th><th>% tahun itu</th></tr></thead>
             <tbody>{rows.map(([y, v]) => (
               <tr key={y}><td>{y}</td><td>{v.n}</td><td>{usd(v.start)}</td><td className={v.pnl >= 0 ? 'pos' : 'neg'}>{v.pnl >= 0 ? '+' : ''}{usd(v.pnl)}</td><td className={v.pnl >= 0 ? 'pos' : 'neg'}>{pct(v.pnl / v.start * 100)}</td></tr>

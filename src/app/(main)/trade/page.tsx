@@ -114,7 +114,13 @@ export default function TradePage() {
           </div>
         ) : null}
 
-        <div className="tablewrap" style={{ marginTop: 12 }}>
+        {!j.trades.length && !draft ? <p className="mute small">Belum ada trade. Catat dari sinyal, kalkulator, atau tombol + Trade.</p> : null}
+        {jErr && !draft ? <div className="error">{jErr}</div> : null}
+      </section>
+      <section className="group">
+        <h2>Ringkasan jurnal</h2>
+        <p className="mute small">Geser tabel untuk melihat seluruh metrik.</p>
+        <div className="tablewrap" tabIndex={0} role="region" aria-label="Statistik jurnal" style={{ marginTop: 12 }}>
           <table>
             <thead><tr><th></th><th>Trade selesai</th><th>Win</th><th>Win backtest</th><th>Hasil</th><th>Rata-rata</th></tr></thead>
             <tbody>
@@ -134,7 +140,10 @@ export default function TradePage() {
         </div>
         {closedT.length > 0 && closedT.length < 30 ? <p className="mute small">Belum bisa dibandingkan: butuh minimal ±30 trade selesai per metode.</p> : null}
 
-        {openT.length ? <h3 style={{ marginTop: 14 }}>Posisi terbuka</h3> : null}
+      </section>
+      <section className="group">
+        <div className="section-heading"><h2>Posisi terbuka</h2><span className="tag">{openT.length} posisi</span></div>
+        {!openT.length ? <p className="mute small">Tidak ada posisi terbuka dalam jurnal.</p> : null}
         <div className="list">
           {openT.map((t) => (
             <div key={t.id} className="item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
@@ -154,7 +163,10 @@ export default function TradePage() {
           ))}
         </div>
 
-        {closedT.length ? <h3 style={{ marginTop: 14 }}>Riwayat</h3> : null}
+      </section>
+      <section className="group">
+        <div className="section-heading"><h2>Riwayat perdagangan</h2><span className="tag">{closedT.length} trade</span></div>
+        {!closedT.length ? <p className="mute small">Trade yang sudah ditutup akan tampil di sini.</p> : null}
         <div className="list">
           {closedT.slice(0, 50).map((t) => (
             <div key={t.id} className="item">
@@ -169,12 +181,10 @@ export default function TradePage() {
             </div>
           ))}
         </div>
-        {!j.trades.length && !draft ? <p className="mute" style={{ marginTop: 8 }}>Belum ada trade. Catat dari sinyal, kalkulator, atau tombol + Trade.</p> : null}
-        {jErr && !draft ? <div className="error">{jErr}</div> : null}
         <p className="mute small" style={{ marginTop: 8 }}>Hasil trade dihitung dari harga keluar × lot × 100 (belum termasuk komisi & swap broker).</p>
       </section>
 
-      <p className="mute small" style={{ textAlign: 'center' }}>Sinyal datang dari indikator TradingView v1/v2 — cara pasang di <Link href="/settings#tradingview">Atur → TradingView</Link>.</p>
+      <p className="mute small" style={{ textAlign: 'center' }}>Sinyal datang dari indikator TradingView v1/v2 — cara pasang di <Link href="/settings#tradingview">Settings → TradingView</Link>.</p>
     </div>
   );
 }

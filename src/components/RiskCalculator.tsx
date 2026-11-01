@@ -34,6 +34,7 @@ export function RiskCalculator() {
   const bar = Math.min(1, ddShare);
 
   return (
+    <>
     <section className="group">
       <h2>Kalkulator risiko modal &amp; lot</h2>
       <p className="mute small">Masukkan modal dan risiko, lalu lihat perkiraan drawdown, ketahanan rugi beruntun, dan hasil — dari backtest 2004–2026.</p>
@@ -50,8 +51,11 @@ export function RiskCalculator() {
       {unit === 'cent' && Number.isFinite(modal) ? <p className="mute small">= {usd(modal)} (100 cent = $1)</p> : null}
       <button className="btn primary block" style={{ marginTop: 10 }} onClick={() => setGo(true)} disabled={!ok}>Hitung risiko</button>
 
+    </section>
       {go && ok ? (
-        <div className="stack tight" style={{ marginTop: 12 }}>
+        <>
+        <section className="group stack">
+          <h2>Eksposur risiko</h2>
           <div className="notice" style={{ background: status.bg }}>
             <strong className={status.c}>{status.t}</strong>
             <div className="small" style={{ marginTop: 4 }}>
@@ -71,7 +75,9 @@ export function RiskCalculator() {
             <div><span className="mute small">Posisi terbuka maks (historis)</span><strong>{s.maxOpen} = {usd(s.maxOpen * r)}</strong></div>
           </div>
 
-          <h3 style={{ marginTop: 6 }}>Perkiraan hasil (rata-rata backtest)</h3>
+        </section>
+        <section className="group">
+          <h2>Perkiraan hasil (rata-rata backtest)</h2>
           <div className="facts">
             <div><span className="mute small">Per bulan</span><strong className="pos">+{usd(s.perMonthR * r)} ({pc((s.perMonthR * r) / modal)})</strong></div>
             <div><span className="mute small">Per tahun</span><strong className="pos">+{usd(s.perMonthR * 12 * r)} ({pc((s.perMonthR * 12 * r) / modal)})</strong></div>
@@ -81,8 +87,10 @@ export function RiskCalculator() {
             <div><span className="mute small">12 bulan terburuk</span><strong className="neg">{usd(s.worst12mR * r)} ({pc((s.worst12mR * r) / modal)})</strong></div>
           </div>
 
-          <h3 style={{ marginTop: 6 }}>Ketahanan rugi beruntun</h3>
-          <div className="tablewrap">
+        </section>
+        <section className="group stack">
+          <h2>Ketahanan rugi beruntun</h2>
+          <div className="tablewrap" tabIndex={0} role="region" aria-label="Ketahanan modal">
             <table>
               <thead><tr><th>Kena SL berturut-turut</th><th>Total rugi</th><th>% modal</th></tr></thead>
               <tbody>
@@ -103,8 +111,9 @@ export function RiskCalculator() {
             </div>
           </div>
           <p className="mute small">Dihitung dari backtest website (2004–2026, RR 1:2, biaya rata-rata broker + swap). Hasil nyata bisa berbeda; bukan jaminan dan bukan nasihat keuangan.</p>
-        </div>
+        </section>
+        </>
       ) : null}
-    </section>
+    </>
   );
 }

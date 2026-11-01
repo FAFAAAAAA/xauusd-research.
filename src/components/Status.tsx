@@ -10,7 +10,7 @@ export function ModeTag({ mode, test }: { mode: string; test?: boolean }) {
   );
 }
 export function PageHead({ title, sub, children }: { title: string; sub?: string; children?: React.ReactNode }) {
-  return <div className="page-head"><h1>{title}</h1>{sub ? <p className="sub">{sub}</p> : null}{children}</div>;
+  return <header className="page-head"><h1>{title}</h1>{sub ? <p className="sub">{sub}</p> : null}{children}</header>;
 }
 export function Loading({ what = 'data' }: { what?: string }) {
   return (
@@ -20,5 +20,5 @@ export function Loading({ what = 'data' }: { what?: string }) {
   );
 }
 export function ErrorBox({ error, retry }: { error: string; retry?: () => void }) {
-  return <div className="error row between"><span>{error}</span>{retry ? <button className="btn sm" onClick={retry}>Coba lagi</button> : null}</div>;
+  return <div className="error row between" role="alert"><div className="stack tight"><strong>Data belum dapat dimuat</strong><span className="small">{error}</span></div>{retry ? <button className="btn sm" onClick={retry}>Coba lagi</button> : null}</div>;
 }

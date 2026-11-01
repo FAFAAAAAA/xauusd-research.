@@ -3,10 +3,12 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'XAUUSD Research',
-  description: 'Backtest dan replay strategi SNR emas (XAUUSD) dengan notifikasi Telegram.',
+  description: 'Workspace riset XAUUSD: backtest strategi, analytics performa, jurnal trading, dan manajemen risiko.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'XAUUSD Research' },
   robots: { index: false, follow: false },
 };
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#f2f4f7' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, maximumScale: 1, viewportFit: 'cover', themeColor: '#0c0d0f' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

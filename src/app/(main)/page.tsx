@@ -1,85 +1,19 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { call, fmt, peek, px } from '@/components/client';
-import { ErrorBox, Loading, PageHead, Status } from '@/components/Status';
-import { CATEGORY_LABEL } from '@/lib/core/news';
+import useSWR from 'swr';
+import { call } from '@/components/client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type Dash = any;
-
+import { ErrorBox, Loading, PageHead } from '@/components/Status';
+import ResearchOverview from '@/components/ResearchOverview';
+import LiveOverview from '@/components/LiveOverview';
 
 export default function Dashboard() {
-  const [d, setD] = useState<Dash | null>(() => peek<Dash>('/api/dashboard'));
-  const [err, setErr] = useState<string | null>(null);
-  const load = useCallback(() => { setErr(null); call<Dash>('/api/dashboard').then(setD).catch((e) => setErr(e.message)); }, []);
-  useEffect(() => { load(); const t = setInterval(load, 30_000); return () => clearInterval(t); }, [load]);
-  if (err) return <><PageHead title="Beranda" /><ErrorBox error={err} retry={load} /></>;
-  if (!d) return <><PageHead title="Beranda" /><Loading /></>;
-  const tz = d.timezone;
-  const tg = d.telegram;
-  const tv = d.tradingview;
-  const tgOk = tg.tokenConfigured && tg.chatConfigured && tg.lastTest?.ok;
-  const tr = d.trading;
-  const sig = tr.lastSignal;
-  const money = (n: number) => `${n < 0 ? '−' : n > 0 ? '+' : ''}$${Math.abs(n).toFixed(2)}`;
-  return (
-    <div className="stack">
-      <PageHead title="Beranda" />
-
-      <section className="hero">
-        <span className="label">Bulan ini (jurnal live)</span>
-        <span className={`price ${tr.month.pnl > 0 ? 'pos' : tr.month.pnl < 0 ? 'neg' : ''}`}>{money(tr.month.pnl)}</span>
-        <span className="mute small">{tr.month.closed} trade selesai{tr.month.winRate != null ? ` · win ${(tr.month.winRate * 100).toFixed(0)}%` : ''} · {tr.open} posisi terbuka</span>
-        <div className="row" style={{ marginTop: 10 }}><Link className="btn sm primary" href="/trade">Buka Trade</Link><Link className="btn sm" href="/calculator">Kalkulator</Link></div>
-      </section>
-
-      <section className="group">
-        <h2>Sinyal live terakhir</h2>
-        {sig ? (
-          <div className="item" style={{ marginTop: 8 }}>
-            <span style={{ minWidth: 0 }}>
-              <span className="t" style={{ display: 'block' }}>{sig.label}</span>
-              <span className="d">{fmt(sig.time, tz)} · Entry ≈ {px(sig.entry)} · SL {px(sig.sl)} · TP {px(sig.tp)}</span>
-            </span>
-            <span className={`tag ${sig.side === 'BUY' ? 'buy' : 'sell'}`}>{sig.side}</span>
-          </div>
-        ) : <p className="mute" style={{ marginTop: 8 }}>Belum ada. Pasang indikator v1/v2 di TradingView (menu Trade).</p>}
-      </section>
-
-      <section className="group">
-        <h2>Koneksi</h2>
-        <div className="list">
-          <div className="item">
-            <span className="t">Bot Telegram</span>
-            <span className="end"><Status on={!!tgOk} error={tg.lastTest && !tg.lastTest.ok}>
-              {!tg.tokenConfigured ? 'Belum diatur' : !tg.chatConfigured ? 'Chat ID kosong' : !tg.lastTest ? 'Belum dites' : tg.lastTest.ok ? 'Terhubung' : 'Gagal'}
-            </Status></span>
-          </div>
-          <div className="item">
-            <span className="t">TradingView (live)</span>
-            <span className="end"><Status on={tv.configured && tv.lastStatus?.status === 'accepted'} error={tv.lastStatus && !['accepted', 'duplicate'].includes(tv.lastStatus.status)}>
-              {!tv.configured ? 'Belum diatur' : tv.lastStatus ? (tv.lastStatus.status === 'accepted' ? `Alert ${fmt(tv.lastStatus.at, tz)}` : 'Alert ditolak') : 'Menunggu alert'}
-            </Status></span>
-          </div>
-        </div>
-      </section>
-
-      <section className="group">
-        <div className="row between"><h2>Berita penting minggu ini</h2><Link className="btn sm ghost" href="/news">Semua</Link></div>
-        {d.upcomingNews.length ? (
-          <div className="list">
-            {d.upcomingNews.slice(0, 4).map((n: any) => (
-              <div key={n.id} className="item">
-                <span style={{ minWidth: 0 }}><span className="t" style={{ display: 'block' }}>{n.title}</span>
-                  <span className="d">{fmt(n.scheduledAt, tz)} · {CATEGORY_LABEL[n.category as keyof typeof CATEGORY_LABEL] ?? n.category}</span></span>
-                {n.impact === 'high' ? <span className="tag sell">Tinggi</span> : <span className="tag">{n.impact}</span>}
-              </div>
-            ))}
-          </div>
-        ) : <p className="mute">Kalender belum diisi. <Link href="/news">Impor di Berita</Link></p>}
-      </section>
-
-    </div>
-  );
+  const { data, error, mutate, isValidating } = useSWR('/api/dashboard', call<any>, { refreshInterval: 30_000, shouldRetryOnError: false });
+  return <div className="stack">
+    <div className="page-heading-row"><PageHead title="Dashboard" sub="Satu tempat untuk memahami performa strategi Anda." /><div className="page-actions"><button className="btn icon-button" aria-label="Muat ulang ringkasan live" disabled={isValidating} onClick={() => void mutate()}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12 0l2 5M4 12l2 5a7 7 0 0 0 12 0" /></svg></button><Link href="/analytics?view=run" className="btn primary"><span aria-hidden="true">+</span> Backtest baru</Link></div></div>
+    <div className="row"><span className="tag">Overview</span><span className="small mute">XAUUSD & multi-asset</span></div>
+    <ResearchOverview timezone={data?.timezone ?? 'UTC'} />
+    {data ? <LiveOverview data={data} /> : error ? <section className="group"><div className="section-heading"><div><h2>Trading live & integrasi</h2><p>Jurnal, sinyal, koneksi, dan agenda ekonomi</p></div></div><ErrorBox error={error.message} retry={() => void mutate()} /></section> : <Loading what="jurnal dan integrasi" />}
+  </div>;
 }
