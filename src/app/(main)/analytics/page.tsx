@@ -158,6 +158,23 @@ export default function Analytics() {
                       </div>
                     </div>
                   ) : null}
+                  {(() => {
+                    // trade frequency over the tested calendar time of the chosen results (sum of their periods)
+                    const days = picked.reduce((a: number, s: any) => a + Math.max(0, (Date.parse(s.period_end) - Date.parse(s.period_start)) / 86_400_000), 0);
+                    if (!(days > 0) || !sum.trades) return null;
+                    const f = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
+                    return (
+                      <div className="hold">
+                        <span className="label">Rata-rata jumlah trade</span>
+                        <div className="hold3">
+                          <div><strong>{f(sum.trades / (days * 5 / 7))}</strong><span>per hari bursa</span></div>
+                          <div><strong>{f(sum.trades / (days / 7))}</strong><span>per minggu</span></div>
+                          <div><strong>{f(sum.trades / (days / 30.44))}</strong><span>per bulan</span></div>
+                        </div>
+                        <span className="small mute">Posisi terbuka bersamaan paling banyak: <strong>{m.maxOpenPositions}</strong></span>
+                      </div>
+                    );
+                  })()}
                   <details className="more">
                     <summary>Angka lain</summary>
                     <dl className="kv">

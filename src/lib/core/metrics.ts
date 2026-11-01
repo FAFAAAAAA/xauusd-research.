@@ -35,6 +35,8 @@ export interface Metrics {
   medianHoldHours: number | null;
   avgHoldWinHours: number | null;
   avgHoldLossHours: number | null;
+  /** Most positions open at the same time (entry ≤ t < exit). */
+  maxOpenPositions: number;
 }
 
 /** Returns null when there are no closed trades — the UI then shows an empty state, never zeros. */
@@ -68,6 +70,12 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     if (t.plannedRr != null) rrs.push(t.plannedRr);
   }
   const n = closed.length;
+  // most positions open at once: sweep entries/exits (an exit at the same moment as an entry frees the slot first)
+  const ev: Array<[number, number]> = [];
+  for (const t of closed) { ev.push([t.entryTime, 1]); ev.push([t.exitTime!, -1]); }
+  ev.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let open = 0, maxOpen = 0;
+  for (const [, d] of ev) { open += d; if (open > maxOpen) maxOpen = open; }
   const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
   return {
     totalTrades: n,
@@ -88,6 +96,7 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     medianHoldHours: hold.length ? [...hold].sort((a, b) => a - b)[Math.floor(hold.length / 2)] : null,
     avgHoldWinHours: avg(holdW),
     avgHoldLossHours: avg(holdL),
+    maxOpenPositions: maxOpen,
   };
 }
 
