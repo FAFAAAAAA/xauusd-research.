@@ -421,8 +421,8 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
         <span className="label">Data</span>
         <div className="seg" role="group" aria-label="Timeframe data">
           <button aria-pressed={f.tf === 'M5'} onClick={() => setF((x) => ({ ...x, tf: 'M5', y1: '', y2: '' }))}>M5 · emas 2004–Jan 2026</button>
-          <button aria-pressed={f.tf === 'M15'} onClick={() => setF((x) => ({ ...x, tf: 'M15', y1: '', y2: '' }))}>M15 · emas sejak 2004</button>
-          <button aria-pressed={f.tf === 'M30'} onClick={() => setF((x) => ({ ...x, tf: 'M30', y1: '', y2: '' }))}>M30 · emas sejak 2004</button>
+          <button aria-pressed={f.tf === 'M15'} onClick={() => setF((x) => ({ ...x, tf: 'M15', y1: '', y2: '' }))}>M15 · emas 2004–Jan 2026</button>
+          <button aria-pressed={f.tf === 'M30'} onClick={() => setF((x) => ({ ...x, tf: 'M30', y1: '', y2: '' }))}>M30 · emas 2004–Jan 2026</button>
         </div>
       </div>
       <div className="stack tight">

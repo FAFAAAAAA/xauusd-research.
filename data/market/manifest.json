@@ -101,8 +101,8 @@
   "symbol": "XAUUSD",
   "tf": "M30",
   "first": 1086926400000,
-  "last": 1793392200000,
-  "candles": 263273
+  "last": 1769808600000,
+  "candles": 248912
  },
  "BTCUSD_M30": {
   "symbol": "BTCUSD",
@@ -129,8 +129,8 @@
   "symbol": "XAUUSD",
   "tf": "M15",
   "first": 1086927300000,
-  "last": 1793393100000,
-  "candles": 515106
+  "last": 1769809500000,
+  "candles": 494235
  },
  "USDCAD_M30": {
   "symbol": "USDCAD",
