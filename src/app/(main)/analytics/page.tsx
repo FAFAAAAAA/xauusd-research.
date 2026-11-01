@@ -234,6 +234,22 @@ export default function Analytics() {
                   rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
                   metrics: m, trades: d.trades, yearRows: rows, rrOf: rrNum, tz,
                 } : null)} />
+                {fresh && d.byRegime?.length ? (
+                  <section className="group">
+                    <h2>Hasil per kondisi pasar</h2>
+                    <p className="mute small" style={{ margin: 0 }}>Kondisi saat entry, dari candle harian (ADX 14): ADX &lt; 20 = sideways; selain itu uptrend jika +DI &gt; −DI, downtrend jika sebaliknya.</p>
+                    <div className="tablewrap">
+                      <table><thead><tr><th>Kondisi</th><th>Trade</th><th>Win rate</th><th>Untung/rugi</th><th>Profit factor</th><th>Per trade</th></tr></thead>
+                        <tbody>{(['up', 'down', 'sideways'] as const).map((k) => {
+                          const g = d.byRegime.find((x: any) => x.key === k)?.metrics;
+                          const lab = k === 'up' ? 'Uptrend' : k === 'down' ? 'Downtrend' : 'Sideways';
+                          return g ? (
+                            <tr key={k}><td>{lab}</td><td>{g.totalTrades}</td><td>{(g.winRate * 100).toFixed(1)}%</td><td className={tone(g.totalPnl)}>{money(g.totalPnl)}</td><td>{g.profitFactor == null ? '—' : g.profitFactor.toFixed(2)}</td><td className={tone(g.expectancy)}>{money(g.expectancy ?? 0)}</td></tr>
+                          ) : <tr key={k}><td>{lab}</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>;
+                        })}</tbody></table>
+                    </div>
+                  </section>
+                ) : null}
                 <CapitalGrowth key={key} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group">
