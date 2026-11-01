@@ -47,6 +47,7 @@ export default function Analytics() {
 
   const configs = d?.sessions?.length ? strategyConfigs(d.sessions) : [];
   const [cfg, setCfg] = useState<string | null>(null);
+  const [tab, setTab] = useState<'hasil' | 'jalan' | 'kelola'>('hasil');
   const cfgSel = cfg && configs.some((c) => c.key === cfg) ? cfg : configs[0]?.key ?? null;
   const cfgSessions: any[] = d?.sessions?.length ? d.sessions.filter((s: any) => configKey(s) === cfgSel) : [];
   const pairs = pairSummaries(cfgSessions, rr);
@@ -101,12 +102,28 @@ export default function Analytics() {
   const hasRuns = rows.length > 0;
   return (
     <div className="stack">
-      <PageHead title="Hasil backtest" />
+      <PageHead title="Backtest" sub="Uji strategi di data historis — terpisah dari trading live." />
+      {hasRuns ? (
+        <div className="seg scroll">
+          {([['hasil', 'Hasil'], ['jalan', 'Jalankan backtest'], ['kelola', 'Kelola']] as const).map(([k, l]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}</button>)}
+        </div>
+      ) : null}
 
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" /> : !hasRuns ? (
         <RunBacktest existingFor={() => []} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); }} />
       ) : (
         <>
+          {tab === 'jalan' ? (
+            <section className="group"><RunBacktest bare existingFor={(k, sym) => yearRows(d.sessions.filter((s: any) => configKey(s) === k && symOf(s) === sym)).map((r) => r.label)} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); setTab('hasil'); window.scrollTo({ top: 0 }); }} /></section>
+          ) : tab === 'kelola' ? (
+            <section className="group stack">
+              <DeleteAll sessions={d.sessions} current={d.sessions.filter((s: any) => configKey(s) === cfgSel)} currentLabel={configs.find((c) => c.key === cfgSel)?.label ?? ''} onDeleted={() => { setCfg(null); reloadAll(); window.scrollTo({ top: 0 }); }} />
+              <RunPicker sessions={cfgSessions.filter((s: any) => symOf(s) === pairSel)} selected={cur ? String(cur.id) : ''} tz={tz}
+                onSelect={(id) => { const s0 = d.sessions.find((x: any) => String(x.id) === id); if (s0) choose(periodLabel(s0.period_start ?? null, s0.period_end ?? null), rrNum(s0)); window.scrollTo({ top: 0 }); }}
+                onDeleted={() => reloadAll()} />
+            </section>
+          ) : (
+          <>
           <section className="group stack">
             {configs.length > 1 ? (
               <label className="field">Strategi
@@ -292,19 +309,8 @@ export default function Analytics() {
             )}
           </div>
 
-          <details className="group">
-            <summary><span><h2>Backtest baru</h2><span className="s">Jalankan tahun lain atau ubah risiko</span></span></summary>
-            <div className="body"><RunBacktest bare existingFor={(k, sym) => yearRows(d.sessions.filter((s: any) => configKey(s) === k && symOf(s) === sym)).map((r) => r.label)} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); window.scrollTo({ top: 0 }); }} /></div>
-          </details>
-          <details className="group">
-            <summary><span><h2>Kelola hasil</h2><span className="s">Hapus backtest lama, dobel, atau semuanya</span></span></summary>
-            <div className="body">
-              <DeleteAll sessions={d.sessions} current={d.sessions.filter((s: any) => configKey(s) === cfgSel)} currentLabel={configs.find((c) => c.key === cfgSel)?.label ?? ''} onDeleted={() => { setCfg(null); reloadAll(); window.scrollTo({ top: 0 }); }} />
-              <RunPicker sessions={cfgSessions.filter((s: any) => symOf(s) === pairSel)} selected={cur ? String(cur.id) : ''} tz={tz}
-                onSelect={(id) => { const s0 = d.sessions.find((x: any) => String(x.id) === id); if (s0) choose(periodLabel(s0.period_start ?? null, s0.period_end ?? null), rrNum(s0)); window.scrollTo({ top: 0 }); }}
-                onDeleted={() => reloadAll()} />
-            </div>
-          </details>
+          </>
+          )}
         </>
       )}
     </div>

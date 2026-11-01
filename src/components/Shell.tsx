@@ -16,7 +16,7 @@ const ITEMS = [
   { href: '/', label: 'Beranda', icon: I.home },
   { href: '/trade', label: 'Trade', icon: I.trade },
   { href: '/calculator', label: 'Kalkulator', icon: I.calc },
-  { href: '/analytics', label: 'Hasil', icon: I.results },
+  { href: '/analytics', label: 'Backtest', icon: I.results },
   { href: '/settings', label: 'Atur', icon: I.settings },
 ];
 

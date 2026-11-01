@@ -31,7 +31,7 @@ export default function Dashboard() {
         <span className="label">Bulan ini (jurnal live)</span>
         <span className={`price ${tr.month.pnl > 0 ? 'pos' : tr.month.pnl < 0 ? 'neg' : ''}`}>{money(tr.month.pnl)}</span>
         <span className="mute small">{tr.month.closed} trade selesai{tr.month.winRate != null ? ` · win ${(tr.month.winRate * 100).toFixed(0)}%` : ''} · {tr.open} posisi terbuka</span>
-        <div className="row" style={{ marginTop: 10 }}><Link className="btn sm primary" href="/trade">Buka Trade</Link><Link className="btn sm" href="/analytics">Hasil backtest</Link></div>
+        <div className="row" style={{ marginTop: 10 }}><Link className="btn sm primary" href="/trade">Buka Trade</Link><Link className="btn sm" href="/calculator">Kalkulator</Link></div>
       </section>
 
       <section className="group">
