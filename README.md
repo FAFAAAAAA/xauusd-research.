@@ -332,3 +332,10 @@ Mesin website, 2004–2026, biaya rata-rata broker (spread 0,12, slippage 0,10, 
 | **volbreak-v4** | 8,0 | 39,5% | **+$1.899** | 1,13 | **$562** | **70%** (median 13,5 jam) | **+$385** | +$1.514 |
 
 Diuji juga dan ditolak: aturan 1 yang disederhanakan (semua varian lebih banyak trade tapi untung turun; tanpa D1 hanya menambah SELL dengan win 31,8%), UT Bot sebagai tren, penutupan sebelum rollover (bertentangan dengan aturan TP/SL). volbreak-v3 dipensiunkan; hasil lamanya tetap di database tetapi disembunyikan.
+
+## 5t. Kalkulator risiko modal & lot (menu Trade, 1 Nov 2026)
+
+Seperti contoh website di video pemilik: isi modal (USD atau cent), lalu risiko % per trade atau lot tetap, pilih v1 / v2 / v1+v2.
+Statistik diambil dari `src/lib/core/risk-stats.ts` (backtest mesin website 2004–2026, biaya rata-rata broker + swap; semua dalam R).
+Keluaran: drawdown historis terburuk dalam $ dan % modal (ideal ≤ 40%), risiko/lot/modal ideal, posisi terbuka maks, perkiraan hasil per bulan/tahun,
+bulan & 12 bulan terburuk, dan tabel rugi beruntun. Mode lot memakai jarak SL median strategi (perkiraan). Perbarui `risk-stats.ts` kalau strategi berubah.

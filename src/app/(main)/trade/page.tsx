@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, fmt, peek, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
+import { RiskCalculator } from '@/components/RiskCalculator';
 import { liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/lib/core/journal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -119,6 +120,8 @@ export default function TradePage() {
           <button className="btn sm" style={{ marginTop: 12 }} onClick={() => openDraft({ side: cSide, entry: cEntry, sl: cSl, tp: cTp.toFixed(2), lot: calc.lot.toFixed(2) })}>Catat ke jurnal</button>
         ) : null}
       </section>
+
+      <RiskCalculator />
 
       <section className="group">
         <h2>Sinyal live</h2>
