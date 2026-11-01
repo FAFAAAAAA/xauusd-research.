@@ -6,7 +6,7 @@ import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
 import { ReportButton } from '@/components/ReportImage';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
-import { METHODS, methodByStrategy } from '@/lib/core/strategy/methods-meta';
+import { METHODS, methodByKey, methodByStrategy } from '@/lib/core/strategy/methods-meta';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), { ssr: false });
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -413,7 +413,9 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       if (usable[0]) setF((x) => ({ ...x, strategy: x.strategy || usable[0].id }));
     }).catch(() => {});
   }, []);
-  const sets = markets.filter((m) => m.tf === f.tf && m.source_id);
+  const strat = strategies.find((x: any) => x.id === f.strategy);
+  const baseTf: string = (strat && methodByKey(strat.adapter_key)?.baseTf) || 'M15';   // the strategy decides its own base timeframe
+  const sets = markets.filter((m) => m.tf === baseTf && m.source_id);
   const chosen = sets.filter((m) => sel == null || sel.includes(m.symbol));
   const firstY = chosen.length ? Math.min(...chosen.map((m) => yearOf(m.first))) : 2018;
   const lastY = chosen.length ? Math.max(...chosen.map((m) => yearOf(m.last))) : new Date().getUTCFullYear();
@@ -421,9 +423,8 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const y1 = Math.max(Number(f.y1) || firstY, firstY), y2 = Math.min(Number(f.y2) || lastY, lastY);
   const list = years.filter((y) => y >= y1 && y <= y2);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
-  const strat = strategies.find((x: any) => x.id === f.strategy);
   const params: Record<string, boolean> = {};
-  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${f.tf !== 'M15' ? `|${f.tf}` : ''}${swapTag(Number(f.swapLong) || 0, Number(f.swapShort) || 0)}`;
+  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${baseTf !== 'M15' ? `|${baseTf}` : ''}${swapTag(Number(f.swapLong) || 0, Number(f.swapShort) || 0)}`;
   const yearsFor = (m: any) => list.filter((y) => y >= yearOf(m.first) && y <= yearOf(m.last));
   const togglePair = (sym: string) => setSel((cur) => {
     const base = cur ?? sets.map((m) => m.symbol);
@@ -480,7 +481,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           {strategies.map((s) => <option key={s.id} value={s.id}>{STRAT_LABEL[s.adapter_key] ?? `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : null}
-      <p className="mute small" style={{ margin: 0 }}>Timeframe mengikuti strategi: entry dikonfirmasi close candle M15, level &amp; tren dari H1/H4/D1. Data emas M15 2004–2026.</p>
+      <p className="mute small" style={{ margin: 0 }}>{baseTf === 'M15' ? 'Timeframe mengikuti strategi: entry dikonfirmasi close candle M15, level & tren dari H1/H4/D1. Data emas M15 2004–2026.' : `Strategi scalping: entry di candle ${baseTf}, tren dari M15 ke atas. Data emas ${baseTf} 2004 – Jan 2026.`}</p>
       <div className="stack tight">
         <div className="row between"><span className="label">Pair ({chosen.length}/{sets.length})</span>
           <button className="btn sm ghost" onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>

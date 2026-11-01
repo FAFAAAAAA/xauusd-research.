@@ -73,6 +73,17 @@ export interface GuardResult {
 }
 
 /** Runs a strategy on a defensively copied, frozen context and drops any look-ahead output. */
+// Frozen closed-candle copies, reused while the caller passes the same array (backtests on M1/M5 reuse one HTF view
+// for many base candles). Re-checked every call: only reused if its last candle is still closed at `now`.
+const frozenHtf = new WeakMap<readonly Candle[], readonly Candle[]>();
+function closedHtf(arr: readonly Candle[], ms: number, now: number): readonly Candle[] {
+  const hit = frozenHtf.get(arr);
+  if (hit && (hit.length === 0 || hit[hit.length - 1].time + ms <= now) && hit.length === arr.length) return hit;
+  const out = Object.freeze(arr.filter((c) => c.time + ms <= now));
+  if (out.length === arr.length) frozenHtf.set(arr, out);
+  return out;
+}
+
 export function runStrategyGuarded(adapter: StrategyAdapter, ctx: StrategyContext): GuardResult {
   const violations: string[] = [];
   const last = ctx.candles[ctx.candles.length - 1];
@@ -87,9 +98,7 @@ export function runStrategyGuarded(adapter: StrategyAdapter, ctx: StrategyContex
     },
     htf: ctx.htf
       ? (Object.fromEntries(
-          Object.entries(ctx.htf).map(([tf, arr]) => [
-            tf, Object.freeze((arr ?? []).filter((c) => c.time + TIMEFRAME_MS[tf as Timeframe] <= ctx.now)),
-          ]),
+          Object.entries(ctx.htf).map(([tf, arr]) => [tf, closedHtf(arr ?? [], TIMEFRAME_MS[tf as Timeframe], ctx.now)]),
         ) as StrategyContext['htf'])
       : undefined,
   };

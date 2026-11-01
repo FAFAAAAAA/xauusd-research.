@@ -101,6 +101,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     htf[t] = await P.between(t, v.from - days * DAY, v.to);
   }
   const ptr: Partial<Record<Timeframe, number>> = {};
+  const view: Partial<Record<Timeframe, readonly Candle[]>> = {};   // reused until a new HTF candle closes (fast on M1/M5 bases)
   for (const t of htfList) ptr[t] = 0;
 
   const instrumentId = await repo.getInstrumentId(db, symbol);
@@ -119,8 +120,9 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       const arr = htf[t]!;
       let p = ptr[t]!;
       while (p < arr.length && arr[p].time + TIMEFRAME_MS[t] <= now) p++; // closed HTF candles only
+      if (p !== ptr[t] || !view[t]) view[t] = arr.slice(Math.max(0, p - (adapter.htfWindow?.[t] ?? HTF_WINDOW)), p);
       ptr[t] = p;
-      ctxHtf[t] = arr.slice(Math.max(0, p - (adapter.htfWindow?.[t] ?? HTF_WINDOW)), p);
+      ctxHtf[t] = view[t];
     }
     const window = m15.slice(Math.max(0, i + 1 - M15_WINDOW), i + 1);
     if (window.length < adapter.warmupCandles) continue;
