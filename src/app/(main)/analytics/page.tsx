@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
-import { EquityChart, PnlCalendar, closedTrades } from '@/components/ResultCharts';
+import { EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
 import { ReportButton } from '@/components/ReportImage';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
 import { METHODS, methodByStrategy } from '@/lib/core/strategy/methods-meta';
@@ -232,11 +232,7 @@ export default function Analytics() {
                   rr: curRr, riskUsd: picked[0]?.cost_config?.risk_usd ?? null, costs: picked[0]?.cost_config ?? null,
                   metrics: m, trades: d.trades, yearRows: rows, rrOf: rrNum, tz,
                 } : null)} />
-                <CapitalGrowth key={key} trades={closedTrades(d.trades)} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
-                <section className="group">
-                  <h2>Grafik saldo</h2>
-                  <EquityChart trades={closedTrades(d.trades)} tz={tz} />
-                </section>
+                <CapitalGrowth key={key} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group">
                   <PnlCalendar key={key} trades={closedTrades(d.trades)} tz={tz} />
@@ -762,12 +758,18 @@ function YearTable({ sessions, selected, tz, onSelect, onDeleted }: {
 
 
 /** Capital growth from the backtest trades: fixed $ risk per trade (as simulated), scaled to the risk the owner types here. */
-function CapitalGrowth({ trades, baseRisk, startCapital }: { trades: { entry: number; exit: number; pnl: number }[]; baseRisk: number | null; startCapital: number | null }) {
+function CapitalGrowth({ trades, tz, baseRisk, startCapital }: { trades: ClosedTrade[]; tz: string; baseRisk: number | null; startCapital: number | null }) {
   const [cap, setCap] = useState(String(startCapital ?? 1000));
   const [risk, setRisk] = useState(String(baseRisk ?? 10));
   const c0 = Number(cap.replace(',', '.')), r = Number(risk.replace(',', '.'));
   if (!trades.length) return null;
   const ok = c0 > 0 && r > 0 && !!baseRisk;
+  const chart = (
+    <section className="group">
+      <h2>Grafik saldo</h2>
+      <EquityChart trades={trades} tz={tz} start={ok ? c0 : 0} scale={ok ? r / baseRisk! : 1} />
+    </section>
+  );
   const k = ok ? r / baseRisk! : 1;
   const pct = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
   const usd = (x: number) => `${x < 0 ? '−' : ''}$${Math.abs(x).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
@@ -783,7 +785,7 @@ function CapitalGrowth({ trades, baseRisk, startCapital }: { trades: { entry: nu
   }
   const total = eq - c0, rows = [...years.entries()].sort((a, b) => a[0] - b[0]);
   const nYears = Math.max(1, (trades[trades.length - 1].exit - trades[0].entry) / (365.25 * 86_400_000));
-  return (
+  return (<>
     <section className="group">
       <h2>Perkembangan modal</h2>
       <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
@@ -806,5 +808,6 @@ function CapitalGrowth({ trades, baseRisk, startCapital }: { trades: { entry: nu
         </div>
       </>}
     </section>
-  );
+    {chart}
+  </>);
 }
