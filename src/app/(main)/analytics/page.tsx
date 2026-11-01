@@ -41,6 +41,7 @@ export default function Analytics() {
   const [tz, setTz] = useState('UTC');
   const [detail, setDetail] = useState<any>(null);
   const [tradeLimit, setTradeLimit] = useState(10);
+  const [showTrades, setShowTrades] = useState(false);
   const [year, setYear] = useState<string | null>(null); // null = newest, 'ALL' = all years
   const [rr, setRr] = useState(2);
 
@@ -260,6 +261,11 @@ export default function Analytics() {
 
                 <section className="group">
                   <div className="row between"><h2>Trade terakhir</h2><span className="mute small">{d.trades.length} total</span></div>
+                  <div className="row" style={{ marginTop: 8 }}>
+                    <button className="btn sm" onClick={() => setShowTrades((v) => !v)}>{showTrades ? 'Sembunyikan trade' : `Tampilkan trade (${d.trades.length})`}</button>
+                    {!showTrades ? <a className="btn sm" href={`/api/analytics/export?kind=trades${key ? `&session=${key}` : ''}`}>Unduh CSV</a> : null}
+                  </div>
+                  {showTrades ? <>
                   <div className="list" style={{ marginTop: 8 }}>
                     {d.trades.slice(-tradeLimit).reverse().map((t: any) => (
                       <button key={t.id} className="item btnrow" onClick={() => open(t.id)}>
@@ -276,8 +282,10 @@ export default function Analytics() {
                   </div>
                   <div className="row" style={{ marginTop: 12 }}>
                     {d.trades.length > tradeLimit ? <button className="btn sm" onClick={() => setTradeLimit((n) => n + 30)}>Tampilkan lebih banyak</button> : null}
+                    {d.trades.length > tradeLimit ? <button className="btn sm" onClick={() => setTradeLimit(d.trades.length)}>Tampilkan semua</button> : null}
                     <a className="btn sm" href={`/api/analytics/export?kind=trades${key ? `&session=${key}` : ''}`}>Unduh CSV</a>
                   </div>
+                  </> : null}
                 </section>
                 </> : <Loading what="grafik" />}
               </>
