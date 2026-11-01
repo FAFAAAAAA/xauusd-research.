@@ -353,3 +353,16 @@ TradingView webhook butuh paket Essential (±Rp 400 rb/bulan; paket gratis bahka
 - Jadwal luar (cron-job.org, gratis) memanggil `GET /api/live/tick?key=<kunci jadwal>` tiap 15 menit. Kunci dibuat di Atur → Sinyal otomatis (hanya hash yang disimpan).
 - Website mengambil XAU/USD dari Twelve Data (API key gratis; env `TWELVEDATA_API_KEY` atau disimpan di Atur): M15 (400), H1 (5000 → H4 UTC) dan D1 (1100), lalu menjalankan **adapter v2 yang sama dengan backtest** atas candle M15 hari ini; sinyal pada candle tertutup terakhir → event LIVE (dedupe) + Telegram dengan entry ≈ close, SL, TP 1:2, lot dari rencana risiko, tombol salin. 3 panggilan API per 15 menit (±288/hari, batas gratis 800).
 - Harga Twelve Data bisa sedikit berbeda dari broker. Tidak ada order ke broker.
+
+## 5w. Kandidat v3 · BOS H1 (disimpan, belum dipasang di website — 1 Nov 2026)
+Status: **disimpan dulu**. Belum ada di mesin backtest website, Pine, Telegram, atau EA. Angka di bawah dari skrip riset Python (`scripts/research/v3_bos_h1.py`), perlu dicek ulang di mesin website sebelum dipakai.
+
+Aturan (RR 1:2 tetap, keluar hanya di TP atau SL, tanpa batas posisi):
+- Swing H1: pivot 3 candle kiri & kanan, dipakai setelah terkonfirmasi; urutan swing selang-seling (high/low).
+- **BUY:** swing low A → swing high B → swing low C dengan **C > A** (higher low). Entry saat **close M15 menembus di atas B** (candle sebelumnya ≤ B). SL = **C − 0,1 × ATR14 H1**. TP = 2R. Satu trade per level B.
+- **SELL:** kebalikannya — swing high A → low B → high C dengan **C < A**, close M15 di bawah B, SL = C + 0,1 ATR.
+- Filter **aturan 1**: BUY hanya jika H4 close > EMA50 > EMA200 dan D1 close > EMA50; SELL kebalikannya + D1 EMA50 < EMA200.
+
+Hasil 2004–2026 (spread 0,12 · slippage 0,10 · komisi $5 · swap 67/−25, risiko $10/trade):
+4,1 trade/bln · win 40,3% · **+$1.289** · PF 1,18 · DD $250 · 2004–17 +$400 (PF 1,10) · 2018–26 +$889 (PF 1,31) · median hold 14,6 jam, 63% < 24 jam.
+Tanpa aturan 1: −$566. H4 dan M15: rugi. 25 variasi (panjang swing, buffer SL, close H1, kesegaran, batas SL, sesi, ukuran candle, SL tetap ATR) tidak ada yang jelas lebih baik di 2004–2017 → aturan dasar dipertahankan.
