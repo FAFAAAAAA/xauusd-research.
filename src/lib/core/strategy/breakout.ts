@@ -44,8 +44,10 @@ export interface BreakoutParams {
    *  momShape: body ≥ 60% of the range and close in the last 25% of the range in the trade direction;
    *  momSize:  body ≥ 1 × ATR14 of that timeframe;  momAvg: body ≥ 1.5 × average body of the previous 20 candles. */
   momShape: boolean; momSize: boolean; momAvg: boolean;
+  /** Trend from Supertrend(10, 3) on closed candles instead of EMAs: every selected timeframe must agree (research). */
+  stH4: boolean; stH1: boolean; stD1: boolean;
 }
-export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false };
+export const BREAKOUT_DEFAULTS: BreakoutParams = { donchianH1: true, london: true, newYork: true, donchianM30: false, allowSell: true, allowBuy: true, sellD1Bear: false, swingTrend: false, d1Filter: true, donchianM15: false, m15Fast: false, levelTouch: false, ema50Only: false, retest: false, retestLong: false, retestSlBar: false, noTrend: false, momShape: false, momSize: false, momAvg: false, stH4: false, stH1: false, stD1: false };
 export const BREAKOUT_KEY = 'breakout_v02';
 
 export function readBreakoutParams(p: Readonly<Record<string, unknown>> = {}): BreakoutParams {
@@ -107,6 +109,25 @@ export function momentumOk(c: readonly Candle[], k: number, side: 1 | -1, atr: n
 
 type Trend = 'up' | 'down' | 'none';
 
+/** Supertrend (KivancOzbilgic, Pine v4, ATR = RMA) direction of the last candle: 1 up, -1 down. */
+export function supertrendDir(c: readonly Candle[], per = 10, mult = 3): number {
+  if (c.length <= per) return 0;
+  let atr = 0, U = NaN, D = NaN, t = 1;
+  for (let i = 0; i < c.length; i++) {
+    const x = c[i], pc = i ? c[i - 1].close : NaN;
+    const tr = i ? Math.max(x.high - x.low, Math.abs(x.high - pc), Math.abs(x.low - pc)) : x.high - x.low;
+    if (i < per) { atr += tr / per; if (i < per - 1) continue; } else atr = (atr * (per - 1) + tr) / per;
+    const src = (x.high + x.low) / 2;
+    let up = src - mult * atr, dn = src + mult * atr;
+    const u1 = Number.isNaN(U) ? up : U, d1 = Number.isNaN(D) ? dn : D;
+    if (i && pc > u1) up = Math.max(up, u1);
+    if (i && pc < d1) dn = Math.min(dn, d1);
+    t = t === -1 && x.close > d1 ? 1 : t === 1 && x.close < u1 ? -1 : t;
+    U = up; D = dn;
+  }
+  return t;
+}
+
 export const breakoutAdapter: StrategyAdapter = {
   key: BREAKOUT_KEY,
   name: 'Breakout v0.2 (H1 + London + New York, searah tren)',
@@ -126,7 +147,8 @@ export const breakoutAdapter: StrategyAdapter = {
       pend?: Record<string, { side: 1 | -1; level: number; sl: number; atr: number; until: number; why: string; extra: Record<string, unknown> }> };
 
     // trend + D1 ATR: recompute only when a new H4 or D1 candle has closed
-    const tk = `${h4[h4.length - 1].time}|${d1[d1.length - 1].time}`;
+    const useSt = p.stH4 || p.stH1 || p.stD1;
+    const tk = `${h4[h4.length - 1].time}|${d1[d1.length - 1].time}${p.stH1 ? `|${h1[h1.length - 1].time}` : ''}`;
     if (st.tk !== tk) {
       const h4c = h4.map((c) => c.close), d1c = d1.map((c) => c.close);
       const e50 = emaLast(h4c, 50), e200 = emaLast(h4c, 200), d50 = emaLast(d1c, 50);
@@ -137,6 +159,10 @@ export const breakoutAdapter: StrategyAdapter = {
         const sw = trendFromPivots(findPivots(h4.slice(-300), 3)).trend;
         st.trend = sw === 'bullish' && d1up ? 'up' : sw === 'bearish' && d1dn ? 'down' : 'none';
       } else st.trend = lc4 > e50 && e50 > e200 && d1up ? 'up' : lc4 < e50 && e50 < e200 && d1dn ? 'down' : 'none';
+      if (useSt) {
+        const dirs = [p.stH4 ? supertrendDir(h4) : null, p.stH1 ? supertrendDir(h1) : null, p.stD1 ? supertrendDir(d1) : null].filter((x) => x !== null);
+        st.trend = dirs.every((x) => x === 1) ? 'up' : dirs.every((x) => x === -1) ? 'down' : 'none';
+      }
       st.d1bear = emaLast(d1c, 50) < emaLast(d1c, 200);
       st.d1atr = atrLastEwm(d1, 14);
       st.tk = tk;

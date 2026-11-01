@@ -63,9 +63,9 @@ export default function Analytics() {
     setErr(null);
     const url = urlFor(key);
     const cached = peek(url);
-    if (cached) { setD(cached); setLoadedKey(key); }
+    if (cached) { setD(onlyVisible(cached)); setLoadedKey(key); }
     setBusy(!cached);
-    call<any>(url).then((x) => { setD(x); setLoadedKey(key); }).catch((e) => setErr(e.message)).finally(() => setBusy(false));
+    call<any>(url).then((x) => { setD(onlyVisible(x)); setLoadedKey(key); }).catch((e) => setErr(e.message)).finally(() => setBusy(false));
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   // warm the cache for the other RR buttons and "Semua" so the next tap is instant
   useEffect(() => {
@@ -314,7 +314,11 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 }
 
 type PairStatus = { symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
-const STRAT_ORDER = [...METHODS.map((m) => m.adapterKey), 'breakout_v08', 'breakout_v07', 'breakout_v06', 'breakout_v05'];
+// Website cleaned up (owner's choice): only Metode 1 (most stable) and v0.8 (most trades) can be run and are shown.
+// Older results stay in the database, they are only hidden.
+const STRAT_ORDER = ['metode_level', 'breakout_v08'];
+const VISIBLE_STRATEGIES = new Set(['metode level-v1', 'breakout v0.8']);
+const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
   breakout_v08: 'Breakout v0.8 (v0.7 + Base H4/H1)', breakout_v07: 'Breakout v0.7 (v0.6 + Pola N H1/H4)', breakout_v06: 'Breakout v0.6 (v0.5 + candle momentum)', breakout_v05: 'Breakout v0.5 inti', breakout_v04: 'Breakout v0.4 (lebih sering trade)', breakout_v03: 'Breakout v0.3',
