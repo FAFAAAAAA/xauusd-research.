@@ -212,7 +212,9 @@ function TradingView({ s }: { s: any }) {
       <div className="row">
         <button className="btn sm primary" onClick={() => copy('xau_v1.pine', 'Indikator v1')}>Salin indikator v1</button>
         <button className="btn sm primary" onClick={() => copy('xau_v2.pine', 'Indikator v2')}>Salin indikator v2</button>
+        <button className="btn sm" onClick={() => copy('xau_peta_struktur.pine', 'Peta Struktur')}>Salin Peta Struktur</button>
       </div>
+      <p className="mute small">Peta Struktur = alat bantu visual (volume profile, trendline, OB, FVG, BOS, zona S/R) untuk chart H4/H1. Bukan sinyal entry.</p>
       {msg ? <div className="notice">{msg}</div> : null}
       <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <li>Chart <strong>XAUUSD</strong> broker kamu: v1 di <strong>1 jam</strong>, v2 di <strong>15 menit</strong>.</li>

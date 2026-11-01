@@ -1,0 +1,223 @@
+//@version=5
+// XAU · Peta Struktur — menggambar otomatis: volume profile (kiri), trendline, Order Block (OB), Fair Value Gap (FVG),
+// Break of Structure (BOS) dan zona Support / Resistance. Semua dari candle yang SUDAH TUTUP (tidak melihat masa depan).
+// Alat bantu visual, BUKAN sinyal: di backtest website, entry pantulan OB / FVG / zona SNR di emas tidak untung.
+// Paling cocok di chart H4 atau H1.
+indicator("XAU · Peta Struktur", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 1000)
+
+// ---------- input
+swingLen  = input.int(5, "Panjang swing (candle kiri & kanan)", minval = 2)
+showVP    = input.bool(true, "Volume profile (kiri)", group = "Tampilkan")
+showTL    = input.bool(true, "Trendline", group = "Tampilkan")
+showOB    = input.bool(true, "Order Block (OB)", group = "Tampilkan")
+showFVG   = input.bool(true, "Fair Value Gap (FVG)", group = "Tampilkan")
+showBOS   = input.bool(true, "Break of Structure (BOS)", group = "Tampilkan")
+showSR    = input.bool(true, "Zona Support / Resistance", group = "Tampilkan")
+vpBars    = input.int(300, "Volume profile: jumlah candle", minval = 50, maxval = 1000, group = "Volume profile")
+vpRows    = input.int(48, "Volume profile: jumlah baris", minval = 10, maxval = 120, group = "Volume profile")
+vpWidth   = input.int(60, "Volume profile: lebar (candle)", minval = 10, maxval = 200, group = "Volume profile")
+maxOB     = input.int(3, "OB aktif maksimal per arah", minval = 1, maxval = 10, group = "Zona")
+maxFVG    = input.int(3, "FVG aktif maksimal per arah", minval = 1, maxval = 10, group = "Zona")
+srTol     = input.float(0.3, "Toleransi zona S/R (× ATR)", minval = 0.05, group = "Zona")
+extendBars = input.int(40, "Perpanjang zona ke kanan (candle)", minval = 5, group = "Zona")
+
+cBlue  = color.rgb(41, 121, 255)
+cZone  = color.new(color.rgb(120, 140, 170), 75)
+cEdge  = color.new(color.white, 55)
+cText  = color.new(color.white, 0)
+atr    = ta.atr(14)
+
+// ---------- swing pivots (terkonfirmasi setelah swingLen candle)
+ph = ta.pivothigh(high, swingLen, swingLen)
+pl = ta.pivotlow(low, swingLen, swingLen)
+var float lastHigh = na
+var int   lastHighBar = na
+var float prevHigh = na
+var int   prevHighBar = na
+var float lastLow = na
+var int   lastLowBar = na
+var float prevLow = na
+var int   prevLowBar = na
+if not na(ph)
+    prevHigh := lastHigh
+    prevHighBar := lastHighBar
+    lastHigh := ph
+    lastHighBar := bar_index - swingLen
+if not na(pl)
+    prevLow := lastLow
+    prevLowBar := lastLowBar
+    lastLow := pl
+    lastLowBar := bar_index - swingLen
+
+// ---------- trendline: 2 swing high terakhir (turun) / 2 swing low terakhir (naik)
+var line tlDown = na
+var line tlUp = na
+if showTL and not na(ph) and not na(prevHigh) and lastHigh < prevHigh
+    line.delete(tlDown)
+    tlDown := line.new(prevHighBar, prevHigh, lastHighBar, lastHigh, extend = extend.right, color = cEdge, width = 1)
+if showTL and not na(pl) and not na(prevLow) and lastLow > prevLow
+    line.delete(tlUp)
+    tlUp := line.new(prevLowBar, prevLow, lastLowBar, lastLow, extend = extend.right, color = cEdge, width = 1)
+
+// ---------- helper: zone box with centred label
+f_box(l, t, r, b, txt) =>
+    box.new(l, t, r, b, border_color = cEdge, bgcolor = cZone, text = txt, text_color = cText, text_size = size.small, text_halign = text.align_center, text_valign = text.align_center)
+
+// ---------- BOS + Order Block
+var box[] obBull = array.new_box()
+var box[] obBear = array.new_box()
+var bool brokeHigh = false
+var bool brokeLow = false
+if not na(ph)
+    brokeHigh := false
+if not na(pl)
+    brokeLow := false
+if barstate.isconfirmed and not na(lastHigh) and not brokeHigh and close > lastHigh
+    brokeHigh := true
+    if showBOS
+        line.new(lastHighBar, lastHigh, bar_index, lastHigh, color = cEdge, width = 1)
+        label.new(math.round((lastHighBar + bar_index) / 2), lastHigh, "BOS", style = label.style_none, textcolor = cText, size = size.small)
+    // OB naik = candle bearish terakhir sebelum dorongan yang menembus swing high
+    if showOB
+        for i = 1 to math.min(bar_index - lastHighBar + 10, 60)
+            if close[i] < open[i]
+                array.push(obBull, f_box(bar_index - i, high[i], bar_index + extendBars, low[i], "OB"))
+                if array.size(obBull) > maxOB
+                    box.delete(array.shift(obBull))
+                break
+if barstate.isconfirmed and not na(lastLow) and not brokeLow and close < lastLow
+    brokeLow := true
+    if showBOS
+        line.new(lastLowBar, lastLow, bar_index, lastLow, color = cEdge, width = 1)
+        label.new(math.round((lastLowBar + bar_index) / 2), lastLow, "BOS", style = label.style_label_up, color = color.new(color.black, 100), textcolor = cText, size = size.small)
+    if showOB
+        for i = 1 to math.min(bar_index - lastLowBar + 10, 60)
+            if close[i] > open[i]
+                array.push(obBear, f_box(bar_index - i, high[i], bar_index + extendBars, low[i], "OB"))
+                if array.size(obBear) > maxOB
+                    box.delete(array.shift(obBear))
+                break
+
+// ---------- FVG (celah 3 candle)
+var box[] fvgBull = array.new_box()
+var box[] fvgBear = array.new_box()
+if showFVG and barstate.isconfirmed and bar_index > 3
+    if low > high[2] and close[1] > open[1]
+        array.push(fvgBull, f_box(bar_index - 2, low, bar_index + extendBars, high[2], "FVG"))
+        if array.size(fvgBull) > maxFVG
+            box.delete(array.shift(fvgBull))
+    if high < low[2] and close[1] < open[1]
+        array.push(fvgBear, f_box(bar_index - 2, low[2], bar_index + extendBars, high, "FVG"))
+        if array.size(fvgBear) > maxFVG
+            box.delete(array.shift(fvgBear))
+
+// hapus zona yang sudah ditembus close (mitigasi penuh); zona aktif ikut digeser ke kanan
+f_maintain(box[] arr, bool bull) =>
+    int i = 0
+    while i < array.size(arr)
+        b = array.get(arr, i)
+        top = box.get_top(b)
+        bot = box.get_bottom(b)
+        if (bull and close < bot) or (not bull and close > top)
+            box.delete(b)
+            array.remove(arr, i)
+        else
+            box.set_right(b, bar_index + extendBars)
+            i += 1
+if barstate.isconfirmed
+    f_maintain(obBull, true)
+    f_maintain(obBear, false)
+    f_maintain(fvgBull, true)
+    f_maintain(fvgBear, false)
+
+// ---------- zona Support / Resistance: ≥ 2 swing di harga yang mirip (pada 300 candle terakhir), digambar di candle terakhir
+var float[] hiPiv = array.new_float()
+var float[] loPiv = array.new_float()
+var int[] hiBar = array.new_int()
+var int[] loBar = array.new_int()
+if not na(ph)
+    array.push(hiPiv, ph)
+    array.push(hiBar, bar_index - swingLen)
+if not na(pl)
+    array.push(loPiv, pl)
+    array.push(loBar, bar_index - swingLen)
+// simpan hanya swing 300 candle terakhir (cepat)
+while array.size(hiBar) > 0 and bar_index - array.get(hiBar, 0) > 300
+    array.shift(hiPiv)
+    array.shift(hiBar)
+while array.size(loBar) > 0 and bar_index - array.get(loBar, 0) > 300
+    array.shift(loPiv)
+    array.shift(loBar)
+var box[] srBoxes = array.new_box()
+f_zones(float[] piv, int[] bars, bool res) =>
+    // cari kelompok swing yang berdekatan; kembalikan [atas, bawah, jumlah] dari kelompok terkuat yang belum ditembus
+    float bestTop = na
+    float bestBot = na
+    int bestN = 0
+    int n = array.size(piv)
+    if n > 1
+        for i = 0 to n - 1
+            if bar_index - array.get(bars, i) > 300
+                continue
+            float p = array.get(piv, i)
+            float t = p
+            float b = p
+            int cnt = 0
+            for j = 0 to n - 1
+                if bar_index - array.get(bars, j) > 300
+                    continue
+                float q = array.get(piv, j)
+                if math.abs(q - p) <= srTol * atr
+                    cnt += 1
+                    t := math.max(t, q)
+                    b := math.min(b, q)
+            bool alive = res ? close < t : close > b
+            if cnt >= 2 and alive and cnt > bestN
+                bestN := cnt
+                bestTop := t
+                bestBot := b
+    [bestTop, bestBot, bestN]
+if showSR and barstate.islast
+    for b in srBoxes
+        box.delete(b)
+    array.clear(srBoxes)
+    [rt, rb, rn] = f_zones(hiPiv, hiBar, true)
+    [st, sb, sn] = f_zones(loPiv, loBar, false)
+    pad = 0.1 * atr
+    if rn >= 2
+        array.push(srBoxes, f_box(bar_index - 300, rt + pad, bar_index + extendBars, rb - pad, "RESISTANCE (" + str.tostring(rn) + "× sentuh)"))
+    if sn >= 2
+        array.push(srBoxes, f_box(bar_index - 300, st + pad, bar_index + extendBars, sb - pad, "SUPPORT ZONE (" + str.tostring(sn) + "× sentuh)"))
+
+// ---------- volume profile (tick volume) di sisi kiri, untuk vpBars candle terakhir
+var box[] vpBoxes = array.new_box()
+if showVP and barstate.islast
+    for b in vpBoxes
+        box.delete(b)
+    array.clear(vpBoxes)
+    int nb = math.min(vpBars, bar_index)
+    float top = high
+    float bot = low
+    for i = 0 to nb - 1
+        top := math.max(top, high[i])
+        bot := math.min(bot, low[i])
+    float step = (top - bot) / vpRows
+    if step > 0
+        float[] vol = array.new_float(vpRows, 0.0)
+        for i = 0 to nb - 1
+            float v = nz(volume[i], 1.0)
+            float lo_ = low[i]
+            float hi_ = high[i]
+            int r0 = math.max(0, math.min(vpRows - 1, int((lo_ - bot) / step)))
+            int r1 = math.max(0, math.min(vpRows - 1, int((hi_ - bot) / step)))
+            float share = v / (r1 - r0 + 1)
+            for r = r0 to r1
+                array.set(vol, r, array.get(vol, r) + share)
+        float mx = array.max(vol)
+        int poc = array.indexof(vol, mx)
+        int left = bar_index - nb
+        for r = 0 to vpRows - 1
+            float w = array.get(vol, r) / mx * vpWidth
+            if w >= 1
+                color c = r == poc ? cBlue : color.new(color.white, 65)
+                array.push(vpBoxes, box.new(left, bot + (r + 1) * step, left + int(w), bot + r * step, border_color = c, bgcolor = c))
