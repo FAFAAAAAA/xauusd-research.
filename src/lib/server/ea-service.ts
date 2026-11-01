@@ -72,12 +72,13 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
     const t = trade;
     const text = event === 'open'
-      ? [`🤖 <b>EA v2 — ${t.side} terbuka</b>`, '', `<b>Entry:</b> ${t.entry.toFixed(2)}`, `<b>SL:</b> ${t.sl.toFixed(2)}`, `<b>TP:</b> ${t.tp.toFixed(2)}`, `<b>Lot:</b> ${t.lot.toFixed(2)}`,
+      ? [`🤖 <b>EA v2 — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${t.entry.toFixed(2)}</code>`, `<b>SL:</b> <code>${t.sl.toFixed(2)}</code>`, `<b>TP:</b> <code>${t.tp.toFixed(2)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
       : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>EA v2 — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : 'manual'})</b>`, '',
         `<b>Entry → keluar:</b> ${t.entry.toFixed(2)} → ${(t.exit ?? 0).toFixed(2)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
-    const r = await sendTelegram(db, { deliveryKey: `ea:${event}:${ticket}`, mode: 'LIVE', text }, { fetchImpl: opts.fetchImpl });
+    const copy = event === 'open' ? [{ text: 'Salin entry', value: t.entry.toFixed(2) }, { text: 'Salin SL', value: t.sl.toFixed(2) }, { text: 'Salin TP', value: t.tp.toFixed(2) }] : undefined;
+    const r = await sendTelegram(db, { deliveryKey: `ea:${event}:${ticket}`, mode: 'LIVE', text, copy }, { fetchImpl: opts.fetchImpl });
     telegram = r.status;
   }
   return { status: 200, body: { ok: true, id, telegram } };

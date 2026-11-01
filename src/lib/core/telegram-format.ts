@@ -43,7 +43,7 @@ export interface TelegramEventMessage {
 
 const fmtPrice = (n: number | null) => (n == null ? '—' : n.toFixed(2));
 
-export function buildEventMessage(m: TelegramEventMessage): { text: string; button?: { text: string; url: string } } {
+export function buildEventMessage(m: TelegramEventMessage): { text: string; button?: { text: string; url: string }; copy?: Array<{ text: string; value: string }> } {
   const c = (v?: string) => escapeHtml(v ?? NOT_CONFIGURED);
   const zone = m.zoneLow != null && m.zoneHigh != null ? `${fmtPrice(m.zoneLow)} – ${fmtPrice(m.zoneHigh)}` : '—';
   const tzNote = m.displayTimezone === 'UTC' ? 'UTC' : m.displayTimezone;
@@ -56,10 +56,10 @@ export function buildEventMessage(m: TelegramEventMessage): { text: string; butt
         `${t.side === 'BUY' ? '🟢' : '🔴'} <b>XAUUSD — ${t.side}</b> · LIVE${testTag}`,
         `<b>Strategi:</b> ${escapeHtml(m.strategyLabel)}`,
         '',
-        `<b>Entry ≈</b> ${fmtPrice(t.entry)} <i>(harga close; isi di open candle berikutnya)</i>`,
-        `<b>SL:</b> ${fmtPrice(t.sl)}  (jarak ${Math.abs(t.entry - t.sl).toFixed(2)})`,
-        `<b>TP:</b> ${fmtPrice(t.tp)}  (RR 1:${(Math.abs(t.tp - t.entry) / Math.abs(t.entry - t.sl)).toFixed(1)})`,
-        t.lot != null && t.lot > 0 ? `<b>Lot:</b> ${t.lot.toFixed(2)}  (risiko ≈ $${(t.riskUsd ?? 0).toFixed(2)}${t.riskPct ? ` = ${t.riskPct}% modal` : ''})`
+        `<b>Entry ≈</b> <code>${fmtPrice(t.entry)}</code> <i>(harga close; isi di open candle berikutnya)</i>`,
+        `<b>SL:</b> <code>${fmtPrice(t.sl)}</code>  (jarak ${Math.abs(t.entry - t.sl).toFixed(2)})`,
+        `<b>TP:</b> <code>${fmtPrice(t.tp)}</code>  (RR 1:${(Math.abs(t.tp - t.entry) / Math.abs(t.entry - t.sl)).toFixed(1)})`,
+        t.lot != null && t.lot > 0 ? `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>  (risiko ≈ $${(t.riskUsd ?? 0).toFixed(2)}${t.riskPct ? ` = ${t.riskPct}% modal` : ''})`
           : t.lot === 0 ? '<b>Lot:</b> di bawah 0,01 — modal/risiko terlalu kecil untuk SL ini' : '<b>Lot:</b> atur modal & risiko di menu Trade',
         '',
         `<b>News:</b> ${c(m.confirmations.news)}`,
@@ -69,7 +69,9 @@ export function buildEventMessage(m: TelegramEventMessage): { text: string; butt
       );
       const text = lines.join('\n');
       const button = m.linkUrl && /^https:\/\//.test(m.linkUrl) ? { text: 'Buka menu Trade', url: m.linkUrl } : undefined;
-      return { text, button };
+      const copy = [{ text: 'Salin entry', value: fmtPrice(t.entry) }, { text: 'Salin SL', value: fmtPrice(t.sl) }, { text: 'Salin TP', value: fmtPrice(t.tp) }];
+      if (t.lot != null && t.lot > 0) copy.push({ text: 'Salin lot', value: t.lot.toFixed(2) });
+      return { text: text + '\n<i>Ketuk angka atau tombol untuk menyalin.</i>', button, copy };
     }
     lines.push(
       `🔔 <b>XAUUSD — LIVE</b>${testTag}`,

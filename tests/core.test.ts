@@ -253,6 +253,7 @@ test('live trading: lot, journal validation, signal from alert extra, Telegram t
   const msg = buildEventMessage({ mode: 'LIVE', eventType: 'SETUP_CONFIRMED', timeframe: 'M15', eventTime: Date.UTC(2026, 0, 5), price: 100, zoneLow: 99, zoneHigh: 99,
     zoneKind: 'resistance', confirmations: {}, status: 'x', displayTimezone: 'UTC', strategyLabel: 'v2 · Breakout volatilitas',
     trade: { side: 'BUY', entry: 100, sl: 95, tp: 110, lot: 0.02, riskUsd: 10, riskPct: 1 } });
-  assert.match(msg.text, /BUY/); assert.match(msg.text, /SL:<\/b> 95\.00/); assert.match(msg.text, /TP:<\/b> 110\.00/); assert.match(msg.text, /Lot:<\/b> 0\.02/);
+  assert.match(msg.text, /BUY/); assert.match(msg.text, /SL:<\/b> <code>95\.00<\/code>/); assert.match(msg.text, /TP:<\/b> <code>110\.00<\/code>/); assert.match(msg.text, /Lot:<\/b> <code>0\.02<\/code>/);
+  assert.deepEqual(msg.copy?.map((c) => c.value), ['100.00', '95.00', '110.00', '0.02']);
   assert.match(msg.text, /RR 1:2\.0/);
 });

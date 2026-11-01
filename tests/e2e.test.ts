@@ -256,7 +256,9 @@ test('8. TradingView webhook: auth, validation, dedupe, LIVE Telegram', async ()
   assert.equal(r2.status, 200);
   assert.equal(r2.body.telegram, 'sent');
   const txt = String(sent[sent.length - 1].body.text);
-  assert.match(txt, /XAUUSD — BUY/); assert.match(txt, /SL:<\/b> 1996\.00/); assert.match(txt, /Lot:<\/b> 0\.02/);
+  assert.match(txt, /XAUUSD — BUY/); assert.match(txt, /SL:<\/b> <code>1996\.00<\/code>/); assert.match(txt, /Lot:<\/b> <code>0\.02<\/code>/);
+  const kb = (sent[sent.length - 1].body.reply_markup as any).inline_keyboard;
+  assert.deepEqual(kb[0].map((b: any) => b.copy_text.text), ['2001.00', '1996.00', '2011.00', '0.02']);
   const ev = (await repo.listEvents(db, { mode: 'LIVE' })).find((e) => e.strategy_version_label.startsWith('v2'));
   assert.deepEqual(ev?.extra, { side: 'BUY', sl: 1996, tp: 2011 });
 });

@@ -13,6 +13,8 @@ export interface SendRequest {
   replaySessionId?: string | null;
   text: string;
   button?: { text: string; url: string };
+  /** one-tap copy buttons (Telegram copy_text): e.g. entry / SL / TP prices */
+  copy?: Array<{ text: string; value: string }>;
   allowRetryFailed?: boolean;
 }
 
@@ -62,7 +64,10 @@ export async function sendTelegram(db: Db, req: SendRequest, opts: { fetchImpl?:
   }
 
   const body: Record<string, unknown> = { chat_id: chatId, text: req.text, parse_mode: 'HTML', disable_web_page_preview: true };
-  if (req.button) body.reply_markup = { inline_keyboard: [[{ text: req.button.text, url: req.button.url }]] };
+  const rows: unknown[][] = [];
+  if (req.copy?.length) rows.push(req.copy.slice(0, 4).map((c) => ({ text: c.text, copy_text: { text: c.value.slice(0, 256) } })));
+  if (req.button) rows.push([{ text: req.button.text, url: req.button.url }]);
+  if (rows.length) body.reply_markup = { inline_keyboard: rows };
   const url = `${cfg.telegramApiBase}/bot${token}/sendMessage`;
   const scrub = (s: string) => s.split(token).join('[TOKEN]');
 

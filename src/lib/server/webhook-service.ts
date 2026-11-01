@@ -94,7 +94,7 @@ export async function handleTradingViewWebhook(db: Db, rawBody: string, ip: stri
           displayTimezone: tz, strategyLabel: p.strategy_version, isTest: p.source.toUpperCase().includes('TEST'),
           linkUrl: cfg.appBaseUrl ? (sig ? `${cfg.appBaseUrl}/trade` : `${cfg.appBaseUrl}/?event=${id}`) : null,
         });
-        telegram = await sendTelegram(db, { deliveryKey: `live-event:${id}`, mode: 'LIVE', marketEventId: id, text: msg.text, button: msg.button }, { fetchImpl: opts.fetchImpl, cfg });
+        telegram = await sendTelegram(db, { deliveryKey: `live-event:${id}`, mode: 'LIVE', marketEventId: id, text: msg.text, button: msg.button, copy: msg.copy }, { fetchImpl: opts.fetchImpl, cfg });
       }
     }
     await log('accepted', 200, null, body, p.event_id, id);
