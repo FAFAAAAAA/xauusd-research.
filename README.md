@@ -346,3 +346,10 @@ Atas permintaan pemilik: order otomatis dijalankan oleh **EA di MetaTrader 5 mil
 - `public/ea/XAU_v2_EA.mq5`: aturan volbreak-v4 persis (hari UTC, Senin pakai range Jumat, aturan 1 dengan H4/D1 dibentuk dari H1 dalam jam UTC, EMA dengan jendela 1000, ATR D1 Wilder 400, SL 0,35 ATR D1, TP 2R dari harga isi, maks 1 entry per arah per blok 4 jam — dicek juga dari posisi & riwayat supaya aman saat restart). Lot dari risiko % equity, dibulatkan ke bawah; lewati kalau di bawah lot minimum atau spread > batas.
 - EA melaporkan entry & penutupan ke `POST /api/ea/report` (WebRequest). Auth: kunci EA dari Atur → EA (hanya SHA-256 yang disimpan). Laporan ditulis ke jurnal (`ea-<ticket>`, strategi v2, hasil bersih broker termasuk komisi & swap) dan dikirim ke Telegram jika "Kirim sinyal live" aktif. Duplikat diabaikan.
 - EA belum pernah dijalankan di MetaTrader dari lingkungan ini: wajib uji di akun demo.
+
+## 5v. Sinyal live v2 gratis tanpa TradingView (1 Nov 2026)
+
+TradingView webhook butuh paket Essential (±Rp 400 rb/bulan; paket gratis bahkan tidak punya alert indikator). Pengganti gratis:
+- Jadwal luar (cron-job.org, gratis) memanggil `GET /api/live/tick?key=<kunci jadwal>` tiap 15 menit. Kunci dibuat di Atur → Sinyal otomatis (hanya hash yang disimpan).
+- Website mengambil XAU/USD dari Twelve Data (API key gratis; env `TWELVEDATA_API_KEY` atau disimpan di Atur): M15 (400), H1 (5000 → H4 UTC) dan D1 (1100), lalu menjalankan **adapter v2 yang sama dengan backtest** atas candle M15 hari ini; sinyal pada candle tertutup terakhir → event LIVE (dedupe) + Telegram dengan entry ≈ close, SL, TP 1:2, lot dari rencana risiko, tombol salin. 3 panggilan API per 15 menit (±288/hari, batas gratis 800).
+- Harga Twelve Data bisa sedikit berbeda dari broker. Tidak ada order ke broker.

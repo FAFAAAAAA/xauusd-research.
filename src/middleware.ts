@@ -3,7 +3,7 @@ import { verifySession } from './lib/core/crypto';
 
 // Login is OFF by default (owner's choice). Set REQUIRE_LOGIN=true in Vercel to turn it back on.
 // The TradingView webhook is always protected by its own shared secret.
-const PUBLIC = [/^\/login$/, /^\/api\/auth\/login$/, /^\/api\/webhooks\/tradingview$/, /^\/api\/ea\/report$/, /^\/api\/health$/];
+const PUBLIC = [/^\/login$/, /^\/api\/auth\/login$/, /^\/api\/webhooks\/tradingview$/, /^\/api\/ea\/report$/, /^\/api\/live\/tick$/, /^\/api\/health$/];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

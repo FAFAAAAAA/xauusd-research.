@@ -19,6 +19,7 @@ export default function Settings() {
     <div className="stack">
       <PageHead title="Atur" />
       <Telegram s={s} reload={load} />
+      <FeedSetup tz={s.timezone} />
       <TradingView s={s} />
       <EaSetup tz={s.timezone} />
       <General s={s} reload={load} />
@@ -159,6 +160,46 @@ function Telegram({ s, reload }: { s: any; reload: () => void }) {
             {l.status === 'failed' ? <button className="btn sm" onClick={() => retry(l.id)}>Ulangi</button> : null}</div>))}</div>
           : <p className="mute small">Belum ada.</p>}
       </details>
+    </Group>
+  );
+}
+
+function FeedSetup({ tz }: { tz: string }) {
+  const [f, setF] = useState<any>(null);
+  const [key, setKey] = useState('');
+  const [url, setUrl] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => call<any>('/api/live/feed').then(setF).catch((e) => setMsg(e.message));
+  useEffect(() => { load(); }, []);
+  const post = async (json: any) => { setMsg(null); setBusy(true); try { return await call<any>('/api/live/feed', { method: 'POST', json }); } catch (e) { setMsg((e as Error).message); return null; } finally { setBusy(false); } };
+  const st = f?.status;
+  const ok = !!(f?.apiKeySource && f?.cronConfigured && st?.ok);
+  return (
+    <Group id="sinyal" title="Sinyal otomatis v2 (gratis)" sub={!f ? '' : ok ? `Aktif · cek terakhir ${fmt(st.at, tz)}` : !f.apiKeySource ? 'API key belum diisi' : !f.cronConfigured ? 'Jadwal belum dibuat' : st?.error ? 'Ada masalah' : 'Menunggu jadwal pertama'}>
+      <p className="mute small">Website mengambil harga emas dari Twelve Data setiap 15 menit, menghitung aturan v2 yang sama dengan backtest, lalu mengirim sinyal ke Telegram (entry, SL, TP, lot + tombol salin). Tanpa TradingView berbayar dan tanpa komputer.</p>
+      <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <li>Daftar gratis di <strong>twelvedata.com</strong>, salin API key dari dashboard, tempel di bawah → Simpan.</li>
+        <li>Tekan <strong>Buat alamat jadwal</strong>, salin alamatnya.</li>
+        <li>Di <strong>cron-job.org</strong>: Create cronjob → tempel alamat → jadwal <strong>setiap 15 menit</strong> → Create.</li>
+        <li>Pastikan Atur → Bot Telegram → <strong>Kirim sinyal live</strong> menyala.</li>
+      </ol>
+      <label className="field">API key Twelve Data {f?.apiKeyHint ? `· tersimpan ${f.apiKeyHint}${f.apiKeySource === 'env' ? ' (Vercel)' : ''}` : ''}
+        <input type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} placeholder={f?.apiKeySource === 'env' ? 'Diatur di Vercel' : 'tempel API key'} disabled={f?.apiKeySource === 'env'} />
+      </label>
+      <div className="row">
+        <button className="btn sm" disabled={busy || !key.trim()} onClick={async () => { if (await post({ action: 'apikey', apiKey: key.trim() })) { setKey(''); setMsg('API key tersimpan.'); load(); } }}>Simpan API key</button>
+        <button className="btn sm" disabled={busy} onClick={async () => {
+          if (f?.cronConfigured && !window.confirm('Buat alamat baru? Alamat lama di cron-job.org langsung tidak berlaku.')) return;
+          const r = await post({ action: 'cronkey' }); if (r) { setUrl(r.url); load(); } }}>{f?.cronConfigured ? 'Buat alamat baru' : 'Buat alamat jadwal'}</button>
+        <button className="btn sm primary" disabled={busy || !f?.apiKeySource} onClick={async () => {
+          const r = await post({ action: 'test' }); if (r) { setMsg(r.ok ? `Berhasil: candle terakhir ${fmt(r.lastBar, tz)}, ${r.signals.length} sinyal baru.` : `Gagal: ${r.error}`); load(); } }}>{busy ? 'Mengecek…' : 'Tes sekarang'}</button>
+      </div>
+      {url ? <div className="notice"><strong>Alamat jadwal (salin sekarang, hanya ditampilkan sekali):</strong><div className="num" style={{ wordBreak: 'break-all', marginTop: 4 }}>{url}</div>
+        <button className="btn sm" style={{ marginTop: 6 }} onClick={() => navigator.clipboard?.writeText(url)}>Salin</button></div> : null}
+      {msg ? <div className="notice">{msg}</div> : null}
+      {st ? <dl className="kv"><dt>Cek terakhir</dt><dd>{fmt(st.at, tz)}{st.ok ? '' : ` · ${st.error}`}</dd><dt>Candle terakhir</dt><dd>{st.lastBar ? fmt(st.lastBar, tz) : '—'}</dd></dl> : null}
+      <p className="mute small">Harga Twelve Data bisa beda sedikit dengan broker kamu — sesuaikan entry/SL/TP dengan harga di broker.</p>
     </Group>
   );
 }

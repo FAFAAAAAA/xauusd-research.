@@ -465,3 +465,33 @@ test('15. EA report: key auth, open + close written to the journal, Telegram sen
   assert.equal(sent.length, 2);
   assert.match(String(sent[1].body.text), /ditutup \(TP\)/);
 });
+
+test('16. Free live feed (Twelve Data → v2 adapter): signal on the last closed M15 candle, sent once', async () => {
+  const { runFeedTick, newCronKey, checkCronKey } = await import('../src/lib/server/live-feed');
+  await repo.setAppSetting(db, 'feed', { apiKey: 'TESTKEY12345' });
+  await repo.updateTelegramSettings(db, { live_enabled: true });
+  mode = 'ok';
+  const k = await newCronKey(db);
+  assert.equal(await checkCronKey(db, k), true); assert.equal(await checkCronKey(db, 'nope'), false);
+  const D = 86_400_000, H = 3_600_000, M = 900_000;
+  const tue = Date.UTC(2030, 5, 4);                                   // Tuesday; yesterday (Monday) range = 11
+  const iso = (t: number, daily = false) => new Date(t).toISOString().replace('T', ' ').slice(0, daily ? 10 : 19);
+  const d1 = Array.from({ length: 300 }, (_, i) => { const t = tue - (300 - i) * D; const k2 = i; return { datetime: iso(t, true), open: 100 + k2, high: 101 + k2 + (i === 299 ? 9 : 0), low: 99 + k2, close: 100.5 + k2 }; });
+  const h1 = Array.from({ length: 5000 }, (_, i) => { const t = tue - (5000 - i) * H; return { datetime: iso(t), open: 300 + i * 0.01, high: 300.5 + i * 0.01, low: 299.5 + i * 0.01, close: 300.2 + i * 0.01 }; });
+  const m15 = [...Array.from({ length: 60 }, (_, i) => ({ t: tue - (60 - i) * M, o: 399, c: 399.5 })), { t: tue, o: 400, c: 403 }, { t: tue + M, o: 403, c: 405 }, { t: tue + 2 * M, o: 405, c: 406 }]
+    .map((x) => ({ datetime: iso(x.t), open: x.o, high: Math.max(x.o, x.c) + 0.1, low: Math.min(x.o, x.c) - 0.1, close: x.c }));
+  const feedFetch: FetchLike = async (url, init) => {
+    if (url.includes('api.telegram.org')) return fakeFetch(url, init);
+    const iv = /interval=([^&]+)/.exec(url)![1];
+    return { status: 200, json: async () => ({ status: 'ok', values: iv === '1day' ? d1 : iv === '1h' ? h1 : m15 }) };
+  };
+  sent.length = 0;
+  const r = await runFeedTick(db, { now: tue + 3 * M + 30_000, fetchImpl: feedFetch });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.signals.length, 1);
+  assert.equal(r.signals[0].side, 'BUY'); assert.equal(r.signals[0].entry, 406); assert.equal(r.signals[0].telegram, 'sent');
+  const again = await runFeedTick(db, { now: tue + 3 * M + 90_000, fetchImpl: feedFetch });
+  assert.equal(again.signals.length, 0, 'no duplicate when the scheduler calls twice');
+  const kb = (sent[sent.length - 1].body.reply_markup as any).inline_keyboard;
+  assert.equal(kb[0][0].copy_text.text, '406.00');
+});
