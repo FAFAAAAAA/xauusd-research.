@@ -603,3 +603,6 @@ details[open] > .body, details.more[open] > :not(summary) { animation: unfold va
 /* original calendar tap feedback */
 .tabs button, .cal .cell { transition: transform .12s ease-out, background-color .15s ease-out, box-shadow .15s ease-out; }
 .cal .cell:active { transform: scale(.96); transition-duration: .05s; }
+/* an odd last tile in a 2-column grid takes the full row (no half-empty row) */
+.facts > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@media (min-width: 640px) { .hero .facts > div:last-child:nth-child(odd) { grid-column: auto; } }

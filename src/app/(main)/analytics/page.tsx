@@ -68,6 +68,9 @@ export default function Analytics() {
   const cur = picked.length === 1 ? picked[0] : null;
   const curRr = picked.length ? rrNum(picked[0]) : rr;
   const curYear = yearSel === 'ALL' ? `Semua tahun (${picked.length})` : yearSel;
+  // calendar months covered by the chosen results (sum of their tested periods) → average result per month
+  const monthsTested = picked.reduce((a: number, c: any) => a + Math.max(0, (tsMs(c.period_end) - tsMs(c.period_start)) / 86_400_000 || 0), 0) / 30.44;
+  const perMonth = monthsTested > 0 ? sum.pnl / monthsTested : null;
 
   const load = useCallback(() => {
     setErr(null);
@@ -164,6 +167,7 @@ export default function Analytics() {
                 <section className="hero verdict">
                   <span className="label">{pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
+                  {perMonth != null ? <span className="small" style={{ color: 'var(--ink-2)' }}>Rata-rata per bulan <strong className={tone(perMonth)} style={{ fontSize: 17 }}>{money(perMonth)}</strong></span> : null}
                   <p>{sum.pnl > 0 ? 'Untung bersih' : sum.pnl < 0 ? 'Rugi bersih' : 'Impas'} dari <strong>{sum.trades} trade</strong>: <strong className="pos">{sum.wins} menang</strong>, <strong className="neg">{sum.losses} kalah</strong>.</p>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
                   <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Butuh ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}% agar impas</span></div>
@@ -217,7 +221,7 @@ export default function Analytics() {
                 </section>
 
                 {fresh ? <>
-                <CapitalGrowth key={key} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
+                <CapitalGrowth key={key} months={monthsTested} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group calcard">
                   <PnlCalendar key={key} trades={closedTrades(d.trades)} tz={tz} />
@@ -818,7 +822,7 @@ function YearTable({ sessions, selected, tz, onSelect, onDeleted }: {
 
 
 /** Capital growth from the backtest trades: fixed $ risk per trade (as simulated), scaled to the risk the owner types here. */
-function CapitalGrowth({ trades, tz, baseRisk, startCapital }: { trades: ClosedTrade[]; tz: string; baseRisk: number | null; startCapital: number | null }) {
+function CapitalGrowth({ trades, tz, baseRisk, startCapital, months }: { trades: ClosedTrade[]; tz: string; baseRisk: number | null; startCapital: number | null; months: number }) {
   const [cap, setCap] = useState(String(startCapital ?? 1000));
   const [risk, setRisk] = useState(String(baseRisk ?? 10));
   const c0 = Number(cap.replace(',', '.')), r = Number(risk.replace(',', '.'));
@@ -857,6 +861,7 @@ function CapitalGrowth({ trades, tz, baseRisk, startCapital }: { trades: ClosedT
         <div className="facts" style={{ marginTop: 0 }}>
           <div><span className="label">Modal akhir</span><strong className={total >= 0 ? 'pos' : 'neg'}>{usd(eq)}</strong></div>
           <div><span className="label">Kenaikan modal</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100)}</strong></div>
+          {months > 0 ? <div><span className="label">Rata-rata per bulan</span><strong className={total >= 0 ? 'pos' : 'neg'}>{total >= 0 ? '+' : '−'}${Math.abs(total / months).toFixed(2)} ({pct(total / c0 * 100 / months)})</strong></div> : null}
           <div><span className="label">Rata-rata per tahun</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100 / nYears)}</strong></div>
           <div><span className="label">Turun terdalam</span><strong className="neg">−{ddPct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}% ({usd(ddUsd)})</strong></div>
         </div>
