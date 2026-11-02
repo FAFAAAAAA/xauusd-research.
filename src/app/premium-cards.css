@@ -1,72 +1,114 @@
-/* Premium dimensional cards — visual-only enhancement.
-   Do not modify text, charts, PnL calendars, calculations, or component layout.
-   CSS-only; no WebGL, asset downloads, or additional JavaScript. */
+/* XAUUSD Research — modern dimensional cards, v2.
+ * Purely decorative CSS. Never change content, data, graphs or PnL calendar.
+ * Mobile-first: dimensional appearance is visible without hover.
+ * Graphs and PnL calendar containers are excluded completely.
+ */
 
-/* Use the selector on the container itself (no nested chart/card side effects). */
+/* Only ordinary information cards, not chart or calendar panels. */
 .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
-  border-radius: 22px;
-  border: 1px solid color-mix(in srgb, var(--line-2) 72%, transparent);
+  position: relative;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--gold) 14%, var(--line-2));
+  border-radius: 24px;
   background-color: var(--card);
-  background-image: linear-gradient(139deg, rgba(255,255,255,.055), transparent 42%);
+  background-image:
+    radial-gradient(ellipse 86% 74% at 6% 0%, color-mix(in srgb, var(--gold) 11%, transparent), transparent 78%),
+    linear-gradient(150deg, color-mix(in srgb, var(--surface) 91%, white) 0%, var(--card) 45%, color-mix(in srgb, var(--gold) 4%, var(--card)) 100%);
   box-shadow:
-    0 2px 4px rgba(0, 0, 0, .025),
-    0 12px 30px -21px rgba(18, 28, 46, .20),
-    inset 0 1px 0 rgba(255,255,255,.16);
+    0 2px 0 0 color-mix(in srgb, var(--line-2) 55%, transparent),
+    0 6px 12px -7px rgba(14, 29, 53, .16),
+    0 18px 36px -20px rgba(14, 29, 53, .28),
+    0 34px 54px -38px rgba(14, 29, 53, .2),
+    inset 0 1px 0 rgba(255,255,255,.48);
 }
 
-/* Gentle depth for numeric tiles; text and figures are unchanged. */
-.shell :is(.metric, .facts > div, .hold3 > div, .levels > span) {
-  background-image: linear-gradient(155deg, rgba(255,255,255,.07), transparent 55%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
+/* Thin glass-like rim on the top face — always visible on iPhone. */
+.shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas))::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 22px;
+  right: 22px;
+  top: 0;
+  height: 2px;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold) 42%, white), transparent);
+  opacity: .75;
+  pointer-events: none;
 }
 
-/* Light theme uses a more visible beveled edge on white surfaces. */
-:root[data-theme='light'] .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)),
-:root:not([data-theme]) .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
-  background-image: linear-gradient(142deg, rgba(255,255,255,.95), rgba(255,255,255,0) 58%);
-  box-shadow: 0 2px 4px rgba(25,31,40,.024), 0 18px 42px -29px rgba(25,31,40,.26), inset 0 1px 0 rgba(255,255,255,.95);
+/* Metric tiles become genuinely separate, dimensional boxes. No copy or values are changed. */
+.shell .metrics {
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+.shell .metrics > .metric {
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--gold) 12%, var(--line));
+  background: var(--surface);
+  background-image:
+    linear-gradient(140deg, color-mix(in srgb, var(--gold) 7%, transparent), transparent 55%);
+  box-shadow:
+    0 2px 0 color-mix(in srgb, var(--line) 65%, transparent),
+    0 10px 22px -16px rgba(15, 35, 60, .24),
+    inset 0 1px 0 rgba(255,255,255,.32);
 }
 
-/* Respect auto light/dark theme selection without changing its color tokens. */
-@media (prefers-color-scheme: light) {
+/* The small stat boxes get depth without moving their contents or affecting charts. */
+.shell :is(.facts > div, .hold3 > div, .levels > span) {
+  background-image: linear-gradient(145deg, color-mix(in srgb, var(--gold) 5%, var(--surface)), var(--surface));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 2px 5px -4px rgba(12, 25, 48, .18);
+}
+
+/* In a dark theme, darken highlights so cards still look premium and readable. */
+:root[data-theme='dark'] .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+  border-color: color-mix(in srgb, var(--gold) 22%, var(--line-2));
+  background-image: radial-gradient(ellipse 90% 75% at 6% 0%, rgba(83, 144, 242, .11), transparent 76%),
+                    linear-gradient(152deg, color-mix(in srgb, var(--card) 95%, white), var(--card) 68%);
+  box-shadow: 0 2px 0 rgba(255,255,255,.07), 0 12px 24px -13px rgba(0,0,0,.45),
+              0 24px 56px -26px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.085);
+}
+@media (prefers-color-scheme: dark) {
   :root[data-theme='auto'] .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
-    background-image: linear-gradient(142deg, rgba(255,255,255,.95), rgba(255,255,255,0) 58%);
-    box-shadow: 0 2px 4px rgba(25,31,40,.024), 0 18px 42px -29px rgba(25,31,40,.26), inset 0 1px 0 rgba(255,255,255,.95);
+    border-color: color-mix(in srgb, var(--gold) 22%, var(--line-2));
+    background-image: radial-gradient(ellipse 90% 75% at 6% 0%, rgba(83, 144, 242, .11), transparent 76%),
+                      linear-gradient(152deg, color-mix(in srgb, var(--card) 95%, white), var(--card) 68%);
+    box-shadow: 0 2px 0 rgba(255,255,255,.07), 0 12px 24px -13px rgba(0,0,0,.45),
+                0 24px 56px -26px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.085);
   }
 }
 
-/* Three-dimensional tilt is purely cosmetic and only applies when a mouse supports hover.
-   Charts, PnL calendars, and every content row retain their existing interactions. */
+/* Hover: subtle perspective; touch: tactile tap. Neither requires JavaScript. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
-    transition: transform 360ms cubic-bezier(.18,.75,.25,1),
-                border-color 320ms ease,
-                box-shadow 360ms ease,
-                background-color 200ms ease;
-    transform-origin: center center;
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)),
+  .shell .metrics > .metric {
+    transition: transform 360ms cubic-bezier(.22,.8,.2,1),
+                box-shadow 360ms ease, border-color 250ms ease, background-color 250ms ease;
     backface-visibility: hidden;
   }
-  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):hover {
-    transform: perspective(1100px) translate3d(0,-3px,5px) rotateX(1deg) rotateY(-.55deg);
-    box-shadow:
-      0 8px 14px -8px rgba(15,23,42,.13),
-      0 22px 46px -24px rgba(15,23,42,.23),
-      inset 0 1px 0 rgba(255,255,255,.18);
-    border-color: var(--line-2);
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):hover,
+  .shell .metrics > .metric:hover {
+    transform: perspective(950px) translateY(-5px) rotateX(1.7deg) rotateY(-.8deg);
+    border-color: color-mix(in srgb, var(--gold) 30%, var(--line-2));
+    box-shadow: 0 4px 0 color-mix(in srgb, var(--gold) 12%, var(--line)),
+                0 25px 43px -22px rgba(15,35,60,.33), inset 0 1px 0 rgba(255,255,255,.4);
   }
 }
-
-/* On touchscreens, a tiny press effect replaces ongoing 3D animation to protect
-   Safari scroll/zoom performance and prevent heavy GPU load. */
 @media (hover: none) and (prefers-reduced-motion: no-preference) {
-  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
-    transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease;
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)),
+  .shell .metrics > .metric {
+    transition: transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms ease;
   }
-  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):active:not(:has(input:focus,textarea:focus,select:focus)) {
-    transform: perspective(900px) scale(.997) rotateX(.35deg);
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):active,
+  .shell .metrics > .metric:active {
+    transform: perspective(900px) translateY(2px) scale(.995) rotateX(.5deg);
   }
 }
 
+/* Accessible and GPU-friendly by default. */
 @media (prefers-reduced-motion: reduce) {
-  .shell :is(.group, .panel, .hero, .stat) { transform: none !important; }
+  .shell :is(.group, .panel, .hero, .stat), .shell .metrics > .metric { transform: none !important; }
 }
