@@ -17,7 +17,7 @@ export default function Settings() {
   if (!s) return <><PageHead title="Atur" /><Loading what="pengaturan" variant="page" /></>;
   return (
     <div className="stack">
-      <PageHead title="Atur" sub="Koneksi sinyal, tampilan, dan data riset." />
+      <PageHead title="Atur" />
       <span className="section-title">Sinyal & koneksi</span>
       <Telegram s={s} reload={load} />
       <FeedSetup tz={s.timezone} />
@@ -81,7 +81,6 @@ function General({ s, reload }: { s: any; reload: () => void }) {
         <div style={{ maxWidth: 360 }}><Seg full label="Tema" options={[['light', 'Terang'], ['dark', 'Gelap'], ['auto', 'Otomatis']] as const} value={theme} onChange={pickTheme} /></div></div>
       <div className="picker"><span className="label">Zona waktu</span>
         <div style={{ maxWidth: 360 }}><Seg full label="Zona waktu" options={[['UTC', 'UTC'], ['Asia/Seoul', 'Seoul'], ['America/New_York', 'New York']] as const} value={s.timezone} onChange={(v) => save({ timezone: v })} /></div></div>
-      <p className="mute small">Pasang di iPhone seperti aplikasi: buka di Safari → tombol Bagikan → Tambah ke Layar Utama.</p>
       {msg ? <div className="error">{msg}</div> : null}
     </Group>
   );
@@ -175,13 +174,15 @@ function FeedSetup({ tz }: { tz: string }) {
   const ok = !!(f?.apiKeySource && f?.cronConfigured && st?.ok);
   return (
     <Group id="sinyal" title="Sinyal otomatis v2 (gratis)" sub={!f ? '' : ok ? `Aktif · cek terakhir ${fmt(st.at, tz)}` : !f.apiKeySource ? 'API key belum diisi' : !f.cronConfigured ? 'Jadwal belum dibuat' : st?.error ? 'Ada masalah' : 'Menunggu jadwal pertama'}>
-      <p className="mute small">Website mengambil harga emas dari Twelve Data setiap 15 menit, menghitung aturan v2 yang sama dengan backtest, lalu mengirim sinyal ke Telegram (entry, SL, TP, lot + tombol salin). Tanpa TradingView berbayar dan tanpa komputer.</p>
+      <details className="more">
+        <summary>Cara pasang</summary>
       <ol className="howto">
         <li>Daftar gratis di <strong>twelvedata.com</strong>, salin API key dari dashboard, tempel di bawah → Simpan.</li>
         <li>Tekan <strong>Buat alamat jadwal</strong>, salin alamatnya.</li>
         <li>Di <strong>cron-job.org</strong>: Create cronjob → tempel alamat → jadwal <strong>setiap 15 menit</strong> → Create.</li>
         <li>Pastikan Atur → Bot Telegram → <strong>Kirim sinyal live</strong> menyala.</li>
       </ol>
+      </details>
       <label className="field">API key Twelve Data {f?.apiKeyHint ? `· tersimpan ${f.apiKeyHint}${f.apiKeySource === 'env' ? ' (Vercel)' : ''}` : ''}
         <input type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} placeholder={f?.apiKeySource === 'env' ? 'Diatur di Vercel' : 'tempel API key'} disabled={f?.apiKeySource === 'env'} />
       </label>
@@ -197,7 +198,6 @@ function FeedSetup({ tz }: { tz: string }) {
         <div className="copyable"><span className="val">{url}</span><CopyButton text={url} done="Alamat jadwal tersalin" /></div></div> : null}
       {msg ? <div className="notice">{msg}</div> : null}
       {st ? <dl className="kv"><dt>Cek terakhir</dt><dd>{fmt(st.at, tz)}{st.ok ? '' : ` · ${st.error}`}</dd><dt>Candle terakhir</dt><dd>{st.lastBar ? fmt(st.lastBar, tz) : '—'}</dd></dl> : null}
-      <p className="mute small">Harga Twelve Data bisa beda sedikit dengan broker kamu — sesuaikan entry/SL/TP dengan harga di broker.</p>
     </Group>
   );
 }
@@ -215,7 +215,6 @@ function EaSetup({ tz }: { tz: string }) {
   const last = info?.lastReport as { at: number; event: string } | null;
   return (
     <Group id="ea" title="EA MetaTrader 5 (v2 otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
-      <p className="mute small">EA berjalan di MetaTrader 5 (PC atau VPS) dan memasang order v2 dengan SL & TP di broker. Setiap entry dan TP/SL dilaporkan ke Jurnal dan Telegram. Website tidak pernah mengirim order.</p>
       <div className="row">
         <a className="btn sm primary" href="/ea/XAU_v2_EA.mq5" download>Unduh EA (XAU_v2_EA.mq5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
@@ -225,12 +224,15 @@ function EaSetup({ tz }: { tz: string }) {
       {err ? <div className="error">{err}</div> : null}
       <div className="picker"><span className="label">Alamat laporan</span>
         {info?.reportUrl ? <div className="copyable"><span className="val">{info.reportUrl}</span><CopyButton text={info.reportUrl} done="Alamat laporan tersalin" /></div> : <span className="mute small">{info ? 'Isi APP_BASE_URL di Vercel' : 'Memuat…'}</span>}</div>
+      <details className="more">
+        <summary>Cara pasang</summary>
       <ol className="howto">
         <li>Di MetaTrader 5 (komputer): File → Open Data Folder → MQL5 → Experts → salin file EA → klik kanan Navigator → Refresh.</li>
         <li>Tools → Options → Expert Advisors → centang <strong>Allow WebRequest for listed URL</strong> → tambahkan alamat website (tanpa /api/…).</li>
         <li>Buka chart XAUUSD (timeframe bebas), seret EA ke chart, aktifkan <strong>Algo Trading</strong>. Isi: Risiko %, Alamat laporan, Kunci EA.</li>
         <li><strong>Coba di akun demo dulu</strong> minimal 2–4 minggu. Cek bahwa entry, SL, TP muncul di Jurnal dan Telegram.</li>
       </ol>
+      </details>
     </Group>
   );
 }
@@ -254,14 +256,16 @@ function TradingView({ s }: { s: any }) {
         <button className="btn sm primary" onClick={() => copy('xau_v2.pine', 'Indikator v2')}>Salin indikator v2</button>
         <button className="btn sm" onClick={() => copy('xau_peta_struktur.pine', 'Peta Struktur')}>Salin Peta Struktur</button>
       </div>
-      <p className="mute small">Peta Struktur = alat bantu visual (volume profile, trendline, OB, FVG, BOS, zona S/R) untuk chart H4/H1. Bukan sinyal entry.</p>
       {msg ? <div className="notice">{msg}</div> : null}
+      <details className="more">
+        <summary>Cara pasang</summary>
       <ol className="howto">
         <li>Chart <strong>XAUUSD</strong> broker kamu: v1 di <strong>1 jam</strong>, v2 di <strong>15 menit</strong>.</li>
         <li>Pine Editor → tempel → <strong>Add to chart</strong>.</li>
         <li>Alert → kondisi: nama indikator → <strong>Any alert() function call</strong> → notifikasi aplikasi.</li>
         <li><strong>Opsional (Telegram + lot):</strong> paket TradingView dengan webhook. Isi Secret di pengaturan indikator, centang &quot;format JSON&quot;, isi Webhook URL di bawah.</li>
       </ol>
+      </details>
       <div className="picker"><span className="label">Webhook URL</span>
         {tv.webhookUrl ? <div className="copyable"><span className="val">{tv.webhookUrl}</span><CopyButton text={tv.webhookUrl} done="Webhook URL tersalin" /></div> : <span className="mute small">Isi APP_BASE_URL di Vercel</span>}</div>
       <dl className="kv"><dt>Secret</dt><dd>{tv.secretConfigured ? 'Sudah diatur' : 'Belum (TRADINGVIEW_WEBHOOK_SECRET di Vercel)'}</dd></dl>
@@ -365,7 +369,6 @@ function HistoricalData() {
       {prog?.issues?.length ? <pre>{prog.issues.slice(0, 10).map((i: any) => `Baris ${i.line}: ${i.message}`).join('\n')}</pre> : null}
 
       <h3>3. Bentuk H1, H4 & D1</h3>
-      <p className="mute small">Setelah semua file M15 masuk, tekan sekali. Strategi butuh H1, H4 dan D1. Aman ditekan ulang.</p>
       <button className="btn block" onClick={() => runDerive('utc')} disabled={!src || derive?.busy}>{derive?.busy ? 'Menghitung… (bisa beberapa menit)' : `Bentuk H1, H4 & D1 dari ${tf}`}</button>
       {derive && !derive.busy ? (derive.error ? <div className="error">{derive.error}</div>
         : <div className="ok">Selesai: {Object.entries(derive).map(([k, v]) => `${k} ${(v as number).toLocaleString('id-ID')} baru`).join(', ')}.</div>) : null}
@@ -391,7 +394,6 @@ function Zones() {
   const del = async (id: string) => { await call(`/api/zones?id=${id}`, { method: 'DELETE' }).catch(() => {}); reload(); };
   return (
     <Group id="zona" title="Zona manual" sub={zones.length ? `${zones.length} zona` : 'Opsional'}>
-      <p className="mute small">Tidak wajib. Strategi SNR sudah membuat zona sendiri dari H4 dan H1.</p>
       <div className="grid two">
         <label className="field">Jenis<select value={z.kind} onChange={(e) => setZ({ ...z, kind: e.target.value })}><option value="support">Support</option><option value="resistance">Resistance</option></select></label>
         <label className="field">Batas bawah<input inputMode="decimal" value={z.low} onChange={(e) => setZ({ ...z, low: e.target.value })} /></label>
@@ -418,7 +420,6 @@ function OtherImports() {
   return (
     <Group id="impor-tv" title="Impor dari TradingView" sub="Opsional">
       <h3>Laporan Strategy Tester</h3>
-      <p className="mute small">File &quot;List of trades&quot; dari TradingView, untuk dibandingkan dengan backtest website.</p>
       <div className="grid two">
         <label className="field">Nama<input value={rep.name} onChange={(e) => setRep({ ...rep, name: e.target.value })} /></label>
         <label className="field">Zona waktu chart<input value={rep.chart_timezone} onChange={(e) => setRep({ ...rep, chart_timezone: e.target.value })} /></label>

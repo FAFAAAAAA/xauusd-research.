@@ -42,10 +42,10 @@ export default function CalculatorPage() {
   if (!d) return <><PageHead title="Kalkulator" /><Loading /></>;
   return (
     <div className="stack">
-      <PageHead title="Kalkulator" sub="Rencana risiko, lot per trade, dan risiko modal." />
+      <PageHead title="Kalkulator" />
 
       <section className="group stack">
-        <SecHead title="Rencana risiko" meta="dipakai untuk lot di sinyal" />
+        <SecHead title="Rencana risiko" />
         <div className="grid two">
           <label className="field">Modal ($)<input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
           <label className="field">Risiko per trade (%)<input inputMode="decimal" value={rp} onChange={(e) => setRp(e.target.value)} /></label>
@@ -55,11 +55,10 @@ export default function CalculatorPage() {
           <button className="btn sm primary" onClick={saveRisk}>Simpan</button>
         </div>
         {saved ? <div className="error">{saved}</div> : null}
-        <p className="mute small">Dipakai untuk menghitung lot di sinyal Telegram dan kalkulator lot di bawah.</p>
       </section>
 
       <section className="group stack">
-        <SecHead title="Kalkulator lot" meta="TP otomatis di RR 1:2" />
+        <SecHead title="Lot per trade" meta="TP = RR 1:2" />
         <div style={{ maxWidth: 260 }}><Seg full label="Arah" options={[['BUY', 'BUY'], ['SELL', 'SELL']] as const} value={cSide} onChange={setCSide} /></div>
         <div className="grid two">
           <label className="field">Entry<input inputMode="decimal" value={cEntry} onChange={(e) => setCEntry(e.target.value)} placeholder="mis. 2650.50" /></label>

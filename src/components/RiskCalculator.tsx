@@ -36,10 +36,7 @@ export function RiskCalculator() {
 
   return (
     <section className="group stack">
-      <div className="stack tight">
-        <SecHead title="Kalkulator risiko modal & lot" />
-        <p className="mute small">Perkiraan drawdown, ketahanan rugi beruntun, dan hasil untuk modal & risiko kamu — dari backtest 2004–2026.</p>
-      </div>
+      <SecHead title="Risiko modal & lot" meta="backtest 2004–2026" />
       <Seg scroll label="Strategi" options={(Object.keys(RISK_STATS) as Key[]).map((x) => [x, RISK_LABEL[x]] as const)} value={k} onChange={setK} />
       <div className="grid two">
         <label className="field">Modal<input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
@@ -56,13 +53,11 @@ export function RiskCalculator() {
           <div className="notice" style={{ background: status.bg, borderColor: 'transparent' }}>
             <strong className={status.c}>{status.t}</strong>
             <div className="small" style={{ marginTop: 4 }}>
-              Risiko per trade ≈ <strong>{usd(r)}</strong> ({pc(r / modal)} modal){mode === 'lot' ? ` · dihitung dari jarak SL median ${s.medianSl.toFixed(2)} (SL biasanya ${s.p25Sl.toFixed(0)}–${s.p75Sl.toFixed(0)})` : ` · lot ${lotAt(r) >= 0.01 ? `±${lotAt(r).toFixed(2)}` : '< 0,01 (di bawah lot minimum broker)'} di SL median ${s.medianSl.toFixed(2)}`}.
+              Risiko <strong>{usd(r)}</strong>/trade{mode === 'pct' ? ` · lot ${lotAt(r) >= 0.01 ? `±${lotAt(r).toFixed(2)}` : '< 0,01'}` : ''} · drawdown terburuk <strong>{pc(ddShare)}</strong> modal ({usd(-dd)})
             </div>
-            <div className="small" style={{ marginTop: 6 }}>Drawdown historis terburuk: <strong>{s.maxDdR}R = {usd(-dd)}</strong> = <strong>{pc(ddShare)}</strong> dari modal.</div>
             <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', marginTop: 8, overflow: 'hidden' }}>
               <div style={{ width: `${bar * 100}%`, height: '100%', borderRadius: 3, transition: 'width .5s var(--ease)', background: ddShare <= IDEAL_DD_SHARE ? 'var(--up)' : ddShare < 0.7 ? 'var(--warn)' : 'var(--down)' }} />
             </div>
-            <div className="small mute" style={{ marginTop: 4 }}>Batas ideal: drawdown historis ≤ {pc(IDEAL_DD_SHARE)} modal.</div>
           </div>
 
           <div className="facts" style={{ marginTop: 0 }}>
@@ -72,7 +67,7 @@ export function RiskCalculator() {
             <div><span className="mute small">Posisi terbuka maks (historis)</span><strong>{s.maxOpen} = {usd(s.maxOpen * r)}</strong></div>
           </div>
 
-          <h3 style={{ marginTop: 6 }}>Perkiraan hasil (rata-rata backtest)</h3>
+          <h3 style={{ marginTop: 6 }}>Perkiraan hasil</h3>
           <div className="facts" style={{ marginTop: 0 }}>
             <div><span className="mute small">Per bulan</span><strong className="pos">+{usd(s.perMonthR * r)} ({pc((s.perMonthR * r) / modal)})</strong></div>
             <div><span className="mute small">Per tahun</span><strong className="pos">+{usd(s.perMonthR * 12 * r)} ({pc((s.perMonthR * 12 * r) / modal)})</strong></div>
@@ -82,7 +77,8 @@ export function RiskCalculator() {
             <div><span className="mute small">12 bulan terburuk</span><strong className="neg">{usd(s.worst12mR * r)} ({pc((s.worst12mR * r) / modal)})</strong></div>
           </div>
 
-          <h3 style={{ marginTop: 6 }}>Ketahanan rugi beruntun</h3>
+          <details className="more">
+          <summary>Rugi beruntun</summary>
           <div className="tablewrap">
             <table className="num-r">
               <thead><tr><th>Kena SL berturut-turut</th><th>Total rugi</th><th>% modal</th></tr></thead>
@@ -93,17 +89,8 @@ export function RiskCalculator() {
               </tbody>
             </table>
           </div>
-
-          <div className="notice">
-            <strong>Kesimpulan</strong>
-            <div className="small" style={{ marginTop: 4 }}>
-              {ddShare <= IDEAL_DD_SHARE
-                ? `Risiko ${usd(r)} per trade sesuai modal ideal: drawdown terburuk historis menghabiskan ${pc(ddShare)} modal, masih menyisakan ${pc(1 - ddShare)}.`
-                : `Risiko ${usd(r)} per trade terlalu besar untuk modal ${usd(modal)}: drawdown terburuk historis = ${pc(ddShare)} modal. Turunkan risiko ke ±${usd(idealR)} per trade, atau naikkan modal ke ±${usd(idealModal)}.`}
-              {' '}Drawdown historis adalah kejadian terburuk di backtest, bukan batas maksimal — di masa depan bisa lebih besar.
-            </div>
-          </div>
-          <p className="mute small">Dihitung dari backtest website (2004–2026, RR 1:2, biaya rata-rata broker + swap). Hasil nyata bisa berbeda; bukan jaminan dan bukan nasihat keuangan.</p>
+          </details>
+          <p className="mute small">Dari backtest, bukan jaminan. Drawdown di masa depan bisa lebih besar.</p>
         </div>
       ) : null}
     </section>

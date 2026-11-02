@@ -442,15 +442,16 @@ label.field > input, label.field > select { min-width: 0; max-width: 100%; }
 .tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; padding: 4px 0 10px; font: inherit; font-weight: 700; font-size: 17px; color: var(--mute); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
 .tabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--ink); }
-.cal { display: grid; gap: 5px; }
+.cal { display: grid; gap: 4px; }
 .cal.dow, .cal.day { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cal.week { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .cal.month { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .cal.dow span { text-align: center; font-size: 12px; color: var(--mute); font-weight: 600; }
-.cal .cell { border: 0; border-radius: 10px; padding: 7px 2px; min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+.cal .cell { border: 0; border-radius: 9px; padding: 6px 1px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   font: inherit; cursor: pointer; background: var(--sunk); color: var(--ink); min-width: 0; }
-.cal .cell .n { font-size: 15px; font-weight: 600; line-height: 1.1; }
-.cal .cell .v { font-size: 10.5px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.cal .cell .n { font-size: clamp(12px, 3.6vw, 15px); font-weight: 600; line-height: 1.1; }
+.cal .cell .v { font-size: clamp(9.5px, 2.9vw, 11.5px); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: -0.02em; max-width: 100%; }
+@media (max-width: 899px) { .calcard { padding-left: 10px; padding-right: 10px; } }
 .cal.month .cell { min-height: 66px; }
 .cal.month .cell .n { font-size: 14px; color: var(--ink-2); }
 .cal.month .cell .v { font-size: 14px; }

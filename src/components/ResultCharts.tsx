@@ -63,7 +63,7 @@ export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: Clos
         <text x={W - P.r} y={H - 6} fontSize="11" fill="var(--mute)" textAnchor="end">{dmy(wall(pts[pts.length - 1].t, tz))}</text>
       </svg>
       <figcaption className="mute small" style={{ marginTop: 6 }}>
-        {start ? <>Garis = saldo akun mulai dari modal {bal(start)} (garis putus-putus) sampai {bal(end)}, setelah setiap trade ditutup.</> : <>Garis = saldo untung/rugi setelah setiap trade ditutup.</>} Area merah tipis = penurunan terdalam ({money(-best.dd)}).
+        Merah tipis = penurunan terdalam ({money(-best.dd)})
       </figcaption>
     </figure>
   );
@@ -187,10 +187,10 @@ type Metric = 'pnl' | 'wl' | 'count';
 interface Cell { pnl: number; wins: number; losses: number; trades: number }
 const DOW = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const MONTHS_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-const compact = (n: number) => {
+const compact = (n: number, dollar = true) => {
   const a = Math.abs(n);
-  const v = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : a >= 100 ? a.toFixed(0) : a.toFixed(1);
-  return `${n > 0 ? '+' : n < 0 ? '−' : ''}$${v}`;
+  const v = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : a >= 10 || !dollar ? a.toFixed(a >= 10 ? 0 : 1) : a.toFixed(1);
+  return `${n > 0 ? '+' : n < 0 ? '−' : ''}${dollar ? '$' : ''}${v}`;
 };
 
 export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string }) {
@@ -234,8 +234,9 @@ export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string 
 
   const value = (c: Cell | undefined) => {
     if (!c) return null;
-    if (metric === 'pnl') return compact(c.pnl);
-    if (metric === 'count') return `${c.trades} trade`;
+    // small day/week boxes: short numbers so nothing is cut off on narrow phones (exact $ shows when tapped)
+    if (metric === 'pnl') return compact(c.pnl, tab === 'month');
+    if (metric === 'count') return tab === 'month' ? `${c.trades} trade` : String(c.trades);
     return <><span className="pos">{c.wins}</span>/<span className="neg">{c.losses}</span></>;
   };
   const tone = (c: Cell | undefined) => (!c ? 'empty' : c.pnl > 0 ? 'up' : c.pnl < 0 ? 'down' : 'flat');
@@ -305,7 +306,6 @@ export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string 
       <p className="small">
         <strong>{heading}:</strong> <span className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : ''} style={{ fontWeight: 700 }}>{money(tot.pnl)}</span>
         {' '}· {tot.trades} trade · <span className="pos">{tot.wins} menang</span> · <span className="neg">{tot.losses} kalah</span>
-        {' '}· {upN} {unit} untung, {downN} {unit} rugi
       </p>
 
       {tab === 'day' ? <div className="cal dow">{DOW.map((d) => <span key={d}>{d}</span>)}</div> : null}
@@ -325,7 +325,7 @@ export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string 
             ? <>{selected.cell.trades} trade · <span className="pos">{selected.cell.wins} menang</span> · <span className="neg">{selected.cell.losses} kalah</span> · <strong className={selected.cell.pnl >= 0 ? 'pos' : 'neg'}>{money(selected.cell.pnl)}</strong></>
             : 'Tidak ada trade.'}
         </div>
-      ) : <p className="mute small">Tekan kotak untuk melihat rinciannya. Hijau = untung, merah = rugi, abu-abu = tidak ada trade.</p>}
+      ) : null}
     </div>
   );
 }

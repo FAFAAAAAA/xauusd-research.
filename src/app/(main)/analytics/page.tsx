@@ -102,7 +102,7 @@ export default function Analytics() {
   const hasRuns = rows.length > 0;
   return (
     <div className="stack">
-      <PageHead title="Backtest" sub="Uji strategi di data historis — terpisah dari trading live." />
+      <PageHead title="Backtest" />
       {hasRuns ? (
         <div style={{ position: 'sticky', top: 'calc(8px + env(safe-area-inset-top))', zIndex: 10, marginTop: -8 }}>
           <Seg full label="Bagian" options={[['hasil', 'Hasil'], ['jalan', 'Jalankan'], ['kelola', 'Kelola']] as const} value={tab} onChange={(k) => { setTab(k); window.scrollTo({ top: 0 }); }} />
@@ -219,14 +219,13 @@ export default function Analytics() {
                 {fresh ? <>
                 <CapitalGrowth key={key} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
-                <section className="group">
+                <section className="group calcard">
                   <PnlCalendar key={key} trades={closedTrades(d.trades)} tz={tz} />
                 </section>
 
                 {fresh && d.byRegime?.length ? (
                   <section className="group">
                     <SecHead title="Hasil per kondisi pasar" />
-                    <p className="mute small" style={{ marginTop: 4 }}>Kondisi saat entry, dari candle harian (ADX 14): ADX &lt; 20 = sideways; selain itu uptrend jika +DI &gt; −DI, downtrend jika sebaliknya.</p>
                     <div className="tablewrap">
                       <table className="num-r" style={{ marginTop: 8 }}><thead><tr><th>Kondisi</th><th>Trade</th><th>Win rate</th><th>Untung/rugi</th><th>Profit factor</th><th>Per trade</th></tr></thead>
                         <tbody>{(['up', 'down', 'sideways'] as const).map((k) => {
@@ -482,10 +481,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
 
   return (
     <section className={bare ? 'stack' : 'group stack'}>
-      <div className="stack tight">
-        <SecHead title="Jalankan backtest" />
-        <p className="mute small">Satu strategi diuji di semua pair yang dipilih, per tahun, dengan RR 1:1, 1:2, dan 1:3.</p>
-      </div>
+      <SecHead title="Jalankan backtest" meta="RR 1:1 · 1:2 · 1:3" />
       <div className="form-sec">
       <h3><span className="n">1</span>Strategi</h3>
       {strategies.length ? (
@@ -493,7 +489,6 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
           {strategies.map((s) => <option key={s.id} value={s.id}>{STRAT_LABEL[s.adapter_key] ?? `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : <Loading what="strategi" variant="list" />}
-      <p className="mute small" style={{ margin: 0 }}>{baseTf === 'M15' ? 'Timeframe mengikuti strategi: entry dikonfirmasi close candle M15, level & tren dari H1/H4/D1. Data emas M15 2004–2026.' : `Strategi scalping: entry di candle ${baseTf}, tren dari M15 ke atas. Data emas ${baseTf} 2004 – Jan 2026.`}</p>
       </div>
       <div className="form-sec">
         <div className="row between"><h3><span className="n">2</span>Pair <span className="mute" style={{ fontWeight: 400 }}>{chosen.length}/{sets.length}</span></h3>
@@ -756,7 +751,6 @@ function PairTable({ pairs, selected, rr, onPick }: { pairs: PairSum[]; selected
           </button>
         ))}
       </div>
-      <p className="mute small">Tekan pair untuk melihat grafik, kalender, dan trade-nya di bawah.</p>
     </div>
   );
 }
@@ -860,7 +854,6 @@ function CapitalGrowth({ trades, tz, baseRisk, startCapital }: { trades: ClosedT
         <label className="field">Risiko per trade ($)<input id="cg-risk" inputMode="decimal" value={risk} onChange={(e) => setRisk(e.target.value)} /></label>
       </div>
       {!baseRisk ? <p className="mute small">Backtest ini memakai lot tetap, jadi perkembangan modal tidak bisa dihitung ulang.</p> : !ok ? <p className="mute small">Isi modal dan risiko lebih dari 0.</p> : <>
-        <p className="mute small" style={{ margin: 0 }}>Risiko {pct(r / c0 * 100).replace('+', '')} dari modal awal per trade, tetap ${r.toLocaleString('en-US')} setiap trade (tidak diputar).</p>
         <div className="facts" style={{ marginTop: 0 }}>
           <div><span className="label">Modal akhir</span><strong className={total >= 0 ? 'pos' : 'neg'}>{usd(eq)}</strong></div>
           <div><span className="label">Kenaikan modal</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100)}</strong></div>

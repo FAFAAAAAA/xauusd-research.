@@ -28,12 +28,12 @@ export default function Dashboard() {
   const sig = tr.lastSignal;
   return (
     <div className="stack">
-      <PageHead title="Beranda" eyebrow="Ringkasan" actions={<><Link className="btn sm" href="/calculator">Kalkulator</Link><Link className="btn sm primary" href="/trade">Buka Trade</Link></>} />
+      <PageHead title="Beranda" actions={<><Link className="btn sm" href="/calculator">Kalkulator</Link><Link className="btn sm primary" href="/trade">Buka Trade</Link></>} />
       {err ? <ErrorBox error={err} retry={load} /> : null}
 
       {/* what matters most: this month's live result */}
       <section className="hero" aria-labelledby="h-month">
-        <span className="label" id="h-month">Bulan ini · jurnal live</span>
+        <span className="label" id="h-month">Bulan ini</span>
         <span className={`price ${tone(tr.month.pnl)}`}><CountUp value={tr.month.pnl} format={money} /></span>
         <div className="inline-stats">
           <span><span className="k">Trade selesai</span><strong>{tr.month.closed}</strong></span>
@@ -45,9 +45,9 @@ export default function Dashboard() {
       {/* all-time journal performance (real numbers from the journal only) */}
       {all ? (
         <section className="stack tight" aria-label="Performa jurnal">
-          <span className="section-title">Sepanjang waktu · jurnal</span>
+          <span className="section-title">Sepanjang waktu</span>
           <Metrics cols={4}>
-            <Metric label="Total trade" value={all.closed} hint={`${all.wins} menang · ${all.losses} kalah`} />
+            <Metric label="Total trade" value={all.closed} />
             <Metric label="Win rate" value={winPct(all.winRate)} />
             <Metric label="Hasil bersih" value={money(all.pnl)} tone={tone(all.pnl)} />
             <Metric label="Rata-rata per trade" value={all.avgR == null ? '—' : `${all.avgR >= 0 ? '+' : ''}${all.avgR.toFixed(2)}R`} tone={tone(all.avgR)} />
@@ -70,7 +70,7 @@ export default function Dashboard() {
                 <span><span className="k">Take profit</span><strong>{px(sig.tp)}</strong></span>
               </div>
             </div>
-          ) : <p className="empty-inline">Belum ada. Pasang indikator v1/v2 di TradingView — caranya di <Link href="/settings#tradingview">Atur</Link>.</p>}
+          ) : <p className="empty-inline">Belum ada sinyal.</p>}
         </section>
 
         <section className="group">
@@ -92,7 +92,7 @@ export default function Dashboard() {
         </section>
 
         <section className="group span">
-          <SecHead title="Berita penting minggu ini"><Link className="btn sm ghost" href="/news">Semua</Link></SecHead>
+          <SecHead title="Berita minggu ini"><Link className="btn sm ghost" href="/news">Semua</Link></SecHead>
           {d.upcomingNews.length ? (
             <div className="list">
               {d.upcomingNews.slice(0, 4).map((n: any) => (
@@ -103,7 +103,7 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          ) : <p className="empty-inline">Kalender belum diisi. <Link href="/news">Impor di Berita</Link></p>}
+          ) : <p className="empty-inline">Belum ada jadwal.</p>}
         </section>
       </div>
     </div>

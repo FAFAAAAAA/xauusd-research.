@@ -72,7 +72,7 @@ export default function TradePage() {
 
   return (
     <div className="stack">
-      <PageHead title="Trade" sub="Sinyal live dan jurnal. Order tetap kamu pasang sendiri."
+      <PageHead title="Trade"
         actions={!draft ? <button className="btn sm primary" onClick={() => openDraft({})}>+ Catat trade</button> : null} />
 
       <div className="riskbar">
@@ -128,7 +128,7 @@ export default function TradePage() {
               );
             })}
           </div>
-        ) : <p className="empty-inline">Belum ada sinyal dari TradingView. Cara memasang ada di <Link href="/settings#tradingview">Atur → TradingView</Link>.</p>}
+        ) : <p className="empty-inline">Belum ada sinyal.</p>}
       </section>
 
       {openT.length ? (
@@ -160,7 +160,7 @@ export default function TradePage() {
       ) : null}
 
       <section className="group">
-        <SecHead title="Performa jurnal" meta="vs backtest" />
+        <SecHead title="Performa" />
         <div className="tablewrap">
           <table className="num-r">
             <thead><tr><th>Metode</th><th>Selesai</th><th>Win</th><th>Win backtest</th><th>Hasil</th><th>Rata-rata</th></tr></thead>
@@ -179,7 +179,6 @@ export default function TradePage() {
             </tbody>
           </table>
         </div>
-        {closedT.length > 0 && closedT.length < 30 ? <p className="mute small" style={{ marginTop: 10 }}>Belum bisa dibandingkan: butuh minimal ±30 trade selesai per metode.</p> : null}
       </section>
 
       <section className="group">
@@ -199,12 +198,10 @@ export default function TradePage() {
               </div>
             ))}
           </div>
-        ) : <p className="empty-inline">{!j.trades.length ? 'Belum ada trade. Catat dari sinyal, kalkulator, atau tombol + Catat trade.' : 'Belum ada trade yang selesai.'}</p>}
+        ) : <p className="empty-inline">Belum ada trade.</p>}
         {jErr && !draft ? <div className="error" style={{ marginTop: 10 }}>{jErr}</div> : null}
-        <p className="mute small" style={{ marginTop: 12 }}>Hasil dihitung dari harga keluar × lot × 100 (belum termasuk komisi & swap broker).</p>
       </section>
 
-      <p className="mute small" style={{ textAlign: 'center' }}>Sinyal datang dari indikator TradingView v1/v2 (v3 belum punya indikator) — cara pasang di <Link href="/settings#tradingview">Atur → TradingView</Link>.</p>
     </div>
   );
 }

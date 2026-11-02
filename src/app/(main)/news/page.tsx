@@ -33,7 +33,7 @@ export default function News() {
 
   return (
     <div className="stack">
-      <PageHead title="Berita" sub="Jadwal rilis ekonomi yang biasa menggerakkan emas." />
+      <PageHead title="Berita" />
 
       <section className="group stack">
         <SecHead title={asOfLocal ? `Per ${fmt(d?.asOf ?? null, tz)}` : 'Minggu ini'}>
