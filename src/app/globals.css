@@ -4,41 +4,15 @@
 
 /* ======================================================================= tokens */
 :root {
-  /* colour — dark (default) */
-  /* warm charcoal, softer contrast than pure white-on-black (easier on the eyes) */
-  --bg: #0e0d0b;
-  --surface: #171613;
-  --card: linear-gradient(180deg, rgba(255, 244, 222, .045), rgba(255, 244, 222, .015) 60%), rgba(23, 22, 19, .82);
-  --card-edge: inset 0 1px 0 rgba(255, 240, 210, .06);
-  --sunk: #1e1c19;            /* tiles inside a card, inputs' resting fill */
-  --hover: #24221e;
-  --line: #2a2723;
-  --line-2: #38342e;
-  --ink: #e8e3da;
-  --ink-2: #aea79b;
-  --mute: #7d766b;
-  --faint: #433e37;
-  --glow-1: rgba(210, 171, 98, .17);
-  --glow-2: rgba(210, 171, 98, .07);
-  --gold: #d2ab62;            /* accent */
-  --gold-ink: #15110a;
-  --gold-tint: #1f1b13;
-  --gold-press: #bf9a55;
-  --up: #4cb38a;
-  --up-tint: #11211b;
-  --down: #e1675d;
-  --down-tint: #261614;
-  --warn: #e0a43a;
-  --warn-tint: #251d10;
-  --err-ink: #f2aaa2;
-  --ok-ink: #a3dcc3;
-  --on-solid: #0e0d0b;
-  --bar: #12110f;
-  --track: #38342e;
-  --sk-a: #1a1916; --sk-b: #25221d;
-  --shadow: rgba(0, 0, 0, .5);
-  --scrim: rgba(0, 0, 0, .6);
-  color-scheme: dark;
+  /* colour — "Terang Bersih" (default): grey-white page, white cards, blue accent */
+  --bg: #f2f4f6; --surface: #ffffff; --card: #ffffff; --card-edge: 0 1px 3px rgba(25, 31, 40, .04); --card-line: transparent;
+  --glow-1: transparent; --glow-2: transparent;
+  --sunk: #f5f6f8; --hover: #eef0f3; --line: #e5e8eb; --line-2: #d1d6db;
+  --ink: #191f28; --ink-2: #4e5968; --mute: #8b95a1; --faint: #c9cfd6;
+  --gold: #3182f6; --gold-ink: #ffffff; --gold-tint: #e8f3ff; --gold-press: #1b64da;   /* accent (blue) — token name kept */
+  --up: #0fa36b; --up-tint: #e6f7ef; --down: #f04452; --down-tint: #ffeef0; --warn: #d9820b; --warn-tint: #fff4e0;
+  --err-ink: #b4222e; --ok-ink: #0a6e48; --on-solid: #ffffff; --bar: #ffffff; --track: #d1d6db;
+  --sk-a: #eceff2; --sk-b: #f6f7f9; --shadow: rgba(25, 31, 40, .08); --scrim: rgba(25, 31, 40, .4); color-scheme: light;
 
   /* type */
   /* the iPhone's own font (SF Pro); system fonts elsewhere */
@@ -48,7 +22,7 @@
 
   /* space · radius */
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px;
-  --r: 14px; --r-m: 12px; --r-s: 10px; --r-xs: 8px; --r-pill: 999px;
+  --r: 18px; --r-m: 14px; --r-s: 10px; --r-xs: 8px; --r-pill: 999px;
 
   /* motion */
   --ease: cubic-bezier(.2, .8, .2, 1);
@@ -58,25 +32,27 @@
 
   --side-w: 232px;
 }
-/* light — chosen in Atur → Tampilan, or "Otomatis" on a light iPhone */
-:root[data-theme='light'] {
-  --bg: #f7f4ee; --surface: #ffffff; --card: linear-gradient(180deg, #ffffff, #fffdf9); --card-edge: 0 1px 2px rgba(60, 45, 20, .05);
-  --glow-1: rgba(200, 150, 60, .16); --glow-2: rgba(200, 150, 60, .08); --sunk: #f4f1ea; --hover: #efebe3; --line: #e8e3d9; --line-2: #d9d2c5;
-  --ink: #1d1a15; --ink-2: #554e44; --mute: #857d70; --faint: #c6cbd2;
-  --gold: #996d1c; --gold-ink: #ffffff; --gold-tint: #f8f1e3; --gold-press: #845d16;
-  --up: #0f7d57; --up-tint: #e7f4ee; --down: #c03a31; --down-tint: #fbecea; --warn: #a86d12; --warn-tint: #fbf3e2;
-  --err-ink: #8a1f18; --ok-ink: #0b5a3f; --on-solid: #ffffff; --bar: #ffffff; --track: #dde1e6;
-  --sk-a: #eceef1; --sk-b: #f6f7f9; --shadow: rgba(16, 24, 40, .1); --scrim: rgba(16, 20, 26, .4); color-scheme: light;
+/* dark — chosen in Atur → Tampilan, or "Otomatis" on a dark iPhone */
+:root[data-theme='dark'] {
+    --bg: #101013; --surface: #1b1b1f; --card: #1b1b1f; --card-edge: none; --card-line: transparent;
+    --glow-1: transparent; --glow-2: transparent;
+    --sunk: #232328; --hover: #2a2a30; --line: #2c2c33; --line-2: #3a3a42;
+    --ink: #ececf0; --ink-2: #b0b0ba; --mute: #84848f; --faint: #45454d;
+    --gold: #4c94f8; --gold-ink: #ffffff; --gold-tint: #16243a; --gold-press: #3b82f0;
+    --up: #2fc184; --up-tint: #10261d; --down: #f2596a; --down-tint: #2c1519; --warn: #f0a43a; --warn-tint: #2a2112;
+    --err-ink: #ffadb5; --ok-ink: #9fe3c4; --on-solid: #101013; --bar: #16161a; --track: #3a3a42;
+    --sk-a: #1f1f24; --sk-b: #28282e; --shadow: rgba(0, 0, 0, .45); --scrim: rgba(0, 0, 0, .6); color-scheme: dark;
 }
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root[data-theme='auto'] {
-    --bg: #f7f4ee; --surface: #ffffff; --card: linear-gradient(180deg, #ffffff, #fffdf9); --card-edge: 0 1px 2px rgba(60, 45, 20, .05);
-  --glow-1: rgba(200, 150, 60, .16); --glow-2: rgba(200, 150, 60, .08); --sunk: #f4f1ea; --hover: #efebe3; --line: #e8e3d9; --line-2: #d9d2c5;
-    --ink: #1d1a15; --ink-2: #554e44; --mute: #857d70; --faint: #c6cbd2;
-    --gold: #996d1c; --gold-ink: #ffffff; --gold-tint: #f8f1e3; --gold-press: #845d16;
-    --up: #0f7d57; --up-tint: #e7f4ee; --down: #c03a31; --down-tint: #fbecea; --warn: #a86d12; --warn-tint: #fbf3e2;
-    --err-ink: #8a1f18; --ok-ink: #0b5a3f; --on-solid: #ffffff; --bar: #ffffff; --track: #dde1e6;
-    --sk-a: #eceef1; --sk-b: #f6f7f9; --shadow: rgba(16, 24, 40, .1); --scrim: rgba(16, 20, 26, .4); color-scheme: light;
+    --bg: #101013; --surface: #1b1b1f; --card: #1b1b1f; --card-edge: none; --card-line: transparent;
+    --glow-1: transparent; --glow-2: transparent;
+    --sunk: #232328; --hover: #2a2a30; --line: #2c2c33; --line-2: #3a3a42;
+    --ink: #ececf0; --ink-2: #b0b0ba; --mute: #84848f; --faint: #45454d;
+    --gold: #4c94f8; --gold-ink: #ffffff; --gold-tint: #16243a; --gold-press: #3b82f0;
+    --up: #2fc184; --up-tint: #10261d; --down: #f2596a; --down-tint: #2c1519; --warn: #f0a43a; --warn-tint: #2a2112;
+    --err-ink: #ffadb5; --ok-ink: #9fe3c4; --on-solid: #101013; --bar: #16161a; --track: #3a3a42;
+    --sk-a: #1f1f24; --sk-b: #28282e; --shadow: rgba(0, 0, 0, .45); --scrim: rgba(0, 0, 0, .6); color-scheme: dark;
   }
 }
 
@@ -186,7 +162,7 @@ p { margin: 0; }
 .section-title:first-child, .page-head + .section-title { margin-top: 0; }
 
 /* card */
-.panel, .group { background: var(--card); box-shadow: var(--card-edge); border-radius: var(--r); padding: var(--s-5); min-width: 0; border: 1px solid var(--line); }
+.panel, .group { background: var(--card); box-shadow: var(--card-edge); border-radius: var(--r); padding: var(--s-5); min-width: 0; border: 1px solid var(--card-line); }
 .panel > h2 + *, .group > h2 + * { margin-top: var(--s-3); }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }
 .sec-head .meta { color: var(--mute); font-size: var(--fs-sm); }
@@ -229,12 +205,12 @@ details.more[open] > summary::before { transform: rotate(45deg); }
 details.more > :not(summary) { margin-top: 12px; }
 .form-sec { display: flex; flex-direction: column; gap: 10px; padding-top: var(--s-4); border-top: 1px solid var(--line); }
 .form-sec:first-child { padding-top: 0; border-top: 0; }
-.form-sec > h3 { display: flex; align-items: center; gap: 8px; }
-.form-sec > h3 .n { width: 20px; height: 20px; border-radius: 6px; background: var(--sunk); border: 1px solid var(--line); display: grid; place-items: center; font-size: 11px; color: var(--mute); }
+.form-sec h3 { display: flex; align-items: center; gap: 8px; }
+.form-sec h3 .n { width: 20px; height: 20px; border-radius: 6px; background: var(--sunk); border: 1px solid var(--line); display: grid; place-items: center; font-size: 11px; color: var(--mute); }
 
 /* ======================================================================= metrics */
 .hero { position: relative; overflow: hidden; background: radial-gradient(90% 120% at 0% 0%, var(--glow-1), transparent 60%), var(--card); box-shadow: var(--card-edge);
-  border: 1px solid color-mix(in srgb, var(--gold) 22%, var(--line)); border-radius: var(--r); padding: var(--s-6); display: flex; flex-direction: column; gap: 6px; }
+  border: 1px solid var(--card-line); border-radius: var(--r); padding: var(--s-6); display: flex; flex-direction: column; gap: 6px; }
 @media (max-width: 899px) { .hero { padding: var(--s-5) var(--s-4); } }
 .price { font-size: 40px; line-height: 1.05; font-weight: 650; letter-spacing: -0.035em; }
 @media (max-width: 899px) { .price { font-size: var(--fs-num); } }
@@ -295,8 +271,7 @@ ol.howto strong { color: var(--ink); font-weight: 600; }
 @media (hover: hover) { .btn.primary:hover:not(:disabled) { box-shadow: 0 6px 20px -6px color-mix(in srgb, var(--gold) 60%, transparent); transform: translateY(-1px); } }
 @media (hover: hover) { .btn:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); } }
 .btn:active:not(:disabled) { transform: scale(.95); transition: transform 70ms ease-out, background-color 70ms; background: var(--hover); }
-.btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 88%, #fff), var(--gold)); color: var(--gold-ink); border-color: var(--gold); font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 2px 10px -4px color-mix(in srgb, var(--gold) 55%, transparent); }
+.btn.primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); font-weight: 600; }
 @media (hover: hover) { .btn.primary:hover:not(:disabled) { background: var(--gold-press); border-color: var(--gold-press); } }
 .btn.primary:active:not(:disabled) { background: var(--gold-press); }
 .btn.block { width: 100%; }

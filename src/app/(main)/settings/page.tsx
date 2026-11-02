@@ -65,20 +65,20 @@ function useSave(reload: () => void) {
 function General({ s, reload }: { s: any; reload: () => void }) {
   const { msg, save } = useSave(reload);
   // theme is per device (browser storage); 'auto' follows the iPhone light/dark setting
-  // theme is per device (browser storage). Dark is the default; 'auto' follows the iPhone light/dark setting.
+  // theme is per device (browser storage). Light is the default; 'auto' follows the iPhone light/dark setting.
   const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>(() => {
-    try { const t = localStorage.getItem('xau.theme'); return t === 'light' || t === 'auto' ? t : 'dark'; } catch { return 'dark'; }
+    try { const t = localStorage.getItem('xau.theme'); return t === 'dark' || t === 'auto' ? t : 'light'; } catch { return 'light'; }
   });
   const pickTheme = (t: 'auto' | 'light' | 'dark') => {
     setTheme(t);
-    try { if (t === 'dark') localStorage.removeItem('xau.theme'); else localStorage.setItem('xau.theme', t); } catch { /* storage blocked */ }
+    try { if (t === 'light') localStorage.removeItem('xau.theme'); else localStorage.setItem('xau.theme', t); } catch { /* storage blocked */ }
     document.documentElement.dataset.theme = t;
   };
   const tzLabel = s.timezone === 'Asia/Seoul' ? 'Seoul' : s.timezone === 'America/New_York' ? 'New York' : 'UTC';
   return (
     <Group id="tampilan" title="Tampilan" sub={`${theme === 'auto' ? 'Tema otomatis' : theme === 'dark' ? 'Gelap' : 'Terang'} · ${tzLabel}`}>
       <div className="picker"><span className="label">Tema</span>
-        <div style={{ maxWidth: 360 }}><Seg full label="Tema" options={[['dark', 'Gelap'], ['light', 'Terang'], ['auto', 'Otomatis']] as const} value={theme} onChange={pickTheme} /></div></div>
+        <div style={{ maxWidth: 360 }}><Seg full label="Tema" options={[['light', 'Terang'], ['dark', 'Gelap'], ['auto', 'Otomatis']] as const} value={theme} onChange={pickTheme} /></div></div>
       <div className="picker"><span className="label">Zona waktu</span>
         <div style={{ maxWidth: 360 }}><Seg full label="Zona waktu" options={[['UTC', 'UTC'], ['Asia/Seoul', 'Seoul'], ['America/New_York', 'New York']] as const} value={s.timezone} onChange={(v) => save({ timezone: v })} /></div></div>
       <p className="mute small">Pasang di iPhone seperti aplikasi: buka di Safari → tombol Bagikan → Tambah ke Layar Utama.</p>
