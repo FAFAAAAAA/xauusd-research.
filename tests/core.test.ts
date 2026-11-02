@@ -257,3 +257,14 @@ test('live trading: lot, journal validation, signal from alert extra, Telegram t
   assert.deepEqual(msg.copy?.map((c) => c.value), ['100.00', '95.00', '110.00', '0.02']);
   assert.match(msg.text, /RR 1:2\.0/);
 });
+
+test('tradesim breakeven: SL moves to entry after +1R from the next bar; exit at entry is flagged', async () => {
+  const { simulateTrade } = await import('../src/lib/core/tradesim');
+  const c = (t: number, o: number, h: number, l: number, cl: number) => ({ time: t * 900_000, open: o, high: h, low: l, close: cl, volume: 0 });
+  const bars = [c(0, 100, 100, 100, 100), c(1, 100, 100.5, 99.5, 100), c(2, 100, 101.2, 99.8, 101), c(3, 101, 101.1, 99.9, 100), c(4, 100, 103, 99, 102)];
+  const cost = { spread: 0, slippage: 0, commissionPerUnit: 0, ambiguityPolicy: 'worst' as const, contractSize: 100 };
+  const be = simulateTrade(bars, { side: 'long', entryBarIndex: 1, stopLoss: 99, takeProfit: 102, size: 1, breakevenR: 1 }, cost);
+  assert.equal(be.exitTime, bars[3].time); assert.equal(be.exitPrice, 100); assert.equal(be.pnl, 0); assert.equal(be.costs.breakeven, true);
+  const plain = simulateTrade(bars, { side: 'long', entryBarIndex: 1, stopLoss: 99, takeProfit: 102, size: 1 }, cost);
+  assert.equal(plain.exitReason, 'ambiguous_worst');   // bar 4 touches both 99 and 102
+});

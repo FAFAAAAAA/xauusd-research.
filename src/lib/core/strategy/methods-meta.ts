@@ -7,9 +7,9 @@ const OFF = { donchianH1: false, newYork: false, levelTouch: false, nH1: false, 
 const TREND = 'BUY: H4 close > EMA50 > EMA200 & D1 close > EMA50 · SELL kebalikannya + EMA50 D1 < EMA200';
 const TREND_EMA = 'BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1';
 export const METHODS: MethodMeta[] = [
-  { adapterKey: 'metode_level', version: 'level-v2', label: 'v1 · Level H1 diuji 2–3×',
-    rules: `Swing high/low H1 yang sudah disentuh 2–3× ditembus close H1 pertama (candle momentum, badan ≥ 1×ATR) · entry open M15 berikutnya · SL level ∓ 1,5×ATR H1 · ${TREND} · tanpa batas posisi terbuka`,
-    params: { ...OFF, levelTouch: true } },
+  { adapterKey: 'metode_level', version: 'level-v3', label: 'v1 · Level H1 diuji 2–3×',
+    rules: `Swing high/low H1 yang sudah disentuh 2–3× ditembus close H1 pertama (candle momentum, badan ≥ 1×ATR) · entry open M15 berikutnya · sinyal ke-2 searah di hari yang sama dilewati · SL level ∓ 1,5×ATR H1 · ${TREND} · tanpa batas posisi terbuka`,
+    params: { ...OFF, levelTouch: true, skipSecond: true } },
   { adapterKey: 'metode_donchian', version: 'h1-40-v1', label: 'Metode 2 · Breakout H1 40 candle',
     rules: `Close H1 di atas high / di bawah low 40 candle H1 sebelumnya (candle momentum) · SL close ∓ 2,5×ATR H1 · ${TREND} · 1 posisi`,
     params: { ...OFF, donchianH1: true } },
@@ -27,8 +27,8 @@ export const METHODS: MethodMeta[] = [
     params: { ...OFF, nH1: true, nH4: true } },
 ];
 // v2 has its own adapter (volbreak.ts); listed here for labels, report rules and the DB row.
-METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v4', label: 'v2 · Breakout volatilitas', custom: true, params: {},
-  rules: `Close M15 di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL); hari Senin memakai range Jumat (sesi Minggu tidak dihitung) · maks 1 entry per arah per blok 4 jam · SL level ∓ 0,35×ATR D1, TP 2× jarak SL · ${TREND} · tanpa batas posisi terbuka` });
+METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v5', label: 'v2 · Breakout volatilitas', custom: true, params: {},
+  rules: `Close M15 di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL); hari Senin memakai range Jumat (sesi Minggu tidak dihitung) · badan candle sinyal ≥ 0,5×ATR M15 · maks 1 entry per arah per blok 4 jam, sinyal ke-2 searah di hari yang sama dilewati · SL level ∓ 0,35×ATR D1, TP 2× jarak SL, SL digeser ke entry setelah +1R · ${TREND} · tanpa batas posisi terbuka` });
 // v3 has its own adapter (bosh1.ts).
 METHODS.push({ adapterKey: 'metode_bos_h1', version: 'bos-h1-v1', label: 'v3 · BOS H1', custom: true, params: {},
   rules: `Swing H1 (pivot 3 candle): BUY bila swing low C lebih tinggi dari swing low A, lalu close M15 menembus swing high B di antaranya (SELL kebalikannya) · 1 trade per level B · SL di C ∓ 0,1×ATR H1, TP 2× jarak SL · ${TREND} · tanpa batas posisi terbuka` });

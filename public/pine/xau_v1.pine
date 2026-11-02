@@ -1,11 +1,12 @@
 //@version=5
-// XAU v1 · Level H1 diuji 2–3× — sama dengan backtest website. Pasang di chart XAUUSD timeframe 1 JAM (H1).
+// XAU v1 · Level H1 diuji 2–3× (level-v3) — sama dengan backtest website. Pasang di chart XAUUSD timeframe 1 JAM (H1).
 // Sinyal hanya di candle H1 yang sudah TUTUP. Tidak ada order otomatis: kamu pasang order sendiri.
 //  Level  : swing high/low H1 (3 candle kiri-kanan) dalam 119 candle terakhir yang sudah disentuh 2–3×
 //           (sentuhan = high/low masuk 0,25 ATR dari level, jarak antar sentuhan ≥ 3 candle) dan belum pernah ditembus close.
 //           Dipakai level PALING TUA yang ditembus close candle ini.
 //  Entry  : close H1 menembus level itu dengan candle momentum (badan ≥ 1 × ATR14 H1), searah tren. Entry open candle berikutnya.
 //  SL     : level ∓ 1,5 × ATR14 H1. TP = 2 × jarak SL (RR 1:2).
+//  Hari   : sinyal ke-2 searah di hari yang sama (hari UTC) DILEWATI; ke-3 boleh (level-v3, 2 Nov 2026).
 //  Tren (aturan 1): BUY  jika close H4 > EMA50 > EMA200 (H4) dan close D1 > EMA50 (D1)
 //                   SELL jika close H4 < EMA50 < EMA200 (H4), close D1 < EMA50 (D1) dan EMA50 D1 < EMA200 D1
 // Catatan: H4/D1 diambil dari candle TradingView broker kamu (jam tutupnya bisa beda dari UTC), jadi sesekali sinyal bisa
@@ -77,6 +78,22 @@ if active and trendUp and close - open >= atr
 if active and trendDn and open - close >= atr
     [a, b] = f_level(-1)
     lvS := a
+
+// sinyal ke-2 searah di hari UTC yang sama dilewati
+dayId = math.floor(time / 86400000)
+var int cntB = 0
+var int cntS = 0
+if dayId != dayId[1]
+    cntB := 0
+    cntS := 0
+if not na(lvB)
+    cntB += 1
+    if cntB == 2
+        lvB := na
+if not na(lvS)
+    cntS += 1
+    if cntS == 2
+        lvS := na
 
 if not na(lvB)
     sl = lvB - 1.5 * atr

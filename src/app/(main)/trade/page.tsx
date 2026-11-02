@@ -11,8 +11,8 @@ const tone = (n: number | null | undefined) => (n == null ? '' : n > 0 ? 'pos' :
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
 // Backtest reference (average broker costs + swap, 2004–2026, RR 1:2): what live results should be compared with.
 const BT: Record<string, { win: number; perMonth: number; label: string }> = {
-  v1: { win: 0.406, perMonth: 3.5, label: 'v1 · Level H1' },
-  v2: { win: 0.395, perMonth: 8.0, label: 'v2 · Breakout volatilitas' },
+  v1: { win: 0.411, perMonth: 3.1, label: 'v1 · Level H1' },
+  v2: { win: 0.342, perMonth: 5.0, label: 'v2 · Breakout volatilitas' },   // + ±15% impas (BE)
   v3: { win: 0.404, perMonth: 4.1, label: 'v3 · BOS H1' },
 };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
@@ -121,6 +121,7 @@ export default function TradePage() {
                     <span><span className="k">SL</span><strong>{px(s!.sl)}</strong></span>
                     <span><span className="k">TP</span><strong>{px(s!.tp)}</strong></span>
                     <span><span className="k">Lot</span><strong>{l && l.lot > 0 ? l.lot.toFixed(2) : '—'}</strong></span>
+                    {s!.be ? <span><span className="k">BE (SL → entry)</span><strong>{px(s!.be)}</strong></span> : null}
                   </div>
                   <div><button className="btn sm" onClick={() => openDraft({ strategy: stratOf(e.strategy_version_label), side: s!.side, entry: String(s!.entry), sl: String(s!.sl), tp: String(s!.tp), lot: l && l.lot > 0 ? l.lot.toFixed(2) : '' })}>Catat ke jurnal</button></div>
                 </div>

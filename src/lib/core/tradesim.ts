@@ -47,6 +47,9 @@ export interface TradeIntent {
   takeProfit: number;
   size: number;
   maxBarsInTrade?: number;
+  /** move the stop to the entry price once price has reached entry + breakevenR × risk (active from the NEXT bar; the
+   *  bar that reaches it cannot also use the new stop because the order inside a candle is unknown). */
+  breakevenR?: number;
 }
 
 export interface TradeResult {
@@ -58,7 +61,7 @@ export interface TradeResult {
   pnl: number | null;
   pnlR: number | null;
   plannedRr: number;
-  costs: { spread: number; slippage: number; commission: number; swap?: number; nights?: number };
+  costs: { spread: number; slippage: number; commission: number; swap?: number; nights?: number; breakeven?: boolean };
 }
 
 /** Fill price of a market entry at `open`: longs pay the ask (+spread) and slippage, shorts sell the bid minus slippage. */
@@ -82,6 +85,8 @@ export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, c
   const commission = cost.commissionPerUnit * intent.size;
   const costs = { spread: cost.spread, slippage: cost.slippage, commission };
 
+  let stop = intent.stopLoss, moved = false;
+  const beAt = intent.breakevenR && intent.breakevenR > 0 ? entryPrice + (long ? 1 : -1) * intent.breakevenR * risk : NaN;
   const finish = (t: number, px: number, reason: TradeResult['exitReason']): TradeResult => {
     const gross = (long ? px - entryPrice : entryPrice - px) * intent.size * cost.contractSize;
     const rate = (long ? cost.swapLong : cost.swapShort) ?? 0;
@@ -90,7 +95,8 @@ export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, c
     const pnl = gross - commission - swap;
     return {
       entryTime: entryBar.time, entryPrice, exitTime: t, exitPrice: px, exitReason: reason,
-      pnl, pnlR: pnl / (risk * intent.size * cost.contractSize), plannedRr, costs: rate ? { ...costs, swap, nights } : costs,
+      pnl, pnlR: pnl / (risk * intent.size * cost.contractSize), plannedRr,
+      costs: { ...(rate ? { ...costs, swap, nights } : costs), ...(moved && reason !== 'tp' ? { breakeven: true } : {}) },
     };
   };
 
@@ -100,9 +106,9 @@ export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, c
     // Exits for a long happen on BID (data), for a short on ASK (data + spread).
     const hi = long ? c.high : c.high + cost.spread;
     const lo = long ? c.low : c.low + cost.spread;
-    const hitSl = long ? lo <= intent.stopLoss : hi >= intent.stopLoss;
+    const hitSl = long ? lo <= stop : hi >= stop;
     const hitTp = long ? hi >= intent.takeProfit : lo <= intent.takeProfit;
-    const slPx = long ? intent.stopLoss - cost.slippage : intent.stopLoss + cost.slippage;
+    const slPx = long ? stop - cost.slippage : stop + cost.slippage;
     if (hitSl && hitTp) {
       if (cost.ambiguityPolicy === 'skip') {
         return { entryTime: entryBar.time, entryPrice, exitTime: c.time, exitPrice: null, exitReason: 'ambiguous_skipped', pnl: null, pnlR: null, plannedRr, costs };
@@ -114,6 +120,7 @@ export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, c
     if (hitSl) return finish(c.time, slPx, 'sl');
     if (hitTp) return finish(c.time, intent.takeProfit, 'tp');
     if (n + 1 >= maxBars) return finish(c.time, long ? c.close : c.close + cost.spread, 'time');
+    if (!moved && Number.isFinite(beAt) && (long ? hi >= beAt : lo <= beAt)) { moved = true; stop = entryPrice; }   // SL → entry from the next bar
   }
   return { entryTime: entryBar.time, entryPrice, exitTime: null, exitPrice: null, exitReason: 'open', pnl: null, pnlR: null, plannedRr, costs };
 }

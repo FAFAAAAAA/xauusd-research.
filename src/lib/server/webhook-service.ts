@@ -85,7 +85,8 @@ export async function handleTradingViewWebhook(db: Db, rawBody: string, ip: stri
         if (sig) {
           const r = readLiveRisk(await repo.getAppSetting(db, 'live_risk', null));
           const l = lotFor((r.capital * r.riskPct) / 100, sig.entry, sig.sl);
-          trade = { ...sig, lot: l ? l.lot : null, riskUsd: l ? l.risk : null, riskPct: r.riskPct };
+          const isV2 = /^v2\b|volbreak/i.test(String(p.strategy_version));   // v2 (volbreak-v5): SL → entry after +1R
+          trade = { ...sig, lot: l ? l.lot : null, riskUsd: l ? l.risk : null, riskPct: r.riskPct, be: isV2 ? sig.entry + (sig.side === 'BUY' ? 1 : -1) * Math.abs(sig.entry - sig.sl) : null };
         }
         const msg = buildEventMessage({ trade,
           mode: 'LIVE', eventType: p.event_type, timeframe: p.timeframe, eventTime: p.timestamp, price: p.price,

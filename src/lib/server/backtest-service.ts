@@ -206,7 +206,8 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       const lot = riskUsd ? Math.round((riskUsd / (risk * cs)) * 1e6) / 1e6 : size;
       if (!(lot > 0)) { skipped.sl_tidak_valid++; continue; }
       const maxBars = Number(m.ev.details?.max_bars) || undefined; // strategy time exit (e.g. Pine maxHoldBars)
-      const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size: lot, maxBarsInTrade: maxBars }, { ...costs, contractSize: cs });
+      const beR = Number(m.ev.details?.breakeven_r) || undefined;   // strategy rule: SL → entry after +beR (v2 volbreak-v5)
+      const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size: lot, maxBarsInTrade: maxBars, breakevenR: beR }, { ...costs, contractSize: cs });
       busy.set(slot, r.exitTime ?? Infinity);
       const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.details?.slot ?? `${m.ev.zone?.low}-${m.ev.zone?.high}`}`;
       trades.push({

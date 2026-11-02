@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //| XAU_v2_EA.mq5 — v2 · Breakout volatilitas (sama dengan backtest   |
-//| website, versi volbreak-v4). Untuk MetaTrader 5, simbol emas.      |
+//| website, versi volbreak-v5). Untuk MetaTrader 5, simbol emas.      |
 //|                                                                    |
 //| Aturan (semua memakai hari UTC dan candle yang SUDAH TUTUP):       |
 //|  Level hari ini = open hari ini ± 0,5 × range kemarin (high−low).  |
@@ -8,6 +8,9 @@
 //|  BUY : close M15 menembus level atas dari bawah, tren naik.        |
 //|  SELL: close M15 menembus level bawah dari atas, tren turun.       |
 //|  Maks 1 entry per arah per blok 4 jam UTC (00/04/08/12/16/20).     |
+//|  Sinyal ke-2 searah di hari UTC yang sama dilewati (ke-3 boleh).   |
+//|  Badan candle sinyal harus >= 0,5 x ATR14 M15.                     |
+//|  Breakeven: setelah harga +1R, SL digeser ke harga entry.          |
 //|  SL = level ∓ 0,35 × ATR14 D1. TP = 2 × jarak SL dari harga isi.   |
 //|  Tren (aturan 1): BUY  jika close H4 > EMA50 > EMA200 (H4) dan     |
 //|                        close D1 > EMA50 (D1)                       |
@@ -24,7 +27,7 @@
 //| jaminan hasil nyata.                                               |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.00"
+#property version   "1.10"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -40,6 +43,7 @@ input int    InpSlippagePts  = 30;     // Slippage maksimum (points)
 const double VOL_K   = 0.5;
 const double SL_ATR  = 0.35;
 const double RR      = 2.0;
+const double BODY_MIN = 0.5;     // v5: signal candle body >= 0.5 x ATR14 M15
 const int    H4_WIN  = 1000;   // jumlah candle H4 untuk EMA (sama dengan backtest)
 const int    D1_WIN  = 1000;   // jumlah candle D1 untuk EMA
 const int    ATR_WIN = 400;    // jumlah candle D1 untuk ATR
@@ -150,8 +154,46 @@ double LotFor(double riskMoney, double dist)
    return MathMin(lot, mx);
 }
 
+//--- v5 breakeven: once price reaches entry + 1R, move the SL to the entry price (each position once)
+void ManageBreakeven()
+{
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong tk = PositionGetTicket(i);
+      if(tk == 0 || PositionGetInteger(POSITION_MAGIC) != InpMagic || PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL), tp = PositionGetDouble(POSITION_TP);
+      bool buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+      if(sl <= 0 || (buy ? sl >= op : sl <= op)) continue;           // already at breakeven (or no SL)
+      double r = MathAbs(op - sl);
+      double px = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      if(buy ? px >= op + r : px <= op - r)
+      {
+         int dg = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+         if(trade.PositionModify(tk, NormalizeDouble(op, dg), tp)) PrintFormat("Breakeven: SL posisi %I64u digeser ke entry %.2f", tk, op);
+         else PrintFormat("Breakeven gagal (%I64u): %d %s", tk, trade.ResultRetcode(), trade.ResultRetcodeDescription());
+      }
+   }
+}
+
+//--- per-day / per-block markers kept in terminal global variables (survive restarts)
+string GvName(string kind, int side, long key) { return StringFormat("XAUv2_%I64d_%s_%d_%I64d", InpMagic, kind, side, key); }
+
+//--- Wilder ATR14 of the CLOSED M15 candles in m[] (series order: m[1] = last closed)
+double AtrM15(const MqlRates &m[])
+{
+   int n = ArraySize(m);
+   double e = -1;
+   for(int i = n - 2; i >= 1; i--)
+   {
+      double tr = MathMax(m[i].high - m[i].low, MathMax(MathAbs(m[i].high - m[i + 1].close), MathAbs(m[i].low - m[i + 1].close)));
+      e = e < 0 ? tr : e + (tr - e) / 14.0;
+   }
+   return e;
+}
+
 void OnTick()
 {
+   if(InpTrade) ManageBreakeven();
    datetime bar = iTime(_Symbol, PERIOD_M15, 0);
    if(bar == 0 || bar == g_lastBar) return;          // run once, on the first tick of a new M15 candle
    g_lastBar = bar;
@@ -207,9 +249,17 @@ void OnTick()
       double lv = s > 0 ? upL : dnL;
       bool cross = s * (m[1].close - lv) > 0 && s * (m[2].close - lv) <= 0;
       if(!cross || !(s > 0 ? up : dn)) continue;
-      if(UsedInBlock(s, block, off)) continue;
-      double sl = lv - s * SL_ATR * atr;
+      if(UsedInBlock(s, block, off) || GlobalVariableCheck(GvName("blk", s, block))) continue;
+      GlobalVariableSet(GvName("blk", s, block), 1);
+      // count today's signals of this direction (before the candle rule); the 2nd one is skipped
+      string gc = GvName("day", s, dayStart);
+      double nth = (GlobalVariableCheck(gc) ? GlobalVariableGet(gc) : 0) + 1;
+      GlobalVariableSet(gc, nth);
       string side = s > 0 ? "BUY" : "SELL";
+      if(nth == 2) { PrintFormat("Lewati sinyal v2 %s: sinyal ke-2 searah hari ini.", side); continue; }
+      double a15 = AtrM15(m);
+      if(!(MathAbs(m[1].close - m[1].open) >= BODY_MIN * a15)) { PrintFormat("Lewati sinyal v2 %s: badan candle %.2f < %.1f x ATR M15 (%.2f).", side, MathAbs(m[1].close - m[1].open), BODY_MIN, a15); continue; }
+      double sl = lv - s * SL_ATR * atr;
       PrintFormat("Sinyal v2 %s: level %.2f, SL %.2f (ATR D1 %.2f, range %.2f)", side, lv, sl, atr, range);
       if(!InpTrade) break;
       double spread = SymbolInfoDouble(_Symbol, SYMBOL_ASK) - SymbolInfoDouble(_Symbol, SYMBOL_BID);

@@ -141,5 +141,18 @@ export const methodAdapters: StrategyAdapter[] = METHODS.filter((m) => !m.custom
   ...breakoutV08Adapter,
   key: m.adapterKey,
   name: m.label,
-  evaluate: (ctx) => breakoutV08Adapter.evaluate({ ...ctx, params: { ...m.params, ...ctx.params, noLimit: true } }),
+  evaluate: (ctx) => {
+    const p: Record<string, unknown> = { ...m.params, ...ctx.params, noLimit: true };
+    const evs = breakoutV08Adapter.evaluate({ ...ctx, params: p });
+    if (p.skipSecond !== true || !evs.length) return evs;
+    // v1 level-v3 (2 Nov 2026): the 2nd signal of the same direction on the same UTC day is skipped (3rd+ allowed)
+    const st = ctx.state as { dd?: { day: number; n: Record<string, number> } };
+    return evs.filter((e) => {
+      const day = Math.floor(e.candleTime / 86_400_000);
+      if (st.dd?.day !== day) st.dd = { day, n: {} };
+      const side = String(e.details?.side);
+      const nth = (st.dd.n[side] = (st.dd.n[side] ?? 0) + 1);
+      return nth !== 2;
+    });
+  },
 }));

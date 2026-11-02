@@ -38,7 +38,7 @@ export interface TelegramEventMessage {
   isTest?: boolean;
   linkUrl?: string | null;
   /** LIVE signal from the v1/v2 Pine indicators: shown as entry / SL / TP / lot instead of the SNR zone */
-  trade?: { side: 'BUY' | 'SELL'; entry: number; sl: number; tp: number; lot: number | null; riskUsd: number | null; riskPct: number | null };
+  trade?: { side: 'BUY' | 'SELL'; entry: number; sl: number; tp: number; lot: number | null; riskUsd: number | null; riskPct: number | null; /** price at which the SL moves to entry (v2: +1R) */ be?: number | null };
 }
 
 const fmtPrice = (n: number | null) => (n == null ? '—' : n.toFixed(2));
@@ -59,6 +59,7 @@ export function buildEventMessage(m: TelegramEventMessage): { text: string; butt
         `<b>Entry ≈</b> <code>${fmtPrice(t.entry)}</code> <i>(harga close; isi di open candle berikutnya)</i>`,
         `<b>SL:</b> <code>${fmtPrice(t.sl)}</code>  (jarak ${Math.abs(t.entry - t.sl).toFixed(2)})`,
         `<b>TP:</b> <code>${fmtPrice(t.tp)}</code>  (RR 1:${(Math.abs(t.tp - t.entry) / Math.abs(t.entry - t.sl)).toFixed(1)})`,
+        ...(t.be != null && Number.isFinite(t.be) ? [`<b>Breakeven:</b> bila harga mencapai <code>${fmtPrice(t.be)}</code> (+1R), geser SL ke harga entry`] : []),
         t.lot != null && t.lot > 0 ? `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>  (risiko ≈ $${(t.riskUsd ?? 0).toFixed(2)}${t.riskPct ? ` = ${t.riskPct}% modal` : ''})`
           : t.lot === 0 ? '<b>Lot:</b> di bawah 0,01 — modal/risiko terlalu kecil untuk SL ini' : '<b>Lot:</b> atur modal & risiko di menu Trade',
         '',

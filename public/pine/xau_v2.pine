@@ -1,11 +1,13 @@
 //@version=5
-// XAU v2 · Breakout volatilitas — sama dengan backtest website (README 5q). Pasang di chart XAUUSD timeframe 15 menit.
+// XAU v2 · Breakout volatilitas (volbreak-v5) — sama dengan backtest website (README 5q, 5x). Pasang di chart XAUUSD timeframe 15 menit.
 // Sinyal hanya di candle M15 yang sudah TUTUP. Tidak ada order otomatis: kamu pasang order sendiri.
 //  Level hari ini (hari UTC): open hari ini ± 0,5 × range kemarin (high − low). Hari Senin (dan Minggu malam) memakai range JUMAT:
 //  sesi Minggu yang pendek tidak dihitung sebagai "kemarin".
 //  BUY : close M15 menembus level atas dari bawah, tren naik. SELL: kebalikannya, tren turun.
-//  Maks 1 sinyal per arah per blok 4 jam UTC (00/04/08/12/16/20).
+//  Maks 1 sinyal per arah per blok 4 jam UTC (00/04/08/12/16/20). Sinyal ke-2 searah di hari yang sama DILEWATI (ke-3 boleh).
+//  Badan candle sinyal harus ≥ 0,5 × ATR14 M15 (tembusan lemah dilewati).
 //  SL  : level ∓ 0,35 × ATR14 D1. TP = 2 × jarak SL (RR 1:2). Entry di open candle berikutnya.
+//  Breakeven: bila harga mencapai +1R (entry + jarak SL), geser SL ke harga entry.
 //  Tren (aturan 1): BUY  jika close H4 > EMA50 > EMA200 (H4) dan close D1 > EMA50 (D1)
 //                   SELL jika close H4 < EMA50 < EMA200 (H4), close D1 < EMA50 (D1) dan EMA50 D1 < EMA200 D1
 // Catatan: H4/D1 diambil dari candle TradingView broker kamu (jam tutupnya bisa beda dari UTC), jadi sesekali sinyal bisa
@@ -46,32 +48,45 @@ dnL = dOpen - volK * prevRange
 plot(showLv ? upL : na, "Level atas", color.new(color.green, 30), 1, plot.style_linebr)
 plot(showLv ? dnL : na, "Level bawah", color.new(color.red, 30), 1, plot.style_linebr)
 
-// ---- sinyal (maks 1 per arah per blok 4 jam UTC)
+// ---- sinyal (maks 1 per arah per blok 4 jam UTC; sinyal ke-2 searah hari itu dilewati; candle ≥ 0,5 ATR M15)
 blk = math.floor(time / (4 * 3600000))
 var int usedBuy = -1
 var int usedSell = -1
+var int cntBuy = 0
+var int cntSell = 0
+if dayId != dayId[1]
+    cntBuy := 0
+    cntSell := 0
+atr15 = ta.rma(ta.tr(true), 14)
+bigBody = math.abs(close - open) >= 0.5 * atr15
 f_msg(sideTxt, lv, sl, tp) =>
     if asJson
-        "{\"secret\":\"" + secret + "\",\"event_id\":\"v2-" + str.tostring(time) + "-" + sideTxt + "\",\"symbol\":\"XAUUSD\",\"timeframe\":\"15\",\"event_type\":\"SETUP_CONFIRMED\",\"timestamp\":" + str.tostring(time_close) + ",\"price\":" + str.tostring(close, "#.###") + ",\"zone\":{\"low\":" + str.tostring(lv, "#.###") + ",\"high\":" + str.tostring(lv, "#.###") + ",\"kind\":\"" + (sideTxt == "BUY" ? "resistance" : "support") + "\"},\"strategy_version\":\"v2 · Breakout volatilitas\",\"source\":\"tradingview\",\"mode\":\"LIVE\",\"extra\":{\"side\":\"" + sideTxt + "\",\"sl\":" + str.tostring(sl, "#.###") + ",\"tp\":" + str.tostring(tp, "#.###") + "}}"
+        "{\"secret\":\"" + secret + "\",\"event_id\":\"v2-" + str.tostring(time) + "-" + sideTxt + "\",\"symbol\":\"XAUUSD\",\"timeframe\":\"15\",\"event_type\":\"SETUP_CONFIRMED\",\"timestamp\":" + str.tostring(time_close) + ",\"price\":" + str.tostring(close, "#.###") + ",\"zone\":{\"low\":" + str.tostring(lv, "#.###") + ",\"high\":" + str.tostring(lv, "#.###") + ",\"kind\":\"" + (sideTxt == "BUY" ? "resistance" : "support") + "\"},\"strategy_version\":\"v2 · Breakout volatilitas\",\"source\":\"tradingview\",\"mode\":\"LIVE\",\"extra\":{\"side\":\"" + sideTxt + "\",\"sl\":" + str.tostring(sl, "#.###") + ",\"tp\":" + str.tostring(tp, "#.###") + ",\"be\":" + str.tostring(close + (close - sl), "#.###") + "}}"
     else
-        "XAU v2 " + sideTxt + " | Entry ≈ " + str.tostring(close, "#.##") + " | SL " + str.tostring(sl, "#.##") + " | TP " + str.tostring(tp, "#.##") + " | jarak SL " + str.tostring(math.abs(close - sl), "#.##")
+        "XAU v2 " + sideTxt + " | Entry ≈ " + str.tostring(close, "#.##") + " | SL " + str.tostring(sl, "#.##") + " | TP " + str.tostring(tp, "#.##") + " | jarak SL " + str.tostring(math.abs(close - sl), "#.##") + " | BE: di " + str.tostring(close + (close - sl), "#.##") + " geser SL ke entry"
 
 ready = barstate.isconfirmed and not na(prevRange) and prevRange > 0 and not na(datr)
-buySig = ready and close > upL and close[1] <= upL and trendUp and usedBuy != blk
-sellSig = ready and close < dnL and close[1] >= dnL and trendDn and usedSell != blk and not buySig
-if buySig
+preBuy = ready and close > upL and close[1] <= upL and trendUp and usedBuy != blk
+preSell = ready and close < dnL and close[1] >= dnL and trendDn and usedSell != blk and not preBuy
+if preBuy
     usedBuy := blk
+    cntBuy += 1
+if preSell
+    usedSell := blk
+    cntSell += 1
+buySig = preBuy and cntBuy != 2 and bigBody
+sellSig = preSell and cntSell != 2 and bigBody
+if buySig
     sl = upL - slAtr * datr
     tp = close + rr * (close - sl)
-    label.new(bar_index, low, "BUY v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##"), style = label.style_label_up, color = color.green, textcolor = color.white, size = size.small)
+    label.new(bar_index, low, "BUY v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##") + "\nBE " + str.tostring(close + (close - sl), "#.##"), style = label.style_label_up, color = color.green, textcolor = color.white, size = size.small)
     line.new(bar_index, sl, bar_index + 12, sl, color = color.red)
     line.new(bar_index, tp, bar_index + 12, tp, color = color.green)
     alert(f_msg("BUY", upL, sl, tp), alert.freq_once_per_bar_close)
 if sellSig
-    usedSell := blk
     sl = dnL + slAtr * datr
     tp = close - rr * (sl - close)
-    label.new(bar_index, high, "SELL v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##"), style = label.style_label_down, color = color.red, textcolor = color.white, size = size.small)
+    label.new(bar_index, high, "SELL v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##") + "\nBE " + str.tostring(close + (close - sl), "#.##"), style = label.style_label_down, color = color.red, textcolor = color.white, size = size.small)
     line.new(bar_index, sl, bar_index + 12, sl, color = color.red)
     line.new(bar_index, tp, bar_index + 12, tp, color = color.green)
     alert(f_msg("SELL", dnL, sl, tp), alert.freq_once_per_bar_close)

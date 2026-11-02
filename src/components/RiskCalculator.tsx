@@ -10,7 +10,7 @@ const pc = (n: number) => `${(n * 100).toLocaleString('en-US', { maximumFraction
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
 
 export function RiskCalculator() {
-  const [k, setK] = useState<Key>('v1v2');
+  const [k, setK] = useState<Key>('v1v2v3');
   const [cap, setCap] = useState('1000');
   const [unit, setUnit] = useState<'usd' | 'cent'>('usd');
   const [mode, setMode] = useState<'pct' | 'lot'>('pct');

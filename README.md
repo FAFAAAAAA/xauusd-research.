@@ -368,3 +368,14 @@ Aturan (RR 1:2 tetap, keluar hanya di TP atau SL, tanpa batas posisi):
 Hasil 2004–2026 (spread 0,12 · slippage 0,10 · komisi $5 · swap 67/−25, risiko $10/trade):
 4,1 trade/bln · win 40,3% · **+$1.289** · PF 1,18 · DD $250 · 2004–17 +$400 (PF 1,10) · 2018–26 +$889 (PF 1,31) · median hold 14,6 jam, 63% < 24 jam.
 Tanpa aturan 1: −$566. H4 dan M15: rugi. 25 variasi (panjang swing, buffer SL, close H1, kesegaran, batas SL, sesi, ukuran candle, SL tetap ATR) tidak ada yang jelas lebih baik di 2004–2017 → aturan dasar dipertahankan.
+
+## 5x. Perbaikan dari bedah SL (2 Nov 2026): v2 → `volbreak-v5`, v1 → `level-v3`, v3 tetap
+Bedah semua trade yang kena SL (lihat percakapan 2 Nov): ±30% tembusan palsu (tidak pernah +0,25R), ±25% sempat +1R lalu balik ke SL.
+Filter hanya dipakai kalau PF naik di 2004–17 **dan** 2018–26. Hari Rabu & jam New York ditolak (tidak konsisten / memotong terlalu banyak trade).
+
+- **v2 `volbreak-v5`**: (1) badan candle sinyal ≥ 0,5×ATR14 M15, (2) sinyal ke-2 searah di hari UTC yang sama dilewati (ke-3 boleh; dihitung sebelum aturan candle), (3) **breakeven**: setelah +1R SL digeser ke harga entry (`details.breakeven_r = 1`; simulator: aktif mulai candle berikutnya, keluar di entry ditandai `costs.breakeven = true`, `exit_reason` tetap `sl` karena constraint DB). Param: `volMinBody`, `volBe`, `volDayRule` (`skip2`/`max1`/`off`).
+  Mesin website 2004–2026 (biaya rata-rata + swap, $10/trade): 1.302 trade · 5,0/bln · +$2.239 · DD 15,9R ($159) · 2004–17 +$1.281 · 2018–26 +$957 · ±15% trade keluar impas. (v4: +$1.899, DD $562.) Varian `max1` (+$2.036) lebih jelek.
+- **v1 `level-v3`**: sinyal ke-2 searah di hari UTC yang sama dilewati. 833 trade · 3,1/bln · +$950 · DD 30,2R · 2004–17 +$142 · 2018–26 +$808. (v2: +$944, DD 42,5R.)
+- **v3 `bos-h1-v1`**: tidak diubah (filter & breakeven tidak memperbaiki di kedua periode).
+- Ikut diperbarui: Pine `xau_v1.pine` / `xau_v2.pine`, EA `XAU_v2_EA.mq5` (v1.10: aturan v5 + geser SL ke entry setelah +1R; penanda hari/blok di Global Variables terminal), sinyal live Twelve Data & Telegram (baris "Breakeven: bila harga mencapai X geser SL ke entry"), jurnal EA (tutup di harga entry dicatat **BE**), kalkulator risiko (`RISK_STATS` baru + kombinasi v1+v2+v3).
+- Gabungan v1 + v2 + v3 ($10/trade): 3.208 trade · 12/bln · +$4.621 · DD 40,2R.

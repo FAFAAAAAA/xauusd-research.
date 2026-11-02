@@ -395,9 +395,17 @@ test('v2 volatility breakout: registered; BUY when close crosses today open + 0.
   const st = {}; const ev: StrategyEventDraft[] = [];
   for (let i = 1; i < m.length; i++) {
     const w = m.slice(0, i + 1);
-    ev.push(...volBreakAdapter.evaluate({ mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: w, now: w[w.length - 1].time + M15, zones: [], news: {} as never, htf: { H4: h4, D1: d1 }, params: {}, state: st }));
+    ev.push(...volBreakAdapter.evaluate({ mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: w, now: w[w.length - 1].time + M15, zones: [], news: {} as never, htf: { H4: h4, D1: d1 }, params: { volMinBody: 0 }, state: st }));
   }
   assert.equal(ev.length, 1, 'only the first cross of the day');
+  assert.equal(ev[0].details?.breakeven_r, 1, 'v5: SL to entry after +1R');
+  // v5 candle rule: the same crossing candle (body 1 < 0.5 × ATR M15 ≈ 1.67) is skipped with the default volMinBody 0.5
+  const st2 = {}; const ev2: StrategyEventDraft[] = [];
+  for (let i = 1; i < m.length; i++) {
+    const w = m.slice(0, i + 1);
+    ev2.push(...volBreakAdapter.evaluate({ mode: 'BACKTEST', symbol: 'XAUUSD', timeframe: 'M15', candles: w, now: w[w.length - 1].time + M15, zones: [], news: {} as never, htf: { H4: h4, D1: d1 }, params: {}, state: st2 }));
+  }
+  assert.equal(ev2.length, 0, 'weak breakout candle is skipped');
   assert.equal(ev[0].details?.side, 'long');
   assert.equal(ev[0].candleTime, m[3].time);
   assert.equal(ev[0].details?.level, lvl);

@@ -57,7 +57,9 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const reason = b.reason === 'tp' ? 'tp' : b.reason === 'sl' ? 'sl' : 'manual';
     const base = prev ?? { strategy: 'v2', side: b.side, entry: num(b.entry), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, note: 'EA' };
     // keep the broker's real exit price and net result (incl. commission & swap)
-    trade = cleanTrade({ ...base, result: reason === 'tp' ? 'manual' : reason, exit: num(b.price), pnl: num(b.profit), closedAt: timeMs }, id);
+    // v2 breakeven: a stop that closes at (about) the entry price is the moved SL → record as BE, not SL
+    const isBe = reason === 'sl' && Math.abs(num(b.price) - Number(base.entry)) < 0.25 * Math.abs(Number(base.entry) - Number(base.sl));
+    trade = cleanTrade({ ...base, result: reason === 'tp' ? 'manual' : isBe ? 'be' : reason, exit: num(b.price), pnl: num(b.profit), closedAt: timeMs }, id);
     if (typeof trade !== 'string' && reason === 'tp') trade = { ...trade, result: 'tp' };
   }
   if (typeof trade === 'string') return { status: 422, body: { ok: false, error: trade } };
@@ -74,7 +76,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const text = event === 'open'
       ? [`🤖 <b>EA v2 — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${t.entry.toFixed(2)}</code>`, `<b>SL:</b> <code>${t.sl.toFixed(2)}</code>`, `<b>TP:</b> <code>${t.tp.toFixed(2)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
-      : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>EA v2 — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : 'manual'})</b>`, '',
+      : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>EA v2 — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
         `<b>Entry → keluar:</b> ${t.entry.toFixed(2)} → ${(t.exit ?? 0).toFixed(2)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
     const copy = event === 'open' ? [{ text: 'Salin entry', value: t.entry.toFixed(2) }, { text: 'Salin SL', value: t.sl.toFixed(2) }, { text: 'Salin TP', value: t.tp.toFixed(2) }] : undefined;

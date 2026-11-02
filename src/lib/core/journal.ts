@@ -63,7 +63,7 @@ export function journalStats(trades: readonly JournalTrade[], strategy?: string)
   };
 }
 
-export interface LiveSignal { side: JournalSide; entry: number; sl: number; tp: number }
+export interface LiveSignal { side: JournalSide; entry: number; sl: number; tp: number; /** v2: move SL to entry at this price (+1R) */ be?: number }
 /** Reads side / sl / tp sent by the v1/v2 Pine indicators in the alert `extra`. Entry = alert price (bar close; real fill is the next open). */
 export function liveSignalFrom(extra: Record<string, unknown> | null | undefined, price: number): LiveSignal | null {
   if (!extra) return null;
@@ -71,5 +71,6 @@ export function liveSignalFrom(extra: Record<string, unknown> | null | undefined
   const sl = Number(extra.sl), tp = Number(extra.tp);
   if ((side !== 'BUY' && side !== 'SELL') || !(sl > 0) || !(tp > 0) || !(price > 0)) return null;
   if (side === 'BUY' ? !(sl < price && tp > price) : !(sl > price && tp < price)) return null;
-  return { side, entry: price, sl, tp };
+  const be = Number(extra.be);
+  return { side, entry: price, sl, tp, ...(be > 0 ? { be } : {}) };
 }
