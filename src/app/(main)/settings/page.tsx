@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { call, fmt, peek } from '@/components/client';
-import { ErrorBox, Loading, PageHead, Status } from '@/components/Status';
+import { CopyButton, ErrorBox, Loading, PageHead, Seg, Spinner, Status, copyText, toast } from '@/components/Status';
 import { FileText } from '@/components/FileText';
 import { TIMEFRAMES } from '@/lib/core/types';
 
@@ -13,16 +13,19 @@ export default function Settings() {
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => { setErr(null); call<any>('/api/settings').then(setS).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { load(); }, [load]);
-  if (err) return <><PageHead title="Atur" /><ErrorBox error={err} retry={load} /></>;
-  if (!s) return <><PageHead title="Atur" /><Loading what="pengaturan" /></>;
+  if (err && !s) return <><PageHead title="Atur" /><ErrorBox error={err} retry={load} /></>;
+  if (!s) return <><PageHead title="Atur" /><Loading what="pengaturan" variant="page" /></>;
   return (
     <div className="stack">
-      <PageHead title="Atur" />
+      <PageHead title="Atur" sub="Koneksi sinyal, tampilan, dan data riset." />
+      <span className="section-title">Sinyal & koneksi</span>
       <Telegram s={s} reload={load} />
       <FeedSetup tz={s.timezone} />
       <TradingView s={s} />
       <EaSetup tz={s.timezone} />
+      <span className="section-title">Aplikasi</span>
       <General s={s} reload={load} />
+      <span className="section-title">Lanjutan</span>
       <details className="group">
         <summary><span><h2>Lanjutan</h2><span className="s">Data riset, berita, zona, impor, log error</span></span></summary>
         <div className="body">
@@ -53,7 +56,7 @@ function useSave(reload: () => void) {
   const [msg, setMsg] = useState<string | null>(null);
   const save = async (json: unknown) => {
     setMsg(null);
-    try { await call('/api/settings', { method: 'PUT', json }); setMsg('Tersimpan'); reload(); }
+    try { await call('/api/settings', { method: 'PUT', json }); toast('Tersimpan'); reload(); }
     catch (e) { setMsg((e as Error).message); }
   };
   return { msg, save };
@@ -62,29 +65,24 @@ function useSave(reload: () => void) {
 function General({ s, reload }: { s: any; reload: () => void }) {
   const { msg, save } = useSave(reload);
   // theme is per device (browser storage); 'auto' follows the iPhone light/dark setting
+  // theme is per device (browser storage). Dark is the default; 'auto' follows the iPhone light/dark setting.
   const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>(() => {
-    try { const t = localStorage.getItem('xau.theme'); return t === 'light' || t === 'dark' ? t : 'auto'; } catch { return 'auto'; }
+    try { const t = localStorage.getItem('xau.theme'); return t === 'light' || t === 'auto' ? t : 'dark'; } catch { return 'dark'; }
   });
   const pickTheme = (t: 'auto' | 'light' | 'dark') => {
     setTheme(t);
-    try { if (t === 'auto') localStorage.removeItem('xau.theme'); else localStorage.setItem('xau.theme', t); } catch { /* storage blocked */ }
-    if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+    try { if (t === 'dark') localStorage.removeItem('xau.theme'); else localStorage.setItem('xau.theme', t); } catch { /* storage blocked */ }
+    document.documentElement.dataset.theme = t;
   };
   const tzLabel = s.timezone === 'Asia/Seoul' ? 'Seoul' : s.timezone === 'America/New_York' ? 'New York' : 'UTC';
   return (
     <Group id="tampilan" title="Tampilan" sub={`${theme === 'auto' ? 'Tema otomatis' : theme === 'dark' ? 'Gelap' : 'Terang'} · ${tzLabel}`}>
-      <span className="label">Tema</span>
-      <div className="seg" role="group" aria-label="Tema">
-        {([['auto', 'Otomatis'], ['light', 'Terang'], ['dark', 'Gelap']] as const).map(([v, l]) =>
-          <button key={v} aria-pressed={theme === v} onClick={() => pickTheme(v)}>{l}</button>)}
-      </div>
-      <span className="label">Zona waktu</span>
-      <div className="seg" role="group" aria-label="Zona waktu">
-        {[['UTC', 'UTC'], ['Asia/Seoul', 'Seoul'], ['America/New_York', 'New York']].map(([v, l]) =>
-          <button key={v} aria-pressed={s.timezone === v} onClick={() => save({ timezone: v })}>{l}</button>)}
-      </div>
+      <div className="picker"><span className="label">Tema</span>
+        <div style={{ maxWidth: 360 }}><Seg full label="Tema" options={[['dark', 'Gelap'], ['light', 'Terang'], ['auto', 'Otomatis']] as const} value={theme} onChange={pickTheme} /></div></div>
+      <div className="picker"><span className="label">Zona waktu</span>
+        <div style={{ maxWidth: 360 }}><Seg full label="Zona waktu" options={[['UTC', 'UTC'], ['Asia/Seoul', 'Seoul'], ['America/New_York', 'New York']] as const} value={s.timezone} onChange={(v) => save({ timezone: v })} /></div></div>
       <p className="mute small">Pasang di iPhone seperti aplikasi: buka di Safari → tombol Bagikan → Tambah ke Layar Utama.</p>
-      {msg ? <span className="small mute">{msg}</span> : null}
+      {msg ? <div className="error">{msg}</div> : null}
     </Group>
   );
 }
@@ -130,10 +128,10 @@ function Telegram({ s, reload }: { s: any; reload: () => void }) {
       </div>
       <div className="row">
         <button className="btn" onClick={() => { save({ telegram: { botToken: token || undefined, chatId: chat, cooldownSeconds: Number(cool), maxPerMinute: Number(perMin) } }); setToken(''); }}>Simpan</button>
-        <button className="btn" onClick={detect} disabled={det?.busy}>{det?.busy ? 'Mencari…' : 'Cari Chat ID'}</button>
-        <button className="btn primary" onClick={sendTest} disabled={test?.busy}>{test?.busy ? 'Mengirim…' : 'Kirim pesan tes'}</button>
+        <button className="btn" onClick={detect} disabled={det?.busy}>{det?.busy ? <><Spinner />Mencari…</> : 'Cari Chat ID'}</button>
+        <button className="btn primary" onClick={sendTest} disabled={test?.busy}>{test?.busy ? <><Spinner />Mengirim…</> : 'Kirim pesan tes'}</button>
       </div>
-      {msg ? <span className="small mute">{msg}</span> : null}
+      {msg ? <div className="error">{msg}</div> : null}
       {det && !det.busy ? (det.tokenOk ? (
         <div className="notice stack tight">
           <span>Bot <strong>@{det.bot.username}</strong> aktif.</span>
@@ -178,7 +176,7 @@ function FeedSetup({ tz }: { tz: string }) {
   return (
     <Group id="sinyal" title="Sinyal otomatis v2 (gratis)" sub={!f ? '' : ok ? `Aktif · cek terakhir ${fmt(st.at, tz)}` : !f.apiKeySource ? 'API key belum diisi' : !f.cronConfigured ? 'Jadwal belum dibuat' : st?.error ? 'Ada masalah' : 'Menunggu jadwal pertama'}>
       <p className="mute small">Website mengambil harga emas dari Twelve Data setiap 15 menit, menghitung aturan v2 yang sama dengan backtest, lalu mengirim sinyal ke Telegram (entry, SL, TP, lot + tombol salin). Tanpa TradingView berbayar dan tanpa komputer.</p>
-      <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <ol className="howto">
         <li>Daftar gratis di <strong>twelvedata.com</strong>, salin API key dari dashboard, tempel di bawah → Simpan.</li>
         <li>Tekan <strong>Buat alamat jadwal</strong>, salin alamatnya.</li>
         <li>Di <strong>cron-job.org</strong>: Create cronjob → tempel alamat → jadwal <strong>setiap 15 menit</strong> → Create.</li>
@@ -193,10 +191,10 @@ function FeedSetup({ tz }: { tz: string }) {
           if (f?.cronConfigured && !window.confirm('Buat alamat baru? Alamat lama di cron-job.org langsung tidak berlaku.')) return;
           const r = await post({ action: 'cronkey' }); if (r) { setUrl(r.url); load(); } }}>{f?.cronConfigured ? 'Buat alamat baru' : 'Buat alamat jadwal'}</button>
         <button className="btn sm primary" disabled={busy || !f?.apiKeySource} onClick={async () => {
-          const r = await post({ action: 'test' }); if (r) { setMsg(r.ok ? `Berhasil: candle terakhir ${fmt(r.lastBar, tz)}, ${r.signals.length} sinyal baru.` : `Gagal: ${r.error}`); load(); } }}>{busy ? 'Mengecek…' : 'Tes sekarang'}</button>
+          const r = await post({ action: 'test' }); if (r) { setMsg(r.ok ? `Berhasil: candle terakhir ${fmt(r.lastBar, tz)}, ${r.signals.length} sinyal baru.` : `Gagal: ${r.error}`); load(); } }}>{busy ? <><Spinner />Mengecek…</> : 'Tes sekarang'}</button>
       </div>
-      {url ? <div className="notice"><strong>Alamat jadwal (salin sekarang, hanya ditampilkan sekali):</strong><div className="num" style={{ wordBreak: 'break-all', marginTop: 4 }}>{url}</div>
-        <button className="btn sm" style={{ marginTop: 6 }} onClick={() => navigator.clipboard?.writeText(url)}>Salin</button></div> : null}
+      {url ? <div className="notice warn stack tight"><strong>Alamat jadwal — salin sekarang, hanya ditampilkan sekali</strong>
+        <div className="copyable"><span className="val">{url}</span><CopyButton text={url} done="Alamat jadwal tersalin" /></div></div> : null}
       {msg ? <div className="notice">{msg}</div> : null}
       {st ? <dl className="kv"><dt>Cek terakhir</dt><dd>{fmt(st.at, tz)}{st.ok ? '' : ` · ${st.error}`}</dd><dt>Candle terakhir</dt><dd>{st.lastBar ? fmt(st.lastBar, tz) : '—'}</dd></dl> : null}
       <p className="mute small">Harga Twelve Data bisa beda sedikit dengan broker kamu — sesuaikan entry/SL/TP dengan harga di broker.</p>
@@ -222,11 +220,12 @@ function EaSetup({ tz }: { tz: string }) {
         <a className="btn sm primary" href="/ea/XAU_v2_EA.mq5" download>Unduh EA (XAU_v2_EA.mq5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
       </div>
-      {key ? <div className="notice"><strong>Kunci EA (salin sekarang, hanya ditampilkan sekali):</strong><div className="num" style={{ wordBreak: 'break-all', marginTop: 4 }}>{key}</div>
-        <button className="btn sm" style={{ marginTop: 6 }} onClick={() => navigator.clipboard?.writeText(key)}>Salin</button></div> : null}
+      {key ? <div className="notice warn stack tight"><strong>Kunci EA — salin sekarang, hanya ditampilkan sekali</strong>
+        <div className="copyable"><span className="val">{key}</span><CopyButton text={key} done="Kunci EA tersalin" /></div></div> : null}
       {err ? <div className="error">{err}</div> : null}
-      <dl className="kv"><dt>Alamat laporan</dt><dd style={{ wordBreak: 'break-all' }}>{info?.reportUrl ?? 'Isi APP_BASE_URL di Vercel'}</dd></dl>
-      <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="picker"><span className="label">Alamat laporan</span>
+        {info?.reportUrl ? <div className="copyable"><span className="val">{info.reportUrl}</span><CopyButton text={info.reportUrl} done="Alamat laporan tersalin" /></div> : <span className="mute small">{info ? 'Isi APP_BASE_URL di Vercel' : 'Memuat…'}</span>}</div>
+      <ol className="howto">
         <li>Di MetaTrader 5 (komputer): File → Open Data Folder → MQL5 → Experts → salin file EA → klik kanan Navigator → Refresh.</li>
         <li>Tools → Options → Expert Advisors → centang <strong>Allow WebRequest for listed URL</strong> → tambahkan alamat website (tanpa /api/…).</li>
         <li>Buka chart XAUUSD (timeframe bebas), seret EA ke chart, aktifkan <strong>Algo Trading</strong>. Isi: Risiko %, Alamat laporan, Kunci EA.</li>
@@ -244,8 +243,8 @@ function TradingView({ s }: { s: any }) {
   const copy = async (file: string, label: string) => {
     try {
       const txt = await (await fetch(`/pine/${file}`, { cache: 'no-store' })).text();
-      await navigator.clipboard.writeText(txt);
-      setMsg(`${label} tersalin. Tempel di TradingView → Pine Editor.`);
+      if (await copyText(txt, `${label} tersalin`)) setMsg(`${label} tersalin. Tempel di TradingView → Pine Editor.`);
+      else setMsg('Gagal menyalin. Buka tautan file lalu salin manual.');
     } catch { setMsg('Gagal menyalin. Buka tautan file lalu salin manual.'); }
   };
   return (
@@ -257,14 +256,15 @@ function TradingView({ s }: { s: any }) {
       </div>
       <p className="mute small">Peta Struktur = alat bantu visual (volume profile, trendline, OB, FVG, BOS, zona S/R) untuk chart H4/H1. Bukan sinyal entry.</p>
       {msg ? <div className="notice">{msg}</div> : null}
-      <ol className="small" style={{ paddingLeft: 18, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <ol className="howto">
         <li>Chart <strong>XAUUSD</strong> broker kamu: v1 di <strong>1 jam</strong>, v2 di <strong>15 menit</strong>.</li>
         <li>Pine Editor → tempel → <strong>Add to chart</strong>.</li>
         <li>Alert → kondisi: nama indikator → <strong>Any alert() function call</strong> → notifikasi aplikasi.</li>
         <li><strong>Opsional (Telegram + lot):</strong> paket TradingView dengan webhook. Isi Secret di pengaturan indikator, centang &quot;format JSON&quot;, isi Webhook URL di bawah.</li>
       </ol>
-      <dl className="kv"><dt>Webhook URL</dt><dd style={{ wordBreak: 'break-all' }}>{tv.webhookUrl ?? 'Isi APP_BASE_URL di Vercel'}</dd>
-        <dt>Secret</dt><dd>{tv.secretConfigured ? 'Sudah diatur' : 'Belum (TRADINGVIEW_WEBHOOK_SECRET di Vercel)'}</dd></dl>
+      <div className="picker"><span className="label">Webhook URL</span>
+        {tv.webhookUrl ? <div className="copyable"><span className="val">{tv.webhookUrl}</span><CopyButton text={tv.webhookUrl} done="Webhook URL tersalin" /></div> : <span className="mute small">Isi APP_BASE_URL di Vercel</span>}</div>
+      <dl className="kv"><dt>Secret</dt><dd>{tv.secretConfigured ? 'Sudah diatur' : 'Belum (TRADINGVIEW_WEBHOOK_SECRET di Vercel)'}</dd></dl>
       <details className="more">
         <summary>Riwayat alert</summary>
         {!logs ? <Loading what="riwayat" /> : logs.length ? <div className="list">{logs.slice(0, 30).map((l) => (

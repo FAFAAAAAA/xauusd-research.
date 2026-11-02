@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { call, fmt, peek, tzShort } from '@/components/client';
-import { ErrorBox, Loading, PageHead } from '@/components/Status';
+import { ErrorBox, Loading, PageHead, SecHead, Spinner } from '@/components/Status';
 import { CATEGORY_LABEL } from '@/lib/core/news';
 import { zonedWallTimeToUtc } from '@/lib/core/time';
 import { FileText } from '@/components/FileText';
@@ -36,12 +36,11 @@ export default function News() {
       <PageHead title="Berita" sub="Jadwal rilis ekonomi yang biasa menggerakkan emas." />
 
       <section className="group stack">
-        <div className="row between">
-          <h2>{asOfLocal ? `Per ${fmt(d?.asOf ?? null, tz)}` : 'Minggu ini'}</h2>
-          {asOfLocal ? <button className="btn sm" onClick={() => setAsOfLocal('')}>Kembali ke sekarang</button> : null}
-        </div>
-        {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="kalender" /> : !d.events.length ? (
-          <p className="mute">Belum ada jadwal untuk tanggal ini. Impor kalender di bawah.</p>
+        <SecHead title={asOfLocal ? `Per ${fmt(d?.asOf ?? null, tz)}` : 'Minggu ini'}>
+          {asOfLocal ? <button className="btn sm" onClick={() => setAsOfLocal('')}>Kembali ke sekarang</button> : <span />}
+        </SecHead>
+        {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="kalender" variant="list" /> : !d.events.length ? (
+          <p className="empty-inline">Belum ada jadwal untuk tanggal ini. Impor kalender di bawah.</p>
         ) : (
           <div className="list">
             {d.events.map((e: any) => {
@@ -113,7 +112,7 @@ function ImportBox({ endpoint, template, help, onDone }: { endpoint: string; tem
       <label className="field">Nama sumber<input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="mis. Forex Factory" /></label>
       <FileText onText={setText} />
       <label className="switch">Data uji coba<input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} /></label>
-      <button className="btn primary block" onClick={submit} disabled={busy || !text || !provider}>{busy ? 'Mengimpor…' : 'Impor'}</button>
+      <button className="btn primary block" onClick={submit} disabled={busy || !text || !provider}>{busy ? <><Spinner />Mengimpor…</> : 'Impor'}</button>
       {res ? (res.error ? <div className="error">{res.error}</div>
         : <div className="ok">Selesai: {res.inserted ?? res.saved ?? 0} baru{res.updated ? `, ${res.updated} diperbarui` : ''}{res.issues?.length ? `, ${res.issues.length} baris ditolak` : ''}.</div>) : null}
       {res?.issues?.length ? <pre>{res.issues.slice(0, 10).map((i: any) => `Baris ${i.line}: ${i.message}`).join('\n')}</pre> : null}

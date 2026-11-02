@@ -23,7 +23,7 @@ export interface ReportInput {
 }
 
 const C = { bg: '#f2f4f7', card: '#ffffff', ink: '#1b2433', ink2: '#475467', mute: '#8a94a6', line: '#e4e7ec', up: '#12805c', upT: '#e7f5ef', down: '#c2410c', downT: '#fdeee6', gold: '#a87a1f', sunk: '#f7f8fa' };
-const FONT = "'Plus Jakarta Sans', -apple-system, system-ui, sans-serif";
+const FONT = "'Inter', -apple-system, system-ui, sans-serif";
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const money = (n: number, dec = 2) => `${n > 0 ? '+' : n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
@@ -268,7 +268,7 @@ export function ReportButton({ make, filename }: { make: () => ReportInput | nul
   };
   return (
     <div className="stack tight">
-      <button className="btn primary block" onClick={go} disabled={busy}>{busy ? 'Membuat gambar…' : 'Unduh laporan (gambar)'}</button>
+      <button className="btn block" onClick={go} disabled={busy}>{busy ? 'Membuat gambar…' : 'Unduh laporan (gambar)'}</button>
       {msg ? <p className="mute small">{msg}</p> : null}
     </div>
   );

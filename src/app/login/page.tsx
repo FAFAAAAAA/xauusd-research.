@@ -17,15 +17,16 @@ export default function Login() {
   };
   return (
     <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 16 }}>
-      <form onSubmit={submit} className="panel stack" style={{ width: 'min(380px, 100%)' }}>
-        <div>
-          <h1>XAUUSD Research</h1>
+      <form onSubmit={submit} className="panel stack appear" style={{ width: 'min(380px, 100%)', padding: 28 }}>
+        <div className="stack tight">
+          <span aria-hidden style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--gold)', color: 'var(--gold-ink)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700 }}>Au</span>
+          <h1 style={{ fontSize: 22, marginTop: 6 }}>XAUUSD Research</h1>
           <p className="mute small" style={{ margin: 0 }}>Masuk sebagai admin untuk membuka dashboard.</p>
         </div>
         <label className="field">Password admin
           <input type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} required />
         </label>
-        {err ? <div className="error small">{err}</div> : null}
+        {err ? <div className="error small" role="alert">{err}</div> : null}
         <button className="btn primary" disabled={busy || !pw}>{busy ? 'Memeriksa…' : 'Masuk'}</button>
       </form>
     </main>
