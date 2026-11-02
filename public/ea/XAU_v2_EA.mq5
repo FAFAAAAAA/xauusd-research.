@@ -27,7 +27,7 @@
 //| jaminan hasil nyata.                                               |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.11"
+#property version   "1.12"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -127,6 +127,7 @@ int OnInit()
 {
    trade.SetExpertMagicNumber(InpMagic);
    trade.SetDeviationInPoints(InpSlippagePts);
+   trade.SetTypeFillingBySymbol(_Symbol);          // use a filling mode the broker allows (e.g. Exness: FOK / IOC)
    if(StringLen(InpEaKey) < 10) Print("Peringatan: Kunci EA kosong — laporan ke website tidak akan diterima.");
    Print("XAU v2 EA aktif. Offset server-UTC: ", UtcOffset() / 3600.0, " jam.");
    return INIT_SUCCEEDED;
