@@ -1,0 +1,72 @@
+/* Premium dimensional cards — visual-only enhancement.
+   Do not modify text, charts, PnL calendars, calculations, or component layout.
+   CSS-only; no WebGL, asset downloads, or additional JavaScript. */
+
+/* Use the selector on the container itself (no nested chart/card side effects). */
+.shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--line-2) 72%, transparent);
+  background-color: var(--card);
+  background-image: linear-gradient(139deg, rgba(255,255,255,.055), transparent 42%);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, .025),
+    0 12px 30px -21px rgba(18, 28, 46, .20),
+    inset 0 1px 0 rgba(255,255,255,.16);
+}
+
+/* Gentle depth for numeric tiles; text and figures are unchanged. */
+.shell :is(.metric, .facts > div, .hold3 > div, .levels > span) {
+  background-image: linear-gradient(155deg, rgba(255,255,255,.07), transparent 55%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
+}
+
+/* Light theme uses a more visible beveled edge on white surfaces. */
+:root[data-theme='light'] .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)),
+:root:not([data-theme]) .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+  background-image: linear-gradient(142deg, rgba(255,255,255,.95), rgba(255,255,255,0) 58%);
+  box-shadow: 0 2px 4px rgba(25,31,40,.024), 0 18px 42px -29px rgba(25,31,40,.26), inset 0 1px 0 rgba(255,255,255,.95);
+}
+
+/* Respect auto light/dark theme selection without changing its color tokens. */
+@media (prefers-color-scheme: light) {
+  :root[data-theme='auto'] .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+    background-image: linear-gradient(142deg, rgba(255,255,255,.95), rgba(255,255,255,0) 58%);
+    box-shadow: 0 2px 4px rgba(25,31,40,.024), 0 18px 42px -29px rgba(25,31,40,.26), inset 0 1px 0 rgba(255,255,255,.95);
+  }
+}
+
+/* Three-dimensional tilt is purely cosmetic and only applies when a mouse supports hover.
+   Charts, PnL calendars, and every content row retain their existing interactions. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+    transition: transform 360ms cubic-bezier(.18,.75,.25,1),
+                border-color 320ms ease,
+                box-shadow 360ms ease,
+                background-color 200ms ease;
+    transform-origin: center center;
+    backface-visibility: hidden;
+  }
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):hover {
+    transform: perspective(1100px) translate3d(0,-3px,5px) rotateX(1deg) rotateY(-.55deg);
+    box-shadow:
+      0 8px 14px -8px rgba(15,23,42,.13),
+      0 22px 46px -24px rgba(15,23,42,.23),
+      inset 0 1px 0 rgba(255,255,255,.18);
+    border-color: var(--line-2);
+  }
+}
+
+/* On touchscreens, a tiny press effect replaces ongoing 3D animation to protect
+   Safari scroll/zoom performance and prevent heavy GPU load. */
+@media (hover: none) and (prefers-reduced-motion: no-preference) {
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+    transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease;
+  }
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):active:not(:has(input:focus,textarea:focus,select:focus)) {
+    transform: perspective(900px) scale(.997) rotateX(.35deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell :is(.group, .panel, .hero, .stat) { transform: none !important; }
+}
