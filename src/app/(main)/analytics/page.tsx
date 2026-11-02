@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px } from '@/components/client';
-import { EmptyState, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner } from '@/components/Status';
+import { CountUp, EmptyState, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner } from '@/components/Status';
 import { EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
 import { ReportButton } from '@/components/ReportImage';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
@@ -163,7 +163,7 @@ export default function Analytics() {
               <>
                 <section className="hero verdict">
                   <span className="label">{pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
-                  <span className={`price ${tone(sum.pnl)}`}>{money(sum.pnl)}</span>
+                  <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
                   <p>{sum.pnl > 0 ? 'Untung bersih' : sum.pnl < 0 ? 'Rugi bersih' : 'Impas'} dari <strong>{sum.trades} trade</strong>: <strong className="pos">{sum.wins} menang</strong>, <strong className="neg">{sum.losses} kalah</strong>.</p>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
                   <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Butuh ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}% agar impas</span></div>

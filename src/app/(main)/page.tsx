@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { call, fmt, peek, px } from '@/components/client';
-import { ErrorBox, Loading, Metric, Metrics, PageHead, SecHead, Status } from '@/components/Status';
+import { CountUp, ErrorBox, Loading, Metric, Metrics, PageHead, SecHead, Status } from '@/components/Status';
 import { CATEGORY_LABEL } from '@/lib/core/news';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -34,7 +34,7 @@ export default function Dashboard() {
       {/* what matters most: this month's live result */}
       <section className="hero" aria-labelledby="h-month">
         <span className="label" id="h-month">Bulan ini · jurnal live</span>
-        <span className={`price ${tone(tr.month.pnl)}`}>{money(tr.month.pnl)}</span>
+        <span className={`price ${tone(tr.month.pnl)}`}><CountUp value={tr.month.pnl} format={money} /></span>
         <div className="inline-stats">
           <span><span className="k">Trade selesai</span><strong>{tr.month.closed}</strong></span>
           <span><span className="k">Win rate</span><strong>{winPct(tr.month.winRate)}</strong></span>

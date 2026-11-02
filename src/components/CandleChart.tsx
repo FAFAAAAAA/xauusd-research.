@@ -30,7 +30,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     const up = v('--up', '#12805c'), dn = v('--down', '#c2410c');
     const c = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: v('--surface', '#ffffff') }, textColor: v('--mute', '#8a94a6'), fontFamily: "'Inter', system-ui, sans-serif" },
+      layout: { background: { type: ColorType.Solid, color: v('--surface', '#ffffff') }, textColor: v('--mute', '#8a94a6'), fontFamily: "-apple-system, BlinkMacSystemFont, system-ui, sans-serif" },
       grid: { vertLines: { color: v('--sunk', '#f2f4f7') }, horzLines: { color: v('--sunk', '#f2f4f7') } },
       crosshair: { mode: CrosshairMode.Normal },
       rightPriceScale: { borderColor: v('--line', '#e4e7ec') },

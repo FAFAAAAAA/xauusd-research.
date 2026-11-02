@@ -99,8 +99,8 @@ export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: Clos
           ))}
           <line x1={P.l} x2={W - P.r} y1={y(start)} y2={y(start)} stroke="var(--mute)" strokeWidth="1" strokeDasharray="3 4" opacity=".7" />
           {best.dd > 0 ? <rect x={x(best.from)} y={P.t} width={Math.max(1, x(best.to) - x(best.from))} height={H - P.t - P.b} fill="var(--down)" opacity="0.07" /> : null}
-          <path d={area} fill={color} opacity="0.07" />
-          <path d={line} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+          <path className="fill" d={area} fill={color} opacity="0.07" />
+          <path className="draw" pathLength={1} d={line} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
           <circle cx={x(pts.length - 1)} cy={y(end)} r="3" fill={color} />
           <text x={P.l} y={H - 6} fontSize="11" fill="var(--mute)">{dmy(wall(pts[0].t, tz))}</text>
           <text x={W - P.r} y={H - 6} fontSize="11" fill="var(--mute)" textAnchor="end">{dmy(wall(pts[pts.length - 1].t, tz))}</text>

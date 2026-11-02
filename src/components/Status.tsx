@@ -181,3 +181,24 @@ export function CopyButton({ text, label = 'Salin', done }: { text: string; labe
   const [ok, setOk] = useState(false);
   return <button className="btn sm" onClick={async () => { if (await copyText(text, done)) { setOk(true); setTimeout(() => setOk(false), 1600); } }}>{ok ? '✓ Tersalin' : label}</button>;
 }
+
+/** Headline number that counts smoothly to its value (from 0 on first show, then from the previous value). */
+export function CountUp({ value, format, ms = 700 }: { value: number; format: (n: number) => string; ms?: number }) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(0);
+  useEffect(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const a = from.current, b = value;
+    from.current = value;
+    if (reduce || !Number.isFinite(a) || !Number.isFinite(b) || a === b) { setShown(b); return; }
+    let raf = 0; const t0 = performance.now();
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+      setShown(k >= 1 ? b : a + (b - a) * e);
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, ms]);
+  return <span aria-label={format(value)}><span aria-hidden>{format(shown)}</span></span>;
+}
