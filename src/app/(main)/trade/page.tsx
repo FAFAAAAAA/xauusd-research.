@@ -9,7 +9,7 @@ import { liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/
 const money = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '—' : `${n < 0 ? '−' : n > 0 ? '+' : ''}$${Math.abs(n).toFixed(2)}`);
 const tone = (n: number | null | undefined) => (n == null ? '' : n > 0 ? 'pos' : n < 0 ? 'neg' : '');
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
-// Backtest reference (average broker costs + swap, 2004–2026, RR 1:2): what live results should be compared with.
+// Backtest reference (Exness Raw Spread costs + swap, 2004–2026, RR 1:2): what live results should be compared with.
 const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v1: { win: 0.411, perMonth: 3.1, label: 'v1 · Level H1' },
   v2: { win: 0.342, perMonth: 5.0, label: 'v2 · Breakout volatilitas' },   // + ±15% impas (BE)

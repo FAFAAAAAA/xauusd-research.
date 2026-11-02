@@ -1,3 +1,5 @@
+import { BROKER } from './broker';
+import { swapNights } from './tradesim';
 /** Live trading helpers: lot size and the owner's trade journal (manual trades, no broker connection). */
 
 export interface LiveRisk { capital: number; riskPct: number }
@@ -42,7 +44,10 @@ export function cleanTrade(b: Record<string, unknown>, id: string): JournalTrade
   if (result !== 'open' && !(exit > 0)) return 'Harga keluar wajib diisi';
   const closedAt = result === 'open' ? null : (num(b.closedAt) > 0 ? num(b.closedAt) : Date.now());
   const pnlIn = num(b.pnl);
-  const pnl = result === 'open' ? null : Number.isFinite(pnlIn) ? pnlIn : Math.round((side === 'BUY' ? exit - entry : entry - exit) * lot * 100 * 100) / 100;
+  // manual trades: gross P&L minus the broker's commission and swap (Exness Raw Spread, src/lib/core/broker.ts);
+  // trades reported by the EA keep the broker's real net profit (pnl given)
+  const fees = result === 'open' ? 0 : BROKER.commissionPerLot * lot + (side === 'BUY' ? BROKER.swapLong : BROKER.swapShort) * swapNights(openedAt, closedAt ?? openedAt) * lot;
+  const pnl = result === 'open' ? null : Number.isFinite(pnlIn) ? pnlIn : Math.round(((side === 'BUY' ? exit - entry : entry - exit) * lot * 100 - fees) * 100) / 100;
   return {
     id, strategy: STRATS.includes(String(b.strategy)) ? String(b.strategy) : 'lain', side, openedAt, entry, sl, tp, lot,
     closedAt, exit: result === 'open' ? null : exit, result, pnl, note: typeof b.note === 'string' ? b.note.slice(0, 300) : '',

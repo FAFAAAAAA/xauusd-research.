@@ -1,4 +1,5 @@
 'use client';
+import { BROKER } from '@/lib/core/broker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px } from '@/components/client';
@@ -396,13 +397,15 @@ const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
-  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: '0.12', slippage: '0.10', commission: '5', swapLong: '67', swapShort: '-25', risk: '10', capital: '1000', ambiguity: 'worst', be: 'strategy', nocost: '0' });
+  const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: String(BROKER.spread), slippage: String(BROKER.slippage), commission: String(BROKER.commissionPerLot), swapLong: String(BROKER.swapLong), swapShort: String(BROKER.swapShort), risk: '10', capital: '1000', ambiguity: 'worst', be: 'strategy', nocost: '0' });
   const noCost = f.nocost === '1';
   // Remember costs / risk / capital in this browser (convenience only; falls back to defaults if storage is unavailable).
   const loaded = useRef(false);
   useEffect(() => {
     try {
       const v = JSON.parse(localStorage.getItem(FORM_KEY) ?? 'null');
+      // old website defaults (average broker, before 2 Nov 2026) → replaced by the owner's Exness Raw Spread costs
+      if (v && v.commission === '5' && v.swapLong === '67' && v.swapShort === '-25') { delete v.commission; delete v.swapLong; delete v.swapShort; }
       if (v && typeof v === 'object') setF((cur) => ({ ...cur, ...Object.fromEntries(FORM_SAVED.filter((k) => typeof v[k] === 'string').map((k) => [k, v[k]])) }));
     } catch { /* ignore */ }
     loaded.current = true;
@@ -536,6 +539,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
       <label className="switch">Tanpa biaya (spread, komisi, swap = 0)<input type="checkbox" checked={noCost} onChange={(e) => setF((x) => ({ ...x, nocost: e.target.checked ? '1' : '0' }))} /></label>
       <details className="more">
         <summary>{noCost ? 'Lainnya' : 'Biaya & lainnya'}</summary>
+        {!noCost ? <p className="mute small">Default = akun {BROKER.name} kamu: komisi ${BROKER.commissionPerLot}/lot (buka + tutup), swap BUY ${BROKER.swapLong} / SELL ${BROKER.swapShort} per lot per malam (Rabu ×3). Spread {BROKER.spread} sampai diukur di akunmu. <button type="button" className="btn sm ghost" onClick={() => setF((x) => ({ ...x, spread: String(BROKER.spread), slippage: String(BROKER.slippage), commission: String(BROKER.commissionPerLot), swapLong: String(BROKER.swapLong), swapShort: String(BROKER.swapShort) }))}>Pakai biaya Exness</button></p> : null}
         <label className="switch">Pakai rentang tanggal sendiri<input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} /></label>
         <div className="grid two">
           {!noCost ? <>

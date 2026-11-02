@@ -27,7 +27,7 @@
 //| jaminan hasil nyata.                                               |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.12"
+#property version   "1.13"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -39,7 +39,7 @@ input long   InpMagic        = 20261102; // Magic number (pembeda posisi EA ini)
 input string InpReportUrl    = "https://xauusd-research.vercel.app/api/ea/report"; // Alamat laporan website
 input string InpEaKey        = "";     // Kunci EA dari website (Atur → EA)
 input int    InpSlippagePts  = 30;     // Slippage maksimum (points)
-input int    InpTesterUtcOffset = -99; // KHUSUS Strategy Tester: offset jam server − UTC. -99 = otomatis (GMT+2, GMT+3 saat DST Amerika; umum di broker)
+input int    InpTesterUtcOffset = 0;   // KHUSUS Strategy Tester: offset jam server − UTC (Exness = 0). -99 = otomatis GMT+2 / GMT+3 (broker lain)
 
 const double VOL_K   = 0.5;
 const double SL_ATR  = 0.35;

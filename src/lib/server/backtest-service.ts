@@ -1,3 +1,4 @@
+import { BROKER } from '../core/broker';
 import type { Db } from './db';
 import { HttpError } from './db';
 import * as repo from './repo';
@@ -25,7 +26,7 @@ const zoneLo = (z?: { low: number; high: number } | null) => { const a = fin(z?.
 const zoneHi = (z?: { low: number; high: number } | null) => { const a = fin(z?.low), b = fin(z?.high); return a == null || b == null ? b ?? a : Math.max(a, b); };
 
 export const BACKTEST_DEFAULT_COSTS: CostConfig = {
-  spread: 0.12, slippage: 0.10, commissionPerUnit: 5, ambiguityPolicy: 'worst', contractSize: 100,   // average broker costs (owner's choice, 1 Nov 2026)
+  spread: BROKER.spread, slippage: BROKER.slippage, commissionPerUnit: BROKER.commissionPerLot, ambiguityPolicy: 'worst', contractSize: 100,   // owner's Exness Raw Spread account (2 Nov 2026); swap comes from the form
 };
 
 export interface BacktestInput {

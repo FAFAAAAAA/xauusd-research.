@@ -12,8 +12,8 @@ export interface InstrumentSpec {
 }
 
 export const INSTRUMENTS: InstrumentSpec[] = [
-  // Gold uses average broker costs (owner's choice, 1 Nov 2026): spread 0.12, slippage 0.10 per fill, commission $5/lot round turn.
-  { symbol: 'XAUUSD', label: 'XAUUSD (emas)', group: 'Emas', digits: 3, contractSize: 100, usdBase: false, spread: 0.12, slippage: 0.10, commission: 5 },
+  // Gold uses the owner's Exness Raw Spread costs (2 Nov 2026, src/lib/core/broker.ts): spread 0.12, slippage 0.10 per fill, commission $7/lot round turn.
+  { symbol: 'XAUUSD', label: 'XAUUSD (emas)', group: 'Emas', digits: 3, contractSize: 100, usdBase: false, spread: 0.12, slippage: 0.10, commission: 7 },   // Exness Raw Spread: $3.50 per lot per side
   { symbol: 'EURUSD', label: 'EURUSD', group: 'Forex', digits: 5, contractSize: 100_000, usdBase: false, spread: 0.00005, slippage: 0.00002, commission: 7 },
   { symbol: 'GBPUSD', label: 'GBPUSD', group: 'Forex', digits: 5, contractSize: 100_000, usdBase: false, spread: 0.00008, slippage: 0.00002, commission: 7 },
   { symbol: 'USDJPY', label: 'USDJPY', group: 'Forex', digits: 3, contractSize: 100_000, usdBase: true, spread: 0.006, slippage: 0.002, commission: 7 },

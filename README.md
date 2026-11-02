@@ -379,3 +379,8 @@ Filter hanya dipakai kalau PF naik di 2004–17 **dan** 2018–26. Hari Rabu & j
 - **v3 `bos-h1-v1`**: tidak diubah (filter & breakeven tidak memperbaiki di kedua periode).
 - Ikut diperbarui: Pine `xau_v1.pine` / `xau_v2.pine`, EA `XAU_v2_EA.mq5` (v1.10: aturan v5 + geser SL ke entry setelah +1R; penanda hari/blok di Global Variables terminal), sinyal live Twelve Data & Telegram (baris "Breakeven: bila harga mencapai X geser SL ke entry"), jurnal EA (tutup di harga entry dicatat **BE**), kalkulator risiko (`RISK_STATS` baru + kombinasi v1+v2+v3).
 - Gabungan v1 + v2 + v3 ($10/trade): 3.208 trade · 12/bln · +$4.621 · DD 40,2R.
+
+## 5y. Biaya akun pemilik: Exness Raw Spread (2 Nov 2026)
+`src/lib/core/broker.ts` = default website: komisi $3,50/lot/arah ($7 pulang-pergi), swap BUY −474,7 point = $47,47/lot/malam, SELL 0 (Rabu ×3), jam server = UTC, level stop 0, lot 0,01. Spread tetap 0,12 sampai diukur.
+Dipakai di: form Backtest (nilai lama default 5 / 67 / −25 yang tersimpan di browser diganti otomatis; tombol "Pakai biaya Exness"), biaya default server & instrumen XAUUSD, P/L jurnal trade manual (dikurangi komisi + swap; trade dari EA tetap memakai profit asli broker), kalkulator risiko (`RISK_STATS` dihitung ulang), EA v1.13 (`InpTesterUtcOffset` default 0 untuk Exness).
+Mesin website dengan biaya ini (2004–2026, $10/trade): v1 +$1.123 · v2 +$2.375 (PF 1,38, DD 15,3R) · v3 +$1.523 · gabungan +$5.021 (DD 33,2R).

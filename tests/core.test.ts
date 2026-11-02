@@ -242,8 +242,11 @@ test('live trading: lot, journal validation, signal from alert extra, Telegram t
   assert.equal(J.lotFor(10, 2650, 2650), null);
   assert.equal(typeof J.cleanTrade({ side: 'BUY', entry: 100, sl: 101, tp: 102, lot: 0.1, openedAt: 1 }, 'x'), 'string');
   const t = J.cleanTrade({ strategy: 'v1', side: 'SELL', entry: 100, sl: 101, tp: 98, lot: 0.1, openedAt: 1, result: 'tp' }, 'x') as any;
-  assert.equal(t.exit, 98); assert.equal(t.pnl, 20);
-  const s = J.journalStats([t, { ...t, id: 'y', result: 'sl', exit: 101, pnl: -10 }, { ...t, id: 'z', result: 'open', pnl: null }], 'v1');
+  assert.equal(t.exit, 98); assert.equal(t.pnl, 19.3);   // 20 gross − commission 7 × 0.1 lot (SELL swap 0)
+  const D = 86_400_000, mon = Date.UTC(2030, 5, 3);
+  const tb = J.cleanTrade({ strategy: 'v2', side: 'BUY', entry: 100, sl: 99, tp: 102, lot: 0.1, openedAt: mon + 10 * 3_600_000, closedAt: mon + D + 10 * 3_600_000, result: 'tp' }, 'b') as any;
+  assert.equal(tb.pnl, Math.round((20 - 0.7 - 4.747) * 100) / 100);   // one night of BUY swap 47.47 × 0.1
+  const s = J.journalStats([{ ...t, pnl: 20 }, { ...t, id: 'y', result: 'sl', exit: 101, pnl: -10 }, { ...t, id: 'z', result: 'open', pnl: null }], 'v1');
   assert.equal(s.closed, 2); assert.equal(s.open, 1); assert.equal(s.winRate, 0.5); assert.equal(s.pnl, 10);
   assert.ok(Math.abs((s.avgR ?? 0) - 0.5) < 1e-9);
   assert.deepEqual(J.liveSignalFrom({ side: 'buy', sl: 95, tp: 110 }, 100), { side: 'BUY', entry: 100, sl: 95, tp: 110 });
