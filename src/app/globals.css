@@ -68,6 +68,8 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-even
   background: radial-gradient(120% 55% at 50% -12%, var(--glow-1), transparent 62%), radial-gradient(60% 40% at 100% 0%, var(--glow-2), transparent 70%),
     radial-gradient(70% 50% at 0% 100%, var(--glow-2), transparent 70%), var(--bg); }
 html { background: var(--bg); }
+/* paint the band under the iPhone status bar so scrolled content never shows behind the clock */
+body::after { content: ''; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 40; pointer-events: none; }
 body { background: transparent; }
 a { color: var(--gold); text-decoration: none; font-weight: 500; }
 @media (hover: hover) { a:hover { text-decoration: underline; text-underline-offset: 3px; } a.btn:hover { text-decoration: none; } }

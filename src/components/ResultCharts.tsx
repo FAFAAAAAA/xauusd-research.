@@ -189,7 +189,8 @@ const DOW = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const MONTHS_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const compact = (n: number, dollar = true) => {
   const a = Math.abs(n);
-  const v = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : a >= 10 || !dollar ? a.toFixed(a >= 10 ? 0 : 1) : a.toFixed(1);
+  // under $1 keep two decimals, so a tiny loss never reads as "−0.0"
+  const v = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : a >= 10 ? a.toFixed(dollar && a < 100 ? 1 : 0) : a >= 1 ? a.toFixed(1) : a.toFixed(2);
   return `${n > 0 ? '+' : n < 0 ? '−' : ''}${dollar ? '$' : ''}${v}`;
 };
 
