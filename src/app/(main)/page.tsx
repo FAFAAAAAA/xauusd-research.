@@ -35,7 +35,7 @@ export default function Dashboard() {
       {/* what matters most: this month's live result */}
       <section className="hero hero-3d" aria-labelledby="h-month" data-tilt="true">
         <span className="label" id="h-month">Bulan ini</span>
-        <span className={`price ${tone(tr.month.pnl)}`}><CountUp value={tr.month.pnl} format={money} /></span>
+        <span className={`price ${tone(tr.month.pnl)}`}><CountUp value={tr.month.pnl} format={money} ms={320} /></span>
         <div className="inline-stats">
           <span><span className="k">Trade selesai</span><strong>{tr.month.closed}</strong></span>
           <span><span className="k">Win rate</span><strong>{winPct(tr.month.winRate)}</strong></span>
