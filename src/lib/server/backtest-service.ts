@@ -37,6 +37,10 @@ export interface BacktestInput {
   riskUsd?: number | null;
   /** Starting capital the owner entered (display only: % growth on the results page; does not change the simulation). */
   capital?: number | null;
+  /** SL → entry: 'strategy' (default) = the strategy's own rule; 'on' = after +1R for every trade; 'off' = never. */
+  breakeven?: 'strategy' | 'on' | 'off';
+  /** true = simulate without spread, slippage, commission and swap. */
+  noCosts?: boolean;
 }
 
 const EMPTY_NEWS: NewsSnapshot = { archiveAvailable: false, items: [], upcoming: [] };
@@ -67,7 +71,9 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   };
   // Costs: XAUUSD keeps the editable website defaults; other instruments use their own estimates (only the TP/SL-ambiguity rule is editable).
   // Owner's choice (1 Nov 2026): the same costs from the form for every pair; contract size still per instrument.
-  const costs: CostConfig = { ...BACKTEST_DEFAULT_COSTS, contractSize: instrumentCosts(symbol).contractSize, ...(v.costs ?? {}) };
+  const costs: CostConfig = { ...BACKTEST_DEFAULT_COSTS, contractSize: instrumentCosts(symbol).contractSize, ...(v.costs ?? {}),
+    ...(v.noCosts ? { spread: 0, slippage: 0, commissionPerUnit: 0, swapLong: 0, swapShort: 0 } : {}) };
+  const beMode = v.breakeven === 'on' || v.breakeven === 'off' ? v.breakeven : 'strategy';
   const sv = v.strategyVersionId ? await repo.getStrategyVersion(db, v.strategyVersionId) : await repo.defaultStrategyVersion(db);
   const adapter = getAdapter(sv?.adapter_key);
   if (!sv || !adapter.configured) throw new HttpError(422, 'Strategi belum dikonfigurasi');
@@ -144,7 +150,8 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     const id = await repo.createBacktestSession(db, {
       name: v.name?.trim() || `${symbol} ${tf} ${new Date(v.from).toISOString().slice(0, 10)} → ${new Date(v.to).toISOString().slice(0, 10)} RR 1:${rr}`,
       strategyVersionId: sv.id, sourceId: v.sourceId, instrumentId, timeframe: tf, profile: 'snr_trend_momentum',
-      costConfig: { run_id: runId, strategy_params: v.params ?? {}, symbol, data_tf: tf, ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), ...(v.capital && v.capital > 0 ? { capital: v.capital } : {}), rr, entry: `open ${tf} berikutnya`, max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000 },
+      costConfig: { run_id: runId, strategy_params: v.params ?? {}, symbol, data_tf: tf, ...costs, ...(riskUsd ? { risk_usd: riskUsd, lot: 'dihitung per trade dari jarak SL' } : { size }), ...(v.capital && v.capital > 0 ? { capital: v.capital } : {}), rr, entry: `open ${tf} berikutnya`, max_entry_gap_minutes: MAX_ENTRY_GAP_MS / 60_000,
+        ...(beMode !== 'strategy' ? { breakeven_mode: beMode } : {}), ...(v.noCosts ? { no_costs: true } : {}) },
       isTest, notes: `Mesin backtest website. Strategi ${label}. RR 1:${rr}.`,
     });
     sessions.push({ rr, id });
@@ -206,7 +213,8 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       const lot = riskUsd ? Math.round((riskUsd / (risk * cs)) * 1e6) / 1e6 : size;
       if (!(lot > 0)) { skipped.sl_tidak_valid++; continue; }
       const maxBars = Number(m.ev.details?.max_bars) || undefined; // strategy time exit (e.g. Pine maxHoldBars)
-      const beR = Number(m.ev.details?.breakeven_r) || undefined;   // strategy rule: SL → entry after +beR (v2 volbreak-v5)
+      const ruleBe = Number(m.ev.details?.breakeven_r) || undefined;   // strategy rule: SL → entry after +beR (v2 volbreak-v5)
+      const beR = beMode === 'off' ? undefined : beMode === 'on' ? ruleBe ?? 1 : ruleBe;   // owner's override from the form
       const r = simulateTrade(m15, { side: m.side, entryBarIndex: entryIdx, stopLoss: sl, takeProfit: tp, size: lot, maxBarsInTrade: maxBars, breakevenR: beR }, { ...costs, contractSize: cs });
       busy.set(slot, r.exitTime ?? Infinity);
       const uid = `${m.ev.type}:${m.ev.candleTime}:${m.ev.details?.slot ?? `${m.ev.zone?.low}-${m.ev.zone?.high}`}`;

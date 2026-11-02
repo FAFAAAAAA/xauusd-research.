@@ -25,7 +25,8 @@ export async function POST(req: Request) {
       sourceId: reqUuid(b.source_id, 'source_id'), from, to,
       strategyVersionId: typeof b.strategy_version_id === 'string' && b.strategy_version_id ? reqUuid(b.strategy_version_id, 'strategy_version_id') : null,
       params: b.params && typeof b.params === 'object' ? Object.fromEntries(Object.entries(b.params as Record<string, unknown>).filter(([, x]) => typeof x === 'boolean')) : {},
-      rrList: rr, costs, size: num(b.size), riskUsd: num(b.risk_usd) ?? null, capital: num(b.capital) ?? null, name: typeof b.name === 'string' ? b.name.slice(0, 120) : null,
+      rrList: rr, costs, size: num(b.size), riskUsd: num(b.risk_usd) ?? null, capital: num(b.capital) ?? null,
+      breakeven: b.breakeven === 'on' || b.breakeven === 'off' ? b.breakeven : 'strategy', noCosts: b.no_costs === true, name: typeof b.name === 'string' ? b.name.slice(0, 120) : null,
     });
   });
 }
