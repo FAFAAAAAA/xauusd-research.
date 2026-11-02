@@ -16,11 +16,11 @@ export default function Login() {
     window.location.href = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
   };
   return (
-    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 16 }}>
-      <form onSubmit={submit} className="panel stack appear" style={{ width: 'min(380px, 100%)', padding: 28 }}>
+    <main className="login login-3d">
+      <form onSubmit={submit} className="panel stack appear login-3d-card">
         <div className="stack tight">
-          <span aria-hidden style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--gold)', color: 'var(--gold-ink)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700 }}>Au</span>
-          <h1 style={{ fontSize: 22, marginTop: 6 }}>XAUUSD Research</h1>
+          <span className="login-3d-mark" aria-hidden>Au</span>
+          <h1>XAUUSD Research</h1>
           <p className="mute small" style={{ margin: 0 }}>Masuk sebagai admin untuk membuka dashboard.</p>
         </div>
         <label className="field">Password admin
@@ -32,3 +32,4 @@ export default function Login() {
     </main>
   );
 }
+

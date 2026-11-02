@@ -1,0 +1,277 @@
+/* Presentation only. Copy, values, charts and calendars retain their original behavior. */
+:root {
+  --bg: #f3f6fb;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --sunk: #f5f7fb;
+  --hover: #edf3fc;
+  --line: #e5ebf3;
+  --line-2: #d5dfed;
+  --ink: #19273d;
+  --ink-2: #52617a;
+  --mute: #6f7e94;
+  --r: 22px;
+  --r-m: 16px;
+  --r-s: 12px;
+  --side-w: 244px;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --d-1: 100ms;
+  --d-2: 160ms;
+  --d-3: 220ms;
+  --d3-soft-shadow: 0 4px 6px -5px rgba(28, 53, 88, .08), 0 18px 42px -30px rgba(28, 53, 88, .22);
+  --d3-hero-start: #ffffff;
+  --d3-hero-end: #edf4ff;
+  --d3-sculpture-light: #d8e8ff;
+  --d3-rim: rgba(255, 255, 255, .9);
+  --d3-orbit: rgba(120, 157, 211, .2);
+}
+:root[data-theme='dark'] {
+  --d3-soft-shadow: 0 18px 42px -26px rgba(0, 0, 0, .65);
+  --d3-hero-start: #1c202b;
+  --d3-hero-end: #18263c;
+  --d3-sculpture-light: #253f63;
+  --d3-rim: rgba(255, 255, 255, .09);
+  --d3-orbit: rgba(139, 177, 231, .18);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] {
+    --d3-soft-shadow: 0 18px 42px -26px rgba(0, 0, 0, .65);
+    --d3-hero-start: #1c202b;
+    --d3-hero-end: #18263c;
+    --d3-sculpture-light: #253f63;
+    --d3-rim: rgba(255, 255, 255, .09);
+    --d3-orbit: rgba(139, 177, 231, .18);
+  }
+}
+
+/* The page is a quiet canvas; perspective is confined to decorative surfaces. */
+body::before {
+  background: radial-gradient(ellipse 70% 60% at 100% 0%, color-mix(in srgb, var(--gold) 4%, transparent), transparent 80%), var(--bg);
+}
+.main { max-width: 1260px; padding: 42px 44px 88px; }
+.page-head { margin-bottom: 16px; }
+.page-head h1 { font-size: 32px; letter-spacing: -.045em; font-weight: 680; }
+.page-head .ph-top { min-height: 48px; align-items: center; }
+.page-head .ph-actions { gap: 10px; }
+.dashboard-3d { gap: 26px; }
+.dashboard-3d > .stack.tight { gap: 12px; }
+.dashboard-3d .section-title { margin: 0 0 0 2px; font-size: 13px; letter-spacing: .01em; color: var(--ink-2); text-transform: none; }
+.dashboard-3d .cols { gap: 22px; }
+.dashboard-3d .cols > .group.span { margin-top: 0; }
+
+/* One short entrance, with no cascading delays between usable controls. */
+.page { animation: d3-page-in 220ms var(--ease) both; }
+.appear { animation: d3-page-in 240ms var(--ease) both; }
+.page > .stack > *, .page > .stack > .cols > *, .metrics > .metric,
+.facts > div, .hold3 > div, .levels > span, .pairs > .pairrow, .rr3 > .rrbtn {
+  animation: none;
+}
+.tabbar a[aria-current='page'] .ic svg { animation: none; }
+@keyframes d3-page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (min-width: 900px) {
+  .side { padding: 34px 20px 24px; gap: 42px; background: var(--surface); border-right-color: var(--line); }
+  .brand { gap: 11px; padding: 0 2px; font-size: 14px; font-weight: 650; letter-spacing: -.03em; white-space: nowrap; }
+  .brand-mark { width: 34px; height: 34px; font-size: 13px; border-radius: 11px;
+    background: linear-gradient(145deg, #6ca8ff, var(--gold) 65%); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 5px 9px -6px rgba(49,130,246,.6); }
+  .sidenav { gap: 6px; }
+  .sidenav .ind { height: 46px; border-radius: 12px; background: var(--gold-tint); transform: translateY(calc(var(--i, 0) * 52px)); }
+  .sidenav a { height: 46px; gap: 12px; padding: 0 14px; font-size: 13px; border-radius: 12px; }
+  .sidenav a[aria-current='page'] { color: var(--gold); font-weight: 650; }
+  .sidenav a:not([aria-current='page']):hover { background: var(--sunk); }
+  .side-foot { gap: 12px; border-top: 1px solid var(--line); padding: 20px 4px 0; }
+  .side-foot .small { font-size: 11px; line-height: 1.7; }
+}
+
+/* Flat, legible content faces with a subtle raised edge. */
+.shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+  box-shadow: inset 0 1px 0 var(--d3-rim), var(--d3-soft-shadow);
+  padding: 26px;
+  transform: none;
+}
+.shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas))::before { content: none; }
+.shell :is(.group, .panel, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):is(:hover, :active) {
+  transform: none;
+  box-shadow: inset 0 1px 0 var(--d3-rim), var(--d3-soft-shadow);
+  border-color: var(--line);
+}
+.shell details.group:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) { padding: 0; }
+.shell .metrics { gap: 16px; }
+.shell .metrics > .metric { padding: 20px 22px; gap: 8px; border-radius: 18px; border-color: var(--line);
+  background: var(--surface); box-shadow: inset 0 1px 0 var(--d3-rim), var(--d3-soft-shadow); }
+.shell .metrics > .metric:is(:hover, :active) { transform: none; border-color: var(--line); }
+.metric .k { font-size: 12px; color: var(--mute); font-weight: 500; }
+.metric .v { font-size: 25px; letter-spacing: -.04em; }
+.sec-head { min-height: 32px; }
+.sec-head h2 { letter-spacing: -.02em; font-size: 15px; }
+.group > .sec-head + * { margin-top: 18px; }
+.item { padding-block: 16px; }
+.item .t { font-size: 14px; font-weight: 550; }
+.empty-inline { font-size: 13px; line-height: 1.7; }
+.btn { border-radius: 11px; border-color: var(--line-2); font-weight: 600; }
+.btn.primary { box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 5px 12px -8px color-mix(in srgb, var(--gold) 90%, transparent); }
+.btn.sm { border-radius: 10px; min-height: 39px; padding: 8px 14px; font-size: 12px; }
+.btn.ghost { border-color: transparent; }
+input, select, textarea { border-color: var(--line); border-radius: 11px; background-color: var(--sunk); }
+.tablewrap { border-radius: 8px; }
+th { padding-block: 12px; font-size: 11px; letter-spacing: .01em; }
+td { padding-block: 13px; }
+
+/* Hero: the original values occupy their own layer, clear of the sculpture. */
+.shell .hero.hero-3d:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) {
+  min-height: 290px;
+  padding: 36px 40px;
+  gap: 12px;
+  justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(115deg, var(--d3-hero-start) 20%, var(--d3-hero-end));
+  box-shadow: inset 0 1px 0 var(--d3-rim), 0 22px 50px -36px rgba(54, 92, 155, .3);
+  transition: transform 120ms ease-out, box-shadow 180ms var(--ease);
+}
+.hero-3d > :not(.d3-scene) { position: relative; z-index: 2; max-width: 57%; }
+.hero-3d > .label { color: var(--ink-2); font-size: 13px; font-weight: 500; }
+.hero-3d > .price { font-size: clamp(36px, 4.3vw, 58px); line-height: 1.1; letter-spacing: -.055em; font-weight: 650; overflow-wrap: anywhere; }
+.hero-3d > .inline-stats { width: 57%; margin-top: 15px; gap: 18px 30px; }
+.hero-3d .inline-stats .k { font-size: 11px; }
+.hero-3d .inline-stats strong { margin-top: 4px; font-size: 19px; letter-spacing: -.03em; }
+
+/* True six-face CSS solids. No canvases, text or third-party runtime. */
+.d3-scene { position: absolute; z-index: 1; top: 0; right: 0; bottom: 0; width: 43%;
+  overflow: hidden; pointer-events: none; user-select: none; perspective: 1000px; }
+.d3-glow { position: absolute; width: 340px; height: 340px; left: 50%; top: 50%; border-radius: 50%;
+  transform: translate(-50%, -50%); background: radial-gradient(circle, color-mix(in srgb, var(--d3-sculpture-light) 75%, transparent), transparent 68%); }
+.d3-world { position: absolute; width: 250px; height: 200px; left: 50%; top: 52%; transform-style: preserve-3d;
+  transform: translate(-50%, -50%) rotateX(-25deg) rotateY(-31deg) rotateZ(-6deg); animation: d3-hover 8s ease-in-out infinite; }
+.d3-plinth { position: absolute; width: 218px; height: 160px; left: 15px; top: 100px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(88, 77, 41, .18), rgba(62, 93, 144, .045) 50%, transparent 70%);
+  transform: rotateX(90deg) translateZ(-20px); }
+.d3-ingot { --ingot-w: 140px; --ingot-h: 34px; --ingot-d: 82px;
+  position: absolute; width: var(--ingot-w); height: var(--ingot-h); left: 50%; top: 50%; transform-style: preserve-3d; }
+.ingot-a { transform: translate3d(-50%, 42px, 2px) rotateY(-11deg); }
+.ingot-b { transform: translate3d(-50%, -7px, 5px) rotateY(13deg); }
+.ingot-c { transform: translate3d(-50%, -56px, 0) rotateY(-4deg); }
+.d3-face { position: absolute; display: block; left: 50%; top: 50%; border: 1px solid rgba(255, 236, 177, .6);
+  border-radius: 3px; backface-visibility: hidden; }
+.face-front, .face-back { width: var(--ingot-w); height: var(--ingot-h); }
+.face-front { transform: translate(-50%, -50%) translateZ(calc(var(--ingot-d) / 2));
+  background: linear-gradient(110deg, #bd8c37, #e5bb63 40%, #d9a951 72%, #ae7b28); box-shadow: inset 0 2px 2px rgba(255,255,255,.35), inset 0 -2px 2px rgba(123,77,11,.2); }
+.face-back { transform: translate(-50%, -50%) rotateY(180deg) translateZ(calc(var(--ingot-d) / 2)); background: #b68735; }
+.face-top, .face-bottom { width: var(--ingot-w); height: var(--ingot-d); }
+.face-top { transform: translate(-50%, -50%) rotateX(90deg) translateZ(calc(var(--ingot-h) / 2));
+  background: linear-gradient(140deg, #fff0b8, #edce86 45%, #d8af5b); box-shadow: inset 0 0 0 5px rgba(255, 250, 225, .16), inset 0 0 0 6px rgba(153, 108, 30, .12); }
+.face-bottom { transform: translate(-50%, -50%) rotateX(-90deg) translateZ(calc(var(--ingot-h) / 2)); background: #a6782d; }
+.face-right, .face-left { width: var(--ingot-d); height: var(--ingot-h); }
+.face-right { transform: translate(-50%, -50%) rotateY(90deg) translateZ(calc(var(--ingot-w) / 2)); background: linear-gradient(100deg, #b78630, #d2a44f); }
+.face-left { transform: translate(-50%, -50%) rotateY(-90deg) translateZ(calc(var(--ingot-w) / 2)); background: linear-gradient(100deg, #e7bf6d, #f0d393); }
+.d3-orbit { position: absolute; width: 270px; height: 270px; left: 50%; top: 50%; border: 1px solid var(--d3-orbit); border-radius: 50%; }
+.orbit-a { transform: translate(-50%, -50%) rotateX(63deg) rotateZ(-25deg); }
+.orbit-b { width: 300px; height: 300px; border-style: dashed; opacity: .65; transform: translate(-50%, -50%) rotateX(27deg) rotateY(53deg) rotateZ(24deg); }
+.d3-spark { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #d9b669; box-shadow: 0 0 0 5px rgba(217,182,105,.1); }
+.spark-a { top: 26%; left: 22%; }
+.spark-b { right: 13%; bottom: 27%; width: 5px; height: 5px; opacity: .65; }
+@keyframes d3-hover {
+  0%, 100% { transform: translate(-50%, -50%) rotateX(-25deg) rotateY(-31deg) rotateZ(-6deg); }
+  50% { transform: translate(-50%, calc(-50% - 12px)) rotateX(-20deg) rotateY(-20deg) rotateZ(-4deg); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .shell .hero.hero-3d[data-tilt]:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):hover {
+    transform: perspective(1200px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-2px);
+    box-shadow: inset 0 1px 0 var(--d3-rim), 0 30px 56px -38px rgba(54,92,155,.4);
+  }
+}
+
+/* Login uses the original copy, with a single raised brand tile as decoration. */
+.login-3d { position: relative; isolation: isolate; background: transparent; }
+.login-3d::before { content: ''; position: absolute; z-index: -1; width: min(800px, 100vw); height: min(800px, 100vh); left: 50%; top: 50%;
+  transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--gold) 9%, transparent), transparent 68%); pointer-events: none; }
+.login-3d .login-3d-card { position: relative; width: min(420px, 100%); padding: 36px; border: 1px solid var(--line); border-radius: 24px;
+  gap: 26px; background: var(--surface); box-shadow: inset 0 1px 0 var(--d3-rim), 0 32px 90px -52px rgba(30,69,126,.4); }
+.login-3d .login-3d-card > .stack { gap: 12px; }
+.login-3d .login-3d-mark { position: relative; width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(135deg, #7ab2ff, var(--gold));
+  color: var(--gold-ink); display: grid; place-items: center; font-size: 16px; font-weight: 700; margin-bottom: 8px;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--gold) 75%, #163d72), 0 9px 15px -10px var(--gold), inset 0 1px 0 rgba(255,255,255,.5);
+  transform: perspective(600px) rotateX(8deg) rotateY(-8deg); }
+.login-3d-card h1 { font-size: 25px; letter-spacing: -.04em; }
+.login-3d-card .small { line-height: 1.75; font-size: 13px; }
+.login-3d-card .btn { min-height: 46px; }
+
+@media (min-width: 1180px) {
+  .dashboard-3d .cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+}
+@media (max-width: 1100px) and (min-width: 900px) {
+  .main { padding-inline: 28px; }
+  .shell .metrics { gap: 10px; }
+  .shell .metrics > .metric { padding: 16px 13px; }
+  .metric .v { font-size: 21px; }
+  .shell .hero.hero-3d:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) { padding: 28px; }
+  .d3-world { scale: .85; }
+}
+@media (max-width: 899px) {
+  .main { padding: calc(28px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) calc(100px + env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
+  .page-head h1 { font-size: 29px; }
+  .dashboard-3d { gap: 24px; }
+  .shell :is(.group, .panel, .hero, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) { padding: 22px; border-radius: 20px; }
+  .tabbar { background: var(--bar); border-top-color: var(--line); padding-top: 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); box-shadow: 0 -5px 22px -18px rgba(30,69,126,.2); }
+  .tabbar a { gap: 4px; font-size: 10px; }
+  .tabbar .ic { width: 44px; height: 28px; }
+  .tabbar .ic::before { border-radius: 9px; }
+  .tabbar a[aria-current='page'] { color: var(--gold); }
+  .shell .metrics { gap: 12px; }
+  .shell .metrics > .metric { padding: 18px; border-radius: 16px; }
+  .metric .v { font-size: 24px; }
+  .shell .hero.hero-3d:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) { min-height: 275px; padding: 30px; }
+}
+@media (max-width: 639px) {
+  .main { padding-inline: max(20px, env(safe-area-inset-left)); }
+  .page-head { margin-bottom: 4px; gap: 12px; }
+  .page-head .ph-top { gap: 18px; align-items: flex-start; }
+  .page-head h1 { width: 100%; font-size: 28px; }
+  .page-head .ph-actions { gap: 8px; }
+  .dashboard-3d .cols { gap: 18px; }
+  .shell .hero.hero-3d:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) { min-height: 0; padding: 26px 24px 0; gap: 10px; }
+  .hero-3d > :not(.d3-scene) { max-width: 100%; }
+  .hero-3d > .price { font-size: clamp(32px, 10.5vw, 44px); }
+  .hero-3d > .inline-stats { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+  .hero-3d .inline-stats .k { font-size: 10px; }
+  .hero-3d .inline-stats strong { font-size: 18px; }
+  .hero-3d > .d3-scene { position: relative; inset: auto; width: calc(100% + 48px); height: 185px; margin: 0 -24px; }
+  .d3-world { top: 54%; scale: .78; }
+  .d3-glow { width: 290px; height: 290px; }
+  .d3-orbit { width: 240px; height: 240px; }
+  .orbit-b { width: 270px; height: 270px; }
+  .spark-a { left: 22%; }
+  .spark-b { right: 23%; bottom: 23%; }
+  .shell .metrics > .metric { padding: 17px 16px; }
+  .metric .k { font-size: 11px; }
+  .metric .v { font-size: 23px; }
+  .shell :is(.group, .panel, .stat):not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) { padding: 20px; }
+  .shell details.group:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)) { padding: 0; }
+  .item { gap: 8px; }
+  .item .t, .item .end { font-size: 12px; }
+  .login-3d .login-3d-card { padding: 30px 26px; border-radius: 22px; }
+}
+@media (max-width: 359px) {
+  .main { padding-inline: max(16px, env(safe-area-inset-left)); }
+  .shell .metrics { gap: 10px; }
+  .shell .metrics > .metric { padding: 16px 12px; }
+  .metric .k { font-size: 10px; }
+  .metric .v { font-size: 21px; }
+  .hero-3d .inline-stats .k { font-size: 9px; }
+  .hero-3d .inline-stats strong { font-size: 17px; }
+  .login-3d .login-3d-card { padding: 28px 22px; }
+}
+@media (hover: none) {
+  .shell .hero.hero-3d[data-tilt]:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):active { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page, .appear { animation: none; }
+  .d3-world { animation: none; }
+  .shell .hero.hero-3d[data-tilt]:not(.calcard):not(:has(.cal, .chartbox, .chart, canvas)):is(:hover, :active) { transform: none; }
+}

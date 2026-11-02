@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { call, fmt, peek, px } from '@/components/client';
 import { CountUp, ErrorBox, Loading, Metric, Metrics, PageHead, SecHead, Status } from '@/components/Status';
 import { CATEGORY_LABEL } from '@/lib/core/news';
+import DimensionalScene from '@/components/DimensionalScene';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Dash = any;
@@ -27,12 +28,12 @@ export default function Dashboard() {
   const all = tr.all;
   const sig = tr.lastSignal;
   return (
-    <div className="stack">
+    <div className="stack dashboard-3d">
       <PageHead title="Beranda" actions={<><Link className="btn sm" href="/calculator">Kalkulator</Link><Link className="btn sm primary" href="/trade">Buka Trade</Link></>} />
       {err ? <ErrorBox error={err} retry={load} /> : null}
 
       {/* what matters most: this month's live result */}
-      <section className="hero" aria-labelledby="h-month">
+      <section className="hero hero-3d" aria-labelledby="h-month" data-tilt="true">
         <span className="label" id="h-month">Bulan ini</span>
         <span className={`price ${tone(tr.month.pnl)}`}><CountUp value={tr.month.pnl} format={money} /></span>
         <div className="inline-stats">
@@ -40,6 +41,7 @@ export default function Dashboard() {
           <span><span className="k">Win rate</span><strong>{winPct(tr.month.winRate)}</strong></span>
           <span><span className="k">Posisi terbuka</span><strong>{tr.open}</strong></span>
         </div>
+        <DimensionalScene />
       </section>
 
       {/* all-time journal performance (real numbers from the journal only) */}
@@ -109,3 +111,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

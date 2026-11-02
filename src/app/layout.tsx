@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './premium-cards.css';
+import './dimensional.css';
+import DimensionalEffects from '@/components/DimensionalEffects';
 
 export const metadata: Metadata = {
   title: 'XAUUSD Research',
@@ -24,7 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body>{children}<DimensionalEffects /></body>
     </html>
   );
 }
+
