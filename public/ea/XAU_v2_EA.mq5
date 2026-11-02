@@ -27,7 +27,7 @@
 //| jaminan hasil nyata.                                               |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.10"
+#property version   "1.11"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -39,6 +39,7 @@ input long   InpMagic        = 20261102; // Magic number (pembeda posisi EA ini)
 input string InpReportUrl    = "https://xauusd-research.vercel.app/api/ea/report"; // Alamat laporan website
 input string InpEaKey        = "";     // Kunci EA dari website (Atur → EA)
 input int    InpSlippagePts  = 30;     // Slippage maksimum (points)
+input int    InpTesterUtcOffset = -99; // KHUSUS Strategy Tester: offset jam server − UTC. -99 = otomatis (GMT+2, GMT+3 saat DST Amerika; umum di broker)
 
 const double VOL_K   = 0.5;
 const double SL_ATR  = 0.35;
@@ -54,8 +55,23 @@ datetime g_lastBar = 0;
 struct Bar { datetime t; double o, h, l, c; };
 
 //--- server→UTC offset in seconds (broker server time minus GMT), rounded to 15 minutes
+//    In the Strategy Tester TimeGMT() equals the server time, so the offset comes from InpTesterUtcOffset instead.
+bool UsDst(datetime t)
+{
+   MqlDateTime d; TimeToStruct(t, d);
+   if(d.mon < 3 || d.mon > 11) return false;
+   if(d.mon > 3 && d.mon < 11) return true;
+   int firstSun = 1 + (7 - ((d.day_of_week - (d.day - 1) % 7) + 7) % 7) % 7;   // date of the 1st Sunday of this month
+   if(d.mon == 3) return d.day >= firstSun + 7;                               // from the 2nd Sunday of March
+   return d.day < firstSun;                                                   // until the 1st Sunday of November
+}
 int UtcOffset()
 {
+   if(MQLInfoInteger(MQL_TESTER))
+   {
+      if(InpTesterUtcOffset != -99) return InpTesterUtcOffset * 3600;
+      return (UsDst(TimeCurrent()) ? 3 : 2) * 3600;                           // "New York close" servers: GMT+2 / GMT+3
+   }
    long d = (long)(TimeTradeServer() - TimeGMT());
    return (int)(MathRound(d / 900.0) * 900);
 }
@@ -281,6 +297,7 @@ void OnTick()
 //--- report entries and exits to the website
 void Report(string json)
 {
+   if(MQLInfoInteger(MQL_TESTER)) return;                                     // no website reports from the Strategy Tester
    if(StringLen(InpEaKey) < 10 || StringLen(InpReportUrl) < 10) return;
    char data[], res[]; string hdr;
    StringToCharArray(json, data, 0, StringLen(json), CP_UTF8);
