@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { sessionOf, tzOffsetMinutes } from '@/lib/core/time';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -22,106 +22,48 @@ const wall = (ms: number, tz: string) => new Date(ms + tzOffsetMinutes(ms, tz) *
 const dmy = (d: Date) => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 
 /* ------------------------------------------------------------------ equity line */
-/** Width of an element in CSS px (re-measured on resize), so the SVG is drawn at its real size. */
-function useWidth<T extends HTMLElement>(fallback: number) {
-  const ref = useRef<T>(null);
-  const [w, setW] = useState(fallback);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const set = () => setW(Math.max(240, Math.round(el.clientWidth)));
-    set();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(set);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, w] as const;
-}
-
 /** start: starting capital (the line then shows the account balance); scale: multiply each trade's P&L (risk typed by the owner ÷ backtest risk). */
 export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: ClosedTrade[]; tz: string; start?: number; scale?: number }) {
   const pts = useMemo(() => {
     let eq = start;
     return [{ t: trades[0]?.entry ?? 0, v: start }, ...trades.map((x) => ({ t: x.exit, v: (eq += x.pnl * scale) }))];
   }, [trades, start, scale]);
-  const [box, W] = useWidth<HTMLDivElement>(360);
-  const [hover, setHover] = useState<number | null>(null);
-  const H = W >= 600 ? 280 : 210, P = { l: start ? 60 : 48, r: 10, t: 12, b: 24 };
-  const geo = useMemo(() => {
-    const vs = pts.map((p) => p.v);
-    let lo = Math.min(start, ...vs), hi = Math.max(start, ...vs);
-    if (hi - lo < 1) { hi += 1; lo -= 1; }
-    const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
-    const x = (i: number) => P.l + (i / Math.max(1, pts.length - 1)) * (W - P.l - P.r);
-    const y = (v: number) => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
-    // long histories: draw at most ~2 points per pixel (the path still passes through every min/max of a bucket)
-    const step = Math.max(1, Math.floor(pts.length / ((W - P.l - P.r) * 2)));
-    const idx: number[] = [];
-    for (let i = 0; i < pts.length; i += step) {
-      if (step === 1) { idx.push(i); continue; }
-      let mn = i, mx = i;
-      for (let k = i; k < Math.min(pts.length, i + step); k++) { if (pts[k].v < pts[mn].v) mn = k; if (pts[k].v > pts[mx].v) mx = k; }
-      idx.push(...(mn < mx ? [mn, mx] : mn > mx ? [mx, mn] : [mn]));
-    }
-    if (idx[idx.length - 1] !== pts.length - 1) idx.push(pts.length - 1);
-    const line = idx.map((i, n) => `${n ? 'L' : 'M'}${x(i).toFixed(1)},${y(pts[i].v).toFixed(1)}`).join('');
-    const area = `${line}L${x(pts.length - 1).toFixed(1)},${y(start).toFixed(1)}L${x(0).toFixed(1)},${y(start).toFixed(1)}Z`;
-    // deepest drawdown segment (peak → trough)
-    let best = { from: 0, to: 0, dd: 0 }, curPeak = 0;
-    pts.forEach((p, i) => { if (p.v > pts[curPeak].v) curPeak = i; const dd = pts[curPeak].v - p.v; if (dd > best.dd) best = { from: curPeak, to: i, dd }; });
-    return { lo, hi, pad, x, y, line, area, best };
-  }, [pts, start, W, H, P.l, P.r, P.t, P.b]);
   if (trades.length < 2) return <p className="mute small">Butuh minimal 2 trade untuk menggambar grafik.</p>;
-  const { lo, hi, pad, x, y, line, area, best } = geo;
+  const W = 360, H = 190, P = { l: start ? 56 : 44, r: 8, t: 10, b: 22 };
+  const vs = pts.map((p) => p.v);
+  let lo = Math.min(start, ...vs), hi = Math.max(start, ...vs);
+  if (hi - lo < 1) { hi += 1; lo -= 1; }
+  const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  const x = (i: number) => P.l + (i / (pts.length - 1)) * (W - P.l - P.r);
+  const y = (v: number) => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+  const area = `${line}L${x(pts.length - 1).toFixed(1)},${y(start).toFixed(1)}L${x(0).toFixed(1)},${y(start).toFixed(1)}Z`;
   const end = pts[pts.length - 1].v;
   const color = end >= start ? 'var(--up)' : 'var(--down)';
   const bal = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
   const ticks = [hi - pad, (hi + lo) / 2, lo + pad];
-  const move = (e: React.PointerEvent<SVGSVGElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const px = ((e.clientX - r.left) / r.width) * W;
-    const i = Math.round(((px - P.l) / (W - P.l - P.r)) * (pts.length - 1));
-    setHover(Math.min(pts.length - 1, Math.max(0, i)));
-  };
-  const hp = hover != null ? pts[hover] : null;
-  const hx = hover != null ? x(hover) : 0;
+  // deepest drawdown segment (peak → trough)
+  let peakI = 0, best = { from: 0, to: 0, dd: 0 }, curPeak = 0;
+  pts.forEach((p, i) => { if (p.v > pts[curPeak].v) curPeak = i; const dd = pts[curPeak].v - p.v; if (dd > best.dd) { best = { from: curPeak, to: i, dd }; peakI = curPeak; } });
   return (
     <figure style={{ margin: 0 }}>
-      <div ref={box} className="chart">
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img" aria-label={`Grafik saldo: akhir ${start ? bal(end) : money(end)}`}
-          onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
-          {ticks.map((v, i) => (
-            <g key={i}>
-              <line x1={P.l} x2={W - P.r} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeWidth="1" />
-              <text x={P.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--mute)">{start ? bal(v) : short(v)}</text>
-            </g>
-          ))}
-          <line x1={P.l} x2={W - P.r} y1={y(start)} y2={y(start)} stroke="var(--mute)" strokeWidth="1" strokeDasharray="3 4" opacity=".7" />
-          {best.dd > 0 ? <rect x={x(best.from)} y={P.t} width={Math.max(1, x(best.to) - x(best.from))} height={H - P.t - P.b} fill="var(--down)" opacity="0.07" /> : null}
-          <path className="fill" d={area} fill={color} opacity="0.07" />
-          <path className="draw" pathLength={1} d={line} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
-          <circle cx={x(pts.length - 1)} cy={y(end)} r="3" fill={color} />
-          <text x={P.l} y={H - 6} fontSize="11" fill="var(--mute)">{dmy(wall(pts[0].t, tz))}</text>
-          <text x={W - P.r} y={H - 6} fontSize="11" fill="var(--mute)" textAnchor="end">{dmy(wall(pts[pts.length - 1].t, tz))}</text>
-          <g className="xh" opacity={hp ? 1 : 0} aria-hidden>
-            <line x1={hx} x2={hx} y1={P.t} y2={H - P.b} stroke="var(--ink-2)" strokeWidth="1" strokeDasharray="2 3" />
-            {hp ? <circle cx={hx} cy={y(hp.v)} r="4" fill="var(--surface)" stroke={color} strokeWidth="2" /> : null}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Grafik saldo: akhir ${start ? bal(end) : money(end)}`} style={{ display: 'block' }}>
+        {ticks.map((v, i) => (
+          <g key={i}>
+            <line x1={P.l} x2={W - P.r} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeWidth="1" />
+            <text x={P.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--mute)">{start ? bal(v) : short(v)}</text>
           </g>
-        </svg>
-        {hp && hover != null ? (
-          <div className="chart-tip" style={{ transform: `translate(${Math.min(Math.max(hx - 70, 0), W - 150)}px, ${Math.max(0, y(hp.v) - 64)}px)` }}>
-            <strong className={hp.v - start >= 0 ? 'pos' : 'neg'}>{start ? bal(hp.v) : money(hp.v)}</strong>
-            <span className="mute">{hover === 0 ? 'Awal' : `Trade ${hover}`} · {dmy(wall(hp.t, tz))}</span>
-            {hover > 0 ? <span className="mute" style={{ display: 'block' }}>Trade ini: <span className={trades[hover - 1].pnl >= 0 ? 'pos' : 'neg'}>{money(trades[hover - 1].pnl * scale)}</span></span> : null}
-          </div>
-        ) : null}
-      </div>
-      <figcaption className="chart-cap">
-        <span className="lg"><span className="sw" style={{ background: color }} />{start ? `Saldo ${bal(start)} → ${bal(end)}` : 'Saldo untung/rugi'}</span>
-        <span className="lg"><span className="sw dash" />{start ? 'Modal awal' : 'Nol'}</span>
-        {best.dd > 0 ? <span className="lg"><span className="sw box" />Penurunan terdalam {money(-best.dd)}</span> : null}
-        <span>Sentuh / arahkan ke garis untuk detail.</span>
+        ))}
+        <line x1={P.l} x2={W - P.r} y1={y(start)} y2={y(start)} stroke="var(--mute)" strokeWidth="1" strokeDasharray="4 4" />
+        {best.dd > 0 ? <rect x={x(peakI)} y={P.t} width={Math.max(1, x(best.to) - x(peakI))} height={H - P.t - P.b} fill="var(--down)" opacity="0.06" /> : null}
+        <path d={area} fill={color} opacity="0.08" />
+        <path d={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
+        <circle cx={x(pts.length - 1)} cy={y(end)} r="3" fill={color} />
+        <text x={P.l} y={H - 6} fontSize="11" fill="var(--mute)">{dmy(wall(pts[0].t, tz))}</text>
+        <text x={W - P.r} y={H - 6} fontSize="11" fill="var(--mute)" textAnchor="end">{dmy(wall(pts[pts.length - 1].t, tz))}</text>
+      </svg>
+      <figcaption className="mute small" style={{ marginTop: 6 }}>
+        {start ? <>Garis = saldo akun mulai dari modal {bal(start)} (garis putus-putus) sampai {bal(end)}, setelah setiap trade ditutup.</> : <>Garis = saldo untung/rugi setelah setiap trade ditutup.</>} Area merah tipis = penurunan terdalam ({money(-best.dd)}).
       </figcaption>
     </figure>
   );
@@ -334,26 +276,26 @@ export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string 
   return (
     <div className="stack">
       <div className="tabs" role="tablist">
-        {([['day', 'Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const).map(([k, l]) => (
+        {([['day', 'PnL Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setSel(null); }}>{l}</button>
         ))}
       </div>
 
       <div className="row between">
         <div className="row" style={{ gap: 4 }}>
-          <button className="btn sm icon" onClick={() => shift(-1)} disabled={!canPrev} aria-label="Sebelumnya">‹</button>
+          <button className="btn sm" onClick={() => shift(-1)} disabled={!canPrev} aria-label="Sebelumnya">‹</button>
           {tab === 'day' ? (
-            <select value={`${Y}-${M}`} onChange={(e) => { const [a, b] = e.target.value.split('-').map(Number); setYm([a, b]); setSel(null); }} style={{ width: 'auto', minHeight: 36, padding: '4px 30px 4px 10px', fontWeight: 600 }} aria-label="Bulan">
+            <select value={`${Y}-${M}`} onChange={(e) => { const [a, b] = e.target.value.split('-').map(Number); setYm([a, b]); setSel(null); }} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px', fontWeight: 700 }} aria-label="Bulan">
               {months.map(([a, b]) => <option key={`${a}-${b}`} value={`${a}-${b}`}>{MONTHS[b]} {a}</option>)}
             </select>
           ) : (
-            <select value={Y} onChange={(e) => { const y = Number(e.target.value); setYm([y, months.filter((m) => m[0] === y).slice(-1)[0][1]]); setSel(null); }} style={{ width: 'auto', minHeight: 36, padding: '4px 30px 4px 10px', fontWeight: 600 }} aria-label="Tahun">
+            <select value={Y} onChange={(e) => { const y = Number(e.target.value); setYm([y, months.filter((m) => m[0] === y).slice(-1)[0][1]]); setSel(null); }} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px', fontWeight: 700 }} aria-label="Tahun">
               {years.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           )}
-          <button className="btn sm icon" onClick={() => shift(1)} disabled={!canNext} aria-label="Berikutnya">›</button>
+          <button className="btn sm" onClick={() => shift(1)} disabled={!canNext} aria-label="Berikutnya">›</button>
         </div>
-        <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ width: 'auto', minHeight: 36, padding: '4px 30px 4px 10px' }} aria-label="Tampilkan">
+        <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px' }} aria-label="Tampilkan">
           <option value="pnl">PnL</option>
           <option value="wl">Menang/Kalah</option>
           <option value="count">Jumlah trade</option>

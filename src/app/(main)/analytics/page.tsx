@@ -219,8 +219,7 @@ export default function Analytics() {
                 {fresh ? <>
                 <CapitalGrowth key={key} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
-                <section className="group stack">
-                  <SecHead title="Kalender untung/rugi" />
+                <section className="group">
                   <PnlCalendar key={key} trades={closedTrades(d.trades)} tz={tz} />
                 </section>
 
