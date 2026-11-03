@@ -229,21 +229,16 @@ export default function Analytics() {
                           <div><strong>{f(sum.trades / (days / 7))}</strong><span>per minggu</span></div>
                           <div><strong>{f(sum.trades / (days / 30.44))}</strong><span>per bulan</span></div>
                         </div>
-                        <span className="small mute">Posisi terbuka bersamaan paling banyak: <strong>{m.maxOpenPositions}</strong></span>
                       </div>
                     );
                   })()}
-                  <details className="more">
-                    <summary>Angka lain</summary>
-                    <dl className="kv">
-                      <dt>Total dari trade menang</dt><dd className="pos">{money(m.grossProfit)}</dd>
-                      <dt>Total dari trade kalah</dt><dd className="neg">{money(-m.grossLoss)}</dd>
-                      <dt>Profit factor</dt><dd>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</dd>
-                      <dt>Rata-rata per trade</dt><dd>{money(m.expectancy)}</dd>
-                      <dt>Lama posisi (median)</dt><dd>{hrs(m.medianHoldHours)}</dd>
-                      {String(cfgSel ?? '').startsWith('snr') ? <><dt>Zona bertahan / jebol</dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd></> : null}
-                    </dl>
-                  </details></> : <div className="facts"><div><span className="label row" style={{ gap: 8 }}><Spinner />Memuat detail…</span></div></div>}
+                  <div className="facts supplemental-facts">
+                    <div><span className="label stat-label" title="Total profit dari seluruh trade menang"><ResearchIcon name="win" />Total profit</span><strong className="pos">{money(m.grossProfit)}</strong></div>
+                    <div><span className="label stat-label" title="Total rugi dari seluruh trade kalah"><ResearchIcon name="loss" />Total rugi</span><strong className="neg">{money(-m.grossLoss)}</strong></div>
+                    <div><span className="label stat-label" title="Median lama posisi terbuka"><ResearchIcon name="calendar" />Durasi median</span><strong>{hrs(m.medianHoldHours)}</strong></div>
+                    <div><span className="label stat-label" title="Posisi terbuka bersamaan paling banyak"><ResearchIcon name="options" />Posisi bersamaan</span><strong>{m.maxOpenPositions}</strong></div>
+                    {String(cfgSel ?? '').startsWith('snr') ? <div className="zone-outcomes"><span className="label stat-label"><ResearchIcon name="risk" />Zona bertahan / jebol</span><strong>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</strong></div> : null}
+                  </div></> : <div className="facts"><div><span className="label row" style={{ gap: 8 }}><Spinner />Memuat detail…</span></div></div>}
                 </section>
 
                 {fresh ? <>
