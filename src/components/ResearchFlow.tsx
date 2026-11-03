@@ -45,7 +45,7 @@ export default function ResearchFlow({ onActive }: { onActive: (href: string) =>
     let frame = 0;
     const update = () => {
       frame = 0;
-      if (navigating.current || document.body.style.overflow === 'hidden') return;
+      if (navigating.current || document.documentElement.style.overflow === 'hidden') return;
       let current: (typeof RESEARCH_LINKS)[number] = RESEARCH_LINKS[0];
       for (const item of RESEARCH_LINKS) {
         const element = document.getElementById(item.id);
@@ -70,8 +70,8 @@ export default function ResearchFlow({ onActive }: { onActive: (href: string) =>
       }
     }, { threshold: 0.04 });
     const observe = () => {
-      container.querySelectorAll('.page-head, .group, .panel, .metrics').forEach((element) => {
-        if (seen.has(element) || element.closest('[role="dialog"]')) return;
+      container.querySelectorAll('.page-head, .group, .panel, .metrics, .flagship-verdict, .insight-stats .facts > div').forEach((element) => {
+        if (seen.has(element) || element.closest('dialog, [role="dialog"]')) return;
         seen.add(element);
         element.classList.add('flow-reveal');
         reveal.observe(element);

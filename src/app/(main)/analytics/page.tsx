@@ -38,6 +38,8 @@ const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? '
 export default function Analytics() {
   const [d, setD] = useState<any>(() => peek('/api/analytics'));
   const [busy, setBusy] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [tz, setTz] = useState('UTC');
   const [detail, setDetail] = useState<any>(null);
@@ -106,12 +108,19 @@ export default function Analytics() {
   const hasRuns = rows.length > 0;
   return (
     <div className="stack">
-      <PageHead title="Backtest" />
-      {hasRuns ? (
-        <div style={{ position: 'sticky', top: 'calc(8px + env(safe-area-inset-top))', zIndex: 10, marginTop: -8 }}>
-          <Seg full label="Bagian" options={[['hasil', 'Hasil'], ['jalan', 'Jalankan'], ['kelola', 'Kelola']] as const} value={tab} onChange={(k) => { setTab(k); window.scrollTo({ top: 0 }); }} />
+      <PageHead title="Backtest" actions={hasRuns ? <button className="research-action" aria-label="Buka opsi Backtest" aria-haspopup="dialog" onClick={() => setActionsOpen(true)}><span aria-hidden>•••</span></button> : undefined} />
+      {hasRuns ? <div className="backtest-controls">
+        <button className="research-filter" onClick={() => { setTab('hasil'); setFilterOpen(true); }} aria-haspopup="dialog" aria-label="Pilih strategi, tahun dan risk reward">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg>
+          <span>{pairLabel} <i>·</i> {curYear} <i>·</i> 1:{curRr}</span><span className="filter-chevron" aria-hidden>⌄</span>
+        </button>
+        <button className="research-view" onClick={() => setActionsOpen(true)} aria-haspopup="dialog">{tab === 'hasil' ? 'Hasil' : tab === 'jalan' ? 'Jalankan' : 'Kelola'}<span aria-hidden>⌄</span></button>
+      </div> : null}
+      {actionsOpen ? <Sheet title="Backtest" onClose={() => setActionsOpen(false)}>
+        <div className="research-options">
+          {([['hasil', 'Hasil', 'Lihat performa strategi'], ['jalan', 'Jalankan', 'Mulai pengujian baru'], ['kelola', 'Kelola', 'Hasil yang tersimpan']] as const).map(([value, label, description]) => <button key={value} className="research-option" onClick={() => { setTab(value); setActionsOpen(false); document.getElementById('backtest')?.scrollIntoView({ behavior: 'smooth' }); }} aria-pressed={tab === value}><span><strong>{label}</strong><small>{description}</small></span><span aria-hidden>{tab === value ? '✓' : '↗'}</span></button>)}
         </div>
-      ) : null}
+      </Sheet> : null}
 
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" variant="dashboard" /> : !hasRuns ? (
         <RunBacktest existingFor={() => []} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); }} />
@@ -130,7 +139,8 @@ export default function Analytics() {
             </section>
           ) : (
           <>
-          <section className="group stack" aria-label="Pilih hasil">
+          {filterOpen ? <Sheet title="Pilih hasil" onClose={() => setFilterOpen(false)}>
+          <section className="filter-content stack" aria-label="Pilih hasil">
             {configs.length > 1 ? (
               <label className="field">Strategi
                 <select value={cfgSel ?? ''} onChange={(e) => { setCfg(e.target.value); setPair(null); setYear(null); setDetail(null); }}>
@@ -159,19 +169,23 @@ export default function Analytics() {
               </div>
             </div>
           </section>
+          <button className="btn primary filter-apply" onClick={() => setFilterOpen(false)}>Tampilkan hasil</button>
+          </Sheet> : null}
 
           <div className={`stack${busy ? ' refreshing' : ''}`}>
             {!picked.length || (fresh && (!d.hasData || !m)) ? (
               <section className="group"><EmptyState title="Belum ada trade">Backtest ini tidak menghasilkan trade yang selesai.</EmptyState></section>
             ) : (
               <>
-                <section className="hero verdict">
-                  <span className="label">{pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
+                <section className="hero verdict flagship-verdict">
+                  <span className="label verdict-context">{pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
                   {perMonth != null ? <span className="small" style={{ color: 'var(--ink-2)' }}>Rata-rata per bulan <strong className={tone(perMonth)} style={{ fontSize: 17 }}>{money(perMonth)}</strong></span> : null}
-                  <p>{sum.pnl > 0 ? 'Untung bersih' : sum.pnl < 0 ? 'Rugi bersih' : 'Impas'} dari <strong>{sum.trades} trade</strong>: <strong className="pos">{sum.wins} menang</strong>, <strong className="neg">{sum.losses} kalah</strong>.</p>
+                  <div className="verdict-trades"><span><strong>{sum.trades}</strong> trade</span><span className="pos"><strong>{sum.wins}</strong> menang</span><span className="neg"><strong>{sum.losses}</strong> kalah</span></div>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
-                  <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Butuh ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}% agar impas</span></div>
+                  <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Impas ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}%</span></div>
+                </section>
+                <section className="group insight-stats">
                   {m && fresh ? <><div className="facts appear">
                     <div><span className="label">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
                     <div><span className="label">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
@@ -443,6 +457,8 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [prog, setProg] = useState<PairStatus[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const stop = useRef(false);
@@ -631,6 +647,8 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
   const [all, setAll] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const shown = all ? runs : runs.slice(0, 3);
   const day = (ms: number | null) => (ms == null ? '—' : fmt(ms, 'UTC').slice(0, 10));
   const del = async (r: Run) => {
@@ -677,6 +695,8 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
 function DeleteAll({ sessions, current, currentLabel, onDeleted }: { sessions: any[]; current: any[]; currentLabel: string; onDeleted: () => void }) {
   const [ask, setAsk] = useState<'current' | 'all' | null>(null);
   const [busy, setBusy] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const del = async (list: any[]) => {
     setBusy(true); setErr(null);
