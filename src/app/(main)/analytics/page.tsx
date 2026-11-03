@@ -388,14 +388,10 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 }
 function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
   const t = d.trade;
-  const markers = [
-    { time: t.entry, text: t.side === 'long' ? 'BUY' : 'SELL', position: t.side === 'long' ? 'below' : 'above', shape: t.side === 'long' ? 'arrowUp' : 'arrowDown' },
-    ...(t.exit ? [{ time: t.exit, text: EXIT[t.exitReason] ?? t.exitReason, position: 'above', shape: 'square' }] : []),
-  ] as any;
   return (
     <div className="stack">
       <div className="chartbox trade-review-chart">
-        {d.candles.length ? <CandleChart candles={d.candles} markers={markers} timezone={tz} fitKey={t.id} position={{ side: t.side, entry: t.entry, exit: t.exit, entryPrice: t.entryPrice, stopLoss: t.stopLoss, takeProfit: t.takeProfit, exitPrice: t.exitPrice }} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
+        {d.candles.length ? <CandleChart candles={d.candles} timezone={tz} fitKey={t.id} position={{ side: t.side, entry: t.entry, exit: t.exit, entryPrice: t.entryPrice, stopLoss: t.stopLoss, takeProfit: t.takeProfit, exitPrice: t.exitPrice }} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
       </div>
       <dl className="kv">
         {t.setupReason?.risk_usd != null ? <><dt>Risiko</dt><dd>${Number(t.setupReason.risk_usd).toFixed(2)} · lot {t.setupReason.lot}</dd></> : null}

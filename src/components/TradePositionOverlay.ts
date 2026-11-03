@@ -39,20 +39,6 @@ export class TradePositionOverlay implements ISeriesPrimitive {
           ctx.strokeStyle = color; ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(left, price); ctx.lineTo(right, price); ctx.stroke();
         }
-        ctx.setLineDash([5, 4]); ctx.strokeStyle = '#87909c';
-        const end = position.exitPrice == null ? null : api.series.priceToCoordinate(position.exitPrice);
-        if (end != null) { ctx.beginPath(); ctx.moveTo(left, entry); ctx.lineTo(right, end); ctx.stroke(); }
-        ctx.setLineDash([]);
-        const risk = Math.abs(position.entryPrice - position.stopLoss);
-        const rr = risk > 0 ? Math.abs(position.takeProfit - position.entryPrice) / risk : 0;
-        const label = `${position.side === 'long' ? 'BUY' : 'SELL'} · RR 1:${rr.toFixed(1)}`;
-        const x = Math.max(6, left + 7);
-        if (x + 110 < Math.min(mediaSize.width, right + 20)) {
-          const y = Math.max(18, Math.min(entry - 8, mediaSize.height - 8));
-          ctx.font = '600 11px system-ui, sans-serif';
-          ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(x - 4, y - 12, ctx.measureText(label).width + 8, 17);
-          ctx.fillStyle = '#475569'; ctx.fillText(label, x, y);
-        }
         ctx.restore();
       });
     } }) }];

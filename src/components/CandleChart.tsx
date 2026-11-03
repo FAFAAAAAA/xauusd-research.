@@ -34,7 +34,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: v('--surface', '#ffffff') }, textColor: v('--mute', '#8a94a6'), fontFamily: "-apple-system, BlinkMacSystemFont, system-ui, sans-serif" },
       grid: { vertLines: { color: v('--sunk', '#f2f4f7') }, horzLines: { color: v('--sunk', '#f2f4f7') } },
-      crosshair: { mode: CrosshairMode.Normal },
+      crosshair: { mode: position ? CrosshairMode.Hidden : CrosshairMode.Normal },
       rightPriceScale: { scaleMargins: { top: 0.14, bottom: 0.14 }, borderColor: v('--line', '#e4e7ec') },
       timeScale: { borderColor: v('--line', '#e4e7ec'), timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 9, minBarSpacing: 3 },
     });
@@ -42,6 +42,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       upColor: up, borderUpColor: up, wickUpColor: up,
       downColor: dn, borderDownColor: dn, wickDownColor: dn,
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+      priceLineVisible: !position, lastValueVisible: !position,
     });
     chart.current = c;
     return () => { c.remove(); chart.current = null; series.current = null; lines.current = []; };
@@ -85,11 +86,6 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     const exitIndex = position.exit == null ? entryIndex + 24 : indexAt(position.exit);
     const overlay = new TradePositionOverlay(position, entryIndex, exitIndex);
     s.attachPrimitive(overlay);
-    const priceLines = [
-      s.createPriceLine({ price: position.entryPrice, color: '#87909c', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'Entry' }),
-      s.createPriceLine({ price: position.stopLoss, color: '#cf6674', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'SL' }),
-      s.createPriceLine({ price: position.takeProfit, color: '#389b78', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'TP' }),
-    ];
     focus.current = () => {
       const span = Math.min(100, Math.max(55, exitIndex - entryIndex + 24));
       c.priceScale('right').applyOptions({ autoScale: true });
@@ -97,7 +93,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     };
     focus.current();
     lastFit.current = fitKey;
-    return () => { s.detachPrimitive(overlay); priceLines.forEach((line) => s.removePriceLine(line)); };
+    return () => { s.detachPrimitive(overlay); };
   }, [position, candles, fitKey]);
 
   const zoom = (factor: number) => {
