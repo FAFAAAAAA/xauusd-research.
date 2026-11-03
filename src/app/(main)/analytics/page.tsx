@@ -202,7 +202,7 @@ export default function Analytics() {
                     <div><span className="label stat-label" title="Rata-rata profit per trade menang"><ResearchIcon name="win" />Menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
                     <div><span className="label stat-label" title="Rata-rata rugi per trade kalah"><ResearchIcon name="loss" />Kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
                     <div><span className="label stat-label" title="Penurunan saldo terdalam"><ResearchIcon name="drawdown" />Drawdown</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
-                    <div><span className="label stat-label" title="Jumlah kekalahan beruntun"><ResearchIcon name="streak" />Loss streak</span><strong>{m.maxConsecutiveLosses}×</strong></div>
+                    <div><span className="label stat-label"><ResearchIcon name="streak" />Beruntun</span><div className="streak-pair"><span className="pos" aria-label={`Menang beruntun ${m.maxConsecutiveWins} kali`} title="Menang beruntun"><ResearchIcon name="win" /><strong>{m.maxConsecutiveWins}×</strong></span><span className="neg" aria-label={`Kalah beruntun ${m.maxConsecutiveLosses} kali`} title="Kalah beruntun"><ResearchIcon name="loss" /><strong>{m.maxConsecutiveLosses}×</strong></span></div></div>
                     <div><span className="label stat-label" title="Rasio total profit terhadap total rugi"><ResearchIcon name="ratio" />Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
                     <div><span className="label stat-label" title="Rata-rata hasil bersih per trade"><ResearchIcon name="average" />Per trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
                   </div>
@@ -240,7 +240,6 @@ export default function Analytics() {
                       <dt>Total dari trade kalah</dt><dd className="neg">{money(-m.grossLoss)}</dd>
                       <dt>Profit factor</dt><dd>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</dd>
                       <dt>Rata-rata per trade</dt><dd>{money(m.expectancy)}</dd>
-                      <dt>Menang beruntun</dt><dd>{m.maxConsecutiveWins}×</dd>
                       <dt>Lama posisi (median)</dt><dd>{hrs(m.medianHoldHours)}</dd>
                       {String(cfgSel ?? '').startsWith('snr') ? <><dt>Zona bertahan / jebol</dt><dd>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</dd></> : null}
                     </dl>
@@ -248,31 +247,21 @@ export default function Analytics() {
                 </section>
 
                 {fresh ? <>
-                {m?.lossStreaks && m.maxConsecutiveLosses > 0 ? (() => {
-                  const risk = Number(picked[0]?.cost_config?.risk_usd) || null;
-                  const total = m.lossStreaks.reduce((a: number, x: number) => a + x, 0);
-                  return (
-                    <section className="group">
-                      <SecHead title="Rugi beruntun" />
-                      <p className="small mute" style={{ marginTop: 4 }}>Berapa kali terjadi kalah berturut-turut sepanjang backtest ini (terpanjang {m.maxConsecutiveLosses}×). Trade yang keluar impas (SL di entry) tidak memutus dan tidak menambah hitungan.</p>
-                      <div className="tablewrap">
-                        <table className="num-r" style={{ marginTop: 8 }}>
-                          <thead><tr><th>Kalah beruntun</th><th>Terjadi</th><th>Porsi</th>{risk ? <th>Total rugi</th> : null}</tr></thead>
-                          <tbody>
-                            {m.lossStreaks.map((cnt: number, len: number) => len === 0 ? null : (
-                              <tr key={len}>
-                                <td>{len}×{len === m.maxConsecutiveLosses ? ' (terpanjang)' : ''}</td>
-                                <td><strong>{cnt}</strong> kali</td>
-                                <td>{total ? `${((cnt / total) * 100).toFixed(cnt / total < 0.01 && cnt ? 1 : 0)}%` : '—'}</td>
-                                {risk ? <td className="neg">{money(-len * risk)}</td> : null}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  );
-                })() : null}
+                {m ? <section className="group">
+                  <SecHead title="Beruntun" />
+                  <div className="tablewrap">
+                    <table className="num-r">
+                      <thead><tr><th>Rangkaian</th><th className="pos"><span className="streak-column"><ResearchIcon name="win" />Menang</span></th><th className="neg"><span className="streak-column"><ResearchIcon name="loss" />Kalah</span></th></tr></thead>
+                      <tbody>
+                        {Array.from({ length: Math.max(m.maxConsecutiveWins, m.maxConsecutiveLosses) }, (_, index) => index + 1).filter((length) => (m.winStreaks?.[length] ?? 0) + (m.lossStreaks?.[length] ?? 0) > 0).map((length) => <tr key={length}>
+                          <td>{length}×</td>
+                          <td>{m.winStreaks?.[length] ? <strong className="pos">{m.winStreaks[length]} kali</strong> : '—'}</td>
+                          <td>{m.lossStreaks?.[length] ? <strong className="neg">{m.lossStreaks[length]} kali</strong> : '—'}</td>
+                        </tr>)}
+                      </tbody>
+                    </table>
+                  </div>
+                </section> : null}
                 <CapitalGrowth key={key} months={monthsTested} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group calcard">

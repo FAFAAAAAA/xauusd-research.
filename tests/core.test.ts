@@ -171,6 +171,11 @@ test('metrics: empty → null, computed values correct', () => {
   assert.equal(m.maxDrawdown, 200);
   assert.equal(m.maxConsecutiveLosses, 2);
   assert.deepEqual(m.lossStreaks, [0, 0, 1]);
+  assert.deepEqual(m.winStreaks, [0, 2]);
+  const winning = computeMetrics([mk(1, 20, 2), mk(2, 20, 2), mk(3, -0.3, -0.03), mk(4, 20, 2), mk(5, -10, -1), mk(6, 20, 2), mk(7, 20, 2)])!;
+  assert.deepEqual(winning.winStreaks, [0, 0, 1, 1]);
+  assert.equal(winning.maxConsecutiveWins, 3);
+  assert.deepEqual(computeMetrics([mk(1, -10, -1)])!.winStreaks, [0]);
   // L L BE L W L → one streak of 3 (breakeven does not break it) and one streak of 1
   const s2 = computeMetrics([mk(1, -10, -1), mk(2, -10, -1), mk(3, -0.3, -0.03), mk(4, -10, -1), mk(5, 20, 2), mk(6, -10, -1)])!;
   assert.deepEqual(s2.lossStreaks, [0, 1, 0, 1]); assert.equal(s2.maxConsecutiveLosses, 3); assert.equal(s2.breakeven, 1); assert.equal(s2.losses, 4);

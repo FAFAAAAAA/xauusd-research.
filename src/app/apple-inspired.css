@@ -579,3 +579,9 @@ body::before { display: none; }
   .apple-shell .apple-menu-toggle, .apple-shell .apple-topbar .apple-mobile-menu.is-open { background: var(--surface); }
 }
 @media (prefers-reduced-motion: reduce) { .research-flow .sk { animation: none; } }
+
+.streak-pair { display: flex; align-items: center; gap: 20px; }
+.streak-pair > span, .streak-column { display: inline-flex; align-items: center; gap: 6px; }
+.streak-pair .research-icon, .streak-column .research-icon { width: 15px; height: 15px; }
+.streak-pair strong { color: inherit; }
+@media (max-width: 899px) { .streak-pair { gap: 12px; } .streak-pair strong { font-size: 23px; } }

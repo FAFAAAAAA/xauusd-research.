@@ -33,6 +33,8 @@ export interface Metrics {
   /** lossStreaks[n] = how many times exactly n losing trades came in a row (index 0 unused). Breakeven trades
    *  (|R| ≤ 0.1, e.g. v2 stopped at the entry) neither extend nor end a streak. */
   lossStreaks: number[];
+  /** Winning streak distribution, using the same breakeven rule as losing streaks. */
+  winStreaks: number[];
   /** Hours from entry to exit (exit = the candle in which TP/SL was hit). */
   avgHoldHours: number | null;
   medianHoldHours: number | null;
@@ -53,6 +55,8 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
   const rrs: number[] = [];
   const hold: number[] = [], holdW: number[] = [], holdL: number[] = [];
   const streakCount: number[] = [];
+  const winStreakCount: number[] = [];
+  const endWinStreak = () => { if (cw > 0) winStreakCount[cw] = (winStreakCount[cw] ?? 0) + 1; };
   const endStreak = () => { if (cl > 0) streakCount[cl] = (streakCount[cl] ?? 0) + 1; };
   for (const t of closed) {
     const p = t.pnl!;
@@ -60,7 +64,7 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     const flat = t.pnlR != null ? Math.abs(t.pnlR) <= 0.1 : p === 0;   // breakeven exit (SL moved to entry)
     if (flat) { be++; if (p > 0) gp += p; else gl += -p; }
     else if (p > 0) { wins++; gp += p; cw++; endStreak(); cl = 0; }
-    else { losses++; gl += -p; cl++; cw = 0; }
+    else { losses++; gl += -p; cl++; endWinStreak(); cw = 0; }
     mcw = Math.max(mcw, cw); mcl = Math.max(mcl, cl);
     equity += p;
     peak = Math.max(peak, equity);
@@ -76,6 +80,8 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     if (t.plannedRr != null) rrs.push(t.plannedRr);
   }
   endStreak();
+  endWinStreak();
+  const winStreaks = Array.from({ length: mcw + 1 }, (_, i) => (i === 0 ? 0 : winStreakCount[i] ?? 0));
   const lossStreaks = Array.from({ length: mcl + 1 }, (_, i) => (i === 0 ? 0 : streakCount[i] ?? 0));
   const n = closed.length;
   // most positions open at once: sweep entries/exits (an exit at the same moment as an entry frees the slot first)
@@ -100,7 +106,7 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     avgPlannedRr: avg(rrs),
     maxConsecutiveWins: mcw,
     maxConsecutiveLosses: mcl,
-    lossStreaks,
+    lossStreaks, winStreaks,
     avgHoldHours: avg(hold),
     medianHoldHours: hold.length ? [...hold].sort((a, b) => a - b)[Math.floor(hold.length / 2)] : null,
     avgHoldWinHours: avg(holdW),
