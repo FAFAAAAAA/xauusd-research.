@@ -193,7 +193,7 @@ export default function Analytics() {
             ) : (
               <>
                 <section className="hero verdict flagship-verdict">
-                  <span className="label verdict-context summary-risk"><ResearchIcon name="risk" />Risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} / trade</span>
+                  <div className="summary-meta"><span className="label verdict-context summary-risk" aria-label="Risiko per trade"><ResearchIcon name="risk" />{picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'Lot tetap'}</span><span className="summary-trades"><ResearchIcon name="trades" />{sum.trades} trade</span></div>
                   <span className="profit-caption">Hasil bersih</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
                   <div className="hero-winrate"><span>Win rate</span><strong className={winRateTone}>{winRate == null ? '—' : `${(winRate * 100).toFixed(1)}%`}</strong></div>
@@ -201,9 +201,7 @@ export default function Analytics() {
                 <section className="group insight-stats">
                   <div className="facts overview-facts">
                     <div><span className="label stat-label"><ResearchIcon name="calendar" />Rata-rata / bulan</span><strong className={tone(perMonth)}>{perMonth == null ? '—' : money(perMonth)}</strong></div>
-                    <div><span className="label stat-label"><ResearchIcon name="trades" />Total trade</span><strong>{sum.trades}</strong></div>
                     <div><span className="label stat-label">Menang / kalah</span><div className="streak-pair"><span className="pos" aria-label={`${sum.wins} menang`}><ResearchIcon name="win" /><strong>{sum.wins}</strong></span><span className="neg" aria-label={`${sum.losses} kalah`}><ResearchIcon name="loss" /><strong>{sum.losses}</strong></span></div></div>
-                    <div><span className="label stat-label" title="Ambang win rate impas berdasarkan RR, sebelum biaya"><ResearchIcon name="ratio" />Impas (RR)</span><strong>{`${(breakEven * 100).toFixed(1).replace('.0', '')}%`}</strong></div>
                   </div>
                   {m && fresh ? <><div className="facts appear">
                     <div><span className="label stat-label" title="Rata-rata profit per trade menang"><ResearchIcon name="win" />Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
