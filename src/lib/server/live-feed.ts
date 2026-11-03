@@ -101,7 +101,7 @@ export async function runFeedTick(db: Db, opts: { now?: number; fetchImpl?: Fetc
       const id = await repo.insertEvent(db, {
         mode: 'LIVE', eventUid: uid, dedupeKey: `live:${uid}`, instrumentId, timeframe: 'M15', eventType: 'SETUP_CONFIRMED',
         eventTime: f.time + TIMEFRAME_MS.M15, price: entry, zoneLow: f.level, zoneHigh: f.level, zoneKind: s > 0 ? 'resistance' : 'support', zoneId: null,
-        strategyVersionId: null, strategyLabel: 'v2 · Breakout volatilitas', source: 'tradingview_webhook' /* DB allows only existing sources; payload.source = twelvedata */, replaySessionId: null, runNumber: null,
+        strategyVersionId: null, strategyLabel: 'v2 Volatilitas', source: 'tradingview_webhook' /* DB allows only existing sources; payload.source = twelvedata */, replaySessionId: null, runNumber: null,
         confirmations: { trend: s > 0 ? 'Naik (H4 & D1)' : 'Turun (H4 & D1)' }, payload: { symbol: 'XAUUSD', source: 'twelvedata', extra: { side, sl, tp, be: entry + s * Math.abs(entry - sl) } }, isTest: false,
       });
       if (!id) continue;                                     // already sent (scheduler called twice)
@@ -110,7 +110,7 @@ export async function runFeedTick(db: Db, opts: { now?: number; fetchImpl?: Fetc
         const l = lotFor((risk.capital * risk.riskPct) / 100, entry, sl);
         const msg = buildEventMessage({
           mode: 'LIVE', eventType: 'SETUP_CONFIRMED', timeframe: 'M15', eventTime: f.time + TIMEFRAME_MS.M15, price: entry, zoneLow: f.level, zoneHigh: f.level,
-          zoneKind: null, confirmations: {}, status: '', displayTimezone: tz, strategyLabel: 'v2 · Breakout volatilitas (data Twelve Data)',
+          zoneKind: null, confirmations: {}, status: '', displayTimezone: tz, strategyLabel: 'v2 Volatilitas (Twelve Data)',
           trade: { side, entry, sl, tp, lot: l ? l.lot : null, riskUsd: l ? l.risk : null, riskPct: risk.riskPct, be: entry + s * Math.abs(entry - sl) },
         });
         telegram = (await sendTelegram(db, { deliveryKey: `live-event:${id}`, mode: 'LIVE', marketEventId: id, text: msg.text, copy: msg.copy }, { fetchImpl: opts.fetchImpl })).status;

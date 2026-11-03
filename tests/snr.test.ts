@@ -465,3 +465,25 @@ test('v3 BOS H1: registered; BUY when M15 closes above swing high B after a high
   const sl = Number(ev[0].details?.stop_loss);
   assert.ok(sl < C && sl > C - 0.5, `SL just below C (${sl})`);
 });
+
+test('pair strategies: Trendline H4 and Asia → London are registered; Asia → London trades the first close out of the Asia range', async () => {
+  const { asiaLondonAdapter, trendlineH4Adapter } = await import('../src/lib/core/strategy/pairs');
+  assert.equal(getAdapter('metode_trendline_h4'), trendlineH4Adapter);
+  assert.equal(getAdapter('metode_asia_london'), asiaLondonAdapter);
+  const D = 86_400_000, H4 = 4 * 3_600_000, day = Date.UTC(2030, 5, 4);
+  const d1: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: day - (260 - i) * D, open: 100 + i, high: 101 + i, low: 99 + i, close: 100.5 + i, volume: 0 }));
+  const h4: Candle[] = Array.from({ length: 260 }, (_, i) => ({ time: day - (260 - i) * H4, open: 300 + i, high: 301 + i, low: 299 + i, close: 300.5 + i, volume: 0 }));
+  const mk = (q: number, o: number, c: number): Candle => ({ time: day + q * M15, open: o, high: Math.max(o, c) + 0.05, low: Math.min(o, c) - 0.05, close: c, volume: 0 });
+  const m: Candle[] = [mk(-1, 99.9, 100)];
+  for (let q = 0; q < 28; q++) m.push(mk(q, 100, q % 2 ? 100.4 : 99.6));   // Asia range ≈ 99.55–100.45 (00:00–06:59)
+  m.push(mk(28, 100.2, 100.3), mk(29, 100.3, 101.2), mk(30, 101.2, 101.5)); // 07:15 closes above the range
+  const st = {}; const ev: StrategyEventDraft[] = [];
+  for (let i = 1; i < m.length; i++) {
+    const w = m.slice(0, i + 1);
+    ev.push(...asiaLondonAdapter.evaluate({ mode: 'BACKTEST', symbol: 'USDJPY', timeframe: 'M15', candles: w, now: w[w.length - 1].time + M15, zones: [], news: {} as never, htf: { H4: h4, D1: d1 }, params: {}, state: st }));
+  }
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].details?.side, 'long');
+  assert.equal(ev[0].candleTime, m[30].time);
+  assert.ok(Number(ev[0].details?.stop_loss) < 99.6);
+});

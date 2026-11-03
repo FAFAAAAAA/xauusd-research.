@@ -41,7 +41,7 @@ function addPivots(h: readonly Candle[], j: number, st: St) {
 export const BOSH1_KEY = 'metode_bos_h1';
 export const bosH1Adapter: StrategyAdapter = {
   key: BOSH1_KEY,
-  name: 'v3 · BOS H1',
+  name: 'v3 BOS',
   configured: true,
   testOnly: false,
   warmupCandles: 30,

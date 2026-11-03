@@ -11,9 +11,9 @@ const tone = (n: number | null | undefined) => (n == null ? '' : n > 0 ? 'pos' :
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
 // Backtest reference (Exness Raw Spread costs + swap, 2004–2026, RR 1:2): what live results should be compared with.
 const BT: Record<string, { win: number; perMonth: number; label: string }> = {
-  v1: { win: 0.411, perMonth: 3.1, label: 'v1 · Level H1' },
-  v2: { win: 0.342, perMonth: 5.0, label: 'v2 · Breakout volatilitas' },   // + ±15% impas (BE)
-  v3: { win: 0.404, perMonth: 4.1, label: 'v3 · BOS H1' },
+  v1: { win: 0.411, perMonth: 3.1, label: 'v1 Level' },
+  v2: { win: 0.342, perMonth: 5.0, label: 'v2 Volatilitas' },   // + ±15% impas (BE)
+  v3: { win: 0.404, perMonth: 4.1, label: 'v3 BOS' },
 };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };

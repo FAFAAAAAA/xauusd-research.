@@ -107,6 +107,6 @@ export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3', RiskStat
     "p75Sl": 11.73
   }
 };
-export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 · Level H1', v2: 'v2 · Breakout volatilitas', v3: 'v3 · BOS H1', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan' };
+export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 Level', v2: 'v2 Volatilitas', v3: 'v3 BOS', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan' };
 /** Owner-facing rule: the historical max drawdown should stay at or below this share of the capital. */
 export const IDEAL_DD_SHARE = 0.4;

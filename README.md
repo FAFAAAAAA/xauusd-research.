@@ -384,3 +384,10 @@ Filter hanya dipakai kalau PF naik di 2004–17 **dan** 2018–26. Hari Rabu & j
 `src/lib/core/broker.ts` = default website: komisi $3,50/lot/arah ($7 pulang-pergi), swap BUY −474,7 point = $47,47/lot/malam, SELL 0 (Rabu ×3), jam server = UTC, level stop 0, lot 0,01. Spread tetap 0,12 sampai diukur.
 Dipakai di: form Backtest (nilai lama default 5 / 67 / −25 yang tersimpan di browser diganti otomatis; tombol "Pakai biaya Exness"), biaya default server & instrumen XAUUSD, P/L jurnal trade manual (dikurangi komisi + swap; trade dari EA tetap memakai profit asli broker), kalkulator risiko (`RISK_STATS` dihitung ulang), EA v1.13 (`InpTesterUtcOffset` default 0 untuk Exness).
 Mesin website dengan biaya ini (2004–2026, $10/trade): v1 +$1.123 · v2 +$2.375 (PF 1,38, DD 15,3R) · v3 +$1.523 · gabungan +$5.021 (DD 33,2R).
+
+## 5z. Strategi untuk pair lain + nama singkat (3 Nov 2026)
+Studi semua strategi di 10 pair (2017/2018–2026, biaya bawaan tiap pair): pair terbaik di luar emas = **US100** dan **USDJPY**.
+- Baru (`src/lib/core/strategy/pairs.ts`): **Trendline H4** (`metode_trendline_h4`, paling cocok US100: mesin website 2017–2026 +53,8R, 122 trade; data M30 2013–2026 PF 1,68; trade berhari-hari, hampir semua BUY) dan **Asia → London** (`metode_asia_london`, paling cocok USDJPY: +35,2R, 419 trade).
+- Ditampilkan lagi di menu Backtest: Base H1, Base H4 (USDJPY +36,4R), Donchian H1 (US100 +90,3R, tapi 2022+ impas), Range NY (US100 +28,1R, USDCAD +28,9R).
+- Nama singkat: v1 Level · v2 Volatilitas · v3 BOS · Base H1 · Base H4 · Donchian H1 · Range NY · Trendline H4 · Asia → London · Pola N.
+- Biaya backtest: isian biaya di form (akun Exness emas) hanya untuk XAUUSD; pair lain memakai perkiraan biayanya sendiri (`instruments.ts`), tanpa swap.

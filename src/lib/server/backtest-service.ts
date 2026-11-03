@@ -71,8 +71,11 @@ export async function runBacktest(db: Db, v: BacktestInput) {
     between: (t: Timeframe, a: number, b: number) => (fp ? Promise.resolve(fp.between(t, a, b)) : repo.candlesBetween(db, v.sourceId, t, a, b)),
   };
   // Costs: XAUUSD keeps the editable website defaults; other instruments use their own estimates (only the TP/SL-ambiguity rule is editable).
-  // Owner's choice (1 Nov 2026): the same costs from the form for every pair; contract size still per instrument.
-  const costs: CostConfig = { ...BACKTEST_DEFAULT_COSTS, contractSize: instrumentCosts(symbol).contractSize, ...(v.costs ?? {}),
+  // 3 Nov 2026: the form's costs are the owner's gold (Exness) costs → used for XAUUSD only; other pairs use their own
+  // spread/slippage/commission estimates (instruments.ts) and no swap, keeping only the TP/SL-ambiguity choice.
+  const pairCosts = symbol.toUpperCase() === 'XAUUSD' ? (v.costs ?? {})
+    : { ...instrumentCosts(symbol), swapLong: 0, swapShort: 0, ...(v.costs?.ambiguityPolicy ? { ambiguityPolicy: v.costs.ambiguityPolicy } : {}) };
+  const costs: CostConfig = { ...BACKTEST_DEFAULT_COSTS, contractSize: instrumentCosts(symbol).contractSize, ...pairCosts,
     ...(v.noCosts ? { spread: 0, slippage: 0, commissionPerUnit: 0, swapLong: 0, swapShort: 0 } : {}) };
   const beMode = v.breakeven === 'on' || v.breakeven === 'off' ? v.breakeven : 'strategy';
   const sv = v.strategyVersionId ? await repo.getStrategyVersion(db, v.strategyVersionId) : await repo.defaultStrategyVersion(db);
