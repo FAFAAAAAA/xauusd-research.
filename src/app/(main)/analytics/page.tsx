@@ -38,6 +38,7 @@ const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? '
 export default function Analytics() {
   const [d, setD] = useState<any>(() => peek('/api/analytics'));
   const [busy, setBusy] = useState(false);
+  const loadSequence = useRef(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -76,23 +77,18 @@ export default function Analytics() {
   const perMonth = monthsTested > 0 ? sum.pnl / monthsTested : null;
 
   const load = useCallback(() => {
+    const sequence = ++loadSequence.current;
     setErr(null);
     const url = urlFor(key);
     const cached = peek(url);
     if (cached) { setD(onlyVisible(cached)); setLoadedKey(key); }
     setBusy(!cached);
-    call<any>(url).then((x) => { setD(onlyVisible(x)); setLoadedKey(key); }).catch((e) => setErr(e.message)).finally(() => setBusy(false));
+    call<any>(url).then((x) => {
+      if (sequence !== loadSequence.current) return;
+      setD(onlyVisible(x)); setLoadedKey(key);
+    }).catch((e) => { if (sequence === loadSequence.current) setErr(e.message); })
+      .finally(() => { if (sequence === loadSequence.current) setBusy(false); });
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  // warm the cache for the other RR buttons and "Semua" so the next tap is instant
-  useEffect(() => {
-    if (!fresh || !rows.length) return;
-    const t = setTimeout(() => {
-      const keys = [1, 2, 3].map((x) => pick(yearSel, x)).concat(rows.length > 1 ? [pick('ALL', rr)] : [])
-        .map((p) => p.map((c: any) => String(c.id)).join(',')).filter((k) => k && k !== key && !peek(urlFor(k)));
-      keys.forEach((k) => { call(urlFor(k)).catch(() => {}); });
-    }, 400);
-    return () => clearTimeout(t);
-  }, [fresh, key]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
   useEffect(() => { call<any>('/api/settings').then((s) => setTz(s.timezone)).catch(() => {}); }, []);
   const choose = (y: string | null, x: number) => { setYear(y); setRr(x); setDetail(null); setTradeLimit(10); };
@@ -108,7 +104,7 @@ export default function Analytics() {
   const hasRuns = rows.length > 0;
   return (
     <div className="stack">
-      <PageHead title="Backtest" actions={hasRuns ? <button className="research-action" aria-label="Buka opsi Backtest" aria-haspopup="dialog" onClick={() => setActionsOpen(true)}><span aria-hidden>•••</span></button> : undefined} />
+      <PageHead title="Backtest" />
       {hasRuns ? <div className="backtest-controls">
         <button className="research-filter" onClick={() => { setTab('hasil'); setFilterOpen(true); }} aria-haspopup="dialog" aria-label="Pilih strategi, tahun dan risk reward">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg>
@@ -457,6 +453,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);
   const [busy, setBusy] = useState(false);
+  const loadSequence = useRef(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [prog, setProg] = useState<PairStatus[] | null>(null);
@@ -647,6 +644,7 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
   const [all, setAll] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const loadSequence = useRef(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const shown = all ? runs : runs.slice(0, 3);
@@ -695,6 +693,7 @@ function RunPicker({ sessions, selected, tz, onSelect, onDeleted }: {
 function DeleteAll({ sessions, current, currentLabel, onDeleted }: { sessions: any[]; current: any[]; currentLabel: string; onDeleted: () => void }) {
   const [ask, setAsk] = useState<'current' | 'all' | null>(null);
   const [busy, setBusy] = useState(false);
+  const loadSequence = useRef(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);

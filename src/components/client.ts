@@ -5,12 +5,27 @@ import { formatInTz } from '@/lib/core/time';
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 
 const cache = new Map<string, unknown>();
+let cacheEpoch = 0;
+const pending = new Map<string, { epoch: number; request: Promise<unknown> }>();
 /** Last successful GET response for `url` (shown instantly while fresh data loads). */
 export function peek<T>(url: string): T | null {
   return (cache.get(url) as T) ?? null;
 }
 
-export async function call<T>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+/** Coalesce simultaneous reads; never reuse a read from before a write. */
+export function call<T>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+  if (init) return request<T>(url, init);
+  const current = pending.get(url);
+  if (current?.epoch === cacheEpoch) return current.request as Promise<T>;
+  const entry = { epoch: cacheEpoch, request: request<T>(url) };
+  pending.set(url, entry);
+  const cleanup = () => { if (pending.get(url) === entry) pending.delete(url); };
+  entry.request.then(cleanup, cleanup);
+  return entry.request;
+}
+
+async function request<T>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+  const epoch = cacheEpoch;
   const isGet = !init?.method || init.method === 'GET';
   const res = await fetch(url, {
     ...init,
@@ -26,8 +41,8 @@ export async function call<T>(url: string, init?: RequestInit & { json?: unknown
     const detail = Array.isArray(body.errors) ? `: ${body.errors.join('; ')}` : '';
     throw new ApiError(res.status, (body.error ?? `HTTP ${res.status}`) + detail);
   }
-  if (isGet) cache.set(url, body.data);
-  else cache.clear(); // a write may change any view
+  if (isGet) { if (epoch === cacheEpoch) cache.set(url, body.data); }
+  else { cacheEpoch++; cache.clear(); } // a write may change any view
   return body.data as T;
 }
 

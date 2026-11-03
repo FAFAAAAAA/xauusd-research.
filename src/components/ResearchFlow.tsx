@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Loading } from '@/components/Status';
 
-const Backtest = dynamic(() => import('@/app/(main)/analytics/page'), { loading: () => <Loading /> });
+import Backtest from '@/app/(main)/analytics/page';
 const Calculator = dynamic(() => import('@/app/(main)/calculator/page'), { loading: () => <Loading /> });
 const Trade = dynamic(() => import('@/app/(main)/trade/page'), { loading: () => <Loading /> });
 const News = dynamic(() => import('@/app/(main)/news/page'), { loading: () => <Loading /> });
@@ -18,6 +18,23 @@ export const RESEARCH_LINKS = [
   { id: 'news', href: '/news', label: 'Berita', Component: News },
   { id: 'settings', href: '/settings', label: 'Atur', Component: Settings },
 ] as const;
+
+/** Mount each tool once it approaches the viewport; preserve its state after visiting. */
+function ToolSection({ id, label, Component, initial }: { id: string; label: string; Component: React.ComponentType; initial: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(initial);
+  useEffect(() => {
+    if (mounted || !ref.current) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) { setMounted(true); observer.disconnect(); }
+    }, { rootMargin: '120px 0px' });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [mounted]);
+  return <div ref={ref} className="tool-content" data-tool={id}>
+    {mounted ? <Component /> : <div className="tool-placeholder"><h1>{label}</h1><Loading /></div>}
+  </div>;
+}
 
 export default function ResearchFlow({ onActive }: { onActive: (href: string) => void }) {
   const root = useRef<HTMLDivElement>(null);
@@ -73,8 +90,13 @@ export default function ResearchFlow({ onActive }: { onActive: (href: string) =>
       container.querySelectorAll('.page-head, .group, .panel, .metrics, .flagship-verdict, .insight-stats .facts > div').forEach((element) => {
         if (seen.has(element) || element.closest('dialog, [role="dialog"]')) return;
         seen.add(element);
-        element.classList.add('flow-reveal');
-        reveal.observe(element);
+        const bounds = element.getBoundingClientRect();
+        if (bounds.top < window.innerHeight && bounds.bottom > 0) {
+          element.classList.add('is-visible');
+        } else {
+          element.classList.add('flow-reveal');
+          reveal.observe(element);
+        }
       });
     };
     observe();
@@ -91,7 +113,7 @@ export default function ResearchFlow({ onActive }: { onActive: (href: string) =>
   return <div className="research-flow" ref={root}>
     {RESEARCH_LINKS.map(({ id, label, Component }, index) => (
       <section key={id} id={id} className="research-section" aria-label={label}>
-        <Component />
+        <ToolSection id={id} label={label} Component={Component} initial={id === 'backtest' || path === RESEARCH_LINKS[index].href} />
         {index < RESEARCH_LINKS.length - 1 ? (
           <a className="flow-next" href={RESEARCH_LINKS[index + 1].href} onClick={(event) => {
             if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

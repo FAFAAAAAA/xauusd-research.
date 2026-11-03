@@ -479,3 +479,63 @@ body::before { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .research-flow .flow-reveal, .research-flow .flow-reveal:not(.is-visible) { opacity: 1; translate: none; scale: none; transition: none; }
 }
+
+/* Consistent neutral surfaces and a compact first screen. */
+:root[data-theme='light'] { --bg: #f6f7f9; --sunk: #f2f3f5; --surface: #fff; --line: #e7e9ee; --ink: #20242b; --ink-2: #4b5260; --mute: #7a818c; --up: #237b59; --down: #b84955; }
+.research-flow { --flow-radius: 22px; }
+.research-section { padding-top: 36px; }
+.tool-content { min-height: 180px; }
+.tool-placeholder { min-height: 65svh; }
+.tool-placeholder h1 { font-size: 32px; margin-bottom: 24px; }
+.research-section > .tool-content > .stack { gap: 18px; }
+.research-flow .page-head { padding-right: 0; margin-bottom: 0; }
+.research-flow .page-head h1 { font-size: clamp(32px, 4vw, 48px); letter-spacing: -.045em; }
+.backtest-controls { gap: 8px; margin: 0 0 2px; }
+.research-filter, .research-view { box-shadow: none; border: 1px solid var(--line); min-height: 42px; font-size: 12px; }
+.research-view { background: var(--surface); color: var(--ink-2); margin-left: 0; }
+.research-filter { flex: 1; }
+.apple-shell .research-flow .hero.flagship-verdict { min-height: 0; padding: 32px; background: var(--surface); color: var(--ink); align-items: flex-start; text-align: left; gap: 16px; border: 1px solid var(--line); box-shadow: none; }
+.flagship-verdict::after { display: none; }
+.flagship-verdict .verdict-context { color: var(--mute); font-size: 11px; }
+.flagship-verdict .price, .flagship-verdict .price.pos, .flagship-verdict .price.neg { color: var(--ink); font-size: clamp(42px, 6vw, 64px); line-height: 1.05; font-weight: 650; letter-spacing: -.055em; margin: 0; }
+.flagship-verdict .pos { color: var(--up); }
+.flagship-verdict .neg { color: var(--down); }
+.flagship-verdict > .small { color: var(--mute) !important; font-size: 12px; }
+.flagship-verdict > .small strong { font-size: 15px !important; margin-left: 4px; }
+.verdict-trades { color: var(--mute); font-size: 12px; gap: 18px; margin: 0; }
+.flagship-verdict .wlbar { width: 100%; max-width: none; height: 4px; background: #e4bdc3; margin: 2px 0 0; }
+.flagship-verdict .wlbar span { background: var(--up); }
+.flagship-verdict > .row { width: 100%; max-width: none; color: var(--mute); font-size: 11px; }
+.research-flow .group:not(:has(.chart,.chartbox,.cal,canvas)), .research-flow .panel:not(:has(.chart,.chartbox,.cal,canvas)) { box-shadow: none; border: 1px solid var(--line); border-radius: 22px; padding: 24px; }
+.apple-shell .research-flow .insight-stats { border: 0; }
+.insight-stats .facts { gap: 10px; }
+.insight-stats .facts > div { min-height: 110px; padding: 20px; gap: 16px; justify-content: flex-start; border: 1px solid var(--line); border-radius: 20px; }
+.insight-stats .facts strong { font-size: clamp(24px, 2.6vw, 32px); }
+.insight-stats .hold { border: 1px solid var(--line); border-radius: 20px; padding: 22px; margin-top: 10px; gap: 16px; }
+.insight-stats .hold3 strong { font-size: 24px; }
+.research-flow .sec-head h2 { font-size: 21px; }
+.research-flow .flow-reveal { transition: translate .4s ease, opacity .3s ease; scale: none; }
+.research-flow .flow-reveal:not(.is-visible) { opacity: 1; translate: 0 14px; scale: none; }
+.research-flow .flow-reveal.is-visible { translate: 0 0; scale: none; }
+@media (max-width: 899px) {
+  .apple-shell .main:has(.research-flow) { padding-inline: 18px; }
+  .research-section { padding-top: calc(24px + env(safe-area-inset-top, 0px)); }
+  .research-flow .page-head { padding-right: 54px; min-height: 44px; display: flex; align-items: center; }
+  .research-flow .page-head h1 { font-size: 32px; }
+  .research-section > .tool-content > .stack { gap: 16px; }
+  .backtest-controls { margin: 0; }
+  .research-filter, .research-view { min-height: 40px; padding: 9px 12px; gap: 7px; font-size: 11px; }
+  .research-filter svg { width: 16px; height: 16px; }
+  .research-filter i { padding-inline: 1px; }
+  .apple-shell .research-flow .hero.flagship-verdict { padding: 24px; gap: 16px; }
+  .flagship-verdict .price, .flagship-verdict .price.pos, .flagship-verdict .price.neg { font-size: clamp(40px, 11vw, 52px); }
+  .verdict-trades { gap: 14px; font-size: 11px; }
+  .insight-stats .facts > div { min-height: 98px; padding: 18px 16px; gap: 12px; border-radius: 18px; }
+  .insight-stats .facts strong { font-size: 25px; }
+  .insight-stats .facts .label { font-size: 11px; }
+  .insight-stats .hold { padding: 20px; }
+  .insight-stats .hold3 strong { font-size: 21px; }
+  .apple-shell .apple-menu-toggle { box-shadow: none; width: 38px; height: 38px; flex-basis: 38px; }
+  .flow-next { font-size: 26px; margin-top: 20px; padding: 28px 0; }
+}
+@media (prefers-reduced-motion: reduce) { .research-flow .flow-reveal { transition: none; translate: none; } }
