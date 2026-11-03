@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import './premium-cards.css';
+import './apple-inspired.css';
 
 export const metadata: Metadata = {
   title: 'XAUUSD Research',
