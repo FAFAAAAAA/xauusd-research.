@@ -118,6 +118,9 @@ export default function Analytics() {
 
   const m = d?.overall;
   const hasRuns = rows.length > 0;
+  const winRate = sum.trades ? sum.wins / sum.trades : null;
+  const breakEven = 1 / (1 + curRr);
+  const winRateTone = winRate == null || Math.abs(winRate - breakEven) < 1e-10 ? '' : winRate > breakEven ? 'pos' : 'neg';
   return (
     <div className="stack">
       <PageHead title="Backtest" />
@@ -190,15 +193,19 @@ export default function Analytics() {
             ) : (
               <>
                 <section className="hero verdict flagship-verdict">
-                  <span className="label verdict-context"><ResearchIcon name="risk" />Risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} / trade</span>
                   <span className="profit-caption">Hasil bersih</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
-                  {perMonth != null ? <span className="monthly-result" aria-label={`Rata-rata per bulan ${money(perMonth)}`} title="Rata-rata per bulan"><ResearchIcon name="calendar" /><strong className={tone(perMonth)}>{money(perMonth)}</strong><span>/ bulan</span></span> : null}
-                  <div className="verdict-trades"><span aria-label={`${sum.trades} trade`} title="Total trade"><ResearchIcon name="trades" /><strong>{sum.trades}</strong><small>trade</small></span><span className="pos" aria-label={`${sum.wins} menang`} title="Menang"><ResearchIcon name="win" /><strong>{sum.wins}</strong><small>menang</small></span><span className="neg" aria-label={`${sum.losses} kalah`} title="Kalah"><ResearchIcon name="loss" /><strong>{sum.losses}</strong><small>kalah</small></span></div>
-                  <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
-                  <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Impas ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}%</span></div>
+                  <div className="hero-winrate"><span>Win rate</span><strong className={winRateTone}>{winRate == null ? '—' : `${(winRate * 100).toFixed(1)}%`}</strong></div>
                 </section>
                 <section className="group insight-stats">
+                  <div className="facts overview-facts">
+                    <div><span className="label stat-label"><ResearchIcon name="risk" />Risiko / trade</span><strong>{picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'Lot tetap'}</strong></div>
+                    <div><span className="label stat-label"><ResearchIcon name="calendar" />Rata-rata / bulan</span><strong className={tone(perMonth)}>{perMonth == null ? '—' : money(perMonth)}</strong></div>
+                    <div><span className="label stat-label"><ResearchIcon name="trades" />Total trade</span><strong>{sum.trades}</strong></div>
+                    <div><span className="label stat-label"><ResearchIcon name="win" />Menang</span><strong className="pos">{sum.wins}</strong></div>
+                    <div><span className="label stat-label"><ResearchIcon name="loss" />Kalah</span><strong className="neg">{sum.losses}</strong></div>
+                    <div><span className="label stat-label" title="Ambang win rate impas berdasarkan RR, sebelum biaya"><ResearchIcon name="ratio" />Impas (RR)</span><strong>{`${(breakEven * 100).toFixed(1).replace('.0', '')}%`}</strong></div>
+                  </div>
                   {m && fresh ? <><div className="facts appear">
                     <div><span className="label stat-label" title="Rata-rata profit per trade menang"><ResearchIcon name="win" />Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
                     <div><span className="label stat-label" title="Rata-rata rugi per trade kalah"><ResearchIcon name="loss" />Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>

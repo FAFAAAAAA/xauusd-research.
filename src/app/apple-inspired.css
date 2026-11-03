@@ -632,3 +632,9 @@ body::before { display: none; }
   .insight-stats .hold-duration .hold3 strong[data-compact='true'] { font-size: clamp(11px, 3.3vw, 15px); }
   .insight-stats .hold-duration .hold3 span { font-size: 10px; }
 }
+
+/* Main summary is reserved for net result and win rate. */
+.hero-winrate { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; width: 100%; margin-top: 6px; padding-top: 18px; border-top: 1px solid var(--line); }
+.hero-winrate > span { font-size: 13px; color: var(--mute); }
+.hero-winrate > strong { font-size: 26px; font-weight: 600; letter-spacing: -.035em; }
+.insight-stats .facts.overview-facts { margin-bottom: 12px; }
