@@ -617,3 +617,18 @@ body::before { display: none; }
   .insight-stats .hold-duration .hold3 strong { grid-column: 2; grid-row: 1; text-align: right; font-size: 19px; }
   .insight-stats .hold-duration .hold3 span { grid-column: 1; grid-row: 1; font-size: 12px; }
 }
+
+/* Trade review: close-up candles with a lightweight position drawing. */
+.trade-review-chart { height: min(66svh, 600px); min-height: 360px; }
+.trade-chart-tools { position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 3px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 2px 10px #00000006; }
+.trade-chart-tools button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 22px; cursor: pointer; touch-action: manipulation; }
+.trade-chart-tools button:hover { background: var(--sunk); }
+.trade-chart-tools svg { width: 18px; height: 18px; }
+:root[data-theme='light'] { --up: #389d77; --down: #d65d6b; --up-tint: #eaf6ef; --down-tint: #fceef0; }
+@media (max-width: 899px) {
+  .insight-stats .hold-duration .hold3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .insight-stats .hold-duration .hold3 > div { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+  .insight-stats .hold-duration .hold3 strong { font-size: clamp(17px, 4.8vw, 21px); line-height: 1.25; text-align: left; }
+  .insight-stats .hold-duration .hold3 strong[data-compact='true'] { font-size: clamp(11px, 3.3vw, 15px); }
+  .insight-stats .hold-duration .hold3 span { font-size: 10px; }
+}

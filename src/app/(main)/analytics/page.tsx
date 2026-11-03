@@ -211,9 +211,9 @@ export default function Analytics() {
                     <div className="hold hold-duration">
                       <span className="label">Durasi rata-rata</span>
                       <div className="hold3">
-                        <div><strong>{hrs(m.avgHoldHours)}</strong><span>Semua trade</span></div>
-                        <div className="pos"><strong>{hrs(m.avgHoldWinHours)}</strong><span>Menang</span></div>
-                        <div className="neg"><strong>{hrs(m.avgHoldLossHours)}</strong><span>Kalah</span></div>
+                        <div><strong data-compact={hrs(m.avgHoldHours).length > 8}>{hrs(m.avgHoldHours)}</strong><span>Semua trade</span></div>
+                        <div className="pos"><strong data-compact={hrs(m.avgHoldWinHours).length > 8}>{hrs(m.avgHoldWinHours)}</strong><span>Menang</span></div>
+                        <div className="neg"><strong data-compact={hrs(m.avgHoldLossHours).length > 8}>{hrs(m.avgHoldLossHours)}</strong><span>Kalah</span></div>
                       </div>
                     </div>
                   ) : null}
@@ -388,8 +388,8 @@ function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
   ] as any;
   return (
     <div className="stack">
-      <div className="chartbox" style={{ height: 300, minHeight: 0 }}>
-        {d.candles.length ? <CandleChart candles={d.candles} markers={markers} timezone={tz} fitKey={t.id} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
+      <div className="chartbox trade-review-chart">
+        {d.candles.length ? <CandleChart candles={d.candles} markers={markers} timezone={tz} fitKey={t.id} position={{ side: t.side, entry: t.entry, exit: t.exit, entryPrice: t.entryPrice, stopLoss: t.stopLoss, takeProfit: t.takeProfit, exitPrice: t.exitPrice }} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
       </div>
       <dl className="kv">
         {t.setupReason?.risk_usd != null ? <><dt>Risiko</dt><dd>${Number(t.setupReason.risk_usd).toFixed(2)} · lot {t.setupReason.lot}</dd></> : null}
