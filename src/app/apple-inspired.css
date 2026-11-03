@@ -539,3 +539,43 @@ body::before { display: none; }
   .flow-next { font-size: 26px; margin-top: 20px; padding: 28px 0; }
 }
 @media (prefers-reduced-motion: reduce) { .research-flow .flow-reveal { transition: none; translate: none; } }
+
+/* Compact icon controls; labels remain available to assistive technology. */
+.research-icon { width: 18px; height: 18px; flex: none; vertical-align: middle; }
+.research-view.icon-only { width: 42px; min-width: 42px; height: 42px; padding: 0; justify-content: center; border-radius: 14px; }
+.verdict-context, .monthly-result, .verdict-trades > span, .stat-label { display: inline-flex; align-items: center; gap: 8px; }
+.verdict-context .research-icon { width: 15px; height: 15px; }
+.monthly-result { font-size: 12px; color: var(--mute); }
+.monthly-result strong { font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+.monthly-result .research-icon { width: 16px; height: 16px; }
+.verdict-trades { gap: 24px; align-items: center; }
+.verdict-trades > span { gap: 7px; }
+.verdict-trades small { font: inherit; }
+.verdict-trades .research-icon { width: 16px; height: 16px; }
+.insight-stats .stat-label .research-icon { width: 15px; height: 15px; }
+.research-option .research-icon { width: 22px; height: 22px; }
+@media (max-width: 899px) {
+  .research-view.icon-only { width: 40px; min-width: 40px; height: 40px; }
+  .research-filter { justify-content: flex-start; }
+  .research-filter > span:first-of-type { font-size: 11px; }
+  .insight-stats .stat-label { gap: 6px; }
+}
+
+/* Keep scroll and popup motion on transform/opacity rather than painted effects. */
+.apple-shell .sheet .scrim { backdrop-filter: none; -webkit-backdrop-filter: none; background: #11111655; }
+.apple-shell .sheet[open] .panel-s { will-change: transform; }
+.research-flow .page, .research-flow .appear,
+.research-flow .facts > div, .research-flow .hold3 > div,
+.research-flow .metrics > .metric, .research-flow .rr3 > .rrbtn { animation: none; }
+.research-flow .wlbar span { animation: none; transition: none; }
+.research-flow .flow-reveal { transition: translate 280ms cubic-bezier(.2,.7,.2,1), opacity 200ms ease; }
+.research-flow .group, .research-flow .panel, .research-flow .hero,
+.research-flow .facts > div { transition-property: transform, translate, opacity; }
+.research-flow .sk { animation: skeleton-breathe 1.4s ease-in-out infinite alternate; background: var(--sunk); }
+@keyframes skeleton-breathe { from { opacity: .45; } to { opacity: .85; } }
+@media (max-width: 899px) {
+  .apple-shell .apple-topbar, .apple-shell .apple-menu-toggle,
+  .apple-shell .apple-topbar .apple-mobile-menu.is-open { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .apple-shell .apple-menu-toggle, .apple-shell .apple-topbar .apple-mobile-menu.is-open { background: var(--surface); }
+}
+@media (prefers-reduced-motion: reduce) { .research-flow .sk { animation: none; } }

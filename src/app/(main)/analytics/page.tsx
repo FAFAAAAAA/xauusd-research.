@@ -35,6 +35,22 @@ const hrs = (h: unknown) => {
 };
 const tone = (n: unknown) => (typeof n === 'number' ? (n > 0 ? 'pos' : n < 0 ? 'neg' : '') : '');
 
+const UI_ICON_PATH = {
+  options: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  calendar: 'M5 5h14v15H5zM8 3v4M16 3v4M5 10h14',
+  risk: 'M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6zM12 8v5M12 16h.01',
+  trades: 'M4 19V5M4 19h16M8 15l4-5 4 2 4-7',
+  win: 'm5 12 4 4L19 6',
+  loss: 'm6 6 12 12M18 6 6 18',
+  drawdown: 'm4 6 6 6 4-4 6 10M14 18h6v-6',
+  streak: 'M5 5v4h4M10 10v4h4M15 15v4h4',
+  ratio: 'M5 19V11M12 19V5M19 19v-9',
+  average: 'M4 12h16M7 6h10M7 18h10',
+} as const;
+function ResearchIcon({ name }: { name: keyof typeof UI_ICON_PATH }) {
+  return <svg className="research-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={UI_ICON_PATH[name]} /></svg>;
+}
+
 export default function Analytics() {
   const [d, setD] = useState<any>(() => peek('/api/analytics'));
   const [busy, setBusy] = useState(false);
@@ -108,13 +124,13 @@ export default function Analytics() {
       {hasRuns ? <div className="backtest-controls">
         <button className="research-filter" onClick={() => { setTab('hasil'); setFilterOpen(true); }} aria-haspopup="dialog" aria-label="Pilih strategi, tahun dan risk reward">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg>
-          <span>{pairLabel} <i>·</i> {curYear} <i>·</i> 1:{curRr}</span><span className="filter-chevron" aria-hidden>⌄</span>
+          <span>{pairSel ?? 'XAUUSD'} <i>·</i> {curYear} <i>·</i> 1:{curRr}</span>
         </button>
-        <button className="research-view" onClick={() => setActionsOpen(true)} aria-haspopup="dialog">{tab === 'hasil' ? 'Hasil' : tab === 'jalan' ? 'Jalankan' : 'Kelola'}<span aria-hidden>⌄</span></button>
+        <button className="research-view icon-only" onClick={() => setActionsOpen(true)} aria-haspopup="dialog" aria-label="Opsi backtest" title="Hasil, jalankan, dan kelola"><ResearchIcon name="options" /></button>
       </div> : null}
       {actionsOpen ? <Sheet title="Backtest" onClose={() => setActionsOpen(false)}>
         <div className="research-options">
-          {([['hasil', 'Hasil', 'Lihat performa strategi'], ['jalan', 'Jalankan', 'Mulai pengujian baru'], ['kelola', 'Kelola', 'Hasil yang tersimpan']] as const).map(([value, label, description]) => <button key={value} className="research-option" onClick={() => { setTab(value); setActionsOpen(false); document.getElementById('backtest')?.scrollIntoView({ behavior: 'smooth' }); }} aria-pressed={tab === value}><span><strong>{label}</strong><small>{description}</small></span><span aria-hidden>{tab === value ? '✓' : '↗'}</span></button>)}
+          {([['hasil', 'Hasil', 'Lihat performa strategi'], ['jalan', 'Jalankan', 'Mulai pengujian baru'], ['kelola', 'Kelola', 'Hasil yang tersimpan']] as const).map(([value, label, description]) => <button key={value} className="research-option" onClick={() => { setTab(value); setActionsOpen(false); document.getElementById('backtest')?.scrollIntoView({ behavior: 'smooth' }); }} aria-pressed={tab === value}><span><strong>{label}</strong><small>{description}</small></span><span>{tab === value ? <ResearchIcon name="win" /> : null}</span></button>)}
         </div>
       </Sheet> : null}
 
@@ -174,21 +190,21 @@ export default function Analytics() {
             ) : (
               <>
                 <section className="hero verdict flagship-verdict">
-                  <span className="label verdict-context">{pairs.length > 1 || pairSel !== 'XAUUSD' ? `${pairLabel} · ` : ''}{curYear} · RR 1:{curRr} · risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} per trade</span>
+                  <span className="label verdict-context"><ResearchIcon name="risk" />Risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} / trade</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
-                  {perMonth != null ? <span className="small" style={{ color: 'var(--ink-2)' }}>Rata-rata per bulan <strong className={tone(perMonth)} style={{ fontSize: 17 }}>{money(perMonth)}</strong></span> : null}
-                  <div className="verdict-trades"><span><strong>{sum.trades}</strong> trade</span><span className="pos"><strong>{sum.wins}</strong> menang</span><span className="neg"><strong>{sum.losses}</strong> kalah</span></div>
+                  {perMonth != null ? <span className="monthly-result" aria-label={`Rata-rata per bulan ${money(perMonth)}`} title="Rata-rata per bulan"><ResearchIcon name="calendar" /><strong className={tone(perMonth)}>{money(perMonth)}</strong><span>/ bulan</span></span> : null}
+                  <div className="verdict-trades"><span aria-label={`${sum.trades} trade`} title="Total trade"><ResearchIcon name="trades" /><strong>{sum.trades}</strong><small>trade</small></span><span className="pos" aria-label={`${sum.wins} menang`} title="Menang"><ResearchIcon name="win" /><strong>{sum.wins}</strong></span><span className="neg" aria-label={`${sum.losses} kalah`} title="Kalah"><ResearchIcon name="loss" /><strong>{sum.losses}</strong></span></div>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
                   <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Impas ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}%</span></div>
                 </section>
                 <section className="group insight-stats">
                   {m && fresh ? <><div className="facts appear">
-                    <div><span className="label">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
-                    <div><span className="label">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
-                    <div><span className="label">Turun terdalam</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
-                    <div><span className="label">Kalah beruntun</span><strong>{m.maxConsecutiveLosses}×</strong></div>
-                    <div><span className="label">Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
-                    <div><span className="label">Rata-rata per trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata profit per trade menang"><ResearchIcon name="win" />Menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata rugi per trade kalah"><ResearchIcon name="loss" />Kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
+                    <div><span className="label stat-label" title="Penurunan saldo terdalam"><ResearchIcon name="drawdown" />Drawdown</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
+                    <div><span className="label stat-label" title="Jumlah kekalahan beruntun"><ResearchIcon name="streak" />Loss streak</span><strong>{m.maxConsecutiveLosses}×</strong></div>
+                    <div><span className="label stat-label" title="Rasio total profit terhadap total rugi"><ResearchIcon name="ratio" />Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata hasil bersih per trade"><ResearchIcon name="average" />Per trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
                   </div>
                   {m.avgHoldHours != null ? (
                     <div className="hold">

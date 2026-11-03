@@ -86,21 +86,28 @@ export default function ResearchFlow({ onActive }: { onActive: (href: string) =>
         reveal.unobserve(entry.target);
       }
     }, { threshold: 0.04 });
-    const observe = () => {
-      container.querySelectorAll('.page-head, .group, .panel, .metrics, .flagship-verdict, .insight-stats .facts > div').forEach((element) => {
-        if (seen.has(element) || element.closest('dialog, [role="dialog"]')) return;
+    const selector = '.page-head, .group, .panel, .metrics, .flagship-verdict, .insight-stats .facts > div';
+    const observe = (roots: ParentNode[]) => {
+      const candidates = new Set<Element>();
+      for (const scope of roots) {
+        if (scope instanceof Element && scope.matches(selector)) candidates.add(scope);
+        scope.querySelectorAll(selector).forEach((element) => candidates.add(element));
+      }
+      // Read geometry in one batch before changing classes to avoid repeated layouts.
+      const measured = [...candidates].filter((element) => !seen.has(element) && !element.closest('dialog, [role="dialog"]'))
+        .map((element) => ({ element, bounds: element.getBoundingClientRect() }));
+      for (const { element, bounds } of measured) {
         seen.add(element);
-        const bounds = element.getBoundingClientRect();
-        if (bounds.top < window.innerHeight && bounds.bottom > 0) {
-          element.classList.add('is-visible');
-        } else {
-          element.classList.add('flow-reveal');
-          reveal.observe(element);
-        }
-      });
+        if (bounds.top < window.innerHeight && bounds.bottom > 0) element.classList.add('is-visible');
+        else { element.classList.add('flow-reveal'); reveal.observe(element); }
+      }
     };
-    observe();
-    const mutations = new MutationObserver(observe);
+    observe([container]);
+    const mutations = new MutationObserver((records) => {
+      // Animated numbers replace text nodes every frame; they need no DOM scan.
+      const added = records.flatMap((record) => [...record.addedNodes]).filter((node): node is Element => node instanceof Element);
+      if (added.length) observe(added);
+    });
     mutations.observe(container, { childList: true, subtree: true });
     return () => {
       cancelAnimationFrame(frame);
