@@ -193,23 +193,23 @@ export default function Analytics() {
             ) : (
               <>
                 <section className="hero verdict flagship-verdict">
-                  <div className="summary-meta"><span className="label verdict-context summary-risk" aria-label="Risiko per trade"><ResearchIcon name="risk" />{picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'Lot tetap'}</span><span className="summary-trades"><ResearchIcon name="trades" />{sum.trades} trade</span></div>
+                  <div className="summary-meta"><span className="label verdict-context summary-risk" aria-label="Risiko per trade"><ResearchIcon name="risk" />{picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'Lot tetap'}</span><span className="summary-trades">{sum.trades} trade</span></div>
                   <span className="profit-caption">Hasil bersih</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
                   <div className="hero-winrate"><span>Win rate</span><strong className={winRateTone}>{winRate == null ? '—' : `${(winRate * 100).toFixed(1)}%`}</strong></div>
                 </section>
                 <section className="group insight-stats">
                   <div className="facts overview-facts">
-                    <div><span className="label stat-label"><ResearchIcon name="calendar" />Rata-rata / bulan</span><strong className={tone(perMonth)}>{perMonth == null ? '—' : money(perMonth)}</strong></div>
-                    <div><span className="label stat-label">Menang / kalah</span><div className="streak-pair"><span className="pos" aria-label={`${sum.wins} menang`}><ResearchIcon name="win" /><strong>{sum.wins}</strong></span><span className="neg" aria-label={`${sum.losses} kalah`}><ResearchIcon name="loss" /><strong>{sum.losses}</strong></span></div></div>
+                    <div><span className="label stat-label">Rata-rata / bulan</span><strong className={tone(perMonth)}>{perMonth == null ? '—' : money(perMonth)}</strong></div>
+                    <div><span className="label stat-label">Menang / kalah</span><div className="streak-pair"><span className="pos" aria-label={`${sum.wins} menang`}><strong>{sum.wins}</strong></span><span className="neg" aria-label={`${sum.losses} kalah`}><strong>{sum.losses}</strong></span></div></div>
                   </div>
                   {m && fresh ? <><div className="facts appear">
-                    <div><span className="label stat-label" title="Rata-rata profit per trade menang"><ResearchIcon name="win" />Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
-                    <div><span className="label stat-label" title="Rata-rata rugi per trade kalah"><ResearchIcon name="loss" />Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
-                    <div><span className="label stat-label" title="Penurunan saldo terdalam"><ResearchIcon name="drawdown" />Drawdown maks.</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
-                    <div><span className="label stat-label"><ResearchIcon name="streak" />Beruntun maks.</span><div className="streak-pair"><span className="pos" aria-label={`Menang beruntun ${m.maxConsecutiveWins} kali`} title="Menang beruntun"><ResearchIcon name="win" /><strong>{m.maxConsecutiveWins}×</strong></span><span className="neg" aria-label={`Kalah beruntun ${m.maxConsecutiveLosses} kali`} title="Kalah beruntun"><ResearchIcon name="loss" /><strong>{m.maxConsecutiveLosses}×</strong></span></div></div>
-                    <div><span className="label stat-label" title="Rasio total profit terhadap total rugi"><ResearchIcon name="ratio" />Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
-                    <div><span className="label stat-label" title="Rata-rata hasil bersih per trade"><ResearchIcon name="average" />Rata-rata / trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata profit per trade menang">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata rugi per trade kalah">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
+                    <div><span className="label stat-label" title="Penurunan saldo terdalam">Drawdown maks.</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
+                    <div><span className="label stat-label">Beruntun maks.</span><div className="streak-pair"><span className="pos" aria-label={`Menang beruntun ${m.maxConsecutiveWins} kali`} title="Menang beruntun"><ResearchIcon name="win" /><strong>{m.maxConsecutiveWins}×</strong></span><span className="neg" aria-label={`Kalah beruntun ${m.maxConsecutiveLosses} kali`} title="Kalah beruntun"><ResearchIcon name="loss" /><strong>{m.maxConsecutiveLosses}×</strong></span></div></div>
+                    <div><span className="label stat-label" title="Rasio total profit terhadap total rugi">Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata hasil bersih per trade">Rata-rata / trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
                   </div>
                   {m.avgHoldHours != null ? (
                     <div className="hold hold-duration">
@@ -238,11 +238,11 @@ export default function Analytics() {
                     );
                   })()}
                   <div className="facts supplemental-facts">
-                    <div><span className="label stat-label" title="Total profit dari seluruh trade menang"><ResearchIcon name="win" />Total profit</span><strong className="pos">{money(m.grossProfit)}</strong></div>
-                    <div><span className="label stat-label" title="Total rugi dari seluruh trade kalah"><ResearchIcon name="loss" />Total rugi</span><strong className="neg">{money(-m.grossLoss)}</strong></div>
-                    <div><span className="label stat-label" title="Median lama posisi terbuka"><ResearchIcon name="calendar" />Durasi median</span><strong>{hrs(m.medianHoldHours)}</strong></div>
-                    <div><span className="label stat-label" title="Posisi terbuka bersamaan paling banyak"><ResearchIcon name="options" />Posisi bersamaan</span><strong>{m.maxOpenPositions}</strong></div>
-                    {String(cfgSel ?? '').startsWith('snr') ? <div className="zone-outcomes"><span className="label stat-label"><ResearchIcon name="risk" />Zona bertahan / jebol</span><strong>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</strong></div> : null}
+                    <div><span className="label stat-label" title="Total profit dari seluruh trade menang">Total profit</span><strong className="pos">{money(m.grossProfit)}</strong></div>
+                    <div><span className="label stat-label" title="Total rugi dari seluruh trade kalah">Total rugi</span><strong className="neg">{money(-m.grossLoss)}</strong></div>
+                    <div><span className="label stat-label" title="Median lama posisi terbuka">Durasi median</span><strong>{hrs(m.medianHoldHours)}</strong></div>
+                    <div><span className="label stat-label" title="Posisi terbuka bersamaan paling banyak">Posisi bersamaan</span><strong>{m.maxOpenPositions}</strong></div>
+                    {String(cfgSel ?? '').startsWith('snr') ? <div className="zone-outcomes"><span className="label stat-label">Zona bertahan / jebol</span><strong>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</strong></div> : null}
                   </div></> : <div className="facts"><div><span className="label row" style={{ gap: 8 }}><Spinner />Memuat detail…</span></div></div>}
                 </section>
 
@@ -251,7 +251,7 @@ export default function Analytics() {
                   <SecHead title="Beruntun" />
                   <div className="tablewrap">
                     <table className="num-r">
-                      <thead><tr><th>Rangkaian</th><th className="pos"><span className="streak-column"><ResearchIcon name="win" />Menang</span></th><th className="neg"><span className="streak-column"><ResearchIcon name="loss" />Kalah</span></th></tr></thead>
+                      <thead><tr><th>Rangkaian</th><th className="pos"><span className="streak-column">Menang</span></th><th className="neg"><span className="streak-column">Kalah</span></th></tr></thead>
                       <tbody>
                         {Array.from({ length: Math.max(m.maxConsecutiveWins, m.maxConsecutiveLosses) }, (_, index) => index + 1).filter((length) => (m.winStreaks?.[length] ?? 0) + (m.lossStreaks?.[length] ?? 0) > 0).map((length) => <tr key={length}>
                           <td>{length}×</td>
