@@ -12,54 +12,81 @@ const I = {
   news: <><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M8 9h8M8 12h8M8 15h5" /></>,
   settings: <><circle cx="12" cy="12" r="3" /><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" /></>,
 };
-// Bottom bar (phone): the five main tabs. Sidebar (desktop): the same plus Berita.
-const ITEMS = [
+const MOBILE_ITEMS = [
   { href: '/', label: 'Beranda', icon: I.home },
   { href: '/trade', label: 'Trade', icon: I.trade },
   { href: '/calculator', label: 'Kalkulator', icon: I.calc },
   { href: '/analytics', label: 'Backtest', icon: I.results },
   { href: '/settings', label: 'Atur', icon: I.settings },
 ];
-const SIDE = [...ITEMS.slice(0, 4), { href: '/news', label: 'Berita', icon: I.news }, ITEMS[4]];
-
+const LINKS = [
+  MOBILE_ITEMS[0], MOBILE_ITEMS[1], MOBILE_ITEMS[2], MOBILE_ITEMS[3],
+  { href: '/news', label: 'Berita', icon: I.news }, MOBILE_ITEMS[4],
+];
 const Icon = ({ d }: { d: React.ReactNode }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{d}</svg>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{d}</svg>
 );
 
 export default function Shell({ children, showLogout = false }: { children: React.ReactNode; showLogout?: boolean }) {
   const path = usePathname();
-  // Highlight the tapped tab immediately, before the new page has finished loading.
   const [pending, setPending] = useState<string | null>(null);
-  useEffect(() => { setPending(null); }, [path]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setPending(null); setMenuOpen(false); }, [path]);
   const cur = pending ?? path;
-  const active = (h: string) => (h === '/' ? cur === '/' : cur.startsWith(h));
-  const go = (h: string) => () => { if (h !== path) setPending(h); window.scrollTo({ top: 0 }); };
-  const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; };
-  const sideIdx = SIDE.findIndex((i) => active(i.href));
+  const active = (href: string) => href === '/' ? cur === '/' : cur.startsWith(href);
+  const go = (href: string) => () => {
+    setMenuOpen(false);
+    if (href !== path) setPending(href);
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  };
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  };
   return (
-    <div className="shell">
-      <aside className="side" aria-label="Navigasi">
-        <Link href="/" className="brand" onClick={go('/')}><span className="brand-mark" aria-hidden>Au</span>XAUUSD Research</Link>
-        <nav className="sidenav" aria-label="Menu" style={{ '--i': Math.max(0, sideIdx) } as React.CSSProperties}>
-          <span className="ind" data-hidden={sideIdx < 0} aria-hidden />
-          {SIDE.map((i) => (
-            <Link key={i.href} href={i.href} onClick={go(i.href)} aria-current={active(i.href) ? 'page' : undefined}><Icon d={i.icon} />{i.label}</Link>
-          ))}
-        </nav>
-        <div className="side-foot">
-          {showLogout ? <button className="btn sm ghost" onClick={logout} style={{ justifyContent: 'flex-start' }}>Keluar</button> : null}
-          <span className="mute small">Riset emas · bukan nasihat keuangan</span>
+    <div className="shell apple-shell">
+      <header className="apple-topbar">
+        <div className="apple-topbar-inner">
+          <Link href="/" className="apple-brand" onClick={go('/')}>
+            <span className="apple-brand-symbol" aria-hidden>Au</span>
+            <span>XAUUSD <strong>Research</strong></span>
+          </Link>
+          <nav className="apple-nav-links" aria-label="Navigasi utama">
+            {LINKS.map((item) => (
+              <Link key={item.href} href={item.href} aria-current={active(item.href) ? 'page' : undefined} onClick={go(item.href)}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="apple-nav-actions">
+            <Link href="/analytics" className="apple-nav-cta" onClick={go('/analytics')}>Mulai backtest <span aria-hidden>↗</span></Link>
+            <button
+              type="button"
+              className={'apple-menu-toggle' + (menuOpen ? ' is-open' : '')}
+              aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+              aria-expanded={menuOpen}
+              aria-controls="apple-mobile-menu"
+              onClick={() => setMenuOpen((v) => !v)}
+            ><span /><span /></button>
+          </div>
         </div>
-      </aside>
+        <nav id="apple-mobile-menu" className={'apple-mobile-menu' + (menuOpen ? ' is-open' : '')} aria-label="Menu mobile" hidden={!menuOpen}>
+          {LINKS.map((item) => <Link key={item.href} href={item.href} onClick={go(item.href)} aria-current={active(item.href) ? 'page' : undefined}>{item.label}<span aria-hidden>↗</span></Link>)}
+        </nav>
+      </header>
       <main className="main" aria-busy={pending ? true : undefined}>
         <div key={path} className="page">{children}</div>
         {showLogout ? <div className="mobile-only-logout"><button className="btn sm ghost" onClick={logout}>Keluar</button></div> : null}
       </main>
-      <nav className="tabbar" aria-label="Menu utama">
-        {ITEMS.map((i) => (
-          <Link key={i.href} href={i.href} onClick={go(i.href)} aria-current={active(i.href) ? 'page' : undefined}>
-            <span className="ic"><Icon d={i.icon} /></span>
-            {i.label}
+      <footer className="apple-site-footer">
+        <span>© XAUUSD Research</span>
+        <span>Riset perdagangan dan backtest. Bukan nasihat keuangan.</span>
+        {showLogout ? <button className="apple-logout" onClick={logout}>Keluar</button> : null}
+      </footer>
+      <nav className="tabbar" aria-label="Navigasi cepat">
+        {MOBILE_ITEMS.map((item) => (
+          <Link key={item.href} href={item.href} onClick={go(item.href)} aria-current={active(item.href) ? 'page' : undefined}>
+            <span className="ic"><Icon d={item.icon} /></span>{item.label}
           </Link>
         ))}
       </nav>
