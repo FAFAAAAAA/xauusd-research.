@@ -191,20 +191,21 @@ export default function Analytics() {
               <>
                 <section className="hero verdict flagship-verdict">
                   <span className="label verdict-context"><ResearchIcon name="risk" />Risiko {picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'lot tetap'} / trade</span>
+                  <span className="profit-caption">Hasil bersih</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
                   {perMonth != null ? <span className="monthly-result" aria-label={`Rata-rata per bulan ${money(perMonth)}`} title="Rata-rata per bulan"><ResearchIcon name="calendar" /><strong className={tone(perMonth)}>{money(perMonth)}</strong><span>/ bulan</span></span> : null}
-                  <div className="verdict-trades"><span aria-label={`${sum.trades} trade`} title="Total trade"><ResearchIcon name="trades" /><strong>{sum.trades}</strong><small>trade</small></span><span className="pos" aria-label={`${sum.wins} menang`} title="Menang"><ResearchIcon name="win" /><strong>{sum.wins}</strong></span><span className="neg" aria-label={`${sum.losses} kalah`} title="Kalah"><ResearchIcon name="loss" /><strong>{sum.losses}</strong></span></div>
+                  <div className="verdict-trades"><span aria-label={`${sum.trades} trade`} title="Total trade"><ResearchIcon name="trades" /><strong>{sum.trades}</strong><small>trade</small></span><span className="pos" aria-label={`${sum.wins} menang`} title="Menang"><ResearchIcon name="win" /><strong>{sum.wins}</strong><small>menang</small></span><span className="neg" aria-label={`${sum.losses} kalah`} title="Kalah"><ResearchIcon name="loss" /><strong>{sum.losses}</strong><small>kalah</small></span></div>
                   <div className="wlbar" aria-hidden><span style={{ width: `${(sum.wins / Math.max(1, sum.trades)) * 100}%` }} /></div>
                   <div className="row between small mute"><span>Win rate {sum.trades ? `${((sum.wins / sum.trades) * 100).toFixed(1)}%` : '—'}</span><span>Impas ≥ {curRr ? Math.round(100 / (1 + curRr)) : '—'}%</span></div>
                 </section>
                 <section className="group insight-stats">
                   {m && fresh ? <><div className="facts appear">
-                    <div><span className="label stat-label" title="Rata-rata profit per trade menang"><ResearchIcon name="win" />Menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
-                    <div><span className="label stat-label" title="Rata-rata rugi per trade kalah"><ResearchIcon name="loss" />Kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
-                    <div><span className="label stat-label" title="Penurunan saldo terdalam"><ResearchIcon name="drawdown" />Drawdown</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
-                    <div><span className="label stat-label"><ResearchIcon name="streak" />Beruntun</span><div className="streak-pair"><span className="pos" aria-label={`Menang beruntun ${m.maxConsecutiveWins} kali`} title="Menang beruntun"><ResearchIcon name="win" /><strong>{m.maxConsecutiveWins}×</strong></span><span className="neg" aria-label={`Kalah beruntun ${m.maxConsecutiveLosses} kali`} title="Kalah beruntun"><ResearchIcon name="loss" /><strong>{m.maxConsecutiveLosses}×</strong></span></div></div>
+                    <div><span className="label stat-label" title="Rata-rata profit per trade menang"><ResearchIcon name="win" />Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata rugi per trade kalah"><ResearchIcon name="loss" />Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
+                    <div><span className="label stat-label" title="Penurunan saldo terdalam"><ResearchIcon name="drawdown" />Drawdown maks.</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
+                    <div><span className="label stat-label"><ResearchIcon name="streak" />Beruntun maks.</span><div className="streak-pair"><span className="pos" aria-label={`Menang beruntun ${m.maxConsecutiveWins} kali`} title="Menang beruntun"><ResearchIcon name="win" /><strong>{m.maxConsecutiveWins}×</strong></span><span className="neg" aria-label={`Kalah beruntun ${m.maxConsecutiveLosses} kali`} title="Kalah beruntun"><ResearchIcon name="loss" /><strong>{m.maxConsecutiveLosses}×</strong></span></div></div>
                     <div><span className="label stat-label" title="Rasio total profit terhadap total rugi"><ResearchIcon name="ratio" />Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
-                    <div><span className="label stat-label" title="Rata-rata hasil bersih per trade"><ResearchIcon name="average" />Per trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
+                    <div><span className="label stat-label" title="Rata-rata hasil bersih per trade"><ResearchIcon name="average" />Rata-rata / trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
                   </div>
                   {m.avgHoldHours != null ? (
                     <div className="hold">
