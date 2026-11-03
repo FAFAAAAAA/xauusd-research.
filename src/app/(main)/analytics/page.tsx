@@ -208,12 +208,12 @@ export default function Analytics() {
                     <div><span className="label stat-label" title="Rata-rata hasil bersih per trade"><ResearchIcon name="average" />Rata-rata / trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
                   </div>
                   {m.avgHoldHours != null ? (
-                    <div className="hold">
-                      <span className="label">Rata-rata lama posisi terbuka</span>
+                    <div className="hold hold-duration">
+                      <span className="label">Durasi rata-rata</span>
                       <div className="hold3">
-                        <div><strong>{hrs(m.avgHoldHours)}</strong><span>semua trade</span></div>
-                        <div className="pos"><strong>{hrs(m.avgHoldWinHours)}</strong><span>sampai TP</span></div>
-                        <div className="neg"><strong>{hrs(m.avgHoldLossHours)}</strong><span>sampai SL</span></div>
+                        <div><strong>{hrs(m.avgHoldHours)}</strong><span>Semua trade</span></div>
+                        <div className="pos"><strong>{hrs(m.avgHoldWinHours)}</strong><span>Menang</span></div>
+                        <div className="neg"><strong>{hrs(m.avgHoldLossHours)}</strong><span>Kalah</span></div>
                       </div>
                     </div>
                   ) : null}
