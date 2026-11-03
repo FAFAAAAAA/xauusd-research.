@@ -222,6 +222,31 @@ export default function Analytics() {
                 </section>
 
                 {fresh ? <>
+                {m?.lossStreaks && m.maxConsecutiveLosses > 0 ? (() => {
+                  const risk = Number(picked[0]?.cost_config?.risk_usd) || null;
+                  const total = m.lossStreaks.reduce((a: number, x: number) => a + x, 0);
+                  return (
+                    <section className="group">
+                      <SecHead title="Rugi beruntun" />
+                      <p className="small mute" style={{ marginTop: 4 }}>Berapa kali terjadi kalah berturut-turut sepanjang backtest ini (terpanjang {m.maxConsecutiveLosses}×). Trade yang keluar impas (SL di entry) tidak memutus dan tidak menambah hitungan.</p>
+                      <div className="tablewrap">
+                        <table className="num-r" style={{ marginTop: 8 }}>
+                          <thead><tr><th>Kalah beruntun</th><th>Terjadi</th><th>Porsi</th>{risk ? <th>Total rugi</th> : null}</tr></thead>
+                          <tbody>
+                            {m.lossStreaks.map((cnt: number, len: number) => len === 0 ? null : (
+                              <tr key={len}>
+                                <td>{len}×{len === m.maxConsecutiveLosses ? ' (terpanjang)' : ''}</td>
+                                <td><strong>{cnt}</strong> kali</td>
+                                <td>{total ? `${((cnt / total) * 100).toFixed(cnt / total < 0.01 && cnt ? 1 : 0)}%` : '—'}</td>
+                                {risk ? <td className="neg">{money(-len * risk)}</td> : null}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  );
+                })() : null}
                 <CapitalGrowth key={key} months={monthsTested} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group calcard">

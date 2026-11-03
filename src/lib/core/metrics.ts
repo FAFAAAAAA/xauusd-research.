@@ -30,6 +30,9 @@ export interface Metrics {
   avgPlannedRr: number | null;
   maxConsecutiveWins: number;
   maxConsecutiveLosses: number;
+  /** lossStreaks[n] = how many times exactly n losing trades came in a row (index 0 unused). Breakeven trades
+   *  (|R| ≤ 0.1, e.g. v2 stopped at the entry) neither extend nor end a streak. */
+  lossStreaks: number[];
   /** Hours from entry to exit (exit = the candle in which TP/SL was hit). */
   avgHoldHours: number | null;
   medianHoldHours: number | null;
@@ -49,12 +52,15 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
   const rs: number[] = [];
   const rrs: number[] = [];
   const hold: number[] = [], holdW: number[] = [], holdL: number[] = [];
+  const streakCount: number[] = [];
+  const endStreak = () => { if (cl > 0) streakCount[cl] = (streakCount[cl] ?? 0) + 1; };
   for (const t of closed) {
     const p = t.pnl!;
     total += p;
-    if (p > 0) { wins++; gp += p; cw++; cl = 0; }
-    else if (p < 0) { losses++; gl += -p; cl++; cw = 0; }
-    else { be++; cw = 0; cl = 0; }
+    const flat = t.pnlR != null ? Math.abs(t.pnlR) <= 0.1 : p === 0;   // breakeven exit (SL moved to entry)
+    if (flat) { be++; if (p > 0) gp += p; else gl += -p; }
+    else if (p > 0) { wins++; gp += p; cw++; endStreak(); cl = 0; }
+    else { losses++; gl += -p; cl++; cw = 0; }
     mcw = Math.max(mcw, cw); mcl = Math.max(mcl, cl);
     equity += p;
     peak = Math.max(peak, equity);
@@ -69,6 +75,8 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     if (t.pnlR != null) rs.push(t.pnlR);
     if (t.plannedRr != null) rrs.push(t.plannedRr);
   }
+  endStreak();
+  const lossStreaks = Array.from({ length: mcl + 1 }, (_, i) => (i === 0 ? 0 : streakCount[i] ?? 0));
   const n = closed.length;
   // most positions open at once: sweep entries/exits (an exit at the same moment as an entry frees the slot first)
   const ev: Array<[number, number]> = [];
@@ -92,6 +100,7 @@ export function computeMetrics(trades: readonly TradeRecord[], startingEquity?: 
     avgPlannedRr: avg(rrs),
     maxConsecutiveWins: mcw,
     maxConsecutiveLosses: mcl,
+    lossStreaks,
     avgHoldHours: avg(hold),
     medianHoldHours: hold.length ? [...hold].sort((a, b) => a - b)[Math.floor(hold.length / 2)] : null,
     avgHoldWinHours: avg(holdW),
