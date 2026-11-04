@@ -14,6 +14,7 @@ import { breakoutV08Adapter, methodAdapters } from './basebrk';
 import { volBreakAdapter } from './volbreak';
 import { bosH1Adapter } from './bosh1';
 import { asiaLondonAdapter, trendlineH4Adapter } from './pairs';
+import { emaRsiAtrAdapter } from './ema-rsi-atr';
 
 /**
  * Placeholder for the owner's SNR strategy. It is intentionally empty:
@@ -86,6 +87,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [breakoutV07Adapter.key]: breakoutV07Adapter,
   [breakoutV08Adapter.key]: breakoutV08Adapter,
   ...Object.fromEntries(methodAdapters.map((a) => [a.key, a])),
+  [emaRsiAtrAdapter.key]: emaRsiAtrAdapter,
   [volBreakAdapter.key]: volBreakAdapter,
   [bosH1Adapter.key]: bosH1Adapter,
   [trendlineH4Adapter.key]: trendlineH4Adapter,

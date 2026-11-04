@@ -196,7 +196,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   const summary: Array<{ rr: number; backtestSessionId: string; trades: number; skipped: Record<string, number> }> = [];
   for (const ses of sessions) {
     const trades: repo.TradeInsert[] = [];
-    const skipped: Record<string, number> = { posisi_masih_terbuka: 0, gap_weekend: 0, sl_tidak_valid: 0, tanpa_candle_berikut: 0 };
+    const skipped: Record<string, number> = { posisi_masih_terbuka: 0, gap_weekend: 0, sl_tidak_valid: 0, spread_terlalu_besar: 0, tanpa_candle_berikut: 0 };
     // one open position per slot (SNR: a single slot; breakout: one BUY + one SELL per part); value = exit candle time
     const busy = new Map<string, number>();
     for (const m of meta) {
@@ -206,8 +206,17 @@ export async function runBacktest(db: Db, v: BacktestInput) {
       const slot = String(m.ev.details?.slot ?? 'all');
       if (entryBar.time <= (busy.get(slot) ?? -Infinity)) { skipped.posisi_masih_terbuka++; continue; }
       if (entryBar.time - m.now > MAX_ENTRY_GAP_MS) { skipped.gap_weekend++; continue; }
-      const sl = Number(m.ev.details?.stop_loss);
+      // Dedicated ATR-distance strategies anchor SL at the actual next-open fill, not the signal close.
       const entry = fillPrice(m.side, entryBar.open, costs);
+      const maxSpread = Number(m.ev.details?.max_spread);
+      if (Number.isFinite(maxSpread) && maxSpread >= 0 && costs.spread > maxSpread) {
+        skipped.spread_terlalu_besar++;
+        continue;
+      }
+      const stopDistance = Number(m.ev.details?.stop_distance);
+      const sl = Number.isFinite(stopDistance) && stopDistance > 0
+        ? entry + (m.side === 'long' ? -stopDistance : stopDistance)
+        : Number(m.ev.details?.stop_loss);
       const risk = m.side === 'long' ? entry - sl : sl - entry;
       if (!Number.isFinite(sl) || risk <= 0) { skipped.sl_tidak_valid++; continue; }
       const tp = m.side === 'long' ? entry + ses.rr * risk : entry - ses.rr * risk;

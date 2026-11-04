@@ -415,8 +415,8 @@ type PairStatus = { symbol: string; label: string; years: number[]; done: number
 // Website cleaned up (owner's choice, 1 Nov 2026): only the best strategy is offered and shown, named "v1"
 // (= Metode 1 · Level H1 diuji 2–3×, 1 slot). All other strategies stay in the code and their results stay in the
 // database, they are only hidden.
-const STRAT_ORDER = ['metode_level', 'metode_volbreak', 'metode_bos_h1', 'metode_base_h1', 'metode_base_h4', 'metode_donchian', 'metode_ny', 'metode_trendline_h4', 'metode_asia_london'];
-const VISIBLE_STRATEGIES = new Set(['metode level-v3', 'metode volbreak-v5', 'metode bos-h1-v1', 'metode base-h1-v1', 'metode base-h4-v1', 'metode h1-40-v1', 'metode newyork-v1', 'metode trendline-h4-v1', 'metode asia-london-v1']);
+const STRAT_ORDER = ['metode_ema_rsi_atr', 'metode_level', 'metode_volbreak', 'metode_bos_h1', 'metode_base_h1', 'metode_base_h4', 'metode_donchian', 'metode_ny', 'metode_trendline_h4', 'metode_asia_london'];
+const VISIBLE_STRATEGIES = new Set(['metode ema-rsi-atr-v1', 'metode level-v3', 'metode volbreak-v5', 'metode bos-h1-v1', 'metode base-h1-v1', 'metode base-h4-v1', 'metode h1-40-v1', 'metode newyork-v1', 'metode trendline-h4-v1', 'metode asia-london-v1']);
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
@@ -471,7 +471,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   }, []);
   const strat = strategies.find((x: any) => x.id === f.strategy);
   const baseTf: string = (strat && methodByKey(strat.adapter_key)?.baseTf) || 'M15';   // the strategy decides its own base timeframe
-  const sets = markets.filter((m) => m.tf === baseTf && m.source_id);
+  const sets = markets.filter((m) => m.tf === baseTf && m.source_id && (strat?.adapter_key !== 'metode_ema_rsi_atr' || m.symbol === 'XAUUSD'));
   const chosen = sets.filter((m) => sel == null || sel.includes(m.symbol));
   const firstY = chosen.length ? Math.min(...chosen.map((m) => yearOf(m.first))) : 2018;
   const lastY = chosen.length ? Math.max(...chosen.map((m) => yearOf(m.last))) : new Date().getUTCFullYear();
@@ -488,7 +488,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
     return next.length === sets.length ? null : next;
   });
   const body = (m: any, from: string, to: string) => ({ params,
-    source_id: m.source_id, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null, capital: f.capital.trim() ? Number(f.capital) : null,
+    source_id: m.source_id, strategy_version_id: f.strategy || null, from, to, rr: strat?.adapter_key === 'metode_ema_rsi_atr' ? [2] : [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null, capital: f.capital.trim() ? Number(f.capital) : null,
     costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), swapLong: Number(f.swapLong) || 0, swapShort: Number(f.swapShort) || 0, ambiguityPolicy: f.ambiguity },
     breakeven: f.be, no_costs: noCost,
   });
@@ -529,7 +529,7 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
 
   return (
     <section className={bare ? 'stack' : 'group stack'}>
-      <SecHead title="Jalankan backtest" meta="RR 1:1 · 1:2 · 1:3" />
+      <SecHead title="Jalankan backtest" meta={strat?.adapter_key === 'metode_ema_rsi_atr' ? 'RR 1:2' : 'RR 1:1 · 1:2 · 1:3'} />
       <div className="form-sec">
       <h3><span className="n">1</span>Strategi</h3>
       {strategies.length ? (
