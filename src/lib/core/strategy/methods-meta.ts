@@ -37,10 +37,5 @@ METHODS.push({ adapterKey: 'metode_trendline_h4', version: 'trendline-h4-v1', la
   rules: `Pivot H4 (5 candle kiri-kanan): BUY bila close H4 menembus garis yang melewati 2 pivot high terakhir yang menurun (SELL: 2 pivot low yang naik) · 1 trade per garis · SL di pivot lawan terakhir ∓ 0,1×ATR H4, TP 2× jarak SL · ${TREND} · tanpa batas posisi · paling cocok: US100 (trade bisa berhari-hari)` });
 METHODS.push({ adapterKey: 'metode_asia_london', version: 'asia-london-v1', label: 'Asia → London', custom: true, params: {},
   rules: `Range Asia = candle M15 00:00–06:59 UTC · close M15 pertama keluar range antara 07:00–11:59 UTC (tiap arah sekali per hari) · SL sisi lain range ∓ 0,1×ATR M15, TP 2× jarak SL · ${TREND} · tanpa batas posisi · paling cocok: USDJPY` });
-METHODS.push({
-  adapterKey: 'metode_ema_rsi_atr', version: 'ema-rsi-atr-v1', label: 'EMA 50/200 + RSI + ATR',
-  custom: true, baseTf: 'M15', params: {},
-  rules: 'Khusus XAUUSD: trend D1 dan H4 EMA50/200 searah, pullback M15 dekat EMA50 dalam 4 candle sebelumnya, konfirmasi RSI14 menembus 50 dengan body >=40% range. SL=1.5xATR14 M15 dari entry aktual, TP RR 1:2, satu posisi, tanpa BE/trailing; spread <=10% ATR.',
-});
 export const methodByKey = (k: string) => METHODS.find((m) => m.adapterKey === k);
 export const methodByStrategy = (s: string) => METHODS.find((m) => `metode ${m.version}` === s);
