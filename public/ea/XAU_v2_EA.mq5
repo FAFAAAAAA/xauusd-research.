@@ -27,7 +27,7 @@
 //| jaminan hasil nyata.                                               |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.13"
+#property version   "1.14"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -51,6 +51,9 @@ const int    ATR_WIN = 400;    // jumlah candle D1 untuk ATR
 
 CTrade trade;
 datetime g_lastBar = 0;
+long   g_day = -1;                                   // UTC day the cached D1 values belong to
+bool   g_dayOk = false;
+double g_range = 0, g_atr = 0, g_d50 = 0, g_d200 = 0, g_lcd = 0;
 
 struct Bar { datetime t; double o, h, l, c; };
 
@@ -235,36 +238,50 @@ void OnTick()
    }
    if(dayOpen <= 0) return;
 
-   // H4 and D1 in UTC, built from H1
+   // v1.14: D1 values (completed UTC days before today) only change once per day -> computed once per UTC day and cached
+   if(dayStart != g_day)
+   {
+      g_dayOk = false;
+      MqlRates h1d[];
+      ArraySetAsSeries(h1d, false);
+      int nhd = CopyRates(_Symbol, PERIOD_H1, 0, 26000, h1d);
+      if(nhd < 5000) { Print("Riwayat H1 kurang (", nhd, "). Scroll chart H1 ke kiri / tambah Max bars in chart."); return; }
+      Bar d1[];
+      int nd = BuildUtc(h1d, nhd, off, 86400, (datetime)dayStart, d1);   // days completed before today
+      if(nd < 210) return;
+      int yi = nd - 1;                                                  // yesterday = last completed UTC day that is not Sunday
+      while(yi > 0) { MqlDateTime dt; TimeToStruct(d1[yi].t, dt); if(dt.day_of_week != 0) break; yi--; }
+      g_range = d1[yi].h - d1[yi].l;
+      g_atr = AtrLast(d1, nd, 14, ATR_WIN);
+      g_d50 = EmaLast(d1, nd, 50, D1_WIN); g_d200 = EmaLast(d1, nd, 200, D1_WIN); g_lcd = d1[nd - 1].c;
+      g_day = dayStart;
+      g_dayOk = g_range > 0 && g_atr > 0;
+   }
+   if(!g_dayOk) return;
+   double range = g_range, atr = g_atr;
+   double upL = dayOpen + VOL_K * range, dnL = dayOpen - VOL_K * range;
+
+   // cheap check first: does the just-closed M15 candle cross a level at all?
+   bool crossUp = m[1].close > upL && m[2].close <= upL, crossDn = m[1].close < dnL && m[2].close >= dnL;
+   if(!crossUp && !crossDn) return;
+
+   // trend (aturan 1) — H4 in UTC from H1, only computed when a level is crossed (6000 H1 ≈ 1500 H4 ≥ the 1000-candle EMA window)
    MqlRates h1[];
    ArraySetAsSeries(h1, false);
-   int nh = CopyRates(_Symbol, PERIOD_H1, 0, 26000, h1);
-   if(nh < 5000) { Print("Riwayat H1 kurang (", nh, "). Scroll chart H1 ke kiri / tambah Max bars in chart."); return; }
-   Bar h4[], d1[];
-   datetime sigClose = (datetime)(sigUtc + 900);
-   int n4 = BuildUtc(h1, nh, off, 14400, sigClose, h4);
-   int nd = BuildUtc(h1, nh, off, 86400, (datetime)dayStart, d1);   // days completed before today
-   if(n4 < 210 || nd < 210) return;
-
-   // trend (aturan 1)
+   int nh = CopyRates(_Symbol, PERIOD_H1, 0, 6000, h1);
+   if(nh < 4100) { Print("Riwayat H1 kurang (", nh, "). Scroll chart H1 ke kiri / tambah Max bars in chart."); return; }
+   Bar h4[];
+   int n4 = BuildUtc(h1, nh, off, 14400, (datetime)(sigUtc + 900), h4);
+   if(n4 < 210) return;
    double e50 = EmaLast(h4, n4, 50, H4_WIN), e200 = EmaLast(h4, n4, 200, H4_WIN), lc4 = h4[n4 - 1].c;
-   double d50 = EmaLast(d1, nd, 50, D1_WIN), d200 = EmaLast(d1, nd, 200, D1_WIN), lcd = d1[nd - 1].c;
-   bool up = lc4 > e50 && e50 > e200 && lcd > d50;
-   bool dn = lc4 < e50 && e50 < e200 && lcd < d50 && d50 < d200;
-
-   // yesterday = last completed UTC day that is not Sunday
-   int yi = nd - 1;
-   while(yi > 0) { MqlDateTime dt; TimeToStruct(d1[yi].t, dt); if(dt.day_of_week != 0) break; yi--; }
-   double range = d1[yi].h - d1[yi].l;
-   double atr = AtrLast(d1, nd, 14, ATR_WIN);
-   if(range <= 0 || atr <= 0) return;
-   double upL = dayOpen + VOL_K * range, dnL = dayOpen - VOL_K * range;
+   bool up = lc4 > e50 && e50 > e200 && g_lcd > g_d50;
+   bool dn = lc4 < e50 && e50 < e200 && g_lcd < g_d50 && g_d50 < g_d200;
 
    long block = (sigUtc / 14400) * 14400;
    for(int s = 1; s >= -1; s -= 2)
    {
       double lv = s > 0 ? upL : dnL;
-      bool cross = s * (m[1].close - lv) > 0 && s * (m[2].close - lv) <= 0;
+      bool cross = s > 0 ? crossUp : crossDn;
       if(!cross || !(s > 0 ? up : dn)) continue;
       if(UsedInBlock(s, block, off) || GlobalVariableCheck(GvName("blk", s, block))) continue;
       GlobalVariableSet(GvName("blk", s, block), 1);
