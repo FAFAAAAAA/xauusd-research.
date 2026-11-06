@@ -343,7 +343,7 @@ bulan & 12 bulan terburuk, dan tabel rugi beruntun. Mode lot memakai jarak SL me
 ## 5u. EA MetaTrader 5 untuk v2 (1 Nov 2026)
 
 Atas permintaan pemilik: order otomatis dijalankan oleh **EA di MetaTrader 5 milik pemilik** (PC/VPS), bukan oleh website.
-- `public/ea/XAU_v2_EA.mq5`: aturan volbreak-v4 persis (hari UTC, Senin pakai range Jumat, aturan 1 dengan H4/D1 dibentuk dari H1 dalam jam UTC, EMA dengan jendela 1000, ATR D1 Wilder 400, SL 0,35 ATR D1, TP 2R dari harga isi, maks 1 entry per arah per blok 4 jam — dicek juga dari posisi & riwayat supaya aman saat restart). Lot dari risiko % equity, dibulatkan ke bawah; lewati kalau di bawah lot minimum atau spread > batas.
+- `public/ea/XAU_v2_EA_v114.mq5` (dulu `XAU_v2_EA.mq5`; nama file memuat versi sejak v1.14): aturan volbreak-v4 persis (hari UTC, Senin pakai range Jumat, aturan 1 dengan H4/D1 dibentuk dari H1 dalam jam UTC, EMA dengan jendela 1000, ATR D1 Wilder 400, SL 0,35 ATR D1, TP 2R dari harga isi, maks 1 entry per arah per blok 4 jam — dicek juga dari posisi & riwayat supaya aman saat restart). Lot dari risiko % equity, dibulatkan ke bawah; lewati kalau di bawah lot minimum atau spread > batas.
 - EA melaporkan entry & penutupan ke `POST /api/ea/report` (WebRequest). Auth: kunci EA dari Atur → EA (hanya SHA-256 yang disimpan). Laporan ditulis ke jurnal (`ea-<ticket>`, strategi v2, hasil bersih broker termasuk komisi & swap) dan dikirim ke Telegram jika "Kirim sinyal live" aktif. Duplikat diabaikan.
 - EA belum pernah dijalankan di MetaTrader dari lingkungan ini: wajib uji di akun demo.
 

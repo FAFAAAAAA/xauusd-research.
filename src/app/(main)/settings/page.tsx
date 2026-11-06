@@ -216,7 +216,7 @@ function EaSetup({ tz }: { tz: string }) {
   return (
     <Group id="ea" title="EA MetaTrader 5 (v2 otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
       <div className="row">
-        <a className="btn sm primary" href="/ea/XAU_v2_EA.mq5" download>Unduh EA (XAU_v2_EA.mq5)</a>
+        <a className="btn sm primary" href="/ea/XAU_v2_EA_v114.mq5" download>Unduh EA v1.14 (XAU_v2_EA_v114.mq5)</a>
         <a className="btn sm" href="/ea/XAU_v2_EA_DIAGNOSTIK.mq5" download>Unduh EA Diagnostik (MT5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
       </div>
