@@ -5,7 +5,7 @@
 import { instrumentSpec } from './instruments';
 
 export type Market = 'forex' | 'crypto';
-export const MARKETS: ReadonlyArray<readonly [Market, string]> = [['forex', 'Forex (MT5)'], ['crypto', 'Crypto (Binance)']];
+export const MARKETS: ReadonlyArray<readonly [Market, string]> = [['forex', 'Forex'], ['crypto', 'Crypto']];
 
 /** adapter key → market */
 const ADAPTER: Record<string, Market> = { metode_crypto_donchian: 'crypto', metode_alt_volbreak: 'crypto' };

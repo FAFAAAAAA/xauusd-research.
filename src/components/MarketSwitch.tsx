@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Seg } from '@/components/Status';
 import { MARKETS, type Market } from '@/lib/core/markets';
 
-/* Forex (MT5) | Crypto (Binance) switch shared by every page. The choice is a per-browser convenience (localStorage, guarded),
+/* Forex | Crypto switch shared by every page. The choice is a per-browser convenience (localStorage, guarded),
  * kept in sync between components on the same page through a window event. */
 const KEY = 'market';
 const EVT = 'market-change';

@@ -442,6 +442,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
   const [strategies, setStrategies] = useState<any[]>([]);
   const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: String(BROKER.spread), slippage: String(BROKER.slippage), commission: String(BROKER.commissionPerLot), swapLong: String(BROKER.swapLong), swapShort: String(BROKER.swapShort), risk: '10', capital: '1000', ambiguity: 'worst', be: 'strategy', nocost: '0' });
   const noCost = f.nocost === '1';
+  const crypto = market === 'crypto';   // crypto pairs use the fixed Binance Futures costs (instruments.ts); the editable fields are Exness (forex/gold)
   // Remember costs / risk / capital in this browser (convenience only; falls back to defaults if storage is unavailable).
   const loaded = useRef(false);
   useEffect(() => {
@@ -496,7 +497,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
   const list = years.filter((y) => y >= y1 && y <= y2);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const params: Record<string, boolean> = {};
-  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${baseTf !== 'M15' ? `|${baseTf}` : ''}${noCost ? '' : swapTag(Number(f.swapLong) || 0, Number(f.swapShort) || 0)}${optTag(f.be, noCost)}`;
+  const cfgKey = `${strat ? `${strat.strategy_key} ${strat.version}` : '?'}|${Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join(',')}${baseTf !== 'M15' ? `|${baseTf}` : ''}${noCost || crypto ? '' : swapTag(Number(f.swapLong) || 0, Number(f.swapShort) || 0)}${optTag(f.be, noCost)}`;
   const yearsFor = (m: any) => list.filter((y) => y >= yearOf(m.first) && y <= yearOf(m.last));
   const togglePair = (sym: string) => setSel((cur) => {
     const base = cur ?? sets.map((m) => m.symbol);
@@ -591,13 +592,14 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       <h3><span className="n">5</span>Aturan trade</h3>
       <div className="picker"><span className="label">Pindah SL ke entry setelah +1R</span>
         <Seg full label="SL ke entry" options={[['strategy', 'Bawaan'], ['on', 'Ya'], ['off', 'Tidak']] as const} value={f.be as 'strategy' | 'on' | 'off'} onChange={(v) => setF((x) => ({ ...x, be: v }))} /></div>
-      <label className="switch">Tanpa biaya (spread, komisi, swap = 0)<input type="checkbox" checked={noCost} onChange={(e) => setF((x) => ({ ...x, nocost: e.target.checked ? '1' : '0' }))} /></label>
+      <label className="switch">{crypto ? 'Tanpa biaya (fee, slippage, funding = 0)' : 'Tanpa biaya (spread, komisi, swap = 0)'}<input type="checkbox" checked={noCost} onChange={(e) => setF((x) => ({ ...x, nocost: e.target.checked ? '1' : '0' }))} /></label>
       <details className="more">
         <summary>{noCost ? 'Lainnya' : 'Biaya & lainnya'}</summary>
-        {!noCost ? <p className="mute small">Default = akun {BROKER.name} kamu: komisi ${BROKER.commissionPerLot}/lot (buka + tutup), swap BUY ${BROKER.swapLong} / SELL ${BROKER.swapShort} per lot per malam (Rabu ×3). Spread {BROKER.spread} sampai diukur di akunmu. <button type="button" className="btn sm ghost" onClick={() => setF((x) => ({ ...x, spread: String(BROKER.spread), slippage: String(BROKER.slippage), commission: String(BROKER.commissionPerLot), swapLong: String(BROKER.swapLong), swapShort: String(BROKER.swapShort) }))}>Pakai biaya Exness</button></p> : null}
+        {!noCost && crypto ? <p className="mute small">Biaya Binance Futures (tetap, sama untuk semua koin): fee taker 0,05% per sisi + slippage ≈ 0,12% pulang-pergi dari nilai posisi; funding BUY ±0,03% per hari selama posisi terbuka (SELL tidak dihitung).</p> : null}
+        {!noCost && !crypto ? <p className="mute small">Default = akun {BROKER.name} kamu: komisi ${BROKER.commissionPerLot}/lot (buka + tutup), swap BUY ${BROKER.swapLong} / SELL ${BROKER.swapShort} per lot per malam (Rabu ×3). Spread {BROKER.spread} sampai diukur di akunmu. <button type="button" className="btn sm ghost" onClick={() => setF((x) => ({ ...x, spread: String(BROKER.spread), slippage: String(BROKER.slippage), commission: String(BROKER.commissionPerLot), swapLong: String(BROKER.swapLong), swapShort: String(BROKER.swapShort) }))}>Pakai biaya Exness</button></p> : null}
         <label className="switch">Pakai rentang tanggal sendiri<input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} /></label>
         <div className="grid two">
-          {!noCost ? <>
+          {!noCost && !crypto ? <>
           <label className="field">Spread ($)<input inputMode="decimal" value={f.spread} onChange={set('spread')} /></label>
           <label className="field">Slippage ($)<input inputMode="decimal" value={f.slippage} onChange={set('slippage')} /></label>
           <label className="field">Komisi per lot ($)<input inputMode="decimal" value={f.commission} onChange={set('commission')} /></label>
