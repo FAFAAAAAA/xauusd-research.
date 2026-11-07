@@ -95,18 +95,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (tg.live_enabled) {
     const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
     const t = trade;
-    // Binance bot (v1 SNR): own layout — coin, % distance of SL/TP, risk in USDT, result in R and duration
-    const pctOf = (x: number) => `${x >= t.entry ? '+' : '−'}${(Math.abs(x / t.entry - 1) * 100).toFixed(2)}%`;
-    const riskUsd = Math.abs(t.entry - t.sl) * t.lot;
-    const dur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}h ${Math.floor((m % 1440) / 60)}j` : `${Math.floor(m / 60)}j ${m % 60}m`; };
-    const coin = escapeHtml(symbol.replace(/USDT$/, '') || 'koin');
-    const snrText = event === 'open'
-      ? [`${t.side === 'SELL' ? '🔴' : '🟢'} <b>${t.side} ${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
-        `Entry   <code>${fp(t.entry)}</code>`, `SL      <code>${fp(t.sl)}</code>  (${pctOf(t.sl)})`, `TP      <code>${fp(t.tp)}</code>  (${pctOf(t.tp)})`,
-        `Risiko  <b>${riskUsd.toFixed(2)} USDT</b> · ${t.lot} ${coin}`, '', `🕐 ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
-      : [`${t.result === 'tp' ? '✅ <b>TP</b>' : t.result === 'sl' ? '❌ <b>SL</b>' : '⚪ <b>Ditutup manual</b>'} · <b>${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
-        `Hasil   <b>${(t.pnl ?? 0) >= 0 ? '+' : '−'}${Math.abs(t.pnl ?? 0).toFixed(2)} USDT</b>${riskUsd > 0 ? `  (${(t.pnl ?? 0) >= 0 ? '+' : '−'}${(Math.abs(t.pnl ?? 0) / riskUsd).toFixed(1)}R)` : ''}`,
-        `Harga   ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `Durasi  ${dur((t.closedAt ?? now) - t.openedAt)}`, '', `🕐 ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
+    const snrText = snrMessage(t, symbol, event, tz, now);
     const text = strat === 'snr' ? snrText : event === 'open'
       ? [`🤖 <b>${escapeHtml(who)} — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${fp(t.entry)}</code>`, `<b>SL:</b> <code>${fp(t.sl)}</code>`, `<b>TP:</b> <code>${fp(t.tp)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
@@ -118,4 +107,36 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     telegram = r.status;
   }
   return { status: 200, body: { ok: true, id, telegram } };
+}
+
+/** Telegram layout of the Binance v1 SNR bot: coin, SL/TP distance in %, risk in USDT, result in R and duration. */
+export function snrMessage(t: JournalTrade, symbol: string, event: 'open' | 'close', tz: string, now: number): string {
+  const fp = (x: number) => (Math.abs(x) >= 100 ? x.toFixed(2) : Math.abs(x) >= 1 ? x.toFixed(4) : x.toPrecision(5));
+    const pctOf = (x: number) => `${x >= t.entry ? '+' : '−'}${(Math.abs(x / t.entry - 1) * 100).toFixed(2)}%`;
+  const riskUsd = Math.abs(t.entry - t.sl) * t.lot;
+  const dur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}h ${Math.floor((m % 1440) / 60)}j` : `${Math.floor(m / 60)}j ${m % 60}m`; };
+  const coin = escapeHtml(symbol.replace(/USDT$/, '') || 'koin');
+  return event === 'open'
+    ? [`${t.side === 'SELL' ? '🔴' : '🟢'} <b>${t.side} ${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
+      `Entry   <code>${fp(t.entry)}</code>`, `SL      <code>${fp(t.sl)}</code>  (${pctOf(t.sl)})`, `TP      <code>${fp(t.tp)}</code>  (${pctOf(t.tp)})`,
+      `Risiko  <b>${riskUsd.toFixed(2)} USDT</b> · ${t.lot} ${coin}`, '', `🕐 ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
+    : [`${t.result === 'tp' ? '✅ <b>TP</b>' : t.result === 'sl' ? '❌ <b>SL</b>' : '⚪ <b>Ditutup manual</b>'} · <b>${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
+      `Hasil   <b>${(t.pnl ?? 0) >= 0 ? '+' : '−'}${Math.abs(t.pnl ?? 0).toFixed(2)} USDT</b>${riskUsd > 0 ? `  (${(t.pnl ?? 0) >= 0 ? '+' : '−'}${(Math.abs(t.pnl ?? 0) / riskUsd).toFixed(1)}R)` : ''}`,
+      `Harga   ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `Durasi  ${dur((t.closedAt ?? now) - t.openedAt)}`, '', `🕐 ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
+}
+
+/** Sends sample bot messages (open, close at TP, info) to Telegram so the owner can see the layout. Nothing is written to the journal. */
+export async function sendBotTest(db: Db, opts: { fetchImpl?: FetchLike; now?: number } = {}): Promise<{ sent: string[] }> {
+  const now = opts.now ?? Date.now();
+  const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
+  const t: JournalTrade = { id: 'test', strategy: 'snr', side: 'SELL', openedAt: now - 7 * 3_600_000 - 20 * 60_000, entry: 0.2345, sl: 0.2412, tp: 0.2211, lot: 597,
+    closedAt: now, exit: 0.2211, result: 'tp', pnl: 7.95, note: 'Bot Binance SANDUSDT' };
+  const msgs = [snrMessage({ ...t, result: 'open', exit: null, closedAt: null, pnl: null }, 'SANDUSDT', 'open', tz, now), snrMessage(t, 'SANDUSDT', 'close', tz, now),
+    `ℹ️ <b>Bot v1 SNR</b>\n\nRingkasan 08:00 (waktu Korea) — bot aktif.\nSaldo Futures: 207.95 USDT\nSejak ringkasan terakhir: 1 trade selesai (TP 1, SL 0), hasil +7.95 USDT\nPosisi terbuka: tidak ada`];
+  const sent: string[] = [];
+  for (const [i, text] of msgs.entries()) {
+    const r = await sendTelegram(db, { deliveryKey: `ea:test:${now}:${i}`, mode: 'LIVE', text: `🧪 <i>CONTOH (tes)</i>\n${text}` }, { fetchImpl: opts.fetchImpl });
+    sent.push(r.status);
+  }
+  return { sent };
 }
