@@ -11,9 +11,9 @@ export interface RiskStats {
   worstYearR: number; worst12mR: number; maxOpen: number; medianSl: number; p25Sl: number; p75Sl: number;
 }
 export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3' | 'nas' | 'btc' | 'alt', RiskStats> = {
-  // v1 ALT (Binance Futures, SELL breakout volatilitas di koin cepat & ramai): research portfolio, max 3 open positions, 1/coin, Jan 2020 – Okt 2026,
-  // costs 0.12% round turn (fee + slippage), shorts pay no funding. medianSl / p25Sl / p75Sl = SL distance in % of the price. Generated 7 Nov 2026.
-  "alt": {"trades": 2495, "years": 6.8, "perMonth": 30.63, "winRate": 0.3888, "avgR": 0.1429, "perMonthR": 4.378, "maxDdR": 37.1, "maxLossStreak": 26, "worstMonthR": -16.9, "bestMonthR": 35.8, "negMonthsPct": 0.354, "worstYearR": 9.0, "worst12mR": -17.0, "maxOpen": 3, "medianSl": 5.34, "p25Sl": 4.15, "p75Sl": 7.33},
+  // v2 ALT (Binance Futures, deep breakdown SELL on every liquid coin, metode alt-breakdown-v1): research portfolio max 3 open positions,
+  // 1 per coin, 1h Binance data Jan 2020 – Nov 2026, fee+slippage 0.12% round turn. medianSl / p25Sl / p75Sl = SL in % of price. 7 Nov 2026.
+  "alt": {"trades": 1426, "years": 6.7, "perMonth": 17.77, "winRate": 0.467, "avgR": 0.3712, "perMonthR": 6.596, "maxDdR": 35.3, "maxLossStreak": 22, "worstMonthR": -11.7, "bestMonthR": 141.3, "negMonthsPct": 0.402, "worstYearR": 11.8, "worst12mR": -12.0, "maxOpen": 3, "medianSl": 4.5, "p25Sl": 3.14, "p75Sl": 6.73},
   // v1 BTC (Binance BTCUSDT futures, metode crypto-donchian-v1): website engine on M30 Feb 2018–Oct 2026 with Binance costs (fee 0.05%/side
   // + slippage = 0.12% round turn, funding 0.03%/day for BUY), RR 1:2, generated 7 Nov 2026. medianSl / p25Sl / p75Sl in USD of BTC price:
   // SL as a % of the price over the LAST 12 MONTHS × the last price (77,254). "Lot" = BTC quantity (Binance minimum 0.001 BTC).
@@ -154,7 +154,7 @@ export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3' | 'nas' |
     "p75Sl": 11.73
   }
 };
-export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 Level', v2: 'v1 XAU', v3: 'v3 BOS', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan', nas: 'v1 NAS', btc: 'v1 BTC', alt: 'v1 ALT' };
+export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 Level', v2: 'v1 XAU', v3: 'v3 BOS', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan', nas: 'v1 NAS', btc: 'v1 BTC', alt: 'v2 ALT' };
 /** Instrument facts per entry: USD per 1.00 price move per 1 lot, the broker's minimum lot (Exness) and the backtest period. */
 export const RISK_META: Record<keyof typeof RISK_STATS, { contract: number; minLot: number; period: string; unit: string; dp?: number; broker?: string; noLot?: boolean }> = {
   v1: { contract: 100, minLot: 0.01, period: '2004–2026', unit: '$' }, v2: { contract: 100, minLot: 0.01, period: '2004–2026', unit: '$' },

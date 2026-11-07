@@ -444,3 +444,16 @@ untuk 448 koin USDT-M (termasuk delisting; daftar disusun manual karena fapi.bin
   koin harian dari `alt-fast-days.json` (dihitung titik-waktu s/d 6 Nov 2026; `params.altAll` mematikannya). Per pair tanpa batas 3 posisi
   hasilnya lebih lemah dari portofolio riset (contoh: ENA PF 1,15, WLD 1,09, PEPE 1,06, NEAR 1,00, SUI 0,98).
 
+
+## 6e. v2 ALT — breakdown dalam SELL untuk semua koin likuid (7 Nov 2026)
+
+Bedah lanjutan di semua koin Binance yang likuid pada saat sinyal (volume 30 hari ≥ $20 jt/hari, 440 koin, 1h 2020 – 6 Nov 2026,
+fee+slippage 0,12%): grid breakout volatilitas (level 0,3–2,0 × range kemarin, SL 0,2–0,75 ATR) × pump-fade/dump-bounce × tren × jam × volatilitas.
+- BUY tetap rugi hampir di semua varian. SELL makin kuat makin dalam levelnya (dataran kv 1,0–2,0 positif).
+- Dipilih `metode alt-breakdown-v1` (adapter `strategy/alt2.ts`): SELL saat close H1 < open hari UTC − 1,5 × range kemarin, close D1 < EMA50 D1,
+  SL level + 0,35 ATR14 D1, TP 2R, sekali per hari per koin; hanya hari koin likuid (`alt-liquid-days.json`).
+- Riset: gabungan PF 1,26 (7.405 trade, 418 koin, 77% koin PF > 1); biaya ×2 PF 1,21; short bayar funding 0,03%/hari PF 1,24.
+  Portofolio maks 3 posisi, 1 per koin: 17,8 trade/bln, win 47%, PF 1,68, DD 35×, untung tiap tahun. Profit terkumpul di bulan crash
+  (Okt 2025 +141R, Jan 2026 +74R); tanpa 5 bulan terbaik tetap PF 1,26.
+- Mesin website (6 koin contoh): PF 1,33 vs riset 1,26 untuk koin yang sama. v1 ALT disembunyikan (tetap di kode).
+

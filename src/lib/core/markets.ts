@@ -8,9 +8,9 @@ export type Market = 'forex' | 'crypto';
 export const MARKETS: ReadonlyArray<readonly [Market, string]> = [['forex', 'Forex'], ['crypto', 'Crypto']];
 
 /** adapter key → market */
-const ADAPTER: Record<string, Market> = { metode_crypto_donchian: 'crypto', metode_alt_volbreak: 'crypto' };
+const ADAPTER: Record<string, Market> = { metode_crypto_donchian: 'crypto', metode_alt_volbreak: 'crypto', metode_alt_breakdown: 'crypto' };
 /** strategy label of a backtest session ("metode <version>") → market */
-const VERSION: Record<string, Market> = { 'metode crypto-donchian-v1': 'crypto', 'metode alt-volbreak-v1': 'crypto' };
+const VERSION: Record<string, Market> = { 'metode crypto-donchian-v1': 'crypto', 'metode alt-volbreak-v1': 'crypto', 'metode alt-breakdown-v1': 'crypto' };
 /** journal / risk-calculator keys per market (in display order) */
 export const JOURNAL_KEYS: Record<Market, string[]> = { forex: ['v2', 'nas'], crypto: ['btc', 'alt'] };
 export const RISK_KEYS: Record<Market, Array<'v2' | 'nas' | 'btc' | 'alt'>> = { forex: ['v2', 'nas'], crypto: ['btc', 'alt'] };
