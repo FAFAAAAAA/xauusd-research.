@@ -26,7 +26,7 @@ const C = { bg: '#f2f4f7', card: '#ffffff', ink: '#1b2433', ink2: '#475467', mut
 const FONT = "-apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif";
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-const money = (n: number, dec = 2) => `${n > 0 ? '+' : n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
+const money = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 const tone = (n: number) => (n > 0 ? C.up : n < 0 ? C.down : C.ink2);
 const tint = (n: number) => (n > 0 ? C.upT : n < 0 ? C.downT : C.sunk);
 const wall = (ms: number, tz: string) => new Date(ms + tzOffsetMinutes(ms, tz) * 60_000);
@@ -119,7 +119,7 @@ export function buildReport(r: ReportInput): HTMLCanvasElement {
     const Y = (v: number) => cy + (1 - (v - lo) / (hi - lo)) * ch;
     [hi - pad, (hi + lo) / 2, lo + pad].forEach((v) => {
       g.strokeStyle = C.line; g.lineWidth = 2; g.beginPath(); g.moveTo(cx, Y(v)); g.lineTo(cx + cw, Y(v)); g.stroke();
-      text(money(v, 0), cx - 14, Y(v) + 8, 20, C.mute, 500, 'right');
+      text(money(v), cx - 14, Y(v) + 8, 20, C.mute, 500, 'right');
     });
     g.setLineDash([8, 8]); g.strokeStyle = C.mute; g.beginPath(); g.moveTo(cx, Y(0)); g.lineTo(cx + cw, Y(0)); g.stroke(); g.setLineDash([]);
     const col = eq >= 0 ? C.up : C.down;
@@ -152,7 +152,7 @@ export function buildReport(r: ReportInput): HTMLCanvasElement {
         if (!s) { text('—', bx + colW / 2, ry + 46, 26, C.mute, 500, 'center'); return; }
         const p = Number(s.pnl ?? 0), tr = Number(s.trades ?? 0), wr = tr ? Math.round((Number(s.wins ?? 0) / tr) * 100) : 0;
         rrect(bx, ry + 4, colW, rowH - 10, 14, tint(p), x === r.rr ? C.ink : undefined);
-        text(money(p, 0), bx + colW / 2, ry + 36, 26, tone(p), 700, 'center');
+        text(money(p), bx + colW / 2, ry + 36, 26, tone(p), 700, 'center');
         text(`${tr} trade · ${wr}%`, bx + colW / 2, ry + 60, 18, C.ink2, 500, 'center');
       });
     });
@@ -183,7 +183,7 @@ export function buildReport(r: ReportInput): HTMLCanvasElement {
         rrect(bx + 2, ry + 4, cw - 4, rowH - 10, 10, tint(v));
         text(Math.abs(v) >= 1000 ? `${v < 0 ? '−' : '+'}${(Math.abs(v) / 1000).toFixed(1)}k` : `${v < 0 ? '−' : '+'}${Math.round(Math.abs(v))}`, bx + cw / 2, ry + 36, 17, tone(v), 700, 'center');
       }
-      text(money(tot, 0), P + IW - 32, ry + 38, 22, tone(tot), 700, 'right');
+      text(money(tot), P + IW - 32, ry + 38, 22, tone(tot), 700, 'right');
     });
     y += h + 24;
   }

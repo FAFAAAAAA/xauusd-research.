@@ -16,7 +16,7 @@ const PROFILE: Record<string, string> = {
   snr_only: 'SNR saja', snr_news: 'SNR + berita', snr_trend_momentum: 'SNR + tren', snr_all: 'SNR + semua konfirmasi',
 };
 const EXIT: Record<string, string> = { tp: 'Kena TP', sl: 'Kena SL', ambiguous_worst: 'TP & SL 1 candle (dihitung SL)', ambiguous_best: 'TP & SL 1 candle (dihitung TP)', ambiguous_skipped: 'Dilewati', time: 'Waktu habis', open: 'Masih terbuka', imported: 'Impor' };
-const money = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? `${n >= 0 ? '+' : '−'}$${Math.abs(n).toFixed(2)}` : '—');
+const money = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? `${Math.round(Math.abs(n)) === 0 ? '' : n > 0 ? '+' : '−'}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—');
 /** 0.75 → "45 mnt", 16.4 → "16 jam", 50 → "2 hari 2 jam" */
 /** ms from a DB timestamp (number, ISO, or Postgres text like "2025-01-01 00:00:00+00", which Safari can't parse). */
 const tsMs = (v: unknown): number => {
@@ -194,7 +194,7 @@ export default function Analytics() {
             ) : (
               <>
                 <section className="hero verdict flagship-verdict">
-                  <div className="summary-meta"><span className="label verdict-context summary-risk" aria-label="Risiko per trade"><ResearchIcon name="risk" />{picked[0]?.cost_config?.risk_usd ? `$${picked[0].cost_config.risk_usd}` : 'Lot tetap'}</span><span className="summary-trades">{sum.trades} trade</span></div>
+                  <div className="summary-meta"><span className="label verdict-context summary-risk" aria-label="Risiko per trade"><ResearchIcon name="risk" />{picked[0]?.cost_config?.risk_usd ? `$${Math.round(Number(picked[0].cost_config.risk_usd))}` : 'Lot tetap'}</span><span className="summary-trades">{sum.trades} trade</span></div>
                   <span className="profit-caption">Hasil bersih</span>
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
                   <div className="hero-winrate"><span>Win rate</span><strong className={winRateTone}>{winRate == null ? '—' : `${(winRate * 100).toFixed(1)}%`}</strong></div>
@@ -247,7 +247,7 @@ export default function Analytics() {
                 </section>
 
                 {fresh ? <>
-                {m ? <DrawdownBreakdown key={key} trades={trades} tz={tz} maximum={m.maxDrawdown} /> : null}
+                {m ? <DrawdownBreakdown key={key} trades={trades} tz={tz} /> : null}
                 {m ? <section className="group">
                   <SecHead title="Beruntun" />
                   <div className="tablewrap">
@@ -393,7 +393,7 @@ function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
         {d.candles.length ? <CandleChart candles={d.candles} timezone={tz} fitKey={t.id} position={{ side: t.side, entry: t.entry, exit: t.exit, entryPrice: t.entryPrice, stopLoss: t.stopLoss, takeProfit: t.takeProfit, exitPrice: t.exitPrice }} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
       </div>
       <dl className="kv">
-        {t.setupReason?.risk_usd != null ? <><dt>Risiko</dt><dd>${Number(t.setupReason.risk_usd).toFixed(2)} · lot {t.setupReason.lot}</dd></> : null}
+        {t.setupReason?.risk_usd != null ? <><dt>Risiko</dt><dd>${Math.round(Number(t.setupReason.risk_usd))} · lot {t.setupReason.lot}</dd></> : null}
         <dt>Entry</dt><dd>{px(t.entryPrice)}</dd>
         <dt>Stop loss</dt><dd>{px(t.stopLoss)}</dd>
         <dt>Take profit</dt><dd>{px(t.takeProfit)}</dd>
@@ -933,7 +933,7 @@ function CapitalGrowth({ trades, tz, baseRisk, startCapital, months }: { trades:
         <div className="facts" style={{ marginTop: 0 }}>
           <div><span className="label">Modal akhir</span><strong className={total >= 0 ? 'pos' : 'neg'}>{usd(eq)}</strong></div>
           <div><span className="label">Kenaikan modal</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100)}</strong></div>
-          {months > 0 ? <div><span className="label">Rata-rata per bulan</span><strong className={total >= 0 ? 'pos' : 'neg'}>{total >= 0 ? '+' : '−'}${Math.abs(total / months).toFixed(2)} ({pct(total / c0 * 100 / months)})</strong></div> : null}
+          {months > 0 ? <div><span className="label">Rata-rata per bulan</span><strong className={total >= 0 ? 'pos' : 'neg'}>{money(total / months)} ({pct(total / c0 * 100 / months)})</strong></div> : null}
           <div><span className="label">Rata-rata per tahun</span><strong className={total >= 0 ? 'pos' : 'neg'}>{pct(total / c0 * 100 / nYears)}</strong></div>
           <div><span className="label">Turun terdalam</span><strong className="neg">−{ddPct.toLocaleString('id-ID', { maximumFractionDigits: 1 })}% ({usd(ddUsd)})</strong></div>
         </div>

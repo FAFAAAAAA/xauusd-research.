@@ -4,17 +4,17 @@ import { sessionOf, tzOffsetMinutes } from '@/lib/core/time';
 import { SecHead, Seg } from './Status';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export interface ClosedTrade { entry: number; exit: number; pnl: number; side: string }
+export interface ClosedTrade { entry: number; exit: number; pnl: number; pnlR: number | null; side: string }
 
 export function closedTrades(rows: any[]): ClosedTrade[] {
   return rows
     .filter((t) => t.pnl != null && t.exit_ms != null)
-    .map((t) => ({ entry: Number(t.entry_ms), exit: Number(t.exit_ms), pnl: Number(t.pnl), side: String(t.side) }))
+    .map((t) => ({ entry: Number(t.entry_ms), exit: Number(t.exit_ms), pnl: Number(t.pnl), pnlR: t.pnl_r == null ? null : Number(t.pnl_r), side: String(t.side) }))
     .sort((a, b) => a.exit - b.exit);
 }
 
-const money = (n: number) => `${n >= 0 ? '+' : '−'}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const short = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n) >= 1000 ? `${(Math.abs(n) / 1000).toFixed(1)}k` : Math.round(Math.abs(n))}`;
+const money = (n: number) => `${Math.round(Math.abs(n)) === 0 ? '' : n > 0 ? '+' : '−'}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+const short = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n) >= 1000 ? `${Math.round(Math.abs(n) / 1000)}k` : Math.round(Math.abs(n))}`;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -101,63 +101,65 @@ type DrawdownPeriod = 'week' | 'month';
 interface PeriodDrawdown {
   sort: number;
   label: string;
-  pnl: number;
-  peak: number;
+  totalR: number;
+  peakR: number;
   drawdown: number;
 }
 
 /** Trades arrive in close-time order from closedTrades. Each period starts at its opening balance. */
-export function periodDrawdowns(trades: readonly ClosedTrade[], mode: DrawdownPeriod, tz: string): PeriodDrawdown[] {
+export function periodDrawdowns(trades: readonly ClosedTrade[], mode: DrawdownPeriod | 'all', tz: string): PeriodDrawdown[] | null {
   const periods = new Map<string, PeriodDrawdown>();
   for (const trade of trades) {
-    if (!Number.isFinite(trade.exit) || !Number.isFinite(trade.pnl)) continue;
-    const period = bucket(trade.exit, mode, tz);
+    if (trade.pnlR == null || !Number.isFinite(trade.pnlR)) return null;
+    const period = mode === 'all' ? { key: 'all', sort: 0, label: 'Maksimum' } : bucket(trade.exit, mode, tz);
     let row = periods.get(period.key);
     if (!row) {
-      row = { sort: period.sort, label: period.label, pnl: 0, peak: 0, drawdown: 0 };
+      row = { sort: period.sort, label: period.label, totalR: 0, peakR: 0, drawdown: 0 };
       periods.set(period.key, row);
     }
-    row.pnl += trade.pnl;
-    row.peak = Math.max(row.peak, row.pnl);
-    row.drawdown = Math.max(row.drawdown, row.peak - row.pnl);
+    row.totalR += trade.pnlR;
+    row.peakR = Math.max(row.peakR, row.totalR);
+    row.drawdown = Math.max(row.drawdown, row.peakR - row.totalR);
   }
   return [...periods.values()].sort((a, b) => b.sort - a.sort);
 }
 
-const drawdownMoney = (value: number) => value === 0 ? '$0.00' : money(-value);
+const formatDrawdown = (value: number | null) => value == null ? '—' : `${Math.round(value)}×`;
 
-export function DrawdownBreakdown({ trades, tz, maximum }: { trades: ClosedTrade[]; tz: string; maximum: number }) {
+export function DrawdownBreakdown({ trades, tz }: { trades: ClosedTrade[]; tz: string }) {
   const [mode, setMode] = useState<DrawdownPeriod>('week');
   const [visible, setVisible] = useState(8);
   const weekly = useMemo(() => periodDrawdowns(trades, 'week', tz), [trades, tz]);
   const monthly = useMemo(() => periodDrawdowns(trades, 'month', tz), [trades, tz]);
-  const worst = (periods: PeriodDrawdown[]) => periods.reduce((max, row) => Math.max(max, row.drawdown), 0);
-  const rows = mode === 'week' ? weekly : monthly;
-  const summary: Array<[string, number]> = [['Maksimum', maximum], ['Mingguan terburuk', worst(weekly)], ['Bulanan terburuk', worst(monthly)]];
+  const maximum = useMemo(() => periodDrawdowns(trades, 'all', tz)?.[0]?.drawdown ?? null, [trades, tz]);
+  const worst = (periods: PeriodDrawdown[] | null) => periods?.reduce((max, row) => Math.max(max, row.drawdown), 0) ?? null;
+  const rows = (mode === 'week' ? weekly : monthly) ?? [];
+  const summary: Array<[string, number | null]> = [['Maksimum', maximum], ['Mingguan terburuk', worst(weekly)], ['Bulanan terburuk', worst(monthly)]];
 
   return (
     <section className="group stack">
       <SecHead title="Drawdown" />
       <div className="hold3">
         {summary.map(([label, value]) => (
-          <div key={label} className={value > 0 ? 'neg' : undefined}>
-            <span>{label}</span><strong>{drawdownMoney(value)}</strong>
+          <div key={label} title="Kelipatan risiko per trade" className={value != null && Math.round(value) > 0 ? 'neg' : undefined}>
+            <span>{label}</span><strong>{formatDrawdown(value)}</strong>
           </div>
         ))}
       </div>
-      <p className="small mute">Penurunan saldo dari puncak ke titik terendah berdasarkan trade yang sudah ditutup. Puncak dihitung ulang tiap Senin dan awal bulan sesuai zona waktu {tz}.</p>
-      <Seg label="Periode drawdown" options={[['week', 'Mingguan'], ['month', 'Bulanan']]} value={mode} onChange={(value) => { setMode(value); setVisible(8); }} />
-      <div className="tablewrap">
-        <table className="num-r">
-          <thead><tr><th scope="col">Periode</th><th scope="col">Drawdown</th></tr></thead>
-          <tbody>
-            {rows.slice(0, visible).map((row) => (
-              <tr key={row.sort}><td>{row.label}</td><td className={row.drawdown > 0 ? 'neg' : undefined}>{drawdownMoney(row.drawdown)}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {rows.length > visible ? <button className="btn sm" onClick={() => setVisible(visible + 8)}>Tampilkan lebih banyak</button> : null}
+      {rows.length > 0 ? <>
+        <Seg label="Periode drawdown" options={[['week', 'Mingguan'], ['month', 'Bulanan']]} value={mode} onChange={(value) => { setMode(value); setVisible(8); }} />
+        <div className="tablewrap">
+          <table className="num-r">
+            <thead><tr><th scope="col">Periode</th><th scope="col">Drawdown</th></tr></thead>
+            <tbody>
+              {rows.slice(0, visible).map((row) => (
+                <tr key={row.sort}><td>{row.label}</td><td className={Math.round(row.drawdown) > 0 ? 'neg' : undefined}>{formatDrawdown(row.drawdown)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {rows.length > visible ? <button className="btn sm" onClick={() => setVisible(visible + 8)}>Tampilkan lebih banyak</button> : null}
+      </> : null}
     </section>
   );
 }
@@ -256,9 +258,8 @@ const DOW = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const MONTHS_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const compact = (n: number, dollar = true) => {
   const a = Math.abs(n);
-  // under $1 keep two decimals, so a tiny loss never reads as "−0.0"
-  const v = a >= 1000 ? `${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : a >= 10 ? a.toFixed(dollar && a < 100 ? 1 : 0) : a >= 1 ? a.toFixed(1) : a.toFixed(2);
-  return `${n > 0 ? '+' : n < 0 ? '−' : ''}${dollar ? '$' : ''}${v}`;
+  const v = a >= 1000 ? `${Math.round(a / 1000)}k` : Math.round(a);
+  return `${Math.round(a) === 0 ? '' : n > 0 ? '+' : '−'}${dollar ? '$' : ''}${v}`;
 };
 
 export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string }) {
