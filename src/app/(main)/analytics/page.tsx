@@ -416,8 +416,8 @@ type PairStatus = { symbol: string; label: string; years: number[]; done: number
 // Website cleaned up (owner's choice, 7 Nov 2026): only the best gold strategy is offered and shown, named "v1 XAU"
 // (= metode volbreak-v5, internal key v2). All other strategies stay in the code and their results stay in the
 // database, they are only hidden (other pairs get their own best strategy later).
-const STRAT_ORDER = ['metode_volbreak'];
-const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5']);
+const STRAT_ORDER = ['metode_volbreak', 'metode_nas_donchian'];
+const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5', 'metode nas-donchian-v1']);
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
@@ -474,6 +474,14 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const baseTf: string = (strat && methodByKey(strat.adapter_key)?.baseTf) || 'M15';   // the strategy decides its own base timeframe
   const sets = markets.filter((m) => m.tf === baseTf && m.source_id);
   const chosen = sets.filter((m) => sel == null || sel.includes(m.symbol));
+  // each strategy starts with its own pair(s) selected (v1 XAU → XAUUSD, v1 NAS → US100); the user can still pick others
+  const stratPairs = (strat && methodByKey(strat.adapter_key)?.pairs) || null;
+  useEffect(() => {
+    if (!stratPairs || !sets.length) return;
+    const ok = stratPairs.filter((x) => sets.some((m) => m.symbol === x));
+    if (ok.length) setSel(ok.length === sets.length ? null : ok);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.strategy, sets.length]);
   const firstY = chosen.length ? Math.min(...chosen.map((m) => yearOf(m.first))) : 2018;
   const lastY = chosen.length ? Math.max(...chosen.map((m) => yearOf(m.last))) : new Date().getUTCFullYear();
   const years = Array.from({ length: Math.max(0, lastY - firstY + 1) }, (_, i) => firstY + i);

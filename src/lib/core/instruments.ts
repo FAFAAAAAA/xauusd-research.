@@ -9,6 +9,8 @@ import type { CostConfig } from './tradesim';
 export interface InstrumentSpec {
   symbol: string; label: string; group: 'Emas' | 'Forex' | 'Indeks' | 'Kripto'; digits: number;
   contractSize: number; usdBase: boolean; spread: number; slippage: number; commission: number;
+  /** swap as a fraction of the price per night (BUY / SELL) and the UTC weekday charged 3× (index CFDs) */
+  swapLongPct?: number; swapShortPct?: number; swapTripleDay?: number;
 }
 
 export const INSTRUMENTS: InstrumentSpec[] = [
@@ -19,7 +21,10 @@ export const INSTRUMENTS: InstrumentSpec[] = [
   { symbol: 'USDJPY', label: 'USDJPY', group: 'Forex', digits: 3, contractSize: 100_000, usdBase: true, spread: 0.006, slippage: 0.002, commission: 7 },
   { symbol: 'USDCHF', label: 'USDCHF', group: 'Forex', digits: 5, contractSize: 100_000, usdBase: true, spread: 0.00008, slippage: 0.00002, commission: 7 },
   { symbol: 'USDCAD', label: 'USDCAD', group: 'Forex', digits: 5, contractSize: 100_000, usdBase: true, spread: 0.00008, slippage: 0.00002, commission: 7 },
-  { symbol: 'USATECHIDXUSD', label: 'US100 (Nasdaq)', group: 'Indeks', digits: 3, contractSize: 1, usdBase: false, spread: 1.5, slippage: 0.5, commission: 0 },
+  // US100 = the owner's Exness USTEC (7 Nov 2026): commission 0.313 USD/lot/side, swap BUY −619.3 points (2 digits → 6.193 USD/lot/night
+  // at ±28,420 = 0.0218% of the price), SELL 0, Friday 3×; spread floating (1.5 kept as estimate).
+  { symbol: 'USATECHIDXUSD', label: 'US100 (Nasdaq)', group: 'Indeks', digits: 3, contractSize: 1, usdBase: false, spread: 1.5, slippage: 0.5, commission: 0.626,
+    swapLongPct: 6.193 / 28420, swapShortPct: 0, swapTripleDay: 5 },
   { symbol: 'USA30IDXUSD', label: 'US30 (Dow Jones)', group: 'Indeks', digits: 3, contractSize: 1, usdBase: false, spread: 3, slippage: 1, commission: 0 },
   { symbol: 'BTCUSD', label: 'BTCUSD', group: 'Kripto', digits: 1, contractSize: 1, usdBase: false, spread: 25, slippage: 10, commission: 0 },
   { symbol: 'ETHUSD', label: 'ETHUSD', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 2, slippage: 0.5, commission: 0 },
@@ -32,7 +37,9 @@ export function instrumentSpec(symbol: string): InstrumentSpec | null {
 /** Default execution costs for an instrument (XAUUSD keeps the website's long-standing defaults). */
 export function instrumentCosts(symbol: string): Omit<CostConfig, 'ambiguityPolicy'> {
   const s = instrumentSpec(symbol) ?? INSTRUMENTS[0];
-  return { spread: s.spread, slippage: s.slippage, commissionPerUnit: s.commission, contractSize: s.contractSize };
+  return { spread: s.spread, slippage: s.slippage, commissionPerUnit: s.commission, contractSize: s.contractSize,
+    ...(s.swapLongPct || s.swapShortPct ? { swapLongPct: s.swapLongPct ?? 0, swapShortPct: s.swapShortPct ?? 0 } : {}),
+    ...(s.swapTripleDay !== undefined ? { swapTripleDay: s.swapTripleDay } : {}) };
 }
 
 /** USD value of a 1.00 price move for 1 lot at `price` (quote→USD for USD-base pairs). */

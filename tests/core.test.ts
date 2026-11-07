@@ -280,3 +280,13 @@ test('tradesim breakeven: SL moves to entry after +1R from the next bar; exit at
   const plain = simulateTrade(bars, { side: 'long', entryBarIndex: 1, stopLoss: 99, takeProfit: 102, size: 1 }, cost);
   assert.equal(plain.exitReason, 'ambiguous_worst');   // bar 4 touches both 99 and 102
 });
+
+test('swap triple day is configurable (index CFDs charge Friday 3×) and v1 NAS uses New York time', async () => {
+  const { nyHour } = await import('../src/lib/core/strategy/nas');
+  const { swapNights } = await import('../src/lib/core/tradesim');
+  const H = 3_600_000, fri = Date.UTC(2026, 10, 6);   // Friday 6 Nov 2026
+  assert.equal(swapNights(fri + 20 * H, fri + 22 * H, 5), 3);
+  assert.equal(swapNights(fri + 20 * H, fri + 22 * H), 1);
+  assert.equal(nyHour(Date.UTC(2026, 10, 6, 15, 0)), 10);   // EST (UTC−5)
+  assert.equal(nyHour(Date.UTC(2026, 6, 6, 14, 0)), 10);    // EDT (UTC−4)
+});

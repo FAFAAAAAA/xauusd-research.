@@ -20,17 +20,22 @@ export interface CostConfig {
   /** overnight swap COST per 1 unit of size per night (positive = you pay), BUY and SELL; 0 / missing = no swap */
   swapLong?: number;
   swapShort?: number;
+  /** extra swap as a FRACTION of the entry price per night (index CFDs whose swap follows the price), BUY / SELL */
+  swapLongPct?: number;
+  swapShortPct?: number;
+  /** UTC weekday whose rollover counts 3 nights (default 3 = Wednesday for gold/FX; 5 = Friday for index CFDs) */
+  swapTripleDay?: number;
 }
 
-/** Rollover at 21:00 UTC on Mon–Fri; Wednesday counts 3 nights (weekend). Returns nights charged between entry and exit. */
-export function swapNights(entry: number, exit: number): number {
+/** Rollover at 21:00 UTC on Mon–Fri; Wednesday (or `tripleDay`) counts 3 nights (weekend). Returns nights charged between entry and exit. */
+export function swapNights(entry: number, exit: number, tripleDay = 3): number {
   if (!(exit > entry)) return 0;
   const DAY = 86_400_000, ROLL = 21 * 3_600_000;
   let n = 0;
   for (let t = Math.floor((entry - ROLL) / DAY) * DAY + ROLL; t <= exit; t += DAY) {
     if (t <= entry) continue;
     const wd = new Date(t).getUTCDay();
-    if (wd >= 1 && wd <= 5) n += wd === 3 ? 3 : 1;
+    if (wd >= 1 && wd <= 5) n += wd === tripleDay ? 3 : 1;
   }
   return n;
 }
@@ -89,8 +94,9 @@ export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, c
   const beAt = intent.breakevenR && intent.breakevenR > 0 ? entryPrice + (long ? 1 : -1) * intent.breakevenR * risk : NaN;
   const finish = (t: number, px: number, reason: TradeResult['exitReason']): TradeResult => {
     const gross = (long ? px - entryPrice : entryPrice - px) * intent.size * cost.contractSize;
-    const rate = (long ? cost.swapLong : cost.swapShort) ?? 0;
-    const nights = rate ? swapNights(entryBar.time, t) : 0;
+    const rate = ((long ? cost.swapLong : cost.swapShort) ?? 0)
+      + ((long ? cost.swapLongPct : cost.swapShortPct) ?? 0) * entryPrice * cost.contractSize;
+    const nights = rate ? swapNights(entryBar.time, t, cost.swapTripleDay ?? 3) : 0;
     const swap = rate * nights * intent.size;
     const pnl = gross - commission - swap;
     return {
