@@ -1,12 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SecHead, Seg } from '@/components/Status';
 import { IDEAL_DD_SHARE, RISK_LABEL, RISK_META, RISK_STATS } from '@/lib/core/risk-stats';
 
-/* Capital & lot risk calculator: scales the historical backtest of v1 XAU / v1 NAS / v1 BTC (in R) to the owner's capital and risk. */
+/* Capital & lot risk calculator: scales the historical backtest of v1 XAU / v1 NAS / v1 BTC / v1 ALT (in R) to the owner's capital and risk. */
 type Key = keyof typeof RISK_STATS;
 // Only the strategies the owner trades are offered (7 Nov 2026: "v1 XAU" = key v2, "v1 NAS" = key nas); the other stats stay in risk-stats.ts.
-const SHOWN: Key[] = ['v2', 'nas', 'btc'];
+const SHOWN: Key[] = ['v2', 'nas', 'btc', 'alt'];
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: n !== 0 && Math.abs(n) < 100 ? 2 : 0 })}`;
 const pc = (n: number) => `${(n * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
@@ -19,6 +19,7 @@ export function RiskCalculator() {
   const [val, setVal] = useState('0.5');
   const [go, setGo] = useState(false);
   const s = RISK_STATS[k], meta = RISK_META[k];
+  useEffect(() => { if (RISK_META[k].noLot && mode === 'lot') { setMode('pct'); setVal('0.5'); } }, [k, mode]);   // v1 ALT: many coins, no single lot size
   const modal = num(cap) / (unit === 'cent' ? 100 : 1);
   const v = num(val);
   // dollar risk per trade: percent of capital, or a fixed lot at the strategy's median SL distance
@@ -45,8 +46,8 @@ export function RiskCalculator() {
       <div className="grid two">
         <label className="field">Modal<input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
         <label className="field">Satuan modal<select value={unit} onChange={(e) => setUnit(e.target.value as 'usd' | 'cent')}><option value="usd">Dolar (USD)</option><option value="cent">Cent (akun cent)</option></select></label>
-        <label className="field">Hitung dari<select value={mode} onChange={(e) => { setMode(e.target.value as 'pct' | 'lot'); setVal(e.target.value === 'lot' ? String(minLot) : '0.5'); }}>
-          <option value="pct">Risiko % per trade</option><option value="lot">Lot tetap</option></select></label>
+        {meta.noLot ? null : <label className="field">Hitung dari<select value={mode} onChange={(e) => { setMode(e.target.value as 'pct' | 'lot'); setVal(e.target.value === 'lot' ? String(minLot) : '0.5'); }}>
+          <option value="pct">Risiko % per trade</option><option value="lot">Lot tetap</option></select></label>}
         <label className="field">{mode === 'pct' ? 'Risiko per trade (%)' : `Lot${unit === 'cent' ? ' (akun cent)' : ''}`}<input inputMode="decimal" value={val} onChange={(e) => setVal(e.target.value)} /></label>
         {mode === 'lot' && minLot > 0.01 ? <p className="mute small" style={{ gridColumn: '1 / -1' }}>Lot minimum {RISK_LABEL[k]} di {meta.broker ?? 'Exness'}: {minLot}</p> : null}
       </div>
@@ -58,7 +59,7 @@ export function RiskCalculator() {
           <div className="notice" style={{ background: status.bg, borderColor: 'transparent' }}>
             <strong className={status.c}>{status.t}</strong>
             <div className="small" style={{ marginTop: 4 }}>
-              Risiko <strong>{usd(r)}</strong>/trade{mode === 'pct' ? ` · lot ${lotAt(r) >= minLot ? `±${lotAt(r).toFixed(dp)}` : `< ${minLot.toFixed(dp).replace('.', ',')} (minimum broker)`}` : ''} · drawdown terburuk <strong>{pc(ddShare)}</strong> modal ({usd(-dd)})
+              Risiko <strong>{usd(r)}</strong>/trade{mode === 'pct' && !meta.noLot ? ` · lot ${lotAt(r) >= minLot ? `±${lotAt(r).toFixed(dp)}` : `< ${minLot.toFixed(dp).replace('.', ',')} (minimum broker)`}` : ''} · drawdown terburuk <strong>{pc(ddShare)}</strong> modal ({usd(-dd)})
             </div>
             <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', marginTop: 8, overflow: 'hidden' }}>
               <div style={{ width: `${bar * 100}%`, height: '100%', borderRadius: 3, transition: 'width .5s var(--ease)', background: ddShare <= IDEAL_DD_SHARE ? 'var(--up)' : ddShare < 0.7 ? 'var(--warn)' : 'var(--down)' }} />
@@ -67,7 +68,8 @@ export function RiskCalculator() {
 
           <div className="facts" style={{ marginTop: 0 }}>
             <div><span className="mute small">Risiko ideal per trade</span><strong>{usd(idealR)} ({pc(idealR / modal)})</strong></div>
-            <div><span className="mute small">Lot ideal (SL median {meta.unit === '$' ? `$${s.medianSl}` : `${s.medianSl} poin`})</span><strong>{lotTxt(lotAt(idealR))}</strong></div>
+            {meta.noLot ? <div><span className="mute small">SL median</span><strong>{s.medianSl}% harga (lot dihitung per koin)</strong></div>
+              : <div><span className="mute small">Lot ideal (SL median {meta.unit === '$' ? `$${s.medianSl}` : `${s.medianSl} poin`})</span><strong>{lotTxt(lotAt(idealR))}</strong></div>}
             <div><span className="mute small">Modal ideal untuk risiko ini</span><strong>{usd(idealModal)}</strong></div>
             <div><span className="mute small">Posisi terbuka maks (historis)</span><strong>{s.maxOpen} = {usd(s.maxOpen * r)}</strong></div>
           </div>

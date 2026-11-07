@@ -426,3 +426,15 @@ Syarat lolos: PF ≥ 1,15 di BTC **dan** ETH dan PF ≥ 1,05 di kedua paruh data
 - Profit terkumpul di tahun bull (2019–2021, 2024); 2022 (crash) −2/−3R; 2025–2026 ±impas. BTC dan ETH berkorelasi tinggi → bagi risiko.
 - Forex major: tidak ada konfigurasi yang lolos di ≥ 3 dari 5 pair; hanya USDJPY BUY (profit dari tahun yen melemah) — tidak dipakai.
 
+
+## 6d. v1 ALT — SELL di koin cepat & ramai, Binance Futures (7 Nov 2026)
+
+Pemilik ingin satu strategi untuk banyak koin, dengan filter koin "cepat & banyak trader" dulu. Data: 1h `data.binance.vision`
+untuk 448 koin USDT-M (termasuk delisting; daftar disusun manual karena fapi.binance.com menolak lokasi ini → koin baru bisa terlewat).
+- Filter harian (titik waktu, tanpa data masa depan): volume rata-rata 30 hari ≥ $100 jt/hari dan ATR14 D1 % ≥ median koin-koin itu (±21 koin/hari).
+- Di koin itu semua BUY rugi (PF 0,7–0,86 hampir tiap tahun). Terbaik: breakout volatilitas SELL — close 1h < open hari UTC − 0,5 × range kemarin
+  (sekali per hari per koin), SL level + 0,35 ATR14 D1, TP 2R. Portofolio maks 3 posisi, 1 per koin: 2.495 trade (30,6/bln) win 39% PF 1,23,
+  +4,4R/bln, DD 37R, rugi beruntun 26, untung setiap tahun 2020–2026, hold median 24 jam. Maks 5/10 posisi: PF 1,21/1,16, DD 70/99R.
+- Hasil riset (bukan mesin website; strategi multi-koin tidak bisa dijalankan dari file per-pair) → ringkasan tetap di
+  `src/lib/core/alt-result.json`, tampil di halaman Backtest (`AltResult`) dan kalkulator risiko (mode % saja). Belum dibedah.
+

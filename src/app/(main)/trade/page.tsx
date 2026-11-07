@@ -15,8 +15,9 @@ const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v2: { win: 0.342, perMonth: 5.0, label: 'v1 XAU' },   // + ±15% impas (BE)
   nas: { win: 0.431, perMonth: 5.6, label: 'v1 NAS' },  // website engine M30 2013–2026
   btc: { win: 0.412, perMonth: 3.0, label: 'v1 BTC' },  // website engine M30 2018–2026, Binance costs
+  alt: { win: 0.389, perMonth: 30.6, label: 'v1 ALT' },  // research portfolio (max 3 positions) 2020–2026
 };
-const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'v1 BTC', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
+const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'v1 BTC', alt: 'v1 ALT', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
@@ -70,7 +71,7 @@ export default function TradePage() {
   const signals = (d.events as any[]).map((e) => ({ e, s: liveSignalFrom(e.extra, e.price) })).filter((x) => x.s);
   const openT = j.trades.filter((t) => t.result === 'open');
   const closedT = j.trades.filter((t) => t.result !== 'open');
-  const stratOf = (label: string) => (/^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
+  const stratOf = (label: string) => (/^v1 ?alt/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
   return (
     <div className="stack">
@@ -90,7 +91,7 @@ export default function TradePage() {
           <SecHead title="Catat trade" />
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
             <div className="picker"><span className="label">Metode</span>
-              <Seg full label="Metode" options={(['v2', 'nas', 'btc', 'lain'] as const).map((s) => [s, NAME[s]] as const)} value={draft.strategy} onChange={(s) => setDraft({ ...draft, strategy: s })} /></div>
+              <Seg full label="Metode" options={(['v2', 'nas', 'btc', 'alt', 'lain'] as const).map((s) => [s, NAME[s]] as const)} value={draft.strategy} onChange={(s) => setDraft({ ...draft, strategy: s })} /></div>
             <div className="picker"><span className="label">Arah</span>
               <Seg full label="Arah" options={[['BUY', 'BUY'], ['SELL', 'SELL']] as const} value={draft.side} onChange={(s) => setDraft({ ...draft, side: s })} /></div>
           </div>
@@ -167,7 +168,7 @@ export default function TradePage() {
           <table className="num-r">
             <thead><tr><th>Metode</th><th>Selesai</th><th>Win</th><th>Win backtest</th><th>Hasil</th><th>Rata-rata</th></tr></thead>
             <tbody>
-              {(['v2', 'nas', 'btc', 'all'] as const).map((k) => {
+              {(['v2', 'nas', 'btc', 'alt', 'all'] as const).map((k) => {
                 const s = j.stats[k];
                 if (!s) return null;
                 return (
