@@ -2,7 +2,7 @@
  * Single-method strategies ("satu metode per versi"): each is ONE part of Breakout v0.8 on its own, with ONE slot
  * (at most one open position). Same trend filter family as v0.8. Shared by the server (registry/DB rows) and the UI (labels).
  */
-export interface MethodMeta { adapterKey: string; version: string; label: string; rules: string; params: Record<string, boolean>; /** own adapter (not a part of v0.8) */ custom?: boolean; /** base (entry) timeframe, default M15; scalping uses M1/M5 */ baseTf?: 'M1' | 'M5' | 'M15'; /** pairs selected by default in the backtest form */ pairs?: string[] }
+export interface MethodMeta { adapterKey: string; version: string; label: string; rules: string; params: Record<string, boolean>; /** own adapter (not a part of v0.8) */ custom?: boolean; /** base (entry) timeframe, default M15; scalping uses M1/M5 */ baseTf?: 'M1' | 'M5' | 'M15' | 'M30'; /** pairs selected by default in the backtest form */ pairs?: string[] }
 const OFF = { donchianH1: false, newYork: false, levelTouch: false, nH1: false, nH4: false, baseH4: false, baseH1: false };
 const TREND = 'BUY: H4 close > EMA50 > EMA200 & D1 close > EMA50 · SELL kebalikannya + EMA50 D1 < EMA200';
 const TREND_EMA = 'BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1';
@@ -39,7 +39,7 @@ METHODS.push({ adapterKey: 'metode_trendline_h4', version: 'trendline-h4-v1', la
 METHODS.push({ adapterKey: 'metode_asia_london', version: 'asia-london-v1', label: 'Asia → London', custom: true, params: {},
   rules: `Range Asia = candle M15 00:00–06:59 UTC · close M15 pertama keluar range antara 07:00–11:59 UTC (tiap arah sekali per hari) · SL sisi lain range ∓ 0,1×ATR M15, TP 2× jarak SL · ${TREND} · tanpa batas posisi · paling cocok: USDJPY` });
 // v1 NAS (nas.ts) — Nasdaq (US100) only, research 7 Nov 2026 (README 6b).
-METHODS.push({ adapterKey: 'metode_nas_donchian', version: 'nas-donchian-v1', label: 'v1 NAS', custom: true, params: {}, pairs: ['USATECHIDXUSD'],
+METHODS.push({ adapterKey: 'metode_nas_donchian', version: 'nas-donchian-v1', label: 'v1 NAS', custom: true, params: {}, pairs: ['USATECHIDXUSD'], baseTf: 'M30',
   rules: `US100: close H1 di atas high 20 candle H1 sebelumnya (BUY) / di bawah low 20 candle (SELL) · breakout lanjutan: breakout searah sebelumnya paling lama 2 candle H1 sebelumnya · entry hanya 10:00–16:00 waktu New York (bursa AS buka) · SL close ∓ 0,2×ATR D1, TP 2× jarak SL · ${TREND} · tanpa batas posisi` });
 export const methodByKey = (k: string) => METHODS.find((m) => m.adapterKey === k);
 export const methodByStrategy = (s: string) => METHODS.find((m) => `metode ${m.version}` === s);

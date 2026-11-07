@@ -6,13 +6,13 @@ import { atrLastEwm, emaLast } from './breakout';
  * v1 NAS · Donchian H1 20 breakout on US100 (research 7 Nov 2026, README 6b). Closed candles only, UTC data.
  *  BUY : an H1 candle CLOSES above the highest high of the 20 H1 candles before it, aturan 1 trend up
  *        (H4 close > EMA50 > EMA200 & D1 close > EMA50), AND the previous trend-aligned breakout of the same side happened at
- *        most 2 H1 candles earlier ("breakout lanjutan"), AND the entry (next M15 open = the H1 close) falls between
+ *        most 2 H1 candles earlier ("breakout lanjutan"), AND the entry (next base-candle open = the H1 close) falls between
  *        10:00 and 16:00 New York time (US cash session; DST handled).
  *  SELL: mirror (close below the 20-candle low, trend down incl. EMA50 D1 < EMA200 D1).
  *  SL = H1 close ∓ 0.2 × ATR14(D1, completed weekdays); TP = RR × risk (engine, 1:2); exits only at TP or SL; no position cap.
- *  Backtest 2013–2026 (M30, Exness USTEC costs): ±5.6 trades/month, win 46%, PF 1.52, +20R/yr, max DD 15R, 1 losing year.
+ *  Website base timeframe M30 (data from May 2013). Backtest 2013–2026 (M30, Exness USTEC costs): ±5.6 trades/month, win 46%, PF 1.52, +20R/yr, max DD 15R, 1 losing year.
  */
-const H1 = 3_600_000, M15 = 900_000;
+const H1 = 3_600_000;
 const N = 20, GAP = 2, SLK = 0.2, NY_FROM = 10, NY_TO = 16;
 const nyFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' });
 /** New York wall-clock hour (fractional) of a UTC timestamp. */
@@ -37,8 +37,8 @@ export const nasDonchianAdapter: StrategyAdapter = {
     const h1 = ctx.htf?.H1, h4 = ctx.htf?.H4, d1all = ctx.htf?.D1;
     if (!bar || !h1 || h1.length < N + 2 || !h4 || h4.length < 210 || !d1all?.length) return [];
     const k = h1.length - 1, last = h1[k];
-    // act only on the M15 candle that closes together with a new H1 candle
-    if (last.time + H1 !== bar.time + M15) return [];
+    // act only on the base candle (M15 or M30) that closes together with a new H1 candle
+    if (last.time + H1 !== ctx.now) return [];
     const st = ctx.state as St;
     if (st.lastH1 === last.time) return [];
     st.lastH1 = last.time;
@@ -62,7 +62,7 @@ export const nasDonchianAdapter: StrategyAdapter = {
     let hh = -Infinity, ll = Infinity;
     for (let x = k - N; x < k; x++) { if (h1[x].high > hh) hh = h1[x].high; if (h1[x].low < ll) ll = h1[x].low; }
     const lastSig = (st.last ??= {});
-    const entryTime = bar.time + M15, nyh = nyHour(entryTime);
+    const entryTime = ctx.now, nyh = nyHour(entryTime);   // entry = next base candle open = the H1 close
     const out: StrategyEventDraft[] = [];
     for (const side of [1, -1] as const) {
       if (!(side > 0 ? last.close > hh : last.close < ll)) continue;
