@@ -201,10 +201,11 @@ export default function TradePage() {
       <section className="group">
         <SecHead title="Riwayat" meta={`${closedT.length} total`} />
         {closedT.length ? <>
-          <div className="row">
+          {/* up to 10 trades: shown directly; more: hidden behind the button like the backtest list */}
+          {closedT.length > 10 ? <div className="row">
             <button className="btn sm" onClick={() => setShowHist((v) => !v)}>{showHist ? 'Sembunyikan trade' : `Tampilkan trade (${closedT.length})`}</button>
-          </div>
-          {showHist ? <>
+          </div> : null}
+          {showHist || closedT.length <= 10 ? <>
             <div className="list" style={{ marginTop: 8 }}>
               {closedT.slice(0, histLimit).map((t) => (
                 <button key={t.id} className="item btnrow" onClick={() => setDetail(t)}>
