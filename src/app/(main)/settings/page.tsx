@@ -221,7 +221,7 @@ function EaSetup({ tz }: { tz: string }) {
         <a className="btn sm primary" href="/bot/snr_bot.py" download>Unduh bot v1 SNR Binance (snr_bot.py)</a>
         <a className="btn sm" href="/ea/XAU_v2_EA_DIAGNOSTIK.mq5" download>Unduh EA Diagnostik (MT5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
-        <button className="btn sm" onClick={async () => { try { const r = await call<any>('/api/ea/test', { method: 'POST' }); toast(r.sent?.every((x: string) => x === 'sent') ? 'Contoh pesan bot terkirim ke Telegram' : `Telegram: ${(r.sent ?? []).join(', ')}`); } catch (e) { setErr((e as Error).message); } }}>Tes pesan bot di Telegram</button>
+        <button className="btn sm" onClick={async () => { try { const r = await call<any>('/api/ea/test', { method: 'POST' }); toast(r.sent?.every((x: string) => x === 'sent') ? 'Contoh pesan bot terkirim ke Telegram + 1 trade TES di jurnal (Trade → Crypto)' : `Telegram: ${(r.sent ?? []).join(', ')}`); } catch (e) { setErr((e as Error).message); } }}>Tes pesan bot di Telegram</button>
       </div>
       {key ? <div className="notice warn stack tight"><strong>Kunci EA — salin sekarang, hanya ditampilkan sekali</strong>
         <div className="copyable"><span className="val">{key}</span><CopyButton text={key} done="Kunci EA tersalin" /></div></div> : null}

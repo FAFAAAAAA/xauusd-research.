@@ -125,7 +125,7 @@ export function snrMessage(t: JournalTrade, symbol: string, event: 'open' | 'clo
       `Harga   ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `Durasi  ${dur((t.closedAt ?? now) - t.openedAt)}`, '', `🕐 ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
 }
 
-/** Sends sample bot messages (open, close at TP, info) to Telegram so the owner can see the layout. Nothing is written to the journal. */
+/** Sends sample bot messages (open, close at TP, info) to Telegram and adds one TEST trade (closed at TP) to the journal. */
 export async function sendBotTest(db: Db, opts: { fetchImpl?: FetchLike; now?: number } = {}): Promise<{ sent: string[] }> {
   const now = opts.now ?? Date.now();
   const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
@@ -133,6 +133,11 @@ export async function sendBotTest(db: Db, opts: { fetchImpl?: FetchLike; now?: n
     closedAt: now, exit: 0.2211, result: 'tp', pnl: 7.95, note: 'Bot Binance SANDUSDT' };
   const msgs = [snrMessage({ ...t, result: 'open', exit: null, closedAt: null, pnl: null }, 'SANDUSDT', 'open', tz, now), snrMessage(t, 'SANDUSDT', 'close', tz, now),
     `ℹ️ <b>Bot v1 SNR</b>\n\nRingkasan 08:00 (waktu Korea) — bot aktif.\nSaldo Futures: 207.95 USDT\nSejak ringkasan terakhir: 1 trade selesai (TP 1, SL 0), hasil +7.95 USDT\nPosisi terbuka: tidak ada`];
+  // a TEST row in the journal (closed at TP) so the owner can see how bot trades look there; deletable like any trade
+  const all = await repo.getAppSetting<JournalTrade[]>(db, 'live_journal', []);
+  const list = Array.isArray(all) ? all : [];
+  list.push({ ...t, id: `ea-TEST-${now}`, note: 'Bot Binance SANDUSDT (TES — boleh dihapus)' });
+  await repo.setAppSetting(db, 'live_journal', list.slice(-3000));
   const sent: string[] = [];
   for (const [i, text] of msgs.entries()) {
     const r = await sendTelegram(db, { deliveryKey: `ea:test:${now}:${i}`, mode: 'LIVE', text: `🧪 <i>CONTOH (tes)</i>\n${text}` }, { fetchImpl: opts.fetchImpl });
