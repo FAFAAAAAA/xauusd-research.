@@ -208,6 +208,9 @@ class Bot:
         except RuntimeError: rows = self.api.get('/fapi/v2/positionRisk', signed=True)
         return {r['symbol']: float(r['positionAmt']) for r in rows if float(r['positionAmt']) != 0}
 
+    def positions_mode_hedge(self):
+        return bool(self.api.get('/fapi/v1/positionSide/dual', signed=True).get('dualSidePosition'))
+
     def balance(self):
         for b in self.api.get('/fapi/v2/balance', signed=True):
             if b['asset'] == 'USDT': return float(b['balance'])
@@ -304,6 +307,14 @@ class Bot:
 
     def run(self):
         self.api.sync_time(); self.load_symbols()
+        if self.cfg['api_key']:
+            try:
+                log.info('API key OK — saldo USDT di dompet Futures: %.2f', self.balance())
+                if self.positions_mode_hedge(): log.error('Akun memakai Hedge Mode. Ubah ke One-way Mode di Binance Futures (Pengaturan → Mode Posisi), lalu jalankan lagi.'); return
+            except RuntimeError as e:
+                log.error('API key belum bisa dipakai: %s', e)
+                log.error('Cek: izin "Aktifkan Futures" dicentang, IP VPS sudah ditambahkan, api_key/api_secret tersalin lengkap, testnet sesuai akun.')
+                return
         log.info('Mode: %s · risiko %s · maks %d posisi · leverage %dx', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'], self.cfg['leverage'])
         last_sync = time.time()
