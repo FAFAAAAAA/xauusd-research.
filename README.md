@@ -470,3 +470,9 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
   54 koin untung yang masih aktif (≥ $5 jt/hari) ditambahkan sebagai data 30m. Koin lain tetap ada.
 - Mesin website (6 koin contoh): PF 1,13 vs riset 1,22 (riset membuka trade untuk tiap support yang jebol di candle yang sama; website 1).
 
+- Koreksi (7 Nov 2026): hasil portofolio bergantung pada koin mana yang diambil saat banyak sinyal muncul bersamaan. Dengan urutan acak
+  (25 kali): v1 SNR maks 3 → PF 1,32–1,39 (median 1,34), total $8,0–9,9 rb (risiko $10), DD 45–81× (median 51×), tidak ada tahun rugi;
+  maks 2 → PF 1,36, DD 39×. v2 ALT maks 3 → PF 1,64–1,74, DD 33–43×. Kalkulator risiko memakai run dengan total median.
+- Funding rate (data.binance.vision, semua koin): SELL tembus low 24 jam makin bagus saat funding > 0,01% (PF 1,7–1,9 vs 0,76 saat negatif),
+  tapi sebagai portofolio maks 3 hanya PF 1,13 (untung dari kejadian likuidasi massal). Filter/prioritas funding tidak memperbaiki v1 SNR.
+

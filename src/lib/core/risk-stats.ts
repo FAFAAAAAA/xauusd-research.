@@ -13,10 +13,11 @@ export interface RiskStats {
 export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3' | 'nas' | 'btc' | 'alt' | 'snr', RiskStats> = {
   // v1 SNR (Binance Futures altcoins, support break SELL, metode snr-sell-v1): research portfolio max 3 open positions, 1 per coin,
   // 440 liquid coins, 1h Binance data 2020 – 6 Nov 2026, fee+slippage 0.12%. medianSl / p25Sl / p75Sl = SL in % of price. 7 Nov 2026.
-  "snr": {"trades": 4328, "years": 6.7, "perMonth": 53.74, "winRate": 0.4323, "avgR": 0.247, "perMonthR": 13.272, "maxDdR": 40.7, "maxLossStreak": 23, "worstMonthR": -23.3, "bestMonthR": 194.6, "negMonthsPct": 0.378, "worstYearR": 69.4, "worst12mR": 36.2, "maxOpen": 3, "medianSl": 2.79, "p25Sl": 1.88, "p75Sl": 4.28},
+  // Simultaneous signals are taken in RANDOM order (25 runs; this is the run with the median total) — the result depends on which coin is taken.
+  "snr": {"trades": 4229, "years": 6.7, "perMonth": 52.51, "winRate": 0.42, "avgR": 0.2095, "perMonthR": 11.003, "maxDdR": 66.7, "maxLossStreak": 22, "worstMonthR": -21.6, "bestMonthR": 169.8, "negMonthsPct": 0.39, "worstYearR": 37.7, "worst12mR": 5.7, "maxOpen": 3, "medianSl": 2.79, "p25Sl": 1.88, "p75Sl": 4.28},
   // v2 ALT (Binance Futures, deep breakdown SELL on every liquid coin, metode alt-breakdown-v1): research portfolio max 3 open positions,
   // 1 per coin, 1h Binance data Jan 2020 – Nov 2026, fee+slippage 0.12% round turn. medianSl / p25Sl / p75Sl = SL in % of price. 7 Nov 2026.
-  "alt": {"trades": 1426, "years": 6.7, "perMonth": 17.77, "winRate": 0.467, "avgR": 0.3712, "perMonthR": 6.596, "maxDdR": 35.3, "maxLossStreak": 22, "worstMonthR": -11.7, "bestMonthR": 141.3, "negMonthsPct": 0.402, "worstYearR": 11.8, "worst12mR": -12.0, "maxOpen": 3, "medianSl": 4.5, "p25Sl": 3.14, "p75Sl": 6.73},
+  "alt": {"trades": 1443, "years": 6.7, "perMonth": 17.98, "winRate": 0.4699, "avgR": 0.3797, "perMonthR": 6.827, "maxDdR": 36.6, "maxLossStreak": 26, "worstMonthR": -12.6, "bestMonthR": 138.4, "negMonthsPct": 0.39, "worstYearR": 12.8, "worst12mR": -15.1, "maxOpen": 3, "medianSl": 4.5, "p25Sl": 3.14, "p75Sl": 6.73},
   // v1 BTC (Binance BTCUSDT futures, metode crypto-donchian-v1): website engine on M30 Feb 2018–Oct 2026 with Binance costs (fee 0.05%/side
   // + slippage = 0.12% round turn, funding 0.03%/day for BUY), RR 1:2, generated 7 Nov 2026. medianSl / p25Sl / p75Sl in USD of BTC price:
   // SL as a % of the price over the LAST 12 MONTHS × the last price (77,254). "Lot" = BTC quantity (Binance minimum 0.001 BTC).

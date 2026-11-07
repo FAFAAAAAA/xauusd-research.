@@ -18,7 +18,7 @@ const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   nas: { win: 0.431, perMonth: 5.6, label: 'v1 NAS' },  // website engine M30 2013–2026
   btc: { win: 0.412, perMonth: 3.0, label: 'v1 BTC' },  // website engine M30 2018–2026, Binance costs
   alt: { win: 0.467, perMonth: 17.8, label: 'v2 ALT' },  // research portfolio (max 3 positions) 2020–2026
-  snr: { win: 0.432, perMonth: 53.7, label: 'v1 SNR' },  // research portfolio (max 3 positions) 2020–2026
+  snr: { win: 0.42, perMonth: 52.5, label: 'v1 SNR' },  // research portfolio (max 3 positions) 2020–2026
 };
 const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'v1 BTC', alt: 'v2 ALT', snr: 'v1 SNR', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
