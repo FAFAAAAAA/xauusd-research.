@@ -451,5 +451,432 @@
   "first": 1577836800000,
   "last": 1794007800000,
   "candles": 120048
+ },
+ "LTCUSDT_M30": {
+  "symbol": "LTCUSDT",
+  "tf": "M30",
+  "first": 1578556800000,
+  "last": 1794007800000,
+  "candles": 119408
+ },
+ "ACEUSDT_M30": {
+  "symbol": "ACEUSDT",
+  "tf": "M30",
+  "first": 1702893600000,
+  "last": 1794007800000,
+  "candles": 50572
+ },
+ "LITUSDT_M30": {
+  "symbol": "LITUSDT",
+  "tf": "M30",
+  "first": 1613631600000,
+  "last": 1794007800000,
+  "candles": 99887
+ },
+ "STRKUSDT_M30": {
+  "symbol": "STRKUSDT",
+  "tf": "M30",
+  "first": 1708448400000,
+  "last": 1794007800000,
+  "candles": 47486
+ },
+ "XLMUSDT_M30": {
+  "symbol": "XLMUSDT",
+  "tf": "M30",
+  "first": 1579507200000,
+  "last": 1794007800000,
+  "candles": 118880
+ },
+ "PENGUUSDT_M30": {
+  "symbol": "PENGUUSDT",
+  "tf": "M30",
+  "first": 1734451200000,
+  "last": 1794007800000,
+  "candles": 33040
+ },
+ "DASHUSDT_M30": {
+  "symbol": "DASHUSDT",
+  "tf": "M30",
+  "first": 1580803200000,
+  "last": 1794007800000,
+  "candles": 118400
+ },
+ "INJUSDT_M30": {
+  "symbol": "INJUSDT",
+  "tf": "M30",
+  "first": 1660703400000,
+  "last": 1794007800000,
+  "candles": 74011
+ },
+ "DOTUSDT_M30": {
+  "symbol": "DOTUSDT",
+  "tf": "M30",
+  "first": 1598079600000,
+  "last": 1794007800000,
+  "candles": 108802
+ },
+ "ASTERUSDT_M30": {
+  "symbol": "ASTERUSDT",
+  "tf": "M30",
+  "first": 1758283200000,
+  "last": 1794007800000,
+  "candles": 19800
+ },
+ "SANDUSDT_M30": {
+  "symbol": "SANDUSDT",
+  "tf": "M30",
+  "first": 1611558000000,
+  "last": 1794007800000,
+  "candles": 101074
+ },
+ "XMRUSDT_M30": {
+  "symbol": "XMRUSDT",
+  "tf": "M30",
+  "first": 1580716800000,
+  "last": 1794007800000,
+  "candles": 118448
+ },
+ "ONEUSDT_M30": {
+  "symbol": "ONEUSDT",
+  "tf": "M30",
+  "first": 1616050800000,
+  "last": 1794007800000,
+  "candles": 98578
+ },
+ "HBARUSDT_M30": {
+  "symbol": "HBARUSDT",
+  "tf": "M30",
+  "first": 1615964400000,
+  "last": 1794007800000,
+  "candles": 98626
+ },
+ "ONGUSDT_M30": {
+  "symbol": "ONGUSDT",
+  "tf": "M30",
+  "first": 1701090000000,
+  "last": 1794007800000,
+  "candles": 51574
+ },
+ "MOVRUSDT_M30": {
+  "symbol": "MOVRUSDT",
+  "tf": "M30",
+  "first": 1703593800000,
+  "last": 1794007800000,
+  "candles": 50183
+ },
+ "PROMUSDT_M30": {
+  "symbol": "PROMUSDT",
+  "tf": "M30",
+  "first": 1736944200000,
+  "last": 1794007800000,
+  "candles": 31655
+ },
+ "XPLUSDT_M30": {
+  "symbol": "XPLUSDT",
+  "tf": "M30",
+  "first": 1755855000000,
+  "last": 1794007800000,
+  "candles": 21149
+ },
+ "1000SHIBUSDT_M30": {
+  "symbol": "1000SHIBUSDT",
+  "tf": "M30",
+  "first": 1620667800000,
+  "last": 1794007800000,
+  "candles": 96253
+ },
+ "COTIUSDT_M30": {
+  "symbol": "COTIUSDT",
+  "tf": "M30",
+  "first": 1615359600000,
+  "last": 1794007800000,
+  "candles": 99202
+ },
+ "TIAUSDT_M30": {
+  "symbol": "TIAUSDT",
+  "tf": "M30",
+  "first": 1698775200000,
+  "last": 1794007800000,
+  "candles": 52860
+ },
+ "VVVUSDT_M30": {
+  "symbol": "VVVUSDT",
+  "tf": "M30",
+  "first": 1738137600000,
+  "last": 1794007800000,
+  "candles": 30992
+ },
+ "APTUSDT_M30": {
+  "symbol": "APTUSDT",
+  "tf": "M30",
+  "first": 1666144800000,
+  "last": 1794007800000,
+  "candles": 70988
+ },
+ "TRXUSDT_M30": {
+  "symbol": "TRXUSDT",
+  "tf": "M30",
+  "first": 1579075200000,
+  "last": 1794007800000,
+  "candles": 119120
+ },
+ "DEXEUSDT_M30": {
+  "symbol": "DEXEUSDT",
+  "tf": "M30",
+  "first": 1735039800000,
+  "last": 1794007800000,
+  "candles": 32713
+ },
+ "MUBARAKUSDT_M30": {
+  "symbol": "MUBARAKUSDT",
+  "tf": "M30",
+  "first": 1742218200000,
+  "last": 1794007800000,
+  "candles": 28725
+ },
+ "HEMIUSDT_M30": {
+  "symbol": "HEMIUSDT",
+  "tf": "M30",
+  "first": 1756441800000,
+  "last": 1794007800000,
+  "candles": 20823
+ },
+ "ZROUSDT_M30": {
+  "symbol": "ZROUSDT",
+  "tf": "M30",
+  "first": 1718893800000,
+  "last": 1794007800000,
+  "candles": 41683
+ },
+ "RLCUSDT_M30": {
+  "symbol": "RLCUSDT",
+  "tf": "M30",
+  "first": 1596178800000,
+  "last": 1794007800000,
+  "candles": 109618
+ },
+ "IOSTUSDT_M30": {
+  "symbol": "IOSTUSDT",
+  "tf": "M30",
+  "first": 1582272000000,
+  "last": 1794007800000,
+  "candles": 117584
+ },
+ "OPUSDT_M30": {
+  "symbol": "OPUSDT",
+  "tf": "M30",
+  "first": 1654092000000,
+  "last": 1794007800000,
+  "candles": 77684
+ },
+ "BICOUSDT_M30": {
+  "symbol": "BICOUSDT",
+  "tf": "M30",
+  "first": 1695904200000,
+  "last": 1794007800000,
+  "candles": 54455
+ },
+ "CRVUSDT_M30": {
+  "symbol": "CRVUSDT",
+  "tf": "M30",
+  "first": 1598943600000,
+  "last": 1794007800000,
+  "candles": 108322
+ },
+ "FARTCOINUSDT_M30": {
+  "symbol": "FARTCOINUSDT",
+  "tf": "M30",
+  "first": 1734719400000,
+  "last": 1794007800000,
+  "candles": 32891
+ },
+ "NILUSDT_M30": {
+  "symbol": "NILUSDT",
+  "tf": "M30",
+  "first": 1742821200000,
+  "last": 1794007800000,
+  "candles": 28390
+ },
+ "ETCUSDT_M30": {
+  "symbol": "ETCUSDT",
+  "tf": "M30",
+  "first": 1579161600000,
+  "last": 1794007800000,
+  "candles": 119312
+ },
+ "GTCUSDT_M30": {
+  "symbol": "GTCUSDT",
+  "tf": "M30",
+  "first": 1623382200000,
+  "last": 1794007800000,
+  "candles": 94505
+ },
+ "KAITOUSDT_M30": {
+  "symbol": "KAITOUSDT",
+  "tf": "M30",
+  "first": 1740056400000,
+  "last": 1794007800000,
+  "candles": 29926
+ },
+ "ETHFIUSDT_M30": {
+  "symbol": "ETHFIUSDT",
+  "tf": "M30",
+  "first": 1710775800000,
+  "last": 1794007800000,
+  "candles": 46193
+ },
+ "ICPUSDT_M30": {
+  "symbol": "ICPUSDT",
+  "tf": "M30",
+  "first": 1620702000000,
+  "last": 1794007800000,
+  "candles": 94981
+ },
+ "WLFIUSDT_M30": {
+  "symbol": "WLFIUSDT",
+  "tf": "M30",
+  "first": 1755937800000,
+  "last": 1794007800000,
+  "candles": 21103
+ },
+ "1000BONKUSDT_M30": {
+  "symbol": "1000BONKUSDT",
+  "tf": "M30",
+  "first": 1700661600000,
+  "last": 1794007800000,
+  "candles": 51812
+ },
+ "HOMEUSDT_M30": {
+  "symbol": "HOMEUSDT",
+  "tf": "M30",
+  "first": 1749555000000,
+  "last": 1794007800000,
+  "candles": 24649
+ },
+ "VIRTUALUSDT_M30": {
+  "symbol": "VIRTUALUSDT",
+  "tf": "M30",
+  "first": 1733833800000,
+  "last": 1794007800000,
+  "candles": 33383
+ },
+ "AGTUSDT_M30": {
+  "symbol": "AGTUSDT",
+  "tf": "M30",
+  "first": 1747737000000,
+  "last": 1794007800000,
+  "candles": 25659
+ },
+ "BOMEUSDT_M30": {
+  "symbol": "BOMEUSDT",
+  "tf": "M30",
+  "first": 1710592200000,
+  "last": 1794007800000,
+  "candles": 46295
+ },
+ "BMTUSDT_M30": {
+  "symbol": "BMTUSDT",
+  "tf": "M30",
+  "first": 1742218200000,
+  "last": 1794007800000,
+  "candles": 28725
+ },
+ "MAGICUSDT_M30": {
+  "symbol": "MAGICUSDT",
+  "tf": "M30",
+  "first": 1674615600000,
+  "last": 1794007800000,
+  "candles": 66282
+ },
+ "SOPHUSDT_M30": {
+  "symbol": "SOPHUSDT",
+  "tf": "M30",
+  "first": 1748437200000,
+  "last": 1794007800000,
+  "candles": 25270
+ },
+ "GUSDT_M30": {
+  "symbol": "GUSDT",
+  "tf": "M30",
+  "first": 1723725000000,
+  "last": 1794007800000,
+  "candles": 38999
+ },
+ "WIFUSDT_M30": {
+  "symbol": "WIFUSDT",
+  "tf": "M30",
+  "first": 1705586400000,
+  "last": 1794007800000,
+  "candles": 49076
+ },
+ "SAGAUSDT_M30": {
+  "symbol": "SAGAUSDT",
+  "tf": "M30",
+  "first": 1712658600000,
+  "last": 1794007800000,
+  "candles": 45147
+ },
+ "ATOMUSDT_M30": {
+  "symbol": "ATOMUSDT",
+  "tf": "M30",
+  "first": 1581076800000,
+  "last": 1794007800000,
+  "candles": 118248
+ },
+ "LDOUSDT_M30": {
+  "symbol": "LDOUSDT",
+  "tf": "M30",
+  "first": 1663848000000,
+  "last": 1794007800000,
+  "candles": 72264
+ },
+ "GPSUSDT_M30": {
+  "symbol": "GPSUSDT",
+  "tf": "M30",
+  "first": 1739811600000,
+  "last": 1794007800000,
+  "candles": 30062
+ },
+ "AEROUSDT_M30": {
+  "symbol": "AEROUSDT",
+  "tf": "M30",
+  "first": 1733320800000,
+  "last": 1794007800000,
+  "candles": 33668
+ },
+ "JUPUSDT_M30": {
+  "symbol": "JUPUSDT",
+  "tf": "M30",
+  "first": 1706725800000,
+  "last": 1794007800000,
+  "candles": 48443
+ },
+ "1000RATSUSDT_M30": {
+  "symbol": "1000RATSUSDT",
+  "tf": "M30",
+  "first": 1702648800000,
+  "last": 1794007800000,
+  "candles": 50708
+ },
+ "POLUSDT_M30": {
+  "symbol": "POLUSDT",
+  "tf": "M30",
+  "first": 1726228800000,
+  "last": 1794007800000,
+  "candles": 37608
+ },
+ "SEIUSDT_M30": {
+  "symbol": "SEIUSDT",
+  "tf": "M30",
+  "first": 1692239400000,
+  "last": 1794007800000,
+  "candles": 56491
+ },
+ "SYNUSDT_M30": {
+  "symbol": "SYNUSDT",
+  "tf": "M30",
+  "first": 1723811400000,
+  "last": 1794007800000,
+  "candles": 38951
  }
 }
