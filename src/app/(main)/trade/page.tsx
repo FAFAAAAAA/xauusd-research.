@@ -168,6 +168,7 @@ export default function TradePage() {
             <tbody>
               {(['v2', 'nas', 'all'] as const).map((k) => {
                 const s = j.stats[k];
+                if (!s) return null;
                 return (
                   <tr key={k} className={k === 'all' ? 'total' : undefined}>
                     <td>{NAME[k] ?? k}</td><td>{s.closed}</td>
