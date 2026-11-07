@@ -53,5 +53,6 @@ export function fmt(ms: number | null | undefined, tz: string, seconds = false) 
 export function tzShort(tz: string) {
   return tz === 'America/New_York' ? 'New York' : tz === 'Asia/Seoul' ? 'Seoul' : 'UTC';
 }
-export const px = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? n.toFixed(2) : n == null ? '—' : String(n));
+// price: 2 decimals from 100 up (gold, indices), 4 from 1 (forex, mid coins), 5 significant digits below 1 (small coins)
+export const px = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? (Math.abs(n) >= 100 ? n.toFixed(2) : Math.abs(n) >= 1 ? n.toFixed(4) : n.toPrecision(5)) : n == null ? '—' : String(n));
 export const pct = (n: number | null | undefined) => (n == null ? '—' : `${(n * 100).toFixed(1)}%`);

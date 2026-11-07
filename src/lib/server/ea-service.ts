@@ -95,13 +95,25 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (tg.live_enabled) {
     const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
     const t = trade;
-    const text = event === 'open'
+    // Binance bot (v1 SNR): own layout — coin, % distance of SL/TP, risk in USDT, result in R and duration
+    const pctOf = (x: number) => `${x >= t.entry ? '+' : '−'}${(Math.abs(x / t.entry - 1) * 100).toFixed(2)}%`;
+    const riskUsd = Math.abs(t.entry - t.sl) * t.lot;
+    const dur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}h ${Math.floor((m % 1440) / 60)}j` : `${Math.floor(m / 60)}j ${m % 60}m`; };
+    const coin = escapeHtml(symbol.replace(/USDT$/, '') || 'koin');
+    const snrText = event === 'open'
+      ? [`${t.side === 'SELL' ? '🔴' : '🟢'} <b>${t.side} ${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
+        `Entry   <code>${fp(t.entry)}</code>`, `SL      <code>${fp(t.sl)}</code>  (${pctOf(t.sl)})`, `TP      <code>${fp(t.tp)}</code>  (${pctOf(t.tp)})`,
+        `Risiko  <b>${riskUsd.toFixed(2)} USDT</b> · ${t.lot} ${coin}`, '', `🕐 ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
+      : [`${t.result === 'tp' ? '✅ <b>TP</b>' : t.result === 'sl' ? '❌ <b>SL</b>' : '⚪ <b>Ditutup manual</b>'} · <b>${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
+        `Hasil   <b>${(t.pnl ?? 0) >= 0 ? '+' : '−'}${Math.abs(t.pnl ?? 0).toFixed(2)} USDT</b>${riskUsd > 0 ? `  (${(t.pnl ?? 0) >= 0 ? '+' : '−'}${(Math.abs(t.pnl ?? 0) / riskUsd).toFixed(1)}R)` : ''}`,
+        `Harga   ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `Durasi  ${dur((t.closedAt ?? now) - t.openedAt)}`, '', `🕐 ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
+    const text = strat === 'snr' ? snrText : event === 'open'
       ? [`🤖 <b>${escapeHtml(who)} — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${fp(t.entry)}</code>`, `<b>SL:</b> <code>${fp(t.sl)}</code>`, `<b>TP:</b> <code>${fp(t.tp)}</code>`, `<b>${strat === 'snr' ? 'Jumlah' : 'Lot'}:</b> <code>${strat === 'snr' ? String(t.lot) : t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
       : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>${escapeHtml(who)} — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
         `<b>Entry → keluar:</b> ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
-    const copy = event === 'open' ? [{ text: 'Salin entry', value: fp(t.entry) }, { text: 'Salin SL', value: fp(t.sl) }, { text: 'Salin TP', value: fp(t.tp) }] : undefined;
+    const copy = event === 'open' && strat !== 'snr' ? [{ text: 'Salin entry', value: fp(t.entry) }, { text: 'Salin SL', value: fp(t.sl) }, { text: 'Salin TP', value: fp(t.tp) }] : undefined;
     const r = await sendTelegram(db, { deliveryKey: `ea:${event}:${ticket}`, mode: 'LIVE', text, copy }, { fetchImpl: opts.fetchImpl });
     telegram = r.status;
   }

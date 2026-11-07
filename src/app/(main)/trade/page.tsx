@@ -148,7 +148,7 @@ export default function TradePage() {
             {openT.map((t) => (
               <div key={t.id} className={`trow${busyId === t.id ? ' refreshing' : ''}`}>
                 <div className="top">
-                  <span><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span><span className="t">{NAME[t.strategy] ?? t.strategy} · {t.lot.toFixed(2)} lot</span></span>
+                  <span><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span><span className="t">{NAME[t.strategy] ?? t.strategy} · {['btc', 'alt', 'snr'].includes(t.strategy) ? `${t.note.replace(/^Bot Binance ?/, '') || 'koin'} · ${t.lot}` : `${t.lot.toFixed(2)} lot`}</span></span>
                   <span className="mute small">{fmt(t.openedAt, tz)}</span>
                 </div>
                 <div className="levels" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>

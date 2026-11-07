@@ -18,6 +18,7 @@ Background + autostart (Windows):   python snr_bot.py --install    start now and
                                     python snr_bot.py --status     last lines of the log
                                     python snr_bot.py --stop       stop the background bot (until --install again)
                                     python snr_bot.py --uninstall  stop and remove the autostart
+                                    python snr_bot.py --test       send a test trade + message to the website journal / Telegram
 """
 import hashlib, hmac, json, logging, math, os, random, socket, subprocess, sys, time, urllib.parse
 from datetime import datetime, timezone
@@ -428,6 +429,14 @@ def command(cmd):
         open(STOP_FILE, 'w').close(); schtasks('/end', '/tn', TASK)
         code, out = schtasks('/delete', '/tn', TASK, '/f')
         print('Autostart dihapus, bot berhenti.' if code == 0 else out)
+    elif cmd == '--test':
+        cfg = load_config()
+        if not cfg['report_key']: sys.exit('report_key kosong di snr_bot_config.json')
+        t = int(time.time()); tk = f'TEST-{t}'
+        report(cfg, {'event': 'open', 'ticket': tk, 'symbol': 'TESTUSDT', 'side': 'SELL', 'price': 1.2345, 'sl': 1.2716, 'tp': 1.1603, 'lot': 107.8, 'time': t - 7 * 3600})
+        report(cfg, {'event': 'close', 'ticket': tk, 'symbol': 'TESTUSDT', 'side': 'SELL', 'price': 1.1603, 'profit': 7.86, 'reason': 'tp', 'lot': 107.8, 'time': t})
+        notify(cfg, 'Pesan tes — kalau ini sampai, laporan bot ke Telegram berfungsi.')
+        print('3 pesan tes dikirim (posisi TEST dibuka, ditutup TP, dan info). Hapus trade TEST di jurnal website (Trade -> Crypto) bila sudah dilihat.')
     elif cmd == '--status':
         try:
             with open(LOG_FILE, encoding='utf-8') as f: lines = f.readlines()[-15:]
@@ -435,7 +444,7 @@ def command(cmd):
         except FileNotFoundError: print('Belum ada log.')
         print('stop.flag ada -> bot dihentikan' if os.path.exists(STOP_FILE) else '')
     else:
-        sys.exit('Perintah: --install, --status, --stop, --uninstall')
+        sys.exit('Perintah: --install, --status, --stop, --uninstall, --test')
 
 
 if __name__ == '__main__':
