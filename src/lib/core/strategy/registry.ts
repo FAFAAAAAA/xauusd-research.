@@ -15,6 +15,7 @@ import { volBreakAdapter } from './volbreak';
 import { bosH1Adapter } from './bosh1';
 import { asiaLondonAdapter, trendlineH4Adapter } from './pairs';
 import { nasDonchianAdapter } from './nas';
+import { cryptoDonchianAdapter } from './crypto';
 
 /**
  * Placeholder for the owner's SNR strategy. It is intentionally empty:
@@ -92,6 +93,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [trendlineH4Adapter.key]: trendlineH4Adapter,
   [asiaLondonAdapter.key]: asiaLondonAdapter,
   [nasDonchianAdapter.key]: nasDonchianAdapter,
+  [cryptoDonchianAdapter.key]: cryptoDonchianAdapter,
   [snrSndAdapter.key]: snrSndAdapter,
   [customAdapter.key]: customAdapter,
   [snrSnd2Adapter.key]: snrSnd2Adapter,

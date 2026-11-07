@@ -11,6 +11,8 @@ export interface InstrumentSpec {
   contractSize: number; usdBase: boolean; spread: number; slippage: number; commission: number;
   /** swap as a fraction of the price per night (BUY / SELL) and the UTC weekday charged 3× (index CFDs) */
   swapLongPct?: number; swapShortPct?: number; swapTripleDay?: number;
+  /** round-turn fee as a fraction of the notional (crypto exchanges) */
+  commissionPct?: number;
 }
 
 export const INSTRUMENTS: InstrumentSpec[] = [
@@ -26,8 +28,13 @@ export const INSTRUMENTS: InstrumentSpec[] = [
   { symbol: 'USATECHIDXUSD', label: 'US100 (Nasdaq)', group: 'Indeks', digits: 3, contractSize: 1, usdBase: false, spread: 1.5, slippage: 0.5, commission: 0.626,
     swapLongPct: 6.193 / 28420, swapShortPct: 0, swapTripleDay: 5 },
   { symbol: 'USA30IDXUSD', label: 'US30 (Dow Jones)', group: 'Indeks', digits: 3, contractSize: 1, usdBase: false, spread: 3, slippage: 1, commission: 0 },
-  { symbol: 'BTCUSD', label: 'BTCUSD', group: 'Kripto', digits: 1, contractSize: 1, usdBase: false, spread: 25, slippage: 10, commission: 0 },
-  { symbol: 'ETHUSD', label: 'ETHUSD', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 2, slippage: 0.5, commission: 0 },
+  // Crypto = Binance USDT-M perpetual futures (7 Nov 2026): taker fee 0.05% per side + 0.02% slippage → commissionPct 0.0012 round
+  // turn; spread ≈ 1 tick; funding estimated 0.01% per 8 h paid by longs → swapLongPct 0.0003 per day, 7 days a week
+  // (rollover Mon–Fri with Friday ×3 = 7 charges per week); shorts 0 (conservative: they usually receive funding).
+  { symbol: 'BTCUSD', label: 'BTCUSDT (Binance Futures)', group: 'Kripto', digits: 1, contractSize: 1, usdBase: false, spread: 0.1, slippage: 0, commission: 0,
+    commissionPct: 0.0012, swapLongPct: 0.0003, swapShortPct: 0, swapTripleDay: 5 },
+  { symbol: 'ETHUSD', label: 'ETHUSDT (Binance Futures)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0.01, slippage: 0, commission: 0,
+    commissionPct: 0.0012, swapLongPct: 0.0003, swapShortPct: 0, swapTripleDay: 5 },
 ];
 
 export function instrumentSpec(symbol: string): InstrumentSpec | null {
@@ -38,6 +45,7 @@ export function instrumentSpec(symbol: string): InstrumentSpec | null {
 export function instrumentCosts(symbol: string): Omit<CostConfig, 'ambiguityPolicy'> {
   const s = instrumentSpec(symbol) ?? INSTRUMENTS[0];
   return { spread: s.spread, slippage: s.slippage, commissionPerUnit: s.commission, contractSize: s.contractSize,
+    ...(s.commissionPct ? { commissionPct: s.commissionPct } : {}),
     ...(s.swapLongPct || s.swapShortPct ? { swapLongPct: s.swapLongPct ?? 0, swapShortPct: s.swapShortPct ?? 0 } : {}),
     ...(s.swapTripleDay !== undefined ? { swapTripleDay: s.swapTripleDay } : {}) };
 }

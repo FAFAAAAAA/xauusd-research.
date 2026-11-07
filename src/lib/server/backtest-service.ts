@@ -76,7 +76,7 @@ export async function runBacktest(db: Db, v: BacktestInput) {
   const pairCosts = symbol.toUpperCase() === 'XAUUSD' ? (v.costs ?? {})
     : { ...instrumentCosts(symbol), swapLong: 0, swapShort: 0, ...(v.costs?.ambiguityPolicy ? { ambiguityPolicy: v.costs.ambiguityPolicy } : {}) };
   const costs: CostConfig = { ...BACKTEST_DEFAULT_COSTS, contractSize: instrumentCosts(symbol).contractSize, ...pairCosts,
-    ...(v.noCosts ? { spread: 0, slippage: 0, commissionPerUnit: 0, swapLong: 0, swapShort: 0, swapLongPct: 0, swapShortPct: 0 } : {}) };
+    ...(v.noCosts ? { spread: 0, slippage: 0, commissionPerUnit: 0, commissionPct: 0, swapLong: 0, swapShort: 0, swapLongPct: 0, swapShortPct: 0 } : {}) };
   const beMode = v.breakeven === 'on' || v.breakeven === 'off' ? v.breakeven : 'strategy';
   const sv = v.strategyVersionId ? await repo.getStrategyVersion(db, v.strategyVersionId) : await repo.defaultStrategyVersion(db);
   const adapter = getAdapter(sv?.adapter_key);

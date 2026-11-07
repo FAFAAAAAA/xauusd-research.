@@ -41,5 +41,7 @@ METHODS.push({ adapterKey: 'metode_asia_london', version: 'asia-london-v1', labe
 // v1 NAS (nas.ts) — Nasdaq (US100) only, research 7 Nov 2026 (README 6b).
 METHODS.push({ adapterKey: 'metode_nas_donchian', version: 'nas-donchian-v1', label: 'v1 NAS', custom: true, params: {}, pairs: ['USATECHIDXUSD'], baseTf: 'M30',
   rules: `US100: close H1 di atas high 20 candle H1 sebelumnya (BUY) / di bawah low 20 candle (SELL) · breakout lanjutan: breakout searah sebelumnya paling lama 2 candle H1 sebelumnya · entry hanya 10:00–16:00 waktu New York (bursa AS buka) · SL close ∓ 0,2×ATR D1, TP 2× jarak SL · ${TREND} · tanpa batas posisi` });
+METHODS.push({ adapterKey: 'metode_crypto_donchian', version: 'crypto-donchian-v1', label: 'v1 BTC', custom: true, params: {}, pairs: ['BTCUSD', 'ETHUSD'], baseTf: 'M30',
+  rules: `Binance Futures BTC/ETH, hanya BUY: close H4 di atas high 50 candle H4 sebelumnya (close pertama yang menembus) · tren: close D1 > EMA200 D1 · SL close − 1×ATR14 D1, TP 2× jarak SL · tanpa SELL · tanpa batas posisi · biaya Binance (fee taker 0,05%/sisi + slippage + funding)` });
 export const methodByKey = (k: string) => METHODS.find((m) => m.adapterKey === k);
 export const methodByStrategy = (s: string) => METHODS.find((m) => `metode ${m.version}` === s);

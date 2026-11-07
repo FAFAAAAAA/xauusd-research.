@@ -412,3 +412,17 @@ Studi semua strategi di 10 pair (2017/2018–2026, biaya bawaan tiap pair): pair
 - **Biaya US100** (`instruments.ts`) = spesifikasi USTEC akun pemilik: komisi 0,313 USD/lot/sisi, swap BUY 619,3 point (≈ 0,0218% harga per malam, `swapLongPct`), SELL 0, Jumat 3× (`swapTripleDay` 5). `tradesim` mendukung swap persentase harga dan hari triple per instrumen.
 - Form backtest otomatis memilih pair milik strategi (v1 XAU → XAUUSD, v1 NAS → US100).
 - v1 NAS memakai data dasar **M30** di website (mulai Mei 2013; trade pertama ±2014 setelah pemanasan 210 candle D1). Validasi adapter di M30 2013–2026 dengan biaya website: 5,6 trade/bulan (sama dengan riset), PF 1,29 (2013–2019 PF 1,18, 2020–2026 PF 1,37), DD 26R; per tahun 2014 +7R, 2015 +1, 2016 −15, 2017 +4, 2018 +42, 2019 +1, 2020 +21, 2021 +12, 2022 +23, 2023 +4, 2024 +21, 2025 +18, 2026 +14. Lebih rendah dari riset (PF 1,52) karena website memakai spread/slippage/komisi tetap dalam poin (2,6 poin total) — berat saat harga US100 masih 3.000–6.000 (2013–2017); riset memakai biaya proporsional terhadap harga.
+
+## 6c. v1 BTC — Binance Futures BTC/ETH (7 Nov 2026)
+
+Pemilik ingin fokus ke Binance Futures. Semua strategi chat (60+ per koin) dan pencarian khusus kripto (±2.000 kombinasi: Donchian H1/H4/D1,
+breakout volatilitas, RSI2, high/low kemarin × filter tren × arah × jam UTC × SL 0,25–1 ATR D1) diuji di BTC dan ETH dengan biaya Binance.
+Syarat lolos: PF ≥ 1,15 di BTC **dan** ETH dan PF ≥ 1,05 di kedua paruh data. Keluarga yang lolos konsisten: breakout H4 BUY dengan SL lebar.
+- Aturan (`metode crypto-donchian-v1`, adapter `src/lib/core/strategy/crypto.ts`): BUY saat close H4 pertama di atas high 50 candle H4
+  sebelumnya, close D1 terakhir > EMA200 D1, SL = close − 1×ATR14 D1, TP 1:2, tanpa SELL, tanpa batas posisi. Basis M30.
+- Dataran stabil: Donchian 20–80 × SL 0,75–1,5 ATR semuanya PF 1,3–1,8 di kedua koin. SELL rugi di semua varian.
+- Mesin website (biaya Binance: `commissionPct` 0,12% pulang-pergi, funding BUY 0,03%/hari 7 hari): BTC Feb 2018–Okt 2026 308 trade
+  (3,0/bln) win 41% PF 1,28 DD 17,8R; ETH 2019–2026 273 trade win 45% PF 1,55 DD 17,9R. Hold median ±2,5 hari (hanya ±25% selesai < 1 hari).
+- Profit terkumpul di tahun bull (2019–2021, 2024); 2022 (crash) −2/−3R; 2025–2026 ±impas. BTC dan ETH berkorelasi tinggi → bagi risiko.
+- Forex major: tidak ada konfigurasi yang lolos di ≥ 3 dari 5 pair; hanya USDJPY BUY (profit dari tahun yen melemah) — tidak dipakai.
+

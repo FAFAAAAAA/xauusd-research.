@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { SecHead, Seg } from '@/components/Status';
 import { IDEAL_DD_SHARE, RISK_LABEL, RISK_META, RISK_STATS } from '@/lib/core/risk-stats';
 
-/* Capital & lot risk calculator: scales the historical backtest of v1 XAU / v1 NAS (in R) to the owner's capital and risk. */
+/* Capital & lot risk calculator: scales the historical backtest of v1 XAU / v1 NAS / v1 BTC (in R) to the owner's capital and risk. */
 type Key = keyof typeof RISK_STATS;
 // Only the strategies the owner trades are offered (7 Nov 2026: "v1 XAU" = key v2, "v1 NAS" = key nas); the other stats stay in risk-stats.ts.
-const SHOWN: Key[] = ['v2', 'nas'];
+const SHOWN: Key[] = ['v2', 'nas', 'btc'];
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: n !== 0 && Math.abs(n) < 100 ? 2 : 0 })}`;
 const pc = (n: number) => `${(n * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
@@ -30,8 +30,9 @@ export function RiskCalculator() {
     : ddShare < 1 ? { t: 'Terlalu berisiko', c: 'neg', bg: 'var(--down-tint)' }
     : { t: 'Akun bisa habis — drawdown historis melebihi modal', c: 'neg', bg: 'var(--down-tint)' };
   const idealR = (IDEAL_DD_SHARE * modal) / s.maxDdR;                         // $ risk per trade that keeps DD ≤ 40%
-  const lotAt = (risk: number) => Math.floor((risk / (s.medianSl * meta.contract)) * 100 * (unit === 'cent' ? 100 : 1) + 1e-9) / 100;
-  const minLot = meta.minLot, lotTxt = (l: number) => (l >= minLot ? l.toFixed(2) : `< ${minLot.toFixed(2).replace('.', ',')}`);
+  const dp = meta.dp ?? 2, f10 = 10 ** dp;   // lot decimals (Binance BTC quantity: 0.001)
+  const lotAt = (risk: number) => Math.floor((risk / (s.medianSl * meta.contract)) * f10 * (unit === 'cent' ? 100 : 1) + 1e-9) / f10;
+  const minLot = meta.minLot, lotTxt = (l: number) => (l >= minLot ? l.toFixed(dp) : `< ${minLot.toFixed(dp).replace('.', ',')}`);
   const idealModal = (s.maxDdR * r) / IDEAL_DD_SHARE;
   const streaks = [5, 10, s.maxLossStreak].filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a - b);
   const blow = Math.floor(modal / r);
@@ -47,7 +48,7 @@ export function RiskCalculator() {
         <label className="field">Hitung dari<select value={mode} onChange={(e) => { setMode(e.target.value as 'pct' | 'lot'); setVal(e.target.value === 'lot' ? String(minLot) : '0.5'); }}>
           <option value="pct">Risiko % per trade</option><option value="lot">Lot tetap</option></select></label>
         <label className="field">{mode === 'pct' ? 'Risiko per trade (%)' : `Lot${unit === 'cent' ? ' (akun cent)' : ''}`}<input inputMode="decimal" value={val} onChange={(e) => setVal(e.target.value)} /></label>
-        {mode === 'lot' && minLot > 0.01 ? <p className="mute small" style={{ gridColumn: '1 / -1' }}>Lot minimum {RISK_LABEL[k]} di Exness: {minLot}</p> : null}
+        {mode === 'lot' && minLot > 0.01 ? <p className="mute small" style={{ gridColumn: '1 / -1' }}>Lot minimum {RISK_LABEL[k]} di {meta.broker ?? 'Exness'}: {minLot}</p> : null}
       </div>
       {unit === 'cent' && Number.isFinite(modal) ? <p className="mute small">= {usd(modal)} (100 cent = $1)</p> : null}
       <button className="btn primary block" onClick={() => setGo(true)} disabled={!ok}>Hitung risiko</button>
@@ -57,7 +58,7 @@ export function RiskCalculator() {
           <div className="notice" style={{ background: status.bg, borderColor: 'transparent' }}>
             <strong className={status.c}>{status.t}</strong>
             <div className="small" style={{ marginTop: 4 }}>
-              Risiko <strong>{usd(r)}</strong>/trade{mode === 'pct' ? ` · lot ${lotAt(r) >= minLot ? `±${lotAt(r).toFixed(2)}` : `< ${minLot.toFixed(2).replace('.', ',')} (minimum broker)`}` : ''} · drawdown terburuk <strong>{pc(ddShare)}</strong> modal ({usd(-dd)})
+              Risiko <strong>{usd(r)}</strong>/trade{mode === 'pct' ? ` · lot ${lotAt(r) >= minLot ? `±${lotAt(r).toFixed(dp)}` : `< ${minLot.toFixed(dp).replace('.', ',')} (minimum broker)`}` : ''} · drawdown terburuk <strong>{pc(ddShare)}</strong> modal ({usd(-dd)})
             </div>
             <div style={{ height: 6, borderRadius: 3, background: 'var(--line)', marginTop: 8, overflow: 'hidden' }}>
               <div style={{ width: `${bar * 100}%`, height: '100%', borderRadius: 3, transition: 'width .5s var(--ease)', background: ddShare <= IDEAL_DD_SHARE ? 'var(--up)' : ddShare < 0.7 ? 'var(--warn)' : 'var(--down)' }} />

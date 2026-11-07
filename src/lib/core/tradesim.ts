@@ -13,6 +13,8 @@ export interface CostConfig {
   slippage: number;
   /** commission per trade round-turn, account currency per 1 unit of size */
   commissionPerUnit: number;
+  /** extra commission round-turn as a FRACTION of the entry notional (exchange fees, e.g. Binance taker 0.05% × 2 = 0.001) */
+  commissionPct?: number;
   /** when TP and SL are both inside one candle and order is unknowable */
   ambiguityPolicy: 'worst' | 'best' | 'skip';
   /** contract multiplier: account currency per 1.00 price move per 1 unit (e.g. 100 for 1 lot = 100 oz) */
@@ -87,7 +89,7 @@ export function simulateTrade(candles: readonly Candle[], intent: TradeIntent, c
     throw new Error('SL/TP tidak konsisten dengan arah trade');
   }
   const plannedRr = Math.abs(intent.takeProfit - entryPrice) / risk;
-  const commission = cost.commissionPerUnit * intent.size;
+  const commission = cost.commissionPerUnit * intent.size + (cost.commissionPct ?? 0) * entryPrice * cost.contractSize * intent.size;
   const costs = { spread: cost.spread, slippage: cost.slippage, commission };
 
   let stop = intent.stopLoss, moved = false;
