@@ -37,6 +37,7 @@ DEFAULT_CONFIG = {
     "risk_percent": 0.5,             # risiko per trade (% saldo) bila risk_mode = percent
     "risk_usdt": 5.0,                # risiko per trade (USDT) bila risk_mode = usdt
     "max_positions": 3,              # maks posisi terbuka (backtest: 3)
+    "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
     "leverage": 5,                   # leverage per koin (hanya margin; risiko tetap dari jarak SL)
     "coins": "default",              # "default" = 26 koin terbaik, "all" = semua koin USDT likuid, atau daftar ["SANDUSDT", ...]
     "exclude": [],                   # koin yang tidak mau ditradingkan
@@ -315,6 +316,7 @@ class Bot:
                 log.error('API key belum bisa dipakai: %s', e)
                 log.error('Cek: izin "Aktifkan Futures" dicentang, IP VPS sudah ditambahkan, api_key/api_secret tersalin lengkap, testnet sesuai akun.')
                 return
+        if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
         log.info('Mode: %s · risiko %s · maks %d posisi · leverage %dx', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'], self.cfg['leverage'])
         last_sync = time.time()
@@ -328,6 +330,12 @@ class Bot:
                 random.shuffle(sigs)                                   # several signals at once: random order (as in the backtest)
                 live = self.positions()
                 busy = set(self.st['positions']) | {s for s, a in live.items() if a != 0}
+                stop = float(self.cfg.get('stop_balance_usdt') or 0)
+                if sigs and stop > 0 and not self.cfg['dry_run']:
+                    bal = self.balance()
+                    if bal < stop:
+                        log.error('REM AKTIF: saldo %.2f USDT di bawah batas %.2f — tidak membuka posisi baru. Naikkan modal / ubah stop_balance_usdt bila ingin lanjut.', bal, stop)
+                        sigs = []
                 for sym, level, atr, close in sigs:
                     if sym in busy: continue
                     if not self.cfg['dry_run'] and len(busy) >= int(self.cfg['max_positions']):
