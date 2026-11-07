@@ -35,7 +35,8 @@ export function cleanTrade(b: Record<string, unknown>, id: string): JournalTrade
   const entry = num(b.entry), sl = num(b.sl), tp = num(b.tp), lot = num(b.lot);
   if (!(entry > 0) || !(sl > 0) || !(tp > 0)) return 'Entry, SL dan TP wajib diisi';
   if (side === 'BUY' ? !(sl < entry && tp > entry) : !(sl > entry && tp < entry)) return 'SL/TP tidak cocok dengan arah';
-  if (!(lot > 0 && lot <= 100)) return 'Lot harus 0,01–100';
+  const crypto = ['btc', 'alt', 'snr'].includes(String(b.strategy));   // crypto: quantity in coins (can be large)
+  if (!(lot > 0 && lot <= (crypto ? 1e12 : 100))) return crypto ? 'Jumlah koin tidak valid' : 'Lot harus 0,01–100';
   const openedAt = num(b.openedAt);
   if (!(openedAt > 0)) return 'Waktu buka tidak valid';
   const result = (['open', 'tp', 'sl', 'be', 'manual'] as const).includes(b.result as JournalResult) ? (b.result as JournalResult) : 'open';

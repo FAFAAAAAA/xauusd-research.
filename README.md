@@ -481,3 +481,16 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
   Dipilih dengan seluruh data → ke depan kemungkinan lebih lemah. Bedah lanjutan (retest, sentuhan, umur support, body, volume, turun 7 hari,
   breadth) tidak memperbaiki portofolio; retest rugi (PF 0,99).
 
+
+## 6g. Bot Binance v1 SNR (8 Nov 2026)
+
+`public/bot/snr_bot.py` (Python 3, hanya butuh `requests`), dijalankan di PC/VPS pemilik; kunci API tetap di `snr_bot_config.json` di mesin itu.
+- Aturan sama dengan `metode snr-sell-v1`; logika sinyal dicek pada data historis: SAND 281/281, FIL 363/364, ARB 219/219 sinyal riset ditemukan.
+- Setiap H4 tutup (+20 detik): koin dengan volume 30 hari ≥ $20 jt dan close D1 < EMA50 diperiksa; sinyal → MARKET SELL, lalu SL/TP sebagai
+  algo order (`POST /fapi/v1/algoOrder`, STOP_MARKET & TAKE_PROFIT_MARKET, closePosition, CONTRACT_PRICE). SL gagal dipasang → posisi langsung ditutup.
+- Maks posisi (default 3), 1 per koin, sinyal bersamaan diacak. Jumlah koin = risiko / (SL − harga), dibulatkan ke bawah ke stepSize.
+- Default `testnet: true` (demo-fapi.binance.com) dan `dry_run: true`. Koin: "default" (26 koin terbaik), "all" (semua USDT likuid) atau daftar.
+- Laporan buka/tutup ke `/api/ea/report` dengan `"strategy":"snr"` dan `symbol` (jurnal strategi snr, Telegram "Bot v1 SNR <KOIN>"),
+  hasil bersih = realizedPnl − komisi + funding dari Binance.
+- Belum pernah dijalankan ke Binance dari lingkungan ini (fapi.binance.com menolak lokasi ini): wajib uji di testnet.
+

@@ -47,18 +47,23 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (!event) return { status: 422, body: { ok: false, error: 'event harus open atau close' } };
   const timeMs = num(b.time) > 0 ? num(b.time) * (num(b.time) < 1e12 ? 1000 : 1) : now;
 
-  // which EA: v1 XAU (journal key v2, default) or v1 NAS (journal key nas, EA sends "strategy":"nas")
-  const strat = b.strategy === 'nas' ? 'nas' : 'v2';
-  const lbl = strat === 'nas' ? 'v1 NAS' : 'v1 XAU';
+  // which EA / bot: v1 XAU (journal key v2, default), v1 NAS ("strategy":"nas") or the Binance v1 SNR bot ("strategy":"snr", sends "symbol")
+  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'snr' ? 'snr' : 'v2';
+  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'v1 SNR' : 'v1 XAU';
+  const symbol = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24).toUpperCase() : '';
+  const src = strat === 'snr' ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
+  const who = strat === 'snr' ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;
+  // prices of small coins need more than 2 decimals
+  const fp = (x: number) => (Math.abs(x) >= 100 ? x.toFixed(2) : Math.abs(x) >= 1 ? x.toFixed(4) : x.toPrecision(5));
   let trade: JournalTrade | string;
   if (event === 'open') {
     if (i >= 0) return { status: 200, body: { ok: true, duplicate: true } };
-    trade = cleanTrade({ strategy: strat, side: b.side, entry: num(b.price), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, result: 'open', note: 'EA' }, id);
+    trade = cleanTrade({ strategy: strat, side: b.side, entry: num(b.price), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, result: 'open', note: src }, id);
   } else {
     const prev = i >= 0 ? list[i] : null;
     if (prev && prev.result !== 'open') return { status: 200, body: { ok: true, duplicate: true } };
     const reason = b.reason === 'tp' ? 'tp' : b.reason === 'sl' ? 'sl' : 'manual';
-    const base = prev ?? { strategy: strat, side: b.side, entry: num(b.entry), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, note: 'EA' };
+    const base = prev ?? { strategy: strat, side: b.side, entry: num(b.entry), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, note: src };
     // keep the broker's real exit price and net result (incl. commission & swap)
     // v2 breakeven: a stop that closes at (about) the entry price is the moved SL → record as BE, not SL
     const isBe = strat === 'v2' && reason === 'sl' && Math.abs(num(b.price) - Number(base.entry)) < 0.25 * Math.abs(Number(base.entry) - Number(base.sl));
@@ -77,12 +82,12 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
     const t = trade;
     const text = event === 'open'
-      ? [`🤖 <b>EA ${lbl} — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${t.entry.toFixed(2)}</code>`, `<b>SL:</b> <code>${t.sl.toFixed(2)}</code>`, `<b>TP:</b> <code>${t.tp.toFixed(2)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
+      ? [`🤖 <b>${escapeHtml(who)} — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${fp(t.entry)}</code>`, `<b>SL:</b> <code>${fp(t.sl)}</code>`, `<b>TP:</b> <code>${fp(t.tp)}</code>`, `<b>${strat === 'snr' ? 'Jumlah' : 'Lot'}:</b> <code>${strat === 'snr' ? String(t.lot) : t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
-      : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>EA ${lbl} — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
-        `<b>Entry → keluar:</b> ${t.entry.toFixed(2)} → ${(t.exit ?? 0).toFixed(2)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
+      : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>${escapeHtml(who)} — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
+        `<b>Entry → keluar:</b> ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
-    const copy = event === 'open' ? [{ text: 'Salin entry', value: t.entry.toFixed(2) }, { text: 'Salin SL', value: t.sl.toFixed(2) }, { text: 'Salin TP', value: t.tp.toFixed(2) }] : undefined;
+    const copy = event === 'open' ? [{ text: 'Salin entry', value: fp(t.entry) }, { text: 'Salin SL', value: fp(t.sl) }, { text: 'Salin TP', value: fp(t.tp) }] : undefined;
     const r = await sendTelegram(db, { deliveryKey: `ea:${event}:${ticket}`, mode: 'LIVE', text, copy }, { fetchImpl: opts.fetchImpl });
     telegram = r.status;
   }

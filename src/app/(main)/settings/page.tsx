@@ -214,10 +214,11 @@ function EaSetup({ tz }: { tz: string }) {
   };
   const last = info?.lastReport as { at: number; event: string } | null;
   return (
-    <Group id="ea" title="EA MetaTrader 5 (v1 XAU & v1 NAS otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
+    <Group id="ea" title="EA MT5 & bot Binance (otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
       <div className="row">
         <a className="btn sm primary" href="/ea/XAU_v2_EA_v114.mq5" download>Unduh EA v1 XAU (XAU_v2_EA_v114.mq5)</a>
         <a className="btn sm primary" href="/ea/NAS_v1_EA_v100.mq5" download>Unduh EA v1 NAS (NAS_v1_EA_v100.mq5)</a>
+        <a className="btn sm primary" href="/bot/snr_bot.py" download>Unduh bot v1 SNR Binance (snr_bot.py)</a>
         <a className="btn sm" href="/ea/XAU_v2_EA_DIAGNOSTIK.mq5" download>Unduh EA Diagnostik (MT5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
       </div>
