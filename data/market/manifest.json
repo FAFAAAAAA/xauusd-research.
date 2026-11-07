@@ -878,5 +878,383 @@
   "first": 1723811400000,
   "last": 1794007800000,
   "candles": 38951
+ },
+ "WUSDT_M30": {
+  "symbol": "WUSDT",
+  "tf": "M30",
+  "first": 1712158200000,
+  "last": 1794007800000,
+  "candles": 45425
+ },
+ "BATUSDT_M30": {
+  "symbol": "BATUSDT",
+  "tf": "M30",
+  "first": 1581580800000,
+  "last": 1794007800000,
+  "candles": 117968
+ },
+ "ERAUSDT_M30": {
+  "symbol": "ERAUSDT",
+  "tf": "M30",
+  "first": 1752766200000,
+  "last": 1794007800000,
+  "candles": 22865
+ },
+ "SUSDT_M30": {
+  "symbol": "SUSDT",
+  "tf": "M30",
+  "first": 1737021600000,
+  "last": 1794007800000,
+  "candles": 31612
+ },
+ "RSRUSDT_M30": {
+  "symbol": "RSRUSDT",
+  "tf": "M30",
+  "first": 1603090800000,
+  "last": 1794007800000,
+  "candles": 105778
+ },
+ "ZEREBROUSDT_M30": {
+  "symbol": "ZEREBROUSDT",
+  "tf": "M30",
+  "first": 1735826400000,
+  "last": 1794007800000,
+  "candles": 32276
+ },
+ "KAIAUSDT_M30": {
+  "symbol": "KAIAUSDT",
+  "tf": "M30",
+  "first": 1733320800000,
+  "last": 1794007800000,
+  "candles": 33668
+ },
+ "PYTHUSDT_M30": {
+  "symbol": "PYTHUSDT",
+  "tf": "M30",
+  "first": 1700663400000,
+  "last": 1794007800000,
+  "candles": 51811
+ },
+ "HOTUSDT_M30": {
+  "symbol": "HOTUSDT",
+  "tf": "M30",
+  "first": 1617087600000,
+  "last": 1794007800000,
+  "candles": 98002
+ },
+ "CFXUSDT_M30": {
+  "symbol": "CFXUSDT",
+  "tf": "M30",
+  "first": 1676903400000,
+  "last": 1794007800000,
+  "candles": 65011
+ },
+ "ZKUSDT_M30": {
+  "symbol": "ZKUSDT",
+  "tf": "M30",
+  "first": 1718622000000,
+  "last": 1794007800000,
+  "candles": 41834
+ },
+ "ORCAUSDT_M30": {
+  "symbol": "ORCAUSDT",
+  "tf": "M30",
+  "first": 1733497200000,
+  "last": 1794007800000,
+  "candles": 33570
+ },
+ "ALTUSDT_M30": {
+  "symbol": "ALTUSDT",
+  "tf": "M30",
+  "first": 1706191200000,
+  "last": 1794007800000,
+  "candles": 48740
+ },
+ "STXUSDT_M30": {
+  "symbol": "STXUSDT",
+  "tf": "M30",
+  "first": 1676989800000,
+  "last": 1794007800000,
+  "candles": 64963
+ },
+ "RENDERUSDT_M30": {
+  "symbol": "RENDERUSDT",
+  "tf": "M30",
+  "first": 1721988000000,
+  "last": 1794007800000,
+  "candles": 39964
+ },
+ "MINAUSDT_M30": {
+  "symbol": "MINAUSDT",
+  "tf": "M30",
+  "first": 1675767600000,
+  "last": 1794007800000,
+  "candles": 65642
+ },
+ "INITUSDT_M30": {
+  "symbol": "INITUSDT",
+  "tf": "M30",
+  "first": 1744785000000,
+  "last": 1794007800000,
+  "candles": 27299
+ },
+ "PENDLEUSDT_M30": {
+  "symbol": "PENDLEUSDT",
+  "tf": "M30",
+  "first": 1690511400000,
+  "last": 1794007800000,
+  "candles": 57451
+ },
+ "ALGOUSDT_M30": {
+  "symbol": "ALGOUSDT",
+  "tf": "M30",
+  "first": 1592298000000,
+  "last": 1794007800000,
+  "candles": 112014
+ },
+ "EIGENUSDT_M30": {
+  "symbol": "EIGENUSDT",
+  "tf": "M30",
+  "first": 1727762400000,
+  "last": 1794007800000,
+  "candles": 36756
+ },
+ "JTOUSDT_M30": {
+  "symbol": "JTOUSDT",
+  "tf": "M30",
+  "first": 1702029600000,
+  "last": 1794007800000,
+  "candles": 51052
+ },
+ "ARCUSDT_M30": {
+  "symbol": "ARCUSDT",
+  "tf": "M30",
+  "first": 1737118800000,
+  "last": 1794007800000,
+  "candles": 31558
+ },
+ "BLURUSDT_M30": {
+  "symbol": "BLURUSDT",
+  "tf": "M30",
+  "first": 1682683200000,
+  "last": 1794007800000,
+  "candles": 61800
+ },
+ "RUNEUSDT_M30": {
+  "symbol": "RUNEUSDT",
+  "tf": "M30",
+  "first": 1599202800000,
+  "last": 1794007800000,
+  "candles": 108178
+ },
+ "CKBUSDT_M30": {
+  "symbol": "CKBUSDT",
+  "tf": "M30",
+  "first": 1677585600000,
+  "last": 1794007800000,
+  "candles": 64632
+ },
+ "GALAUSDT_M30": {
+  "symbol": "GALAUSDT",
+  "tf": "M30",
+  "first": 1631935800000,
+  "last": 1794007800000,
+  "candles": 89993
+ },
+ "MORPHOUSDT_M30": {
+  "symbol": "MORPHOUSDT",
+  "tf": "M30",
+  "first": 1732717800000,
+  "last": 1794007800000,
+  "candles": 34003
+ },
+ "INUSDT_M30": {
+  "symbol": "INUSDT",
+  "tf": "M30",
+  "first": 1754562600000,
+  "last": 1794007800000,
+  "candles": 21867
+ },
+ "COMPUSDT_M30": {
+  "symbol": "COMPUSDT",
+  "tf": "M30",
+  "first": 1593507600000,
+  "last": 1794007800000,
+  "candles": 111342
+ },
+ "CAKEUSDT_M30": {
+  "symbol": "CAKEUSDT",
+  "tf": "M30",
+  "first": 1698928200000,
+  "last": 1794007800000,
+  "candles": 52775
+ },
+ "PLUMEUSDT_M30": {
+  "symbol": "PLUMEUSDT",
+  "tf": "M30",
+  "first": 1742562000000,
+  "last": 1794007800000,
+  "candles": 28534
+ },
+ "ARKUSDT_M30": {
+  "symbol": "ARKUSDT",
+  "tf": "M30",
+  "first": 1695139200000,
+  "last": 1794007800000,
+  "candles": 54880
+ },
+ "AXSUSDT_M30": {
+  "symbol": "AXSUSDT",
+  "tf": "M30",
+  "first": 1605855600000,
+  "last": 1794007800000,
+  "candles": 104482
+ },
+ "ORDIUSDT_M30": {
+  "symbol": "ORDIUSDT",
+  "tf": "M30",
+  "first": 1699360200000,
+  "last": 1794007800000,
+  "candles": 52535
+ },
+ "REZUSDT_M30": {
+  "symbol": "REZUSDT",
+  "tf": "M30",
+  "first": 1714485600000,
+  "last": 1794007800000,
+  "candles": 44132
+ },
+ "PIXELUSDT_M30": {
+  "symbol": "PIXELUSDT",
+  "tf": "M30",
+  "first": 1708354800000,
+  "last": 1794007800000,
+  "candles": 47538
+ },
+ "BERAUSDT_M30": {
+  "symbol": "BERAUSDT",
+  "tf": "M30",
+  "first": 1738854000000,
+  "last": 1794007800000,
+  "candles": 30594
+ },
+ "APEUSDT_M30": {
+  "symbol": "APEUSDT",
+  "tf": "M30",
+  "first": 1647529200000,
+  "last": 1794007800000,
+  "candles": 81330
+ },
+ "SPXUSDT_M30": {
+  "symbol": "SPXUSDT",
+  "tf": "M30",
+  "first": 1733833800000,
+  "last": 1794007800000,
+  "candles": 33383
+ },
+ "GRIFFAINUSDT_M30": {
+  "symbol": "GRIFFAINUSDT",
+  "tf": "M30",
+  "first": 1735824600000,
+  "last": 1794007800000,
+  "candles": 32277
+ },
+ "POWRUSDT_M30": {
+  "symbol": "POWRUSDT",
+  "tf": "M30",
+  "first": 1698373800000,
+  "last": 1794007800000,
+  "candles": 53083
+ },
+ "TREEUSDT_M30": {
+  "symbol": "TREEUSDT",
+  "tf": "M30",
+  "first": 1753797600000,
+  "last": 1794007800000,
+  "candles": 22292
+ },
+ "ANIMEUSDT_M30": {
+  "symbol": "ANIMEUSDT",
+  "tf": "M30",
+  "first": 1737651600000,
+  "last": 1794007800000,
+  "candles": 31262
+ },
+ "MANAUSDT_M30": {
+  "symbol": "MANAUSDT",
+  "tf": "M30",
+  "first": 1615791600000,
+  "last": 1794007800000,
+  "candles": 98722
+ },
+ "1000FLOKIUSDT_M30": {
+  "symbol": "1000FLOKIUSDT",
+  "tf": "M30",
+  "first": 1683390600000,
+  "last": 1794007800000,
+  "candles": 61407
+ },
+ "CHZUSDT_M30": {
+  "symbol": "CHZUSDT",
+  "tf": "M30",
+  "first": 1611212400000,
+  "last": 1794007800000,
+  "candles": 101506
+ },
+ "VETUSDT_M30": {
+  "symbol": "VETUSDT",
+  "tf": "M30",
+  "first": 1581667200000,
+  "last": 1794007800000,
+  "candles": 117680
+ },
+ "IOUSDT_M30": {
+  "symbol": "IOUSDT",
+  "tf": "M30",
+  "first": 1718114400000,
+  "last": 1794007800000,
+  "candles": 42116
+ },
+ "BIOUSDT_M30": {
+  "symbol": "BIOUSDT",
+  "tf": "M30",
+  "first": 1735905600000,
+  "last": 1794007800000,
+  "candles": 32232
+ },
+ "NXPCUSDT_M30": {
+  "symbol": "NXPCUSDT",
+  "tf": "M30",
+  "first": 1747290600000,
+  "last": 1794007800000,
+  "candles": 25907
+ },
+ "0GUSDT_M30": {
+  "symbol": "0GUSDT",
+  "tf": "M30",
+  "first": 1758123000000,
+  "last": 1794007800000,
+  "candles": 19889
+ },
+ "LPTUSDT_M30": {
+  "symbol": "LPTUSDT",
+  "tf": "M30",
+  "first": 1636601400000,
+  "last": 1794007800000,
+  "candles": 87401
+ },
+ "MEWUSDT_M30": {
+  "symbol": "MEWUSDT",
+  "tf": "M30",
+  "first": 1718632800000,
+  "last": 1794007800000,
+  "candles": 41828
+ },
+ "PEOPLEUSDT_M30": {
+  "symbol": "PEOPLEUSDT",
+  "tf": "M30",
+  "first": 1640318400000,
+  "last": 1794007800000,
+  "candles": 85096
  }
 }

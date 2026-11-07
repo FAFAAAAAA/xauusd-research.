@@ -457,3 +457,16 @@ fee+slippage 0,12%): grid breakout volatilitas (level 0,3–2,0 × range kemarin
   (Okt 2025 +141R, Jan 2026 +74R); tanpa 5 bulan terbaik tetap PF 1,26.
 - Mesin website (6 koin contoh): PF 1,33 vs riset 1,26 untuk koin yang sama. v1 ALT disembunyikan (tetap di kode).
 
+
+## 6f. v1 SNR — support jebol SELL untuk altcoin (7 Nov 2026)
+
+SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pantul rugi). SNR tembus SELL dibedah: TF H2/H4/H8 × pivot 2/3/5 ×
+10 atau 3 level × SL 0,25–1,0 ATR × tren × jam; diuji sebagai portofolio maks 3 posisi (1 per koin).
+- Dipilih `metode snr-sell-v1` (`strategy/snrsell.ts`): support = low H4 terendah 5 candle kiri-kanan, 10 terakhir; SELL saat close H4 < support
+  (candle sebelumnya ≥), close D1 < EMA50 D1, koin likuid (≥ $20 jt/hari, `alt-liquid-days.json`); SL support + 0,5 ATR14 H4; TP 2R.
+- Riset portofolio maks 3: 4.328 trade (±54/bln) win 43% PF 1,41, +$10.689 (risiko $10), DD 41×, untung tiap tahun, hold median 8 jam;
+  biaya ×2 PF 1,32; short bayar funding PF 1,40; tanpa 5 bulan terbaik PF 1,23. Per koin: 270 dari 393 untung (69%); BTC rugi.
+- Atas permintaan pemilik: pair default = 114 koin website yang untung di riset (cherry-picking: hasil koin pilihan ke depan bisa lebih lemah);
+  54 koin untung yang masih aktif (≥ $5 jt/hari) ditambahkan sebagai data 30m. Koin lain tetap ada.
+- Mesin website (6 koin contoh): PF 1,13 vs riset 1,22 (riset membuka trade untuk tiap support yang jebol di candle yang sama; website 1).
+

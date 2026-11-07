@@ -18,6 +18,7 @@ import { nasDonchianAdapter } from './nas';
 import { cryptoDonchianAdapter } from './crypto';
 import { altVolbreakAdapter } from './alt';
 import { altBreakdownAdapter } from './alt2';
+import { snrSellAdapter } from './snrsell';
 
 /**
  * Placeholder for the owner's SNR strategy. It is intentionally empty:
@@ -98,6 +99,7 @@ const REGISTRY: Record<string, StrategyAdapter> = {
   [cryptoDonchianAdapter.key]: cryptoDonchianAdapter,
   [altVolbreakAdapter.key]: altVolbreakAdapter,
   [altBreakdownAdapter.key]: altBreakdownAdapter,
+  [snrSellAdapter.key]: snrSellAdapter,
   [snrSndAdapter.key]: snrSndAdapter,
   [customAdapter.key]: customAdapter,
   [snrSnd2Adapter.key]: snrSnd2Adapter,
