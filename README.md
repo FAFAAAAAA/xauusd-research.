@@ -347,6 +347,13 @@ Atas permintaan pemilik: order otomatis dijalankan oleh **EA di MetaTrader 5 mil
 - EA melaporkan entry & penutupan ke `POST /api/ea/report` (WebRequest). Auth: kunci EA dari Atur → EA (hanya SHA-256 yang disimpan). Laporan ditulis ke jurnal (`ea-<ticket>`, strategi v2, hasil bersih broker termasuk komisi & swap) dan dikirim ke Telegram jika "Kirim sinyal live" aktif. Duplikat diabaikan.
 - EA belum pernah dijalankan di MetaTrader dari lingkungan ini: wajib uji di akun demo.
 
+## 5w. EA MetaTrader 5 untuk v1 NAS (7 Nov 2026)
+
+- `public/ea/NAS_v1_EA_v100.mq5`, untuk USTEC (Exness), chart timeframe apa saja. Aturan nas-donchian-v1 persis (bagian 6b): close H1 menembus high/low 20 candle H1 sebelumnya, aturan 1 dengan H4 & D1 dibentuk dari H1 dalam jam UTC (D1 hanya Senin–Jumat), breakout searah-tren yang sama 1–2 candle H1 sebelumnya (dihitung ulang dari riwayat, jadi aman saat restart), jam entry 10:00–16:00 New York (DST otomatis), SL close ∓ 0,2 ATR14 D1, TP 2R dari harga isi, tanpa BE, tanpa batas posisi. Penanda per candle di GlobalVariables mencegah entry ganda setelah restart.
+- Laporan memakai kunci EA yang sama dengan `"strategy":"nas"`: jurnal menyimpan strategi `nas`, Telegram "EA v1 NAS", dan label impas (BE) hanya untuk v1 XAU.
+- Lot minimum USTEC 0,05: risiko kecil (mis. 0,5% dari $1.000 ≈ $5 vs SL ±92 poin × 0,05 = $4,6) ada di batas — entry dilewati jika lot < minimum.
+- Belum pernah dijalankan di MetaTrader dari lingkungan ini: wajib uji di Strategy Tester & akun demo.
+
 ## 5v. Sinyal live v2 gratis tanpa TradingView (1 Nov 2026)
 
 TradingView webhook butuh paket Essential (±Rp 400 rb/bulan; paket gratis bahkan tidak punya alert indikator). Pengganti gratis:
