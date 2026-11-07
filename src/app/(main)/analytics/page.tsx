@@ -1,10 +1,10 @@
 'use client';
 import { BROKER } from '@/lib/core/broker';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { CountUp, EmptyState, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner } from '@/components/Status';
-import { EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
+import { DrawdownBreakdown, EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
 import { ReportButton } from '@/components/ReportImage';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
 import { METHODS, methodByKey, methodByStrategy } from '@/lib/core/strategy/methods-meta';
@@ -117,6 +117,7 @@ export default function Analytics() {
   const pairLabel = instrumentLabel(pairSel);
 
   const m = d?.overall;
+  const trades = useMemo(() => closedTrades(d?.trades ?? []), [d?.trades]);
   const hasRuns = rows.length > 0;
   const winRate = sum.trades ? sum.wins / sum.trades : null;
   const breakEven = 1 / (1 + curRr);
@@ -206,7 +207,6 @@ export default function Analytics() {
                   {m && fresh ? <><div className="facts appear">
                     <div><span className="label stat-label" title="Rata-rata profit per trade menang">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
                     <div><span className="label stat-label" title="Rata-rata rugi per trade kalah">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
-                    <div><span className="label stat-label" title="Penurunan saldo terdalam">Drawdown maks.</span><strong className="neg">{money(-m.maxDrawdown)}</strong></div>
                     <div><span className="label stat-label">Beruntun maks.</span><div className="streak-pair"><span className="pos" aria-label={`Menang beruntun ${m.maxConsecutiveWins} kali`} title="Menang beruntun"><ResearchIcon name="win" /><strong>{m.maxConsecutiveWins}×</strong></span><span className="neg" aria-label={`Kalah beruntun ${m.maxConsecutiveLosses} kali`} title="Kalah beruntun"><ResearchIcon name="loss" /><strong>{m.maxConsecutiveLosses}×</strong></span></div></div>
                     <div><span className="label stat-label" title="Rasio total profit terhadap total rugi">Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
                     <div><span className="label stat-label" title="Rata-rata hasil bersih per trade">Rata-rata / trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
@@ -247,6 +247,7 @@ export default function Analytics() {
                 </section>
 
                 {fresh ? <>
+                {m ? <DrawdownBreakdown key={key} trades={trades} tz={tz} maximum={m.maxDrawdown} /> : null}
                 {m ? <section className="group">
                   <SecHead title="Beruntun" />
                   <div className="tablewrap">
@@ -262,10 +263,10 @@ export default function Analytics() {
                     </table>
                   </div>
                 </section> : null}
-                <CapitalGrowth key={key} months={monthsTested} trades={closedTrades(d.trades)} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
+                <CapitalGrowth key={key} months={monthsTested} trades={trades} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group calcard">
-                  <PnlCalendar key={key} trades={closedTrades(d.trades)} tz={tz} />
+                  <PnlCalendar key={key} trades={trades} tz={tz} />
                 </section>
 
                 {fresh && d.byRegime?.length ? (
