@@ -48,7 +48,8 @@ DEFAULT_CONFIG = {
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
     "leverage": 5,                   # leverage per koin (hanya margin; risiko tetap dari jarak SL)
     "margin_isolated": True,         # true = margin Isolated per posisi (lebih aman), false = Cross
-    "daily_summary": True,           # ringkasan harian ke Telegram (jam 09:00 waktu Korea / 00:00 UTC)
+    "daily_summary": True,           # ringkasan ke Telegram
+    "summary_hours_kst": [8, 23],    # jam ringkasan (waktu Korea): 08:00 pagi dan 23:00 malam
     "coins": "default",              # "default" = 26 koin terbaik, "all" = semua koin USDT likuid, atau daftar ["SANDUSDT", ...]
     "exclude": [],                   # koin yang tidak mau ditradingkan
     "min_volume_usdt": 20000000,     # likuiditas: rata-rata volume 30 hari (USDT) minimal
@@ -327,21 +328,25 @@ class Bot:
             log.info('Posisi %s ditutup (%s) | hasil %.2f USDT', sym, reason.upper(), pnl)
             report(self.cfg, {'event': 'close', 'ticket': p['ticket'], 'symbol': sym, 'side': 'SELL', 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
                               'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'], 'time': int(time.time())})
-            day = datetime.now(timezone.utc).strftime('%Y-%m-%d'); dp = self.st.setdefault('day_pnl', {})
-            dp[day] = round(dp.get(day, 0) + pnl, 4); dp.pop(next(iter(dp)), None) if len(dp) > 40 else None
+            cl = self.st.setdefault('closed', []); cl.append([int(time.time()), round(pnl, 4), reason]); del cl[:-300]
             del self.st['positions'][sym]; save_state(self.st)
 
     def summary(self):
+        """status message at the hours in summary_hours_kst (Korea time, UTC+9): balance, result since the last summary, open positions"""
         if not self.cfg.get('daily_summary', True) or self.cfg['dry_run']: return
-        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        if self.st.get('last_summary') == today: return
-        self.st['last_summary'] = today; save_state(self.st)
-        from datetime import timedelta
-        yday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
+        kst = datetime.fromtimestamp(time.time() + 9 * 3600, timezone.utc)
+        if kst.hour not in [int(h) for h in self.cfg.get('summary_hours_kst', [8, 23])]: return
+        key = kst.strftime('%Y-%m-%d %H')
+        if self.st.get('last_summary') == key: return
+        since = self.st.get('last_summary_ts', int(time.time()) - 86400)
+        self.st['last_summary'] = key; self.st['last_summary_ts'] = int(time.time()); save_state(self.st)
         try: bal = self.balance()
         except RuntimeError: bal = float('nan')
-        pos = ', '.join(f"{k.replace('USDT', '')}" for k in self.st['positions']) or 'tidak ada'
-        notify(self.cfg, f"Ringkasan harian — bot aktif.\nSaldo Futures: {bal:.2f} USDT\nHasil kemarin ({yday}): {self.st.get('day_pnl', {}).get(yday, 0):+.2f} USDT\nPosisi terbuka: {pos}")
+        done = [c for c in self.st.get('closed', []) if c[0] > since]
+        res = sum(c[1] for c in done); tp = sum(1 for c in done if c[2] == 'tp'); sl = sum(1 for c in done if c[2] == 'sl')
+        pos = ', '.join(k.replace('USDT', '') for k in self.st['positions']) or 'tidak ada'
+        notify(self.cfg, f"Ringkasan {kst.strftime('%H:%M')} (waktu Korea) — bot aktif.\nSaldo Futures: {bal:.2f} USDT\n"
+                         f"Sejak ringkasan terakhir: {len(done)} trade selesai (TP {tp}, SL {sl}), hasil {res:+.2f} USDT\nPosisi terbuka: {pos}")
 
     def run(self):
         self.api.sync_time(); self.load_symbols()

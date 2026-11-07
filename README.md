@@ -494,7 +494,7 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
   hasil bersih = realizedPnl − komisi + funding dari Binance.
 - Belum pernah dijalankan ke Binance dari lingkungan ini (fapi.binance.com menolak lokasi ini): wajib uji di testnet.
 
-- Tambahan (8 Nov 2026): margin Isolated per posisi (`margin_isolated`), rem saldo (`stop_balance_usdt`), ringkasan harian & peringatan ke
+- Tambahan (8 Nov 2026): margin Isolated per posisi (`margin_isolated`), rem saldo (`stop_balance_usdt`), ringkasan (08:00 & 23:00 waktu Korea, `summary_hours_kst`) & peringatan ke
   Telegram lewat `/api/ea/report` event `info` (tanpa baris jurnal), satu instance saja (port lokal 47219), autostart Windows:
   `--install` (Task Scheduler "SNR Bot", saat VPS menyala, akun SYSTEM, `start_bot.bat` mengulang bila error), `--status`, `--stop`, `--uninstall`.
 
