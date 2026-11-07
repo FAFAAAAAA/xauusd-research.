@@ -26,7 +26,7 @@ export interface JournalTrade {
   closedAt: number | null; exit: number | null; result: JournalResult; pnl: number | null; note: string;
 }
 
-const STRATS = ['v1', 'v2', 'v3', 'lain'];
+const STRATS = ['v1', 'v2', 'v3', 'nas', 'lain'];
 /** Validates one journal entry from the browser. Returns an error message or the clean trade. */
 export function cleanTrade(b: Record<string, unknown>, id: string): JournalTrade | string {
   const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : typeof x === 'string' && x.trim() !== '' && Number.isFinite(Number(x)) ? Number(x) : NaN);
