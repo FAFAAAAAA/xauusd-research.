@@ -15,6 +15,7 @@ export interface InstrumentSpec {
   commissionPct?: number;
 }
 
+const BINANCE = { commissionPct: 0.0012, swapLongPct: 0.0003, swapShortPct: 0, swapTripleDay: 5 } as const;   // fee+slippage 0.12% round turn, funding BUY 0.03%/day
 export const INSTRUMENTS: InstrumentSpec[] = [
   // Gold uses the owner's Exness Raw Spread costs (2 Nov 2026, src/lib/core/broker.ts): spread 0.12, slippage 0.10 per fill, commission $7/lot round turn.
   { symbol: 'XAUUSD', label: 'XAUUSD (emas)', group: 'Emas', digits: 3, contractSize: 100, usdBase: false, spread: 0.12, slippage: 0.10, commission: 7 },   // Exness Raw Spread: $3.50 per lot per side
@@ -35,6 +36,33 @@ export const INSTRUMENTS: InstrumentSpec[] = [
     commissionPct: 0.0012, swapLongPct: 0.0003, swapShortPct: 0, swapTripleDay: 5 },
   { symbol: 'ETHUSD', label: 'ETHUSDT (Binance Futures)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0.01, slippage: 0, commission: 0,
     commissionPct: 0.0012, swapLongPct: 0.0003, swapShortPct: 0, swapTripleDay: 5 },
+  // Binance USDT-M futures with ≥ $100 jt/hari volume (90 hari s/d Okt 2026), data 30m dari data.binance.vision (7 Nov 2026).
+  { symbol: 'ZECUSDT', label: 'ZECUSDT (Binance)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'NEARUSDT', label: 'NEARUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'ENAUSDT', label: 'ENAUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'UNIUSDT', label: 'UNIUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: '1000PEPEUSDT', label: '1000PEPEUSDT (Binance)', group: 'Kripto', digits: 7, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'PUMPUSDT', label: 'PUMPUSDT (Binance)', group: 'Kripto', digits: 7, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'WLDUSDT', label: 'WLDUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'TRUMPUSDT', label: 'TRUMPUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'BANKUSDT', label: 'BANKUSDT (Binance)', group: 'Kripto', digits: 6, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'LSKUSDT', label: 'LSKUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'ARBUSDT', label: 'ARBUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'ONDOUSDT', label: 'ONDOUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'TUTUSDT', label: 'TUTUSDT (Binance)', group: 'Kripto', digits: 6, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'FILUSDT', label: 'FILUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'SOLUSDT', label: 'SOLUSDT (Binance)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'XRPUSDT', label: 'XRPUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'HYPEUSDT', label: 'HYPEUSDT (Binance)', group: 'Kripto', digits: 3, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'DOGEUSDT', label: 'DOGEUSDT (Binance)', group: 'Kripto', digits: 6, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'BNBUSDT', label: 'BNBUSDT (Binance)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'SUIUSDT', label: 'SUIUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'ADAUSDT', label: 'ADAUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'LINKUSDT', label: 'LINKUSDT (Binance)', group: 'Kripto', digits: 3, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'TAOUSDT', label: 'TAOUSDT (Binance)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'AVAXUSDT', label: 'AVAXUSDT (Binance)', group: 'Kripto', digits: 3, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'AAVEUSDT', label: 'AAVEUSDT (Binance)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'BCHUSDT', label: 'BCHUSDT (Binance)', group: 'Kripto', digits: 2, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
 ];
 
 export function instrumentSpec(symbol: string): InstrumentSpec | null {

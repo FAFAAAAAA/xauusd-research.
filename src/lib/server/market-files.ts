@@ -114,12 +114,14 @@ export function ensureDatasetSources(db: Db): Promise<Map<string, string>> {
       const spec = instrumentSpec(d.symbol);
       await db.query(`insert into instruments (symbol, description, price_digits) values ($1, $2, $3) on conflict (symbol) do nothing returning id`,
         [d.symbol, spec?.label ?? d.symbol, spec?.digits ?? 5]);
-      const name = `forexsb ${d.symbol} ${d.tf} (file website)`;
+      const bn = d.symbol.endsWith('USDT');   // Binance futures coins (7 Nov 2026); the others are forexsb.com exports
+      const name = `${bn ? 'binance' : 'forexsb'} ${d.symbol} ${d.tf} (file website)`;
       const r = await db.query<{ id: string }>(
         `insert into market_data_sources (name, provider, kind, broker_symbol, file_timezone, price_basis, notes, is_test)
-         values ($1, 'forexsb.com (file bawaan website)', 'csv_import', $2, 'UTC', 'unknown', $3, false)
+         values ($1, $4, 'csv_import', $2, 'UTC', 'unknown', $3, false)
          on conflict (name) do update set broker_symbol = excluded.broker_symbol returning id`,
-        [name, `file:${d.symbol}:${d.tf}`, `Data ${d.tf} ${d.symbol} dari forexsb.com, disimpan sebagai file di website (bukan di database).`]);
+        [name, `file:${d.symbol}:${d.tf}`, `Data ${d.tf} ${d.symbol} dari ${bn ? 'data.binance.vision (Binance USDT-M futures)' : 'forexsb.com'}, disimpan sebagai file di website (bukan di database).`,
+         bn ? 'data.binance.vision (file bawaan website)' : 'forexsb.com (file bawaan website)']);
       out.set(d.key, r[0].id);
     }
     return out;
