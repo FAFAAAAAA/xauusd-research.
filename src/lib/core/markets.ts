@@ -12,8 +12,8 @@ const ADAPTER: Record<string, Market> = { metode_crypto_donchian: 'crypto', meto
 /** strategy label of a backtest session ("metode <version>") → market */
 const VERSION: Record<string, Market> = { 'metode crypto-donchian-v1': 'crypto', 'metode alt-volbreak-v1': 'crypto', 'metode alt-breakdown-v1': 'crypto', 'metode snr-sell-v1': 'crypto' };
 /** journal / risk-calculator keys per market (in display order) */
-export const JOURNAL_KEYS: Record<Market, string[]> = { forex: ['v2', 'nas'], crypto: ['btc', 'alt', 'snr'] };
-export const RISK_KEYS: Record<Market, Array<'v2' | 'nas' | 'btc' | 'alt' | 'snr'>> = { forex: ['v2', 'nas'], crypto: ['btc', 'alt', 'snr'] };
+export const JOURNAL_KEYS: Record<Market, string[]> = { forex: ['v2', 'nas'], crypto: ['snr'] };
+export const RISK_KEYS: Record<Market, Array<'v2' | 'nas' | 'btc' | 'alt' | 'snr'>> = { forex: ['v2', 'nas'], crypto: ['snr'] };
 
 export const marketOfAdapter = (k: string): Market => ADAPTER[k] ?? 'forex';
 export const marketOfStrategy = (s: string): Market => VERSION[s] ?? 'forex';
