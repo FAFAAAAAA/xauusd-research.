@@ -519,9 +519,12 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       return { symbol: m.symbol, label: m.label, years: todo, done: 0, fail: 0, skip: ys.length - todo.length, state: 'wait' };
     });
     setProg(st.map((x) => ({ ...x })));
-    for (const p of st) {
+    // 4 pairs at a time (each pair's years stay in order) — many-coin crypto runs were too slow one request at a time
+    const queue = [...st];
+    const worker = async () => { for (let p = queue.shift(); p; p = queue.shift()) await runPair(p); };
+    const runPair = async (p: PairStatus) => {
       const m = chosen.find((x) => x.symbol === p.symbol)!;
-      if (stop.current) break;
+      if (stop.current) return;
       p.state = 'run';
       for (const y of p.years) {
         if (stop.current) break;
@@ -536,7 +539,8 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
         p.proc = (p.proc ?? 0) + 1;
       }
       p.cur = undefined; p.state = 'done'; setProg(st.map((x) => ({ ...x })));
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(4, st.length) }, worker));
     setBusy(false);
     onDone(cfgKey);
   };
