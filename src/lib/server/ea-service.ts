@@ -37,6 +37,20 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (!stored?.hash) return { status: 503, body: { ok: false, error: 'Kunci EA belum dibuat (Atur → EA)' } };
   if (typeof b.key !== 'string' || !safeEqual(sha(b.key), stored.hash)) return { status: 401, body: { ok: false, error: 'Unauthorized' } };
 
+  // bot status messages (daily summary, warnings): Telegram only, no journal row
+  if (b.event === 'info') {
+    const txt = String(b.text ?? '').slice(0, 800);
+    if (!txt.trim()) return { status: 422, body: { ok: false, error: 'text wajib' } };
+    const sym = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24) : '';
+    await repo.setAppSetting(db, 'ea_last_report', { at: now, event: 'info', ticket: sym || 'bot' });
+    const tg = await repo.getTelegramSettings(db);
+    if (!tg.live_enabled) return { status: 200, body: { ok: true, telegram: 'disabled' } };
+    const head = b.strategy === 'snr' ? 'Bot v1 SNR' : 'EA';
+    const level = b.level === 'error' ? '⚠️' : 'ℹ️';
+    const key = createHash('sha256').update(`${now}:${txt}`).digest('hex').slice(0, 16);
+    const r = await sendTelegram(db, { deliveryKey: `ea:info:${key}`, mode: 'LIVE', text: `${level} <b>${escapeHtml(head)}</b>\n\n${escapeHtml(txt)}` }, { fetchImpl: opts.fetchImpl });
+    return { status: 200, body: { ok: true, telegram: r.status } };
+  }
   const ticket = String(b.ticket ?? '').replace(/[^0-9A-Za-z_-]/g, '').slice(0, 40);
   if (!ticket) return { status: 422, body: { ok: false, error: 'ticket wajib' } };
   const id = `ea-${ticket}`;

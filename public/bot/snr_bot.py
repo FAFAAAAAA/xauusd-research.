@@ -14,8 +14,12 @@ Runs on YOUR computer / VPS. Your API key stays in snr_bot_config.json on that m
 Start on the Binance Futures TESTNET (demo money). Trading is risky; backtest results are not a promise.
 
 Install:  pip install requests          Run:  python snr_bot.py          (Ctrl+C to stop; positions keep their SL/TP at Binance)
+Background + autostart (Windows):   python snr_bot.py --install    start now and after every VPS restart (hidden)
+                                    python snr_bot.py --status     last lines of the log
+                                    python snr_bot.py --stop       stop the background bot (until --install again)
+                                    python snr_bot.py --uninstall  stop and remove the autostart
 """
-import hashlib, hmac, json, logging, math, os, random, sys, time, urllib.parse
+import hashlib, hmac, json, logging, math, os, random, socket, subprocess, sys, time, urllib.parse
 from datetime import datetime, timezone
 
 try:
@@ -27,6 +31,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(HERE, 'snr_bot_config.json')
 STATE_FILE = os.path.join(HERE, 'snr_bot_state.json')
 LOG_FILE = os.path.join(HERE, 'snr_bot.log')
+STOP_FILE = os.path.join(HERE, 'stop.flag')
+BAT_FILE = os.path.join(HERE, 'start_bot.bat')
+TASK = 'SNR Bot'
+LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
     "testnet": True,                 # true = demo-fapi.binance.com (uang mainan); false = akun asli
@@ -39,6 +47,8 @@ DEFAULT_CONFIG = {
     "max_positions": 3,              # maks posisi terbuka (backtest: 3)
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
     "leverage": 5,                   # leverage per koin (hanya margin; risiko tetap dari jarak SL)
+    "margin_isolated": True,         # true = margin Isolated per posisi (lebih aman), false = Cross
+    "daily_summary": True,           # ringkasan harian ke Telegram (jam 09:00 waktu Korea / 00:00 UTC)
     "coins": "default",              # "default" = 26 koin terbaik, "all" = semua koin USDT likuid, atau daftar ["SANDUSDT", ...]
     "exclude": [],                   # koin yang tidak mau ditradingkan
     "min_volume_usdt": 20000000,     # likuiditas: rata-rata volume 30 hari (USDT) minimal
@@ -47,7 +57,7 @@ DEFAULT_CONFIG = {
 }
 DEFAULT_COINS = ['GMTUSDT', 'FILUSDT', '1000SHIBUSDT', 'SANDUSDT', 'DOTUSDT', 'GALAUSDT', 'ATOMUSDT', 'APTUSDT', 'AVAXUSDT', 'ALGOUSDT',
                  'WLDUSDT', 'AAVEUSDT', 'NEOUSDT', '1000PEPEUSDT', 'LUNA2USDT', 'ARBUSDT', 'IMXUSDT', 'THETAUSDT', 'FTMUSDT', 'KSMUSDT',
-                 '1000LUNCUSDT', '1INCHUSDT', 'ROSEUSDT', 'ARKMUSDT', 'ANKRUSDT', 'HOTUSDT']
+                 '1000LUNCUSDT', '1INCHUSDT', 'ROSEUSDT', 'ARKMUSDT', 'ANKRUSDT', 'HOTUSDT']   # FTMUSDT is skipped automatically when delisted
 PV, KEEP, SLK, RR, H4_LIMIT, D1_LIMIT = 5, 10, 0.5, 2.0, 600, 400
 H4 = 4 * 3600
 
@@ -175,6 +185,11 @@ def report(cfg, payload):
         log.warning('Laporan ke website gagal: %s', e)
 
 
+def notify(cfg, text, level='info'):
+    """short status message to Telegram through the website (daily summary, warnings)"""
+    report(cfg, {'event': 'info', 'text': text, 'level': level})
+
+
 class Bot:
     def __init__(self, cfg):
         self.cfg, self.api, self.st = cfg, Binance(cfg), load_state()
@@ -252,6 +267,10 @@ class Bot:
             log.info('%s: jumlah %.8f di bawah minimum Binance untuk risiko %.2f USDT — dilewati', sym, qty, risk); return
         if self.cfg['dry_run']:
             log.info('[DRY RUN] SELL %s qty %s ~%s SL %s TP %s', sym, fmt(qty, f['step']), close, fmt(sl, f['tick']), fmt(close - RR * (sl - close), f['tick'])); return
+        if self.cfg.get('margin_isolated', True):
+            try: self.api.post('/fapi/v1/marginType', {'symbol': sym, 'marginType': 'ISOLATED'})
+            except RuntimeError as e:
+                if '-4046' not in str(e): log.warning('%s: margin isolated: %s', sym, e)   # -4046 = already isolated
         try: self.api.post('/fapi/v1/leverage', {'symbol': sym, 'leverage': int(self.cfg['leverage'])})
         except RuntimeError as e: log.warning('%s: leverage: %s', sym, e)
         o = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'SELL', 'type': 'MARKET', 'quantity': fmt(qty, f['step']), 'newOrderRespType': 'RESULT'})
@@ -267,7 +286,9 @@ class Bot:
             b = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': 'BUY', 'type': 'TAKE_PROFIT_MARKET', 'triggerPrice': fmt(tp_r, f['tick']),
                                                      'closePosition': 'true', 'workingType': 'CONTRACT_PRICE'})
         except RuntimeError as e:
-            log.error('%s: SL/TP gagal dipasang (%s) — posisi ditutup demi keamanan', sym, e); self.close_now(sym, filled); return
+            log.error('%s: SL/TP gagal dipasang (%s) — posisi ditutup demi keamanan', sym, e)
+            notify(self.cfg, f'{sym}: SL/TP gagal dipasang ({e}). Posisi langsung ditutup demi keamanan — cek Binance.', 'error')
+            self.close_now(sym, filled); return
         t = int(time.time())
         ticket = f"{sym}-{o['orderId']}"
         self.st['positions'][sym] = {'ticket': ticket, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
@@ -277,7 +298,9 @@ class Bot:
 
     def close_now(self, sym, qty):
         try: self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'BUY', 'type': 'MARKET', 'quantity': fmt(qty, self.filters[sym]['step']), 'reduceOnly': 'true'})
-        except RuntimeError as e: log.error('%s: GAGAL menutup posisi — tutup manual di Binance! (%s)', sym, e)
+        except RuntimeError as e:
+            log.error('%s: GAGAL menutup posisi — tutup manual di Binance! (%s)', sym, e)
+            notify(self.cfg, f'{sym}: GAGAL menutup posisi ({e}). TUTUP MANUAL di Binance sekarang!', 'error')
 
     # ----- every minute: positions that closed at TP/SL -----
     def manage(self):
@@ -304,7 +327,21 @@ class Bot:
             log.info('Posisi %s ditutup (%s) | hasil %.2f USDT', sym, reason.upper(), pnl)
             report(self.cfg, {'event': 'close', 'ticket': p['ticket'], 'symbol': sym, 'side': 'SELL', 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
                               'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'], 'time': int(time.time())})
+            day = datetime.now(timezone.utc).strftime('%Y-%m-%d'); dp = self.st.setdefault('day_pnl', {})
+            dp[day] = round(dp.get(day, 0) + pnl, 4); dp.pop(next(iter(dp)), None) if len(dp) > 40 else None
             del self.st['positions'][sym]; save_state(self.st)
+
+    def summary(self):
+        if not self.cfg.get('daily_summary', True) or self.cfg['dry_run']: return
+        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        if self.st.get('last_summary') == today: return
+        self.st['last_summary'] = today; save_state(self.st)
+        from datetime import timedelta
+        yday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
+        try: bal = self.balance()
+        except RuntimeError: bal = float('nan')
+        pos = ', '.join(f"{k.replace('USDT', '')}" for k in self.st['positions']) or 'tidak ada'
+        notify(self.cfg, f"Ringkasan harian — bot aktif.\nSaldo Futures: {bal:.2f} USDT\nHasil kemarin ({yday}): {self.st.get('day_pnl', {}).get(yday, 0):+.2f} USDT\nPosisi terbuka: {pos}")
 
     def run(self):
         self.api.sync_time(); self.load_symbols()
@@ -315,12 +352,16 @@ class Bot:
             except RuntimeError as e:
                 log.error('API key belum bisa dipakai: %s', e)
                 log.error('Cek: izin "Aktifkan Futures" dicentang, IP VPS sudah ditambahkan, api_key/api_secret tersalin lengkap, testnet sesuai akun.')
+                notify(self.cfg, f'Bot tidak bisa mulai: API key ditolak ({e}).', 'error')
                 return
         if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
         log.info('Mode: %s · risiko %s · maks %d posisi · leverage %dx', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'], self.cfg['leverage'])
         last_sync = time.time()
+        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} posisi.")
         while True:
+            if os.path.exists(STOP_FILE):
+                log.info('stop.flag ditemukan — bot berhenti.'); notify(self.cfg, 'Bot dihentikan (perintah --stop). Posisi terbuka tetap punya SL/TP di Binance.'); return
             now_s = int(time.time() + self.api.offset / 1000)
             bucket = now_s // H4 * H4
             if bucket > self.st.get('last_scan', 0) and now_s - bucket >= 20:      # 20 s after every H4 close (UTC 00/04/08/12/16/20)
@@ -333,8 +374,10 @@ class Bot:
                 stop = float(self.cfg.get('stop_balance_usdt') or 0)
                 if sigs and stop > 0 and not self.cfg['dry_run']:
                     bal = self.balance()
+                    if bal >= stop: self.st['brake_sent'] = 0
                     if bal < stop:
                         log.error('REM AKTIF: saldo %.2f USDT di bawah batas %.2f — tidak membuka posisi baru. Naikkan modal / ubah stop_balance_usdt bila ingin lanjut.', bal, stop)
+                        if not self.st.get('brake_sent'): notify(self.cfg, f'REM AKTIF: saldo {bal:.2f} USDT di bawah batas {stop:.2f}. Bot tidak membuka posisi baru.', 'error'); self.st['brake_sent'] = 1
                         sigs = []
                 for sym, level, atr, close in sigs:
                     if sym in busy: continue
@@ -347,6 +390,8 @@ class Bot:
                 if not sigs: log.info('Tidak ada sinyal.')
             try: self.manage()
             except RuntimeError as e: log.warning('Cek posisi gagal: %s', e)
+            try: self.summary()
+            except Exception as e: log.warning('Ringkasan gagal: %s', e)
             if time.time() - last_sync > 3600:
                 try: self.api.sync_time(); self.load_symbols()
                 except RuntimeError as e: log.warning('%s', e)
@@ -354,7 +399,47 @@ class Bot:
             time.sleep(30)
 
 
+def schtasks(*args):
+    r = subprocess.run(['schtasks', *args], capture_output=True, text=True)
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def command(cmd):
+    if cmd == '--install':
+        if os.name != 'nt': sys.exit('--install hanya untuk Windows.')
+        with open(BAT_FILE, 'w', encoding='utf-8') as f:
+            f.write(f'@echo off\ncd /d "{HERE}"\n:loop\nif exist "{STOP_FILE}" goto end\n"{sys.executable}" "{os.path.abspath(__file__)}"\n'
+                    f'if exist "{STOP_FILE}" goto end\ntimeout /t 30 /nobreak >nul\ngoto loop\n:end\n')
+        if os.path.exists(STOP_FILE): os.remove(STOP_FILE)
+        code, out = schtasks('/create', '/tn', TASK, '/tr', f'"{BAT_FILE}"', '/sc', 'onstart', '/ru', 'SYSTEM', '/rl', 'HIGHEST', '/f')
+        if code: sys.exit(f'Gagal membuat autostart (jalankan Command Prompt sebagai Administrator):\n{out}')
+        code, out = schtasks('/run', '/tn', TASK)
+        print('Bot berjalan di latar belakang dan otomatis jalan lagi setiap VPS menyala.' if code == 0 else out)
+        print('Cek:  python snr_bot.py --status     Berhenti:  python snr_bot.py --stop')
+    elif cmd == '--stop':
+        open(STOP_FILE, 'w').close()
+        print('Perintah berhenti dikirim. Bot berhenti dalam ±30 detik (posisi tetap punya SL/TP). Jalankan lagi: python snr_bot.py --install')
+    elif cmd == '--uninstall':
+        open(STOP_FILE, 'w').close(); schtasks('/end', '/tn', TASK)
+        code, out = schtasks('/delete', '/tn', TASK, '/f')
+        print('Autostart dihapus, bot berhenti.' if code == 0 else out)
+    elif cmd == '--status':
+        try:
+            with open(LOG_FILE, encoding='utf-8') as f: lines = f.readlines()[-15:]
+            print(''.join(lines))
+        except FileNotFoundError: print('Belum ada log.')
+        print('stop.flag ada -> bot dihentikan' if os.path.exists(STOP_FILE) else '')
+    else:
+        sys.exit('Perintah: --install, --status, --stop, --uninstall')
+
+
 if __name__ == '__main__':
+    if len(sys.argv) > 1: command(sys.argv[1]); sys.exit(0)
+    try:                                          # only one bot at a time (a second copy would double the orders)
+        _lock = socket.socket(); _lock.bind(('127.0.0.1', LOCK_PORT))
+    except OSError:
+        sys.exit('Bot sudah berjalan (mungkin di latar belakang). Cek: python snr_bot.py --status · hentikan: python snr_bot.py --stop')
+    if os.path.exists(STOP_FILE): os.remove(STOP_FILE)
     setup_log()
     cfg = load_config()
     log.info('v1 SNR bot mulai')
@@ -362,3 +447,8 @@ if __name__ == '__main__':
         Bot(cfg).run()
     except KeyboardInterrupt:
         log.info('Bot dihentikan. Posisi terbuka tetap punya SL/TP di Binance.')
+        notify(cfg, 'Bot dihentikan manual (Ctrl+C). Posisi terbuka tetap punya SL/TP di Binance.')
+    except Exception as e:
+        log.exception('Bot error: %s', e)
+        notify(cfg, f'Bot error dan berhenti: {e}. (Mode autostart: jalan lagi otomatis dalam 30 detik.)', 'error')
+        raise
