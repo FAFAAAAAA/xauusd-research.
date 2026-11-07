@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { call, fmt, peek, px } from '@/components/client';
-import { ErrorBox, Loading, PageHead, SecHead, Seg, Spinner, toast } from '@/components/Status';
+import { ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner, toast } from '@/components/Status';
 import Link from 'next/link';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
 import { JOURNAL_KEYS, marketOfJournal } from '@/lib/core/markets';
@@ -23,6 +23,8 @@ const BT: Record<string, { win: number; perMonth: number; label: string }> = {
 const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'v1 BTC', alt: 'v2 ALT', snr: 'v1 SNR', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
+// coin of a bot trade: the note is "Bot Binance SANDUSDT …"
+const coinOf = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
 
 export default function TradePage() {
@@ -30,6 +32,10 @@ export default function TradePage() {
   const [j, setJ] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats> } | null>(() => peek('/api/journal'));
   const [err, setErr] = useState<string | null>(null);
   const [market, setMarket] = useMarket();
+  // history list: same look as the backtest trade list (hidden until opened, 10 at a time, tap a row for the detail sheet)
+  const [showHist, setShowHist] = useState(false);
+  const [histLimit, setHistLimit] = useState(10);
+  const [detail, setDetail] = useState<JournalTrade | null>(null);
   const load = useCallback(() => {
     setErr(null);
     call<any>('/api/live').then(setD).catch((e) => setErr(e.message));
@@ -193,23 +199,51 @@ export default function TradePage() {
       </section>
 
       <section className="group">
-        <SecHead title="Riwayat" meta={closedT.length ? `${closedT.length} trade` : undefined} />
-        {closedT.length ? (
-          <div className="list">
-            {closedT.slice(0, 50).map((t) => (
-              <div key={t.id} className="item">
-                <span style={{ minWidth: 0 }}>
-                  <span className="t" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span>{NAME[t.strategy] ?? t.strategy} · {RESULT[t.result] ?? 'Manual'}</span>
-                  <span className="d" style={{ display: 'block', marginTop: 2 }}>{fmt(t.openedAt, tz)} · {px(t.entry)} → {px(t.exit)}{t.note ? ` · ${t.note}` : ''}</span>
-                </span>
-                <span className="row" style={{ gap: 4, flex: 'none', flexWrap: 'nowrap' }}>
-                  <span className={`num ${tone(t.pnl)}`} style={{ fontWeight: 600 }}>{money(t.pnl)}</span>
-                  <button className="btn sm ghost icon" onClick={() => remove(t)} aria-label="Hapus">✕</button>
-                </span>
-              </div>
-            ))}
+        <SecHead title="Riwayat" meta={`${closedT.length} total`} />
+        {closedT.length ? <>
+          <div className="row">
+            <button className="btn sm" onClick={() => setShowHist((v) => !v)}>{showHist ? 'Sembunyikan trade' : `Tampilkan trade (${closedT.length})`}</button>
           </div>
-        ) : <p className="empty-inline">Belum ada trade.</p>}
+          {showHist ? <>
+            <div className="list" style={{ marginTop: 8 }}>
+              {closedT.slice(0, histLimit).map((t) => (
+                <button key={t.id} className="item btnrow" onClick={() => setDetail(t)}>
+                  <span style={{ minWidth: 0 }}>
+                    <span className="t" style={{ display: 'block' }}>{fmt(t.openedAt, tz)}</span>
+                    <span className="d">{RESULT[t.result] ?? 'Manual'} · {NAME[t.strategy] ?? t.strategy}{coinOf(t) ? ` · ${coinOf(t)}` : ''}</span>
+                  </span>
+                  <span className="row" style={{ gap: 8, flex: 'none' }}>
+                    <span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span>
+                    <span className={`num ${tone(t.pnl)}`} style={{ fontWeight: 600, minWidth: 72, textAlign: 'right' }}>{money(t.pnl)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="row" style={{ marginTop: 12 }}>
+              {closedT.length > histLimit ? <button className="btn sm" onClick={() => setHistLimit((n) => n + 30)}>Tampilkan lebih banyak</button> : null}
+              {closedT.length > histLimit ? <button className="btn sm" onClick={() => setHistLimit(closedT.length)}>Tampilkan semua</button> : null}
+            </div>
+          </> : null}
+        </> : <p className="empty-inline">Belum ada trade.</p>}
+        {detail ? (
+          <Sheet title={`${detail.side} · ${fmt(detail.openedAt, tz)}`} onClose={() => setDetail(null)}>
+            <div className="stack">
+              <dl className="kv">
+                <dt>Metode</dt><dd>{NAME[detail.strategy] ?? detail.strategy}{coinOf(detail) ? ` · ${coinOf(detail)}` : ''}</dd>
+                <dt>{['btc', 'alt', 'snr'].includes(detail.strategy) ? 'Jumlah' : 'Lot'}</dt><dd>{['btc', 'alt', 'snr'].includes(detail.strategy) ? detail.lot : detail.lot.toFixed(2)}</dd>
+                <dt>Entry</dt><dd>{px(detail.entry)}</dd>
+                <dt>Stop loss</dt><dd>{px(detail.sl)}</dd>
+                <dt>Take profit</dt><dd>{px(detail.tp)}</dd>
+                <dt>Keluar</dt><dd>{px(detail.exit)} · {RESULT[detail.result] ?? 'Manual'}</dd>
+                <dt>Hasil</dt><dd className={tone(detail.pnl)} style={{ fontWeight: 600 }}>{money(detail.pnl)}</dd>
+                <dt>Dibuka</dt><dd>{fmt(detail.openedAt, tz)}</dd>
+                <dt>Ditutup</dt><dd>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</dd>
+                {detail.note ? <><dt>Catatan</dt><dd>{detail.note}</dd></> : null}
+              </dl>
+              <button className="btn block" onClick={async () => { const t = detail; setDetail(null); await remove(t); }}>Hapus trade ini</button>
+            </div>
+          </Sheet>
+        ) : null}
         {jErr && !draft ? <div className="error" style={{ marginTop: 10 }}>{jErr}</div> : null}
       </section>
 
