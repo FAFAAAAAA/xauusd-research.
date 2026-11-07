@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { call, fmt, peek, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead, SecHead, Seg, Spinner, toast } from '@/components/Status';
 import Link from 'next/link';
+import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
+import { JOURNAL_KEYS, marketOfJournal } from '@/lib/core/markets';
 import { liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/lib/core/journal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -26,6 +28,7 @@ export default function TradePage() {
   const [d, setD] = useState<any>(() => peek('/api/live'));
   const [j, setJ] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats> } | null>(() => peek('/api/journal'));
   const [err, setErr] = useState<string | null>(null);
+  const [market, setMarket] = useMarket();
   const load = useCallback(() => {
     setErr(null);
     call<any>('/api/live').then(setD).catch((e) => setErr(e.message));
@@ -69,14 +72,17 @@ export default function TradePage() {
   if (!d || !j) return <><PageHead title="Trade" /><Loading /></>;
   const tz = d.timezone;
   const signals = (d.events as any[]).map((e) => ({ e, s: liveSignalFrom(e.extra, e.price) })).filter((x) => x.s);
-  const openT = j.trades.filter((t) => t.result === 'open');
-  const closedT = j.trades.filter((t) => t.result !== 'open');
+  // only the chosen market's journal (Forex: v1 XAU, v1 NAS · Crypto: v1 BTC, v1 ALT; 'lain' shows in both)
+  const inMarket = (t: JournalTrade) => { const m = marketOfJournal(t.strategy); return m === 'both' || m === market; };
+  const openT = j.trades.filter((t) => t.result === 'open' && inMarket(t));
+  const closedT = j.trades.filter((t) => t.result !== 'open' && inMarket(t));
   const stratOf = (label: string) => (/^v1 ?alt/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
   return (
     <div className="stack">
       <PageHead title="Trade"
-        actions={!draft ? <button className="btn sm primary" onClick={() => openDraft({})}>+ Catat trade</button> : null} />
+        actions={!draft ? <button className="btn sm primary" onClick={() => openDraft({ strategy: JOURNAL_KEYS[market][0] })}>+ Catat trade</button> : null} />
+      <MarketSwitch value={market} onChange={(m) => { setMarket(m); setDraft(null); }} />
 
       <div className="riskbar">
         <span>Modal <strong>${d.risk.capital}</strong></span>
@@ -91,7 +97,7 @@ export default function TradePage() {
           <SecHead title="Catat trade" />
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
             <div className="picker"><span className="label">Metode</span>
-              <Seg full label="Metode" options={(['v2', 'nas', 'btc', 'alt', 'lain'] as const).map((s) => [s, NAME[s]] as const)} value={draft.strategy} onChange={(s) => setDraft({ ...draft, strategy: s })} /></div>
+              <Seg full label="Metode" options={[...JOURNAL_KEYS[market], 'lain'].map((s) => [s, NAME[s]] as const)} value={draft.strategy} onChange={(s) => setDraft({ ...draft, strategy: s })} /></div>
             <div className="picker"><span className="label">Arah</span>
               <Seg full label="Arah" options={[['BUY', 'BUY'], ['SELL', 'SELL']] as const} value={draft.side} onChange={(s) => setDraft({ ...draft, side: s })} /></div>
           </div>
@@ -107,7 +113,7 @@ export default function TradePage() {
         </section>
       ) : null}
 
-      <section className="group">
+      {market === 'forex' ? <section className="group">
         <SecHead title="Sinyal live" meta={signals.length ? `${Math.min(10, signals.length)} terbaru` : undefined} />
         {signals.length ? (
           <div className="list">
@@ -132,7 +138,7 @@ export default function TradePage() {
             })}
           </div>
         ) : <p className="empty-inline">Belum ada sinyal.</p>}
-      </section>
+      </section> : null}
 
       {openT.length ? (
         <section className="group">
@@ -168,7 +174,7 @@ export default function TradePage() {
           <table className="num-r">
             <thead><tr><th>Metode</th><th>Selesai</th><th>Win</th><th>Win backtest</th><th>Hasil</th><th>Rata-rata</th></tr></thead>
             <tbody>
-              {(['v2', 'nas', 'btc', 'alt', 'all'] as const).map((k) => {
+              {JOURNAL_KEYS[market].map((k) => {
                 const s = j.stats[k];
                 if (!s) return null;
                 return (

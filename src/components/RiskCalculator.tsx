@@ -2,17 +2,21 @@
 import { useEffect, useState } from 'react';
 import { SecHead, Seg } from '@/components/Status';
 import { IDEAL_DD_SHARE, RISK_LABEL, RISK_META, RISK_STATS } from '@/lib/core/risk-stats';
+import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
+import { RISK_KEYS } from '@/lib/core/markets';
 
 /* Capital & lot risk calculator: scales the historical backtest of v1 XAU / v1 NAS / v1 BTC / v1 ALT (in R) to the owner's capital and risk. */
 type Key = keyof typeof RISK_STATS;
 // Only the strategies the owner trades are offered (7 Nov 2026: "v1 XAU" = key v2, "v1 NAS" = key nas); the other stats stay in risk-stats.ts.
-const SHOWN: Key[] = ['v2', 'nas', 'btc', 'alt'];
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: n !== 0 && Math.abs(n) < 100 ? 2 : 0 })}`;
 const pc = (n: number) => `${(n * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
 
 export function RiskCalculator() {
-  const [k, setK] = useState<Key>('v2');
+  const [market, setMarket] = useMarket();
+  const SHOWN: Key[] = RISK_KEYS[market];   // Forex: v1 XAU, v1 NAS · Crypto: v1 BTC, v1 ALT
+  const [kSel, setK] = useState<Key>('v2');
+  const k: Key = SHOWN.includes(kSel) ? kSel : SHOWN[0];
   const [cap, setCap] = useState('1000');
   const [unit, setUnit] = useState<'usd' | 'cent'>('usd');
   const [mode, setMode] = useState<'pct' | 'lot'>('pct');
@@ -42,6 +46,7 @@ export function RiskCalculator() {
   return (
     <section className="group stack">
       <SecHead title="Risiko modal & lot" meta={`backtest ${meta.period}`} />
+      <MarketSwitch value={market} onChange={(m) => { setMarket(m); setGo(false); }} />
       {SHOWN.length > 1 ? <Seg scroll label="Strategi" options={SHOWN.map((x) => [x, RISK_LABEL[x]] as const)} value={k} onChange={setK} /> : <p className="mute small">Strategi: <strong>{RISK_LABEL[k]}</strong></p>}
       <div className="grid two">
         <label className="field">Modal<input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>

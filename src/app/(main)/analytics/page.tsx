@@ -7,6 +7,8 @@ import { CountUp, EmptyState, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, 
 import { DrawdownBreakdown, EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
 import { ReportButton } from '@/components/ReportImage';
 import { AltResult } from '@/components/AltResult';
+import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
+import { marketOfAdapter, marketOfStrategy, marketOfSymbol, type Market } from '@/lib/core/markets';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
 import { METHODS, methodByKey, methodByStrategy } from '@/lib/core/strategy/methods-meta';
 
@@ -53,7 +55,10 @@ function ResearchIcon({ name }: { name: keyof typeof UI_ICON_PATH }) {
 }
 
 export default function Analytics() {
-  const [d, setD] = useState<any>(() => peek('/api/analytics'));
+  const [dRaw, setD] = useState<any>(() => peek('/api/analytics'));
+  const [market, setMarket] = useMarket();
+  // only the chosen market's results (Forex = MT5 strategies, Crypto = Binance strategies)
+  const d = useMemo(() => (dRaw?.sessions ? { ...dRaw, sessions: dRaw.sessions.filter((s: any) => marketOfStrategy(String(s.strategy ?? '')) === market) } : dRaw), [dRaw, market]);
   const [busy, setBusy] = useState(false);
   const loadSequence = useRef(0);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -126,7 +131,8 @@ export default function Analytics() {
   return (
     <div className="stack">
       <PageHead title="Backtest" />
-      <AltResult />
+      <MarketSwitch value={market} onChange={(m) => { setMarket(m); setCfg(null); setPair(null); setYear(null); }} />
+      {market === 'crypto' ? <AltResult /> : null}
       {hasRuns ? <div className="backtest-controls">
         <button className="research-filter" onClick={() => { setTab('hasil'); setFilterOpen(true); }} aria-haspopup="dialog" aria-label="Pilih strategi, tahun dan risk reward">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg>
@@ -141,11 +147,11 @@ export default function Analytics() {
       </Sheet> : null}
 
       {err ? <ErrorBox error={err} retry={load} /> : !d ? <Loading what="hasil" variant="dashboard" /> : !hasRuns ? (
-        <RunBacktest existingFor={() => []} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); }} />
+        <RunBacktest market={market} existingFor={() => []} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); }} />
       ) : (
         <>
           {tab === 'jalan' ? (
-            <section className="group"><RunBacktest bare existingFor={(k, sym) => yearRows(d.sessions.filter((s: any) => configKey(s) === k && symOf(s) === sym)).map((r) => r.label)} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); setTab('hasil'); window.scrollTo({ top: 0 }); }} /></section>
+            <section className="group"><RunBacktest market={market} bare existingFor={(k, sym) => yearRows(d.sessions.filter((s: any) => configKey(s) === k && symOf(s) === sym)).map((r) => r.label)} onDone={(k) => { setCfg(k); setPair(null); reloadAll(); setTab('hasil'); window.scrollTo({ top: 0 }); }} /></section>
           ) : tab === 'kelola' ? (
             <section className="group stack">
               <SecHead title="Hasil tersimpan" meta={`${d.sessions.length} hasil`} />
@@ -433,7 +439,7 @@ const FORM_SAVED = ['spread', 'slippage', 'commission', 'swapLong', 'swapShort',
 const yearOf = (ms: number) => new Date(ms).getUTCFullYear();
 
 /** One strategy → every chosen pair, one year per request (sequential), RR 1:1/1:2/1:3 each. */
-function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[] }) {
+function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (configKey: string) => void; bare?: boolean; existingFor: (configKey: string, symbol: string) => string[]; market: Market }) {
   const [markets, setMarkets] = useState<any[]>([]);
   const [strategies, setStrategies] = useState<any[]>([]);
   const [f, setF] = useState({ strategy: '', tf: 'M15', y1: '', y2: '', from: '2019-01-01', to: '2020-01-01', spread: String(BROKER.spread), slippage: String(BROKER.slippage), commission: String(BROKER.commissionPerLot), swapLong: String(BROKER.swapLong), swapShort: String(BROKER.swapShort), risk: '10', capital: '1000', ambiguity: 'worst', be: 'strategy', nocost: '0' });
@@ -466,15 +472,16 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   useEffect(() => {
     call<any[]>('/api/markets').then(setMarkets).catch((e) => setErr(e.message));
     call<any[]>('/api/strategies').then((s) => {
-      const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active' && STRAT_ORDER.includes(x.adapter_key))
+      const usable = s.filter((x: any) => x.configured && !x.testOnly && x.status === 'active' && STRAT_ORDER.includes(x.adapter_key) && marketOfAdapter(x.adapter_key) === market)
         .sort((a: any, b: any) => STRAT_ORDER.indexOf(a.adapter_key) - STRAT_ORDER.indexOf(b.adapter_key));
       setStrategies(usable);
-      if (usable[0]) setF((x) => ({ ...x, strategy: x.strategy || usable[0].id }));
+      setSel(null);
+      if (usable[0]) setF((x) => ({ ...x, strategy: usable.some((u: any) => u.id === x.strategy) ? x.strategy : usable[0].id }));
     }).catch(() => {});
-  }, []);
+  }, [market]);
   const strat = strategies.find((x: any) => x.id === f.strategy);
   const baseTf: string = (strat && methodByKey(strat.adapter_key)?.baseTf) || 'M15';   // the strategy decides its own base timeframe
-  const sets = markets.filter((m) => m.tf === baseTf && m.source_id);
+  const sets = markets.filter((m) => m.tf === baseTf && m.source_id && marketOfSymbol(m.symbol) === market);
   const chosen = sets.filter((m) => sel == null || sel.includes(m.symbol));
   // each strategy starts with its own pair(s) selected (v1 XAU → XAUUSD, v1 NAS → US100); the user can still pick others
   const stratPairs: string[] | null = (strat ? methodByKey(String(strat.adapter_key))?.pairs : undefined) ?? null;
