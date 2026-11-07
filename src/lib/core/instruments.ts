@@ -180,6 +180,19 @@ export const INSTRUMENTS: InstrumentSpec[] = [
   { symbol: 'LPTUSDT', label: 'LPTUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
   { symbol: 'MEWUSDT', label: 'MEWUSDT (Binance)', group: 'Kripto', digits: 8, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
   { symbol: 'PEOPLEUSDT', label: 'PEOPLEUSDT (Binance)', group: 'Kripto', digits: 7, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  // + best v1 SNR coins not yet bundled (7 Nov 2026)
+  { symbol: 'GMTUSDT', label: 'GMTUSDT (Binance)', group: 'Kripto', digits: 7, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'NEOUSDT', label: 'NEOUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'LUNA2USDT', label: 'LUNA2USDT (Binance)', group: 'Kripto', digits: 6, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'IMXUSDT', label: 'IMXUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'THETAUSDT', label: 'THETAUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'FTMUSDT', label: 'FTMUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'KSMUSDT', label: 'KSMUSDT (Binance)', group: 'Kripto', digits: 4, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: '1000LUNCUSDT', label: '1000LUNCUSDT (Binance)', group: 'Kripto', digits: 6, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: '1INCHUSDT', label: '1INCHUSDT (Binance)', group: 'Kripto', digits: 6, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'ROSEUSDT', label: 'ROSEUSDT (Binance)', group: 'Kripto', digits: 7, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'ARKMUSDT', label: 'ARKMUSDT (Binance)', group: 'Kripto', digits: 5, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
+  { symbol: 'ANKRUSDT', label: 'ANKRUSDT (Binance)', group: 'Kripto', digits: 7, contractSize: 1, usdBase: false, spread: 0, slippage: 0, commission: 0, ...BINANCE },
 ];
 
 export function instrumentSpec(symbol: string): InstrumentSpec | null {

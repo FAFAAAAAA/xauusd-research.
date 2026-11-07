@@ -1256,5 +1256,89 @@
   "first": 1640318400000,
   "last": 1794007800000,
   "candles": 85096
+ },
+ "GMTUSDT_M30": {
+  "symbol": "GMTUSDT",
+  "tf": "M30",
+  "first": 1647316800000,
+  "last": 1794007800000,
+  "candles": 81352
+ },
+ "NEOUSDT_M30": {
+  "symbol": "NEOUSDT",
+  "tf": "M30",
+  "first": 1581928200000,
+  "last": 1794007800000,
+  "candles": 117775
+ },
+ "LUNA2USDT_M30": {
+  "symbol": "LUNA2USDT",
+  "tf": "M30",
+  "first": 1662778800000,
+  "last": 1794007800000,
+  "candles": 72858
+ },
+ "IMXUSDT_M30": {
+  "symbol": "IMXUSDT",
+  "tf": "M30",
+  "first": 1644550200000,
+  "last": 1794007800000,
+  "candles": 82745
+ },
+ "THETAUSDT_M30": {
+  "symbol": "THETAUSDT",
+  "tf": "M30",
+  "first": 1590566400000,
+  "last": 1794007800000,
+  "candles": 112976
+ },
+ "FTMUSDT_M30": {
+  "symbol": "FTMUSDT",
+  "tf": "M30",
+  "first": 1600930800000,
+  "last": 1794007800000,
+  "candles": 106978
+ },
+ "KSMUSDT_M30": {
+  "symbol": "KSMUSDT",
+  "tf": "M30",
+  "first": 1602658800000,
+  "last": 1794007800000,
+  "candles": 106018
+ },
+ "1000LUNCUSDT_M30": {
+  "symbol": "1000LUNCUSDT",
+  "tf": "M30",
+  "first": 1662728400000,
+  "last": 1794007800000,
+  "candles": 72886
+ },
+ "1INCHUSDT_M30": {
+  "symbol": "1INCHUSDT",
+  "tf": "M30",
+  "first": 1608890400000,
+  "last": 1794007800000,
+  "candles": 102796
+ },
+ "ROSEUSDT_M30": {
+  "symbol": "ROSEUSDT",
+  "tf": "M30",
+  "first": 1640921400000,
+  "last": 1794007800000,
+  "candles": 84761
+ },
+ "ARKMUSDT_M30": {
+  "symbol": "ARKMUSDT",
+  "tf": "M30",
+  "first": 1690511400000,
+  "last": 1794007800000,
+  "candles": 57451
+ },
+ "ANKRUSDT_M30": {
+  "symbol": "ANKRUSDT",
+  "tf": "M30",
+  "first": 1611644400000,
+  "last": 1794007800000,
+  "candles": 101266
  }
 }

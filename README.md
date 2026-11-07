@@ -476,3 +476,8 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
 - Funding rate (data.binance.vision, semua koin): SELL tembus low 24 jam makin bagus saat funding > 0,01% (PF 1,7–1,9 vs 0,76 saat negatif),
   tapi sebagai portofolio maks 3 hanya PF 1,13 (untung dari kejadian likuidasi massal). Filter/prioritas funding tidak memperbaiki v1 SNR.
 
+- Pair default v1 SNR (7 Nov 2026, permintaan pemilik) = 26 koin terbaik: ≥ 100 trade, PF ≥ 1,25, PF ≥ 1,1 di 2020–23 dan 2024–26
+  (12 koin ditambahkan sebagai data 30m). Portofolio maks 3 (urutan acak): PF 1,40, +$5,4 rb, DD 33× vs semua koin PF 1,31, +$8,5 rb, DD 74×.
+  Dipilih dengan seluruh data → ke depan kemungkinan lebih lemah. Bedah lanjutan (retest, sentuhan, umur support, body, volume, turun 7 hari,
+  breadth) tidak memperbaiki portofolio; retest rugi (PF 0,99).
+
