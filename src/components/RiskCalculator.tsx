@@ -96,7 +96,7 @@ export function RiskCalculator() {
               <thead><tr><th>Kena SL berturut-turut</th><th>Total rugi</th><th>% modal</th></tr></thead>
               <tbody>
                 {streaks.map((n) => <tr key={n}><td>{n}×{n === s.maxLossStreak ? ' (terpanjang historis)' : ''}</td><td>{usd(-n * r)}</td><td className={n * r >= modal ? 'neg' : ''}>{pc((n * r) / modal)}</td></tr>)}
-                <tr><td>Drawdown historis terburuk</td><td>{usd(-dd)}</td><td className={ddShare >= 1 ? 'neg' : ''}>{pc(ddShare)}</td></tr>
+                <tr><td>Drawdown historis terburuk ({s.maxDdR}×)</td><td>{usd(-dd)}</td><td className={ddShare >= 1 ? 'neg' : ''}>{pc(ddShare)}</td></tr>
                 <tr><td>Modal habis</td><td>{usd(-modal)}</td><td>100% · setelah ±{blow} SL</td></tr>
               </tbody>
             </table>

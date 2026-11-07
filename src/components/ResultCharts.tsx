@@ -110,21 +110,21 @@ interface PeriodDrawdown {
 export function periodDrawdowns(trades: readonly ClosedTrade[], mode: DrawdownPeriod | 'all', tz: string): PeriodDrawdown[] | null {
   const periods = new Map<string, PeriodDrawdown>();
   for (const trade of trades) {
-    if (!Number.isFinite(trade.pnl)) return null;   // drawdown in $ (owner: no R units on the website)
+    if (trade.pnlR == null || !Number.isFinite(trade.pnlR)) return null;   // drawdown as a multiple of the risk per trade (×)
     const period = mode === 'all' ? { key: 'all', sort: 0, label: 'Maksimum' } : bucket(trade.exit, mode, tz);
     let row = periods.get(period.key);
     if (!row) {
       row = { sort: period.sort, label: period.label, totalR: 0, peakR: 0, drawdown: 0 };
       periods.set(period.key, row);
     }
-    row.totalR += trade.pnl;
+    row.totalR += trade.pnlR;
     row.peakR = Math.max(row.peakR, row.totalR);
     row.drawdown = Math.max(row.drawdown, row.peakR - row.totalR);
   }
   return [...periods.values()].sort((a, b) => b.sort - a.sort);
 }
 
-const formatDrawdown = (value: number | null) => value == null ? '—' : Math.round(value) > 0 ? `−$${Math.round(value).toLocaleString('en-US')}` : '$0';
+const formatDrawdown = (value: number | null) => value == null ? '—' : `${Math.round(value)}×`;
 
 export function DrawdownBreakdown({ trades, tz }: { trades: ClosedTrade[]; tz: string }) {
   const [mode, setMode] = useState<DrawdownPeriod>('week');
@@ -141,7 +141,7 @@ export function DrawdownBreakdown({ trades, tz }: { trades: ClosedTrade[]; tz: s
       <SecHead title="Drawdown" />
       <div className="hold3">
         {summary.map(([label, value]) => (
-          <div key={label} className={value != null && Math.round(value) > 0 ? 'neg' : undefined}>
+          <div key={label} title="Kelipatan risiko per trade" className={value != null && Math.round(value) > 0 ? 'neg' : undefined}>
             <span>{label}</span><strong>{formatDrawdown(value)}</strong>
           </div>
         ))}
