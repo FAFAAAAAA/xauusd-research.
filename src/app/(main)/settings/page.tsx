@@ -173,7 +173,7 @@ function FeedSetup({ tz }: { tz: string }) {
   const st = f?.status;
   const ok = !!(f?.apiKeySource && f?.cronConfigured && st?.ok);
   return (
-    <Group id="sinyal" title="Sinyal otomatis v2 (gratis)" sub={!f ? '' : ok ? `Aktif · cek terakhir ${fmt(st.at, tz)}` : !f.apiKeySource ? 'API key belum diisi' : !f.cronConfigured ? 'Jadwal belum dibuat' : st?.error ? 'Ada masalah' : 'Menunggu jadwal pertama'}>
+    <Group id="sinyal" title="Sinyal otomatis v1 XAU (gratis)" sub={!f ? '' : ok ? `Aktif · cek terakhir ${fmt(st.at, tz)}` : !f.apiKeySource ? 'API key belum diisi' : !f.cronConfigured ? 'Jadwal belum dibuat' : st?.error ? 'Ada masalah' : 'Menunggu jadwal pertama'}>
       <details className="more">
         <summary>Cara pasang</summary>
       <ol className="howto">
@@ -214,9 +214,9 @@ function EaSetup({ tz }: { tz: string }) {
   };
   const last = info?.lastReport as { at: number; event: string } | null;
   return (
-    <Group id="ea" title="EA MetaTrader 5 (v2 otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
+    <Group id="ea" title="EA MetaTrader 5 (v1 XAU otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
       <div className="row">
-        <a className="btn sm primary" href="/ea/XAU_v2_EA_v114.mq5" download>Unduh EA v1.14 (XAU_v2_EA_v114.mq5)</a>
+        <a className="btn sm primary" href="/ea/XAU_v2_EA_v114.mq5" download>Unduh EA v1 XAU (XAU_v2_EA_v114.mq5)</a>
         <a className="btn sm" href="/ea/XAU_v2_EA_DIAGNOSTIK.mq5" download>Unduh EA Diagnostik (MT5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
       </div>
@@ -251,17 +251,16 @@ function TradingView({ s }: { s: any }) {
     } catch { setMsg('Gagal menyalin. Buka tautan file lalu salin manual.'); }
   };
   return (
-    <Group id="tradingview" title="TradingView & sinyal" sub={tv.secretConfigured ? 'Webhook siap' : 'Indikator v1 & v2'}>
+    <Group id="tradingview" title="TradingView & sinyal" sub={tv.secretConfigured ? 'Webhook siap' : 'Indikator v1 XAU'}>
       <div className="row">
-        <button className="btn sm primary" onClick={() => copy('xau_v1.pine', 'Indikator v1')}>Salin indikator v1</button>
-        <button className="btn sm primary" onClick={() => copy('xau_v2.pine', 'Indikator v2')}>Salin indikator v2</button>
+        <button className="btn sm primary" onClick={() => copy('xau_v2.pine', 'Indikator v1 XAU')}>Salin indikator v1 XAU</button>
         <button className="btn sm" onClick={() => copy('xau_peta_struktur.pine', 'Peta Struktur')}>Salin Peta Struktur</button>
       </div>
       {msg ? <div className="notice">{msg}</div> : null}
       <details className="more">
         <summary>Cara pasang</summary>
       <ol className="howto">
-        <li>Chart <strong>XAUUSD</strong> broker kamu: v1 di <strong>1 jam</strong>, v2 di <strong>15 menit</strong>.</li>
+        <li>Chart <strong>XAUUSD</strong> broker kamu, timeframe <strong>15 menit</strong>.</li>
         <li>Pine Editor → tempel → <strong>Add to chart</strong>.</li>
         <li>Alert → kondisi: nama indikator → <strong>Any alert() function call</strong> → notifikasi aplikasi.</li>
         <li><strong>Opsional (Telegram + lot):</strong> paket TradingView dengan webhook. Isi Secret di pengaturan indikator, centang &quot;format JSON&quot;, isi Webhook URL di bawah.</li>

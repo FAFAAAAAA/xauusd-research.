@@ -74,9 +74,9 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
     const t = trade;
     const text = event === 'open'
-      ? [`🤖 <b>EA v2 — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${t.entry.toFixed(2)}</code>`, `<b>SL:</b> <code>${t.sl.toFixed(2)}</code>`, `<b>TP:</b> <code>${t.tp.toFixed(2)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
+      ? [`🤖 <b>EA v1 XAU — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${t.entry.toFixed(2)}</code>`, `<b>SL:</b> <code>${t.sl.toFixed(2)}</code>`, `<b>TP:</b> <code>${t.tp.toFixed(2)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
-      : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>EA v2 — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
+      : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>EA v1 XAU — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
         `<b>Entry → keluar:</b> ${t.entry.toFixed(2)} → ${(t.exit ?? 0).toFixed(2)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
     const copy = event === 'open' ? [{ text: 'Salin entry', value: t.entry.toFixed(2) }, { text: 'Salin SL', value: t.sl.toFixed(2) }, { text: 'Salin TP', value: t.tp.toFixed(2) }] : undefined;

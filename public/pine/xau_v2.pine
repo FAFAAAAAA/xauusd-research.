@@ -1,5 +1,5 @@
 //@version=5
-// XAU v2 · Breakout volatilitas (volbreak-v5) — sama dengan backtest website (README 5q, 5x). Pasang di chart XAUUSD timeframe 15 menit.
+// v1 XAU (dulu "v2") · Breakout volatilitas (volbreak-v5) — sama dengan backtest website (README 5q, 5x). Pasang di chart XAUUSD timeframe 15 menit.
 // Sinyal hanya di candle M15 yang sudah TUTUP. Tidak ada order otomatis: kamu pasang order sendiri.
 //  Level hari ini (hari UTC): open hari ini ± 0,5 × range kemarin (high − low). Hari Senin (dan Minggu malam) memakai range JUMAT:
 //  sesi Minggu yang pendek tidak dihitung sebagai "kemarin".
@@ -12,7 +12,7 @@
 //                   SELL jika close H4 < EMA50 < EMA200 (H4), close D1 < EMA50 (D1) dan EMA50 D1 < EMA200 D1
 // Catatan: H4/D1 diambil dari candle TradingView broker kamu (jam tutupnya bisa beda dari UTC), jadi sesekali sinyal bisa
 // beda sedikit dengan backtest website.
-indicator("XAU v2 · Breakout volatilitas", overlay = true, max_labels_count = 200, max_lines_count = 400)
+indicator("v1 XAU · Breakout volatilitas", overlay = true, max_labels_count = 200, max_lines_count = 400)
 
 secret  = input.string("", "Secret webhook website (kosongkan kalau tidak pakai webhook)")
 asJson  = input.bool(false, "Pesan alert format JSON (untuk webhook website)")
@@ -61,9 +61,9 @@ atr15 = ta.rma(ta.tr(true), 14)
 bigBody = math.abs(close - open) >= 0.5 * atr15
 f_msg(sideTxt, lv, sl, tp) =>
     if asJson
-        "{\"secret\":\"" + secret + "\",\"event_id\":\"v2-" + str.tostring(time) + "-" + sideTxt + "\",\"symbol\":\"XAUUSD\",\"timeframe\":\"15\",\"event_type\":\"SETUP_CONFIRMED\",\"timestamp\":" + str.tostring(time_close) + ",\"price\":" + str.tostring(close, "#.###") + ",\"zone\":{\"low\":" + str.tostring(lv, "#.###") + ",\"high\":" + str.tostring(lv, "#.###") + ",\"kind\":\"" + (sideTxt == "BUY" ? "resistance" : "support") + "\"},\"strategy_version\":\"v2 · Breakout volatilitas\",\"source\":\"tradingview\",\"mode\":\"LIVE\",\"extra\":{\"side\":\"" + sideTxt + "\",\"sl\":" + str.tostring(sl, "#.###") + ",\"tp\":" + str.tostring(tp, "#.###") + ",\"be\":" + str.tostring(close + (close - sl), "#.###") + "}}"
+        "{\"secret\":\"" + secret + "\",\"event_id\":\"v2-" + str.tostring(time) + "-" + sideTxt + "\",\"symbol\":\"XAUUSD\",\"timeframe\":\"15\",\"event_type\":\"SETUP_CONFIRMED\",\"timestamp\":" + str.tostring(time_close) + ",\"price\":" + str.tostring(close, "#.###") + ",\"zone\":{\"low\":" + str.tostring(lv, "#.###") + ",\"high\":" + str.tostring(lv, "#.###") + ",\"kind\":\"" + (sideTxt == "BUY" ? "resistance" : "support") + "\"},\"strategy_version\":\"v1 XAU · Breakout volatilitas\",\"source\":\"tradingview\",\"mode\":\"LIVE\",\"extra\":{\"side\":\"" + sideTxt + "\",\"sl\":" + str.tostring(sl, "#.###") + ",\"tp\":" + str.tostring(tp, "#.###") + ",\"be\":" + str.tostring(close + (close - sl), "#.###") + "}}"
     else
-        "XAU v2 " + sideTxt + " | Entry ≈ " + str.tostring(close, "#.##") + " | SL " + str.tostring(sl, "#.##") + " | TP " + str.tostring(tp, "#.##") + " | jarak SL " + str.tostring(math.abs(close - sl), "#.##") + " | BE: di " + str.tostring(close + (close - sl), "#.##") + " geser SL ke entry"
+        "v1 XAU " + sideTxt + " | Entry ≈ " + str.tostring(close, "#.##") + " | SL " + str.tostring(sl, "#.##") + " | TP " + str.tostring(tp, "#.##") + " | jarak SL " + str.tostring(math.abs(close - sl), "#.##") + " | BE: di " + str.tostring(close + (close - sl), "#.##") + " geser SL ke entry"
 
 ready = barstate.isconfirmed and not na(prevRange) and prevRange > 0 and not na(datr)
 preBuy = ready and close > upL and close[1] <= upL and trendUp and usedBuy != blk
@@ -79,14 +79,14 @@ sellSig = preSell and cntSell != 2 and bigBody
 if buySig
     sl = upL - slAtr * datr
     tp = close + rr * (close - sl)
-    label.new(bar_index, low, "BUY v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##") + "\nBE " + str.tostring(close + (close - sl), "#.##"), style = label.style_label_up, color = color.green, textcolor = color.white, size = size.small)
+    label.new(bar_index, low, "BUY v1 XAU\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##") + "\nBE " + str.tostring(close + (close - sl), "#.##"), style = label.style_label_up, color = color.green, textcolor = color.white, size = size.small)
     line.new(bar_index, sl, bar_index + 12, sl, color = color.red)
     line.new(bar_index, tp, bar_index + 12, tp, color = color.green)
     alert(f_msg("BUY", upL, sl, tp), alert.freq_once_per_bar_close)
 if sellSig
     sl = dnL + slAtr * datr
     tp = close - rr * (sl - close)
-    label.new(bar_index, high, "SELL v2\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##") + "\nBE " + str.tostring(close + (close - sl), "#.##"), style = label.style_label_down, color = color.red, textcolor = color.white, size = size.small)
+    label.new(bar_index, high, "SELL v1 XAU\nSL " + str.tostring(sl, "#.##") + "\nTP " + str.tostring(tp, "#.##") + "\nBE " + str.tostring(close + (close - sl), "#.##"), style = label.style_label_down, color = color.red, textcolor = color.white, size = size.small)
     line.new(bar_index, sl, bar_index + 12, sl, color = color.red)
     line.new(bar_index, tp, bar_index + 12, tp, color = color.green)
     alert(f_msg("SELL", dnL, sl, tp), alert.freq_once_per_bar_close)

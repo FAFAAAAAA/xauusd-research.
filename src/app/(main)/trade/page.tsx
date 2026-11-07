@@ -10,11 +10,11 @@ const money = (n: number | null | undefined) => (n == null || !Number.isFinite(n
 const tone = (n: number | null | undefined) => (n == null ? '' : n > 0 ? 'pos' : n < 0 ? 'neg' : '');
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
 // Backtest reference (Exness Raw Spread costs + swap, 2004–2026, RR 1:2): what live results should be compared with.
+// Internal journal key 'v2' = "v1 XAU" (volbreak-v5); 'v1' / 'v3' are older strategies, kept only for old journal rows.
 const BT: Record<string, { win: number; perMonth: number; label: string }> = {
-  v1: { win: 0.411, perMonth: 3.1, label: 'v1 Level' },
-  v2: { win: 0.342, perMonth: 5.0, label: 'v2 Volatilitas' },   // + ±15% impas (BE)
-  v3: { win: 0.404, perMonth: 4.1, label: 'v3 BOS' },
+  v2: { win: 0.342, perMonth: 5.0, label: 'v1 XAU' },   // + ±15% impas (BE)
 };
+const NAME: Record<string, string> = { v2: 'v1 XAU', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
@@ -68,7 +68,7 @@ export default function TradePage() {
   const signals = (d.events as any[]).map((e) => ({ e, s: liveSignalFrom(e.extra, e.price) })).filter((x) => x.s);
   const openT = j.trades.filter((t) => t.result === 'open');
   const closedT = j.trades.filter((t) => t.result !== 'open');
-  const stratOf = (label: string) => (label.startsWith('v1') ? 'v1' : label.startsWith('v2') ? 'v2' : label.startsWith('v3') ? 'v3' : 'lain');
+  const stratOf = (label: string) => (/^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
   return (
     <div className="stack">
@@ -88,7 +88,7 @@ export default function TradePage() {
           <SecHead title="Catat trade" />
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
             <div className="picker"><span className="label">Metode</span>
-              <Seg full label="Metode" options={(['v1', 'v2', 'v3', 'lain'] as const).map((s) => [s, s] as const)} value={draft.strategy} onChange={(s) => setDraft({ ...draft, strategy: s })} /></div>
+              <Seg full label="Metode" options={(['v2', 'lain'] as const).map((s) => [s, NAME[s]] as const)} value={draft.strategy} onChange={(s) => setDraft({ ...draft, strategy: s })} /></div>
             <div className="picker"><span className="label">Arah</span>
               <Seg full label="Arah" options={[['BUY', 'BUY'], ['SELL', 'SELL']] as const} value={draft.side} onChange={(s) => setDraft({ ...draft, side: s })} /></div>
           </div>
@@ -138,7 +138,7 @@ export default function TradePage() {
             {openT.map((t) => (
               <div key={t.id} className={`trow${busyId === t.id ? ' refreshing' : ''}`}>
                 <div className="top">
-                  <span><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span><span className="t">{t.strategy} · {t.lot.toFixed(2)} lot</span></span>
+                  <span><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span><span className="t">{NAME[t.strategy] ?? t.strategy} · {t.lot.toFixed(2)} lot</span></span>
                   <span className="mute small">{fmt(t.openedAt, tz)}</span>
                 </div>
                 <div className="levels" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
@@ -165,11 +165,11 @@ export default function TradePage() {
           <table className="num-r">
             <thead><tr><th>Metode</th><th>Selesai</th><th>Win</th><th>Win backtest</th><th>Hasil</th><th>Rata-rata</th></tr></thead>
             <tbody>
-              {(['v1', 'v2', 'v3', 'all'] as const).map((k) => {
+              {(['v2', 'all'] as const).map((k) => {
                 const s = j.stats[k];
                 return (
                   <tr key={k} className={k === 'all' ? 'total' : undefined}>
-                    <td>{k === 'all' ? 'Semua' : k}</td><td>{s.closed}</td>
+                    <td>{NAME[k] ?? k}</td><td>{s.closed}</td>
                     <td>{s.winRate == null ? '—' : `${(s.winRate * 100).toFixed(0)}%`}</td>
                     <td className="mute">{BT[k] ? `${(BT[k].win * 100).toFixed(0)}%` : '—'}</td>
                     <td className={tone(s.pnl)}>{money(s.pnl)}</td><td className={tone(s.avgR)}>{s.avgR == null ? '—' : `${s.avgR >= 0 ? '+' : ''}${s.avgR.toFixed(2)}R`}</td>
@@ -188,7 +188,7 @@ export default function TradePage() {
             {closedT.slice(0, 50).map((t) => (
               <div key={t.id} className="item">
                 <span style={{ minWidth: 0 }}>
-                  <span className="t" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span>{t.strategy} · {RESULT[t.result] ?? 'Manual'}</span>
+                  <span className="t" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span>{NAME[t.strategy] ?? t.strategy} · {RESULT[t.result] ?? 'Manual'}</span>
                   <span className="d" style={{ display: 'block', marginTop: 2 }}>{fmt(t.openedAt, tz)} · {px(t.entry)} → {px(t.exit)}{t.note ? ` · ${t.note}` : ''}</span>
                 </span>
                 <span className="row" style={{ gap: 4, flex: 'none', flexWrap: 'nowrap' }}>

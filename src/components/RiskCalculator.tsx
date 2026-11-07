@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { SecHead, Seg } from '@/components/Status';
 import { IDEAL_DD_SHARE, RISK_LABEL, RISK_STATS } from '@/lib/core/risk-stats';
 
-/* Capital & lot risk calculator: scales the historical backtest of v1/v2 (in R) to the owner's capital and risk. */
+/* Capital & lot risk calculator: scales the historical backtest of v1 XAU (in R) to the owner's capital and risk. */
 type Key = keyof typeof RISK_STATS;
+// Only the strategy the owner trades is offered (7 Nov 2026: "v1 XAU" = key v2); the other stats stay in risk-stats.ts.
+const SHOWN: Key[] = ['v2'];
 const usd = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: n !== 0 && Math.abs(n) < 100 ? 2 : 0 })}`;
 const pc = (n: number) => `${(n * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
 
 export function RiskCalculator() {
-  const [k, setK] = useState<Key>('v1v2v3');
+  const [k, setK] = useState<Key>('v2');
   const [cap, setCap] = useState('1000');
   const [unit, setUnit] = useState<'usd' | 'cent'>('usd');
   const [mode, setMode] = useState<'pct' | 'lot'>('pct');
@@ -37,7 +39,7 @@ export function RiskCalculator() {
   return (
     <section className="group stack">
       <SecHead title="Risiko modal & lot" meta="backtest 2004–2026" />
-      <Seg scroll label="Strategi" options={(Object.keys(RISK_STATS) as Key[]).map((x) => [x, RISK_LABEL[x]] as const)} value={k} onChange={setK} />
+      {SHOWN.length > 1 ? <Seg scroll label="Strategi" options={SHOWN.map((x) => [x, RISK_LABEL[x]] as const)} value={k} onChange={setK} /> : <p className="mute small">Strategi: <strong>{RISK_LABEL[k]}</strong></p>}
       <div className="grid two">
         <label className="field">Modal<input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
         <label className="field">Satuan modal<select value={unit} onChange={(e) => setUnit(e.target.value as 'usd' | 'cent')}><option value="usd">Dolar (USD)</option><option value="cent">Cent (akun cent)</option></select></label>

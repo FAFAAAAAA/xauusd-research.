@@ -26,8 +26,9 @@ export const METHODS: MethodMeta[] = [
     rules: `A-B-C di H1/H4 (swing = pantulan 3×ATR, C di atas A untuk BUY) · close M15 menembus B · SL di C · ${TREND_EMA} · tanpa batas posisi`,
     params: { ...OFF, nH1: true, nH4: true } },
 ];
-// v2 has its own adapter (volbreak.ts); listed here for labels, report rules and the DB row.
-METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v5', label: 'v2 Volatilitas', custom: true, params: {},
+// "v1 XAU" (internal key v2, version volbreak-v5) has its own adapter (volbreak.ts); listed here for labels, report rules and the DB row.
+// Renamed 7 Nov 2026: the owner keeps only this strategy for gold; the others stay in the code but are hidden on the website.
+METHODS.push({ adapterKey: 'metode_volbreak', version: 'volbreak-v5', label: 'v1 XAU', custom: true, params: {},
   rules: `Close M15 di atas open hari ini + 0,5 × range kemarin (BUY) / di bawah open − 0,5 × range kemarin (SELL); hari Senin memakai range Jumat (sesi Minggu tidak dihitung) · badan candle sinyal ≥ 0,5×ATR M15 · maks 1 entry per arah per blok 4 jam, sinyal ke-2 searah di hari yang sama dilewati · SL level ∓ 0,35×ATR D1, TP 2× jarak SL, SL digeser ke entry setelah +1R · ${TREND} · tanpa batas posisi terbuka` });
 // v3 has its own adapter (bosh1.ts).
 METHODS.push({ adapterKey: 'metode_bos_h1', version: 'bos-h1-v1', label: 'v3 BOS', custom: true, params: {},

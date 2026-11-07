@@ -412,11 +412,11 @@ function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
 }
 
 type PairStatus = { symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
-// Website cleaned up (owner's choice, 1 Nov 2026): only the best strategy is offered and shown, named "v1"
-// (= Metode 1 · Level H1 diuji 2–3×, 1 slot). All other strategies stay in the code and their results stay in the
-// database, they are only hidden.
-const STRAT_ORDER = ['metode_level', 'metode_volbreak', 'metode_bos_h1', 'metode_base_h1', 'metode_base_h4', 'metode_donchian', 'metode_ny', 'metode_trendline_h4', 'metode_asia_london'];
-const VISIBLE_STRATEGIES = new Set(['metode level-v3', 'metode volbreak-v5', 'metode bos-h1-v1', 'metode base-h1-v1', 'metode base-h4-v1', 'metode h1-40-v1', 'metode newyork-v1', 'metode trendline-h4-v1', 'metode asia-london-v1']);
+// Website cleaned up (owner's choice, 7 Nov 2026): only the best gold strategy is offered and shown, named "v1 XAU"
+// (= metode volbreak-v5, internal key v2). All other strategies stay in the code and their results stay in the
+// database, they are only hidden (other pairs get their own best strategy later).
+const STRAT_ORDER = ['metode_volbreak'];
+const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5']);
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),

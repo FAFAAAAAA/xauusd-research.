@@ -391,3 +391,9 @@ Studi semua strategi di 10 pair (2017/2018–2026, biaya bawaan tiap pair): pair
 - Ditampilkan lagi di menu Backtest: Base H1, Base H4 (USDJPY +36,4R), Donchian H1 (US100 +90,3R, tapi 2022+ impas), Range NY (US100 +28,1R, USDCAD +28,9R).
 - Nama singkat: v1 Level · v2 Volatilitas · v3 BOS · Base H1 · Base H4 · Donchian H1 · Range NY · Trendline H4 · Asia → London · Pola N.
 - Biaya backtest: isian biaya di form (akun Exness emas) hanya untuk XAUUSD; pair lain memakai perkiraan biayanya sendiri (`instruments.ts`), tanpa swap.
+
+## 6a. Website disederhanakan: hanya "v1 XAU" (7 Nov 2026)
+- Pilihan pemilik: emas hanya memakai satu strategi terbaik, **v1 XAU** = `metode volbreak-v5` (dulu "v2 Volatilitas"). Aturan tidak berubah.
+- Uji ketahanan (16 variasi level 0,3–0,7, SL 0,25–0,6 ATR D1, badan 0–0,7, BE mati/0,75/1,5R, aturan sinyal ke-2): setelan sekarang paling efisien (profit/DD 0,69); hampir semua variasi tetap untung di 2004–2017 dan 2018–2026.
+- Menu Backtest, Trade (jurnal, performa), kalkulator risiko, Telegram, sinyal Twelve Data, Pine dan EA memakai nama v1 XAU. Kunci internal tetap `v2` (jurnal lama, laporan EA, data backtest tidak berubah).
+- Strategi lain (v1 Level, v3 BOS, Base, Donchian, Range NY, Trendline H4, Asia → London, Pola N) tetap di kode dan hasilnya tetap di database, hanya disembunyikan. Pair lain akan diberi strategi terbaiknya sendiri.

@@ -25,7 +25,7 @@ const DAY = 86_400_000;
 export const VOLBREAK_KEY = 'metode_volbreak';
 export const volBreakAdapter: StrategyAdapter = {
   key: VOLBREAK_KEY,
-  name: 'v2 Volatilitas',
+  name: 'v1 XAU',
   configured: true,
   testOnly: false,
   warmupCandles: 30,
