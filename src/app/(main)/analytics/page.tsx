@@ -475,10 +475,10 @@ function RunBacktest({ onDone, bare = false, existingFor }: { onDone: (configKey
   const sets = markets.filter((m) => m.tf === baseTf && m.source_id);
   const chosen = sets.filter((m) => sel == null || sel.includes(m.symbol));
   // each strategy starts with its own pair(s) selected (v1 XAU → XAUUSD, v1 NAS → US100); the user can still pick others
-  const stratPairs = (strat && methodByKey(strat.adapter_key)?.pairs) || null;
+  const stratPairs: string[] | null = (strat ? methodByKey(String(strat.adapter_key))?.pairs : undefined) ?? null;
   useEffect(() => {
     if (!stratPairs || !sets.length) return;
-    const ok = stratPairs.filter((x) => sets.some((m) => m.symbol === x));
+    const ok = stratPairs.filter((x: string) => sets.some((m: any) => m.symbol === x));
     if (ok.length) setSel(ok.length === sets.length ? null : ok);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.strategy, sets.length]);
