@@ -182,7 +182,7 @@ export default function TradePage() {
                     <td>{NAME[k] ?? k}</td><td>{s.closed}</td>
                     <td>{s.winRate == null ? '—' : `${(s.winRate * 100).toFixed(0)}%`}</td>
                     <td className="mute">{BT[k] ? `${(BT[k].win * 100).toFixed(0)}%` : '—'}</td>
-                    <td className={tone(s.pnl)}>{money(s.pnl)}</td><td className={tone(s.avgR)}>{s.avgR == null ? '—' : `${s.avgR >= 0 ? '+' : ''}${s.avgR.toFixed(2)}R`}</td>
+                    <td className={tone(s.pnl)}>{money(s.pnl)}</td><td className={tone(s.closed ? s.pnl / s.closed : null)}>{s.closed ? money(s.pnl / s.closed) : '—'}</td>
                   </tr>
                 );
               })}
