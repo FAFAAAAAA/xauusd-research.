@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { sessionOf, tzOffsetMinutes } from '@/lib/core/time';
+import { SecHead, Seg } from './Status';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ClosedTrade { entry: number; exit: number; pnl: number; side: string }
@@ -78,8 +79,8 @@ const PERIOD_WORD: Record<Mode, string> = { day: 'hari', week: 'minggu', month: 
 
 interface Row { key: string; sort: number; label: string; trades: number; wins: number; losses: number; pnl: number }
 
-function bucket(t: ClosedTrade, mode: Mode, tz: string): { key: string; sort: number; label: string } {
-  const d = wall(t.entry, tz);
+function bucket(time: number, mode: Mode, tz: string): { key: string; sort: number; label: string } {
+  const d = wall(time, tz);
   const Y = d.getUTCFullYear(), M = d.getUTCMonth(), D = d.getUTCDate();
   switch (mode) {
     case 'day': return { key: `${Y}-${M}-${D}`, sort: Date.UTC(Y, M, D), label: `${DAYS[d.getUTCDay()].slice(0, 3)}, ${D} ${MONTHS[M]} ${Y}` };
@@ -91,8 +92,74 @@ function bucket(t: ClosedTrade, mode: Mode, tz: string): { key: string; sort: nu
     case 'month': return { key: `${Y}-${M}`, sort: Date.UTC(Y, M, 1), label: `${MONTHS[M]} ${Y}` };
     case 'year': return { key: `${Y}`, sort: Y, label: String(Y) };
     case 'weekday': { const w = d.getUTCDay(); return { key: `d${w}`, sort: (w + 6) % 7, label: DAYS[w] }; }
-    case 'session': { const s = sessionOf(t.entry); return { key: s, sort: SESSION_ORDER.indexOf(s), label: SESSION[s] ?? s }; }
+    case 'session': { const s = sessionOf(time); return { key: s, sort: SESSION_ORDER.indexOf(s), label: SESSION[s] ?? s }; }
   }
+}
+
+type DrawdownPeriod = 'week' | 'month';
+
+interface PeriodDrawdown {
+  sort: number;
+  label: string;
+  pnl: number;
+  peak: number;
+  drawdown: number;
+}
+
+/** Trades arrive in close-time order from closedTrades. Each period starts at its opening balance. */
+export function periodDrawdowns(trades: readonly ClosedTrade[], mode: DrawdownPeriod, tz: string): PeriodDrawdown[] {
+  const periods = new Map<string, PeriodDrawdown>();
+  for (const trade of trades) {
+    if (!Number.isFinite(trade.exit) || !Number.isFinite(trade.pnl)) continue;
+    const period = bucket(trade.exit, mode, tz);
+    let row = periods.get(period.key);
+    if (!row) {
+      row = { sort: period.sort, label: period.label, pnl: 0, peak: 0, drawdown: 0 };
+      periods.set(period.key, row);
+    }
+    row.pnl += trade.pnl;
+    row.peak = Math.max(row.peak, row.pnl);
+    row.drawdown = Math.max(row.drawdown, row.peak - row.pnl);
+  }
+  return [...periods.values()].sort((a, b) => b.sort - a.sort);
+}
+
+const drawdownMoney = (value: number) => value === 0 ? '$0.00' : money(-value);
+
+export function DrawdownBreakdown({ trades, tz, maximum }: { trades: ClosedTrade[]; tz: string; maximum: number }) {
+  const [mode, setMode] = useState<DrawdownPeriod>('week');
+  const [visible, setVisible] = useState(8);
+  const weekly = useMemo(() => periodDrawdowns(trades, 'week', tz), [trades, tz]);
+  const monthly = useMemo(() => periodDrawdowns(trades, 'month', tz), [trades, tz]);
+  const worst = (periods: PeriodDrawdown[]) => periods.reduce((max, row) => Math.max(max, row.drawdown), 0);
+  const rows = mode === 'week' ? weekly : monthly;
+  const summary: Array<[string, number]> = [['Maksimum', maximum], ['Mingguan terburuk', worst(weekly)], ['Bulanan terburuk', worst(monthly)]];
+
+  return (
+    <section className="group stack">
+      <SecHead title="Drawdown" />
+      <div className="hold3">
+        {summary.map(([label, value]) => (
+          <div key={label} className={value > 0 ? 'neg' : undefined}>
+            <span>{label}</span><strong>{drawdownMoney(value)}</strong>
+          </div>
+        ))}
+      </div>
+      <p className="small mute">Penurunan saldo dari puncak ke titik terendah berdasarkan trade yang sudah ditutup. Puncak dihitung ulang tiap Senin dan awal bulan sesuai zona waktu {tz}.</p>
+      <Seg label="Periode drawdown" options={[['week', 'Mingguan'], ['month', 'Bulanan']]} value={mode} onChange={(value) => { setMode(value); setVisible(8); }} />
+      <div className="tablewrap">
+        <table className="num-r">
+          <thead><tr><th scope="col">Periode</th><th scope="col">Drawdown</th></tr></thead>
+          <tbody>
+            {rows.slice(0, visible).map((row) => (
+              <tr key={row.sort}><td>{row.label}</td><td className={row.drawdown > 0 ? 'neg' : undefined}>{drawdownMoney(row.drawdown)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rows.length > visible ? <button className="btn sm" onClick={() => setVisible(visible + 8)}>Tampilkan lebih banyak</button> : null}
+    </section>
+  );
 }
 
 export function PeriodBreakdown({ trades, tz }: { trades: ClosedTrade[]; tz: string }) {
@@ -101,7 +168,7 @@ export function PeriodBreakdown({ trades, tz }: { trades: ClosedTrade[]; tz: str
   const rows = useMemo(() => {
     const m = new Map<string, Row>();
     for (const t of trades) {
-      const b = bucket(t, mode, tz);
+      const b = bucket(t.entry, mode, tz);
       const r = m.get(b.key) ?? { ...b, trades: 0, wins: 0, losses: 0, pnl: 0 };
       r.trades++; r.pnl += t.pnl;
       if (t.pnl > 0) r.wins++; else if (t.pnl < 0) r.losses++;
