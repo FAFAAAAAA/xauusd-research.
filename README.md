@@ -441,6 +441,6 @@ untuk 448 koin USDT-M (termasuk delisting; daftar disusun manual karena fapi.bin
 - 7 Nov 2026 (lanjutan): Forex dan Crypto dipisah di website (`src/lib/core/markets.ts`, tombol Forex (MT5) | Crypto (Binance)).
   26 koin Binance dengan volume ≥ $100 jt/hari (cepat & lambat) dibundel sebagai data 30m (`data/market/<KOIN>USDT_M30.bin.gz`, sumber
   data.binance.vision) dengan biaya Binance. v1 ALT kini juga adapter per pair (`metode alt-volbreak-v1`, `strategy/alt.ts`) dengan filter
-  koin harian dari `alt-fast-days.json` (dihitung titik-waktu s/d 31 Okt 2026; `params.altAll` mematikannya). Per pair tanpa batas 3 posisi
+  koin harian dari `alt-fast-days.json` (dihitung titik-waktu s/d 6 Nov 2026; `params.altAll` mematikannya). Per pair tanpa batas 3 posisi
   hasilnya lebih lemah dari portofolio riset (contoh: ENA PF 1,15, WLD 1,09, PEPE 1,06, NEAR 1,00, SUI 0,98).
 

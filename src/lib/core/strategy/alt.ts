@@ -9,7 +9,7 @@ import FAST from '../alt-fast-days.json';
  *  SELL: the first H1 candle of the day that CLOSES below the level while the H1 candle before it (same day) closed at or above it.
  *  SL = level + 0.35 × ATR14(D1); TP = RR × risk (engine, 1:2); exits only at TP or SL. No BUY. One signal per coin per day.
  *  Coin filter (as in the research): trade a coin only on days after it was "fast & crowded" — 30-day average volume ≥ $100 jt/hari
- *  and ATR14 D1 % ≥ the median of those coins — precomputed per day from Binance 1h data (alt-fast-days.json, up to 31 Oct 2026).
+ *  and ATR14 D1 % ≥ the median of those coins — precomputed per day from Binance 1h data (alt-fast-days.json, up to 6 Nov 2026).
  *  params.altAll = true switches the filter off. The research portfolio also caps open positions at 3 (not applied per pair).
  *  Website base timeframe M30 (Binance 30m data).
  */

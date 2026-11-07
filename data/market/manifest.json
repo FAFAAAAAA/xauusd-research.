@@ -274,182 +274,182 @@
   "symbol": "ZECUSDT",
   "tf": "M30",
   "first": 1580889600000,
-  "last": 1793489400000,
-  "candles": 117824
+  "last": 1794007800000,
+  "candles": 118112
  },
  "NEARUSDT_M30": {
   "symbol": "NEARUSDT",
   "tf": "M30",
   "first": 1602748800000,
-  "last": 1793489400000,
-  "candles": 105680
+  "last": 1794007800000,
+  "candles": 105968
  },
  "ENAUSDT_M30": {
   "symbol": "ENAUSDT",
   "tf": "M30",
   "first": 1712061000000,
-  "last": 1793489400000,
-  "candles": 45191
+  "last": 1794007800000,
+  "candles": 45479
  },
  "UNIUSDT_M30": {
   "symbol": "UNIUSDT",
   "tf": "M30",
   "first": 1600412400000,
-  "last": 1793489400000,
-  "candles": 107218
+  "last": 1794007800000,
+  "candles": 107506
  },
  "1000PEPEUSDT_M30": {
   "symbol": "1000PEPEUSDT",
   "tf": "M30",
   "first": 1683304200000,
-  "last": 1793489400000,
-  "candles": 61167
+  "last": 1794007800000,
+  "candles": 61455
  },
  "PUMPUSDT_M30": {
   "symbol": "PUMPUSDT",
   "tf": "M30",
   "first": 1744468200000,
-  "last": 1793489400000,
-  "candles": 27172
+  "last": 1794007800000,
+  "candles": 27460
  },
  "WLDUSDT_M30": {
   "symbol": "WLDUSDT",
   "tf": "M30",
   "first": 1690200000000,
-  "last": 1793489400000,
-  "candles": 57336
+  "last": 1794007800000,
+  "candles": 57624
  },
  "TRUMPUSDT_M30": {
   "symbol": "TRUMPUSDT",
   "tf": "M30",
   "first": 1737205200000,
-  "last": 1793489400000,
-  "candles": 31222
+  "last": 1794007800000,
+  "candles": 31510
  },
  "BANKUSDT_M30": {
   "symbol": "BANKUSDT",
   "tf": "M30",
   "first": 1745001000000,
-  "last": 1793489400000,
-  "candles": 26891
+  "last": 1794007800000,
+  "candles": 27179
  },
  "LSKUSDT_M30": {
   "symbol": "LSKUSDT",
   "tf": "M30",
   "first": 1706191200000,
-  "last": 1793489400000,
-  "candles": 48452
+  "last": 1794007800000,
+  "candles": 48740
  },
  "ARBUSDT_M30": {
   "symbol": "ARBUSDT",
   "tf": "M30",
   "first": 1679583600000,
-  "last": 1793489400000,
-  "candles": 63234
+  "last": 1794007800000,
+  "candles": 63522
  },
  "ONDOUSDT_M30": {
   "symbol": "ONDOUSDT",
   "tf": "M30",
   "first": 1705755600000,
-  "last": 1793489400000,
-  "candles": 48694
+  "last": 1794007800000,
+  "candles": 48982
  },
  "TUTUSDT_M30": {
   "symbol": "TUTUSDT",
   "tf": "M30",
   "first": 1742461200000,
-  "last": 1793489400000,
-  "candles": 28302
+  "last": 1794007800000,
+  "candles": 28590
  },
  "FILUSDT_M30": {
   "symbol": "FILUSDT",
   "tf": "M30",
   "first": 1602828000000,
-  "last": 1793489400000,
-  "candles": 105636
+  "last": 1794007800000,
+  "candles": 105924
  },
  "SOLUSDT_M30": {
   "symbol": "SOLUSDT",
   "tf": "M30",
   "first": 1600066800000,
-  "last": 1793489400000,
-  "candles": 107170
+  "last": 1794007800000,
+  "candles": 107458
  },
  "XRPUSDT_M30": {
   "symbol": "XRPUSDT",
   "tf": "M30",
   "first": 1578297600000,
-  "last": 1793489400000,
-  "candles": 119264
+  "last": 1794007800000,
+  "candles": 119552
  },
  "HYPEUSDT_M30": {
   "symbol": "HYPEUSDT",
   "tf": "M30",
   "first": 1748601000000,
-  "last": 1793489400000,
-  "candles": 24891
+  "last": 1794007800000,
+  "candles": 25179
  },
  "DOGEUSDT_M30": {
   "symbol": "DOGEUSDT",
   "tf": "M30",
   "first": 1594371600000,
-  "last": 1793489400000,
-  "candles": 110574
+  "last": 1794007800000,
+  "candles": 110862
  },
  "BNBUSDT_M30": {
   "symbol": "BNBUSDT",
   "tf": "M30",
   "first": 1581321600000,
-  "last": 1793489400000,
-  "candles": 117824
+  "last": 1794007800000,
+  "candles": 118112
  },
  "SUIUSDT_M30": {
   "symbol": "SUIUSDT",
   "tf": "M30",
   "first": 1683129600000,
-  "last": 1793489400000,
-  "candles": 61264
+  "last": 1794007800000,
+  "candles": 61552
  },
  "ADAUSDT_M30": {
   "symbol": "ADAUSDT",
   "tf": "M30",
   "first": 1580457600000,
-  "last": 1793489400000,
-  "candles": 118304
+  "last": 1794007800000,
+  "candles": 118592
  },
  "LINKUSDT_M30": {
   "symbol": "LINKUSDT",
   "tf": "M30",
   "first": 1579248000000,
-  "last": 1793489400000,
-  "candles": 118976
+  "last": 1794007800000,
+  "candles": 119264
  },
  "TAOUSDT_M30": {
   "symbol": "TAOUSDT",
   "tf": "M30",
   "first": 1712845800000,
-  "last": 1793489400000,
-  "candles": 44755
+  "last": 1794007800000,
+  "candles": 45043
  },
  "AVAXUSDT_M30": {
   "symbol": "AVAXUSDT",
   "tf": "M30",
   "first": 1600844400000,
-  "last": 1793489400000,
-  "candles": 106978
+  "last": 1794007800000,
+  "candles": 107266
  },
  "AAVEUSDT_M30": {
   "symbol": "AAVEUSDT",
   "tf": "M30",
   "first": 1602831600000,
-  "last": 1793489400000,
-  "candles": 105874
+  "last": 1794007800000,
+  "candles": 106162
  },
  "BCHUSDT_M30": {
   "symbol": "BCHUSDT",
   "tf": "M30",
   "first": 1577836800000,
-  "last": 1793489400000,
-  "candles": 119760
+  "last": 1794007800000,
+  "candles": 120048
  }
 }
