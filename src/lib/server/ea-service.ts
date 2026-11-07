@@ -108,7 +108,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
         `Hasil   <b>${(t.pnl ?? 0) >= 0 ? '+' : '−'}${Math.abs(t.pnl ?? 0).toFixed(2)} USDT</b>${riskUsd > 0 ? `  (${(t.pnl ?? 0) >= 0 ? '+' : '−'}${(Math.abs(t.pnl ?? 0) / riskUsd).toFixed(1)}R)` : ''}`,
         `Harga   ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `Durasi  ${dur((t.closedAt ?? now) - t.openedAt)}`, '', `🕐 ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
     const text = strat === 'snr' ? snrText : event === 'open'
-      ? [`🤖 <b>${escapeHtml(who)} — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${fp(t.entry)}</code>`, `<b>SL:</b> <code>${fp(t.sl)}</code>`, `<b>TP:</b> <code>${fp(t.tp)}</code>`, `<b>${strat === 'snr' ? 'Jumlah' : 'Lot'}:</b> <code>${strat === 'snr' ? String(t.lot) : t.lot.toFixed(2)}</code>`,
+      ? [`🤖 <b>${escapeHtml(who)} — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${fp(t.entry)}</code>`, `<b>SL:</b> <code>${fp(t.sl)}</code>`, `<b>TP:</b> <code>${fp(t.tp)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
       : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>${escapeHtml(who)} — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
         `<b>Entry → keluar:</b> ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
