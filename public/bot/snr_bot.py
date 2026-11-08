@@ -17,6 +17,7 @@ Install:  pip install requests          Run:  python snr_bot.py          (Ctrl+C
 Background + autostart (Windows):   python snr_bot.py --install    start now and after every VPS restart (hidden)
                                     python snr_bot.py --status     last lines of the log
                                     python snr_bot.py --stop       stop the background bot (until --install again)
+                                    python snr_bot.py --reset      resume after the loss-streak brake (max_loss_streak)
                                     python snr_bot.py --uninstall  stop and remove the autostart
                                     python snr_bot.py --test       send a test trade + message to the website journal / Telegram
 """
@@ -33,6 +34,7 @@ CONFIG_FILE = os.path.join(HERE, 'snr_bot_config.json')
 STATE_FILE = os.path.join(HERE, 'snr_bot_state.json')
 LOG_FILE = os.path.join(HERE, 'snr_bot.log')
 STOP_FILE = os.path.join(HERE, 'stop.flag')
+RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
 LOCK_PORT = 47219
@@ -47,6 +49,7 @@ DEFAULT_CONFIG = {
     "risk_usdt": 5.0,                # risiko per trade (USDT) bila risk_mode = usdt
     "max_positions": 3,              # maks posisi terbuka (backtest: 3)
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
+    "max_loss_streak": 7,            # rem kalah beruntun: setelah N kali SL berturut-turut tidak buka posisi baru (0 = mati); lanjut lagi: python snr_bot.py --reset
     "leverage": 5,                   # leverage per koin (hanya margin; risiko tetap dari jarak SL)
     "margin_isolated": True,         # true = margin Isolated per posisi (lebih aman), false = Cross
     "daily_summary": True,           # ringkasan ke Telegram
@@ -330,6 +333,12 @@ class Bot:
             report(self.cfg, {'event': 'close', 'ticket': p['ticket'], 'symbol': sym, 'side': 'SELL', 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
                               'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'], 'time': int(time.time())})
             cl = self.st.setdefault('closed', []); cl.append([int(time.time()), round(pnl, 4), reason]); del cl[:-300]
+            if reason == 'sl': self.st['loss_streak'] = self.st.get('loss_streak', 0) + 1
+            elif reason == 'tp': self.st['loss_streak'] = 0                     # manual close: streak unchanged
+            mx = int(self.cfg.get('max_loss_streak') or 0)
+            if mx > 0 and reason == 'sl' and self.st['loss_streak'] == mx:
+                log.error('REM KALAH BERUNTUN: %d kali SL berturut-turut — tidak membuka posisi baru. Lanjut lagi: python snr_bot.py --reset', mx)
+                notify(self.cfg, f'REM AKTIF: {mx} kali SL berturut-turut. Bot tidak membuka posisi baru (posisi terbuka tetap jalan).\nLanjut lagi: python snr_bot.py --reset', 'error')
             del self.st['positions'][sym]; save_state(self.st)
 
     def summary(self):
@@ -346,6 +355,8 @@ class Bot:
         done = [c for c in self.st.get('closed', []) if c[0] > since]
         res = sum(c[1] for c in done); tp = sum(1 for c in done if c[2] == 'tp'); sl = sum(1 for c in done if c[2] == 'sl')
         pos = ', '.join(k.replace('USDT', '') for k in self.st['positions']) or 'tidak ada'
+        mx = int(self.cfg.get('max_loss_streak') or 0); ls = self.st.get('loss_streak', 0)
+        pos += f"\nKalah beruntun: {ls}" + (f" dari {mx}" + (' — REM AKTIF (--reset untuk lanjut)' if ls >= mx else '') if mx > 0 else '')
         notify(self.cfg, f"Ringkasan {kst.strftime('%H:%M')} (waktu Korea) — bot aktif.\nSaldo Futures: {bal:.2f} USDT\n"
                          f"Sejak ringkasan terakhir: {len(done)} trade selesai (TP {tp}, SL {sl}), hasil {res:+.2f} USDT\nPosisi terbuka: {pos}")
 
@@ -360,6 +371,14 @@ class Bot:
                 log.error('Cek: izin "Aktifkan Futures" dicentang, IP VPS sudah ditambahkan, api_key/api_secret tersalin lengkap, testnet sesuai akun.')
                 notify(self.cfg, f'Bot tidak bisa mulai: API key ditolak ({e}).', 'error')
                 return
+        if 'loss_streak' not in self.st:                                     # first run with this version: count the SLs at the end of the history
+            n = 0
+            for c in reversed(self.st.get('closed', [])):
+                if c[2] == 'tp': break
+                if c[2] == 'sl': n += 1
+            self.st['loss_streak'] = n; save_state(self.st)
+        mx = int(self.cfg.get('max_loss_streak') or 0)
+        if mx > 0: log.info('Rem kalah beruntun: berhenti buka posisi baru setelah %d SL berturut-turut (sekarang %d)', mx, self.st['loss_streak'])
         if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
         log.info('Mode: %s · risiko %s · maks %d posisi · leverage %dx', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'], self.cfg['leverage'])
@@ -368,6 +387,11 @@ class Bot:
         while True:
             if os.path.exists(STOP_FILE):
                 log.info('stop.flag ditemukan — bot berhenti.'); notify(self.cfg, 'Bot dihentikan (perintah --stop). Posisi terbuka tetap punya SL/TP di Binance.'); return
+            if os.path.exists(RESET_FILE):
+                try: os.remove(RESET_FILE)
+                except OSError: pass
+                self.st['loss_streak'] = 0; save_state(self.st)
+                log.info('Hitungan kalah beruntun di-reset ke 0 — bot boleh buka posisi lagi.'); notify(self.cfg, 'Hitungan kalah beruntun di-reset. Bot kembali membuka posisi baru.')
             now_s = int(time.time() + self.api.offset / 1000)
             bucket = now_s // H4 * H4
             if bucket > self.st.get('last_scan', 0) and now_s - bucket >= 20:      # 20 s after every H4 close (UTC 00/04/08/12/16/20)
@@ -385,6 +409,10 @@ class Bot:
                         log.error('REM AKTIF: saldo %.2f USDT di bawah batas %.2f — tidak membuka posisi baru. Naikkan modal / ubah stop_balance_usdt bila ingin lanjut.', bal, stop)
                         if not self.st.get('brake_sent'): notify(self.cfg, f'REM AKTIF: saldo {bal:.2f} USDT di bawah batas {stop:.2f}. Bot tidak membuka posisi baru.', 'error'); self.st['brake_sent'] = 1
                         sigs = []
+                mx = int(self.cfg.get('max_loss_streak') or 0)
+                if sigs and mx > 0 and self.st.get('loss_streak', 0) >= mx:
+                    log.error('REM KALAH BERUNTUN aktif (%d SL berturut-turut) — %d sinyal dilewati. Lanjut lagi: python snr_bot.py --reset', self.st['loss_streak'], len(sigs))
+                    sigs = []
                 for sym, level, atr, close in sigs:
                     if sym in busy: continue
                     if not self.cfg['dry_run'] and len(busy) >= int(self.cfg['max_positions']):
@@ -425,6 +453,9 @@ def command(cmd):
     elif cmd == '--stop':
         open(STOP_FILE, 'w').close()
         print('Perintah berhenti dikirim. Bot berhenti dalam ±30 detik (posisi tetap punya SL/TP). Jalankan lagi: python snr_bot.py --install')
+    elif cmd == '--reset':
+        open(RESET_FILE, 'w').close()
+        print('Reset dikirim. Dalam ±30 detik hitungan kalah beruntun jadi 0 dan bot boleh buka posisi lagi (bot harus sedang berjalan).')
     elif cmd == '--uninstall':
         open(STOP_FILE, 'w').close(); schtasks('/end', '/tn', TASK)
         code, out = schtasks('/delete', '/tn', TASK, '/f')
@@ -444,7 +475,7 @@ def command(cmd):
         except FileNotFoundError: print('Belum ada log.')
         print('stop.flag ada -> bot dihentikan' if os.path.exists(STOP_FILE) else '')
     else:
-        sys.exit('Perintah: --install, --status, --stop, --uninstall, --test')
+        sys.exit('Perintah: --install, --status, --stop, --reset, --uninstall, --test')
 
 
 if __name__ == '__main__':
