@@ -495,7 +495,7 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
 - Belum pernah dijalankan ke Binance dari lingkungan ini (fapi.binance.com menolak lokasi ini): wajib uji di testnet.
 
 - Tambahan (8 Nov 2026): margin Isolated per posisi (`margin_isolated`), rem saldo (`stop_balance_usdt`), ringkasan (08:00 & 23:00 waktu Korea, `summary_hours_kst`) & peringatan ke
-- Rem kalah beruntun (8 Nov 2026, `max_loss_streak`, bawaan 7, 0 = mati): setelah 7 SL berturut-turut (TP me-reset, tutup manual tidak dihitung) bot tidak membuka posisi baru; posisi terbuka tetap jalan. Lanjut lagi: `python snr_bot.py --reset`. Catatan riset: 7 kalah beruntun terjadi ±1× per 1–2 bulan di backtest 25 koin, jadi rem ini sering aktif.
   Telegram lewat `/api/ea/report` event `info` (tanpa baris jurnal), satu instance saja (port lokal 47219), autostart Windows:
   `--install` (Task Scheduler "SNR Bot", saat VPS menyala, akun SYSTEM, `start_bot.bat` mengulang bila error), `--status`, `--stop`, `--uninstall`.
+- Rem kalah beruntun (8 Nov 2026, `max_loss_streak`, bawaan 7, 0 = mati): setelah 7 SL berturut-turut (TP me-reset, tutup manual tidak dihitung) bot tidak membuka posisi baru; posisi terbuka tetap jalan. Lanjut lagi: `python snr_bot.py --reset`. Catatan riset: 7 kalah beruntun terjadi ±1× per 1–2 bulan di backtest 25 koin, jadi rem ini sering aktif.
 
