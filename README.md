@@ -499,3 +499,14 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
   `--install` (Task Scheduler "SNR Bot", saat VPS menyala, akun SYSTEM, `start_bot.bat` mengulang bila error), `--status`, `--stop`, `--uninstall`.
 - Rem kalah beruntun (8 Nov 2026, `max_loss_streak`, bawaan 7, 0 = mati): setelah 7 SL berturut-turut (TP me-reset, tutup manual tidak dihitung) bot tidak membuka posisi baru; posisi terbuka tetap jalan. Lanjut lagi: `python snr_bot.py --reset`. Catatan riset: 7 kalah beruntun terjadi ±1× per 1–2 bulan di backtest 25 koin, jadi rem ini sering aktif.
 
+## 6h. EA prop firm: v1 XAU + v1 NAS dalam satu EA (8 Nov 2026)
+- File `public/ea/PROP_XAU_NAS_EA_v100.mq5` (unduh di Atur → EA). Satu chart, simbol emas (`InpXauSymbol`, default XAUUSD) dan Nasdaq (`InpNasSymbol`, default NAS100 = FundingPips).
+  Logika sinyal disalin persis dari `XAU_v2_EA_v114` dan `NAS_v1_EA_v100`, magic number sama (laporan jurnal tetap v1 XAU / v1 NAS).
+- Risiko = `InpRiskPercent` % dari `InpAccountSize` (ukuran akun awal). Penjaga prop firm: target (`InpTargetPct`, tutup semua & berhenti), rugi harian
+  (dari saldo/equity tertinggi saat hari server mulai) dan rugi total, masing-masing berhenti `InpBufferPct` sebelum batas; sebelum entry lot dikecilkan bila
+  rugi terburuk (semua posisi kena SL + trade baru) bisa melewati batas, atau bila margin (leverage kecil) tidak cukup. Filter berita USD dampak tinggi
+  (`InpNewsMinutes`, kalender MT5; untuk akun funded FundingPips). Hari trading dihitung saat target tercapai.
+- Riset prop firm (aturan 8%/5%, harian 5%, total 10%, XAU+NAS 2014–2026): risiko 2% → lulus 2 fase sekali beli ±41%, ±1 bulan bila lulus;
+  1% → ±51%, ±3 bulan; 0,5% → ±99%, ±1 tahun. Funded risiko 0,5%: ±0,94%/bulan dengan posisi ditutup tiap Jumat (aturan akun Master FundingPips),
+  12 bulan tidak pernah kena batas. Crypto (BTC/ETH) untuk prop firm: tidak ada strategi yang lolos (147 kombinasi, hanya hari kerja, tutup Jumat).
+
