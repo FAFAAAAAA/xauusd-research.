@@ -70,6 +70,19 @@ export default function TradePage() {
     try { setJ(await call<any>('/api/journal', { method: 'PUT', json: { id: t.id, result, exit, closedAt: Date.now() } })); toast('Posisi ditutup'); }
     catch (e) { setJErr((e as Error).message); } finally { setBusyId(null); }
   };
+  // correct a closed trade by hand (e.g. the broker shows TP but the bot reported it wrongly)
+  const fix = async (t: JournalTrade) => {
+    const r = window.prompt('Hasil sebenarnya? Ketik: tp, sl, be, atau manual', t.result === 'open' ? 'tp' : t.result);
+    if (r == null) return;
+    const result = r.trim().toLowerCase();
+    if (!['tp', 'sl', 'be', 'manual'].includes(result)) { setJErr('Hasil harus tp, sl, be, atau manual'); return; }
+    const ex = window.prompt('Harga keluar (lihat di Binance / MT5)?', String(t.exit ?? t.entry));
+    if (ex == null) return;
+    const pl = window.prompt('Untung/rugi bersih dalam $ (pakai minus untuk rugi)?', t.pnl == null ? '' : String(t.pnl));
+    if (pl == null) return;
+    try { setJ(await call<any>('/api/journal', { method: 'PUT', json: { id: t.id, result, exit: num(ex), pnl: num(pl), closedAt: t.closedAt ?? Date.now() } })); toast('Trade dikoreksi'); }
+    catch (e) { setJErr((e as Error).message); }
+  };
   const remove = async (t: JournalTrade) => {
     if (!window.confirm('Hapus trade ini dari jurnal?')) return;
     try { setJ(await call<any>(`/api/journal?id=${t.id}`, { method: 'DELETE' })); toast('Trade dihapus'); } catch (e) { setJErr((e as Error).message); }
@@ -241,6 +254,7 @@ export default function TradePage() {
                 <dt>Ditutup</dt><dd>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</dd>
                 {detail.note ? <><dt>Catatan</dt><dd>{detail.note}</dd></> : null}
               </dl>
+              <button className="btn block" onClick={async () => { const t = detail; setDetail(null); await fix(t); }}>Koreksi hasil (TP / SL / harga / $)</button>
               <button className="btn block" onClick={async () => { const t = detail; setDetail(null); await remove(t); }}>Hapus trade ini</button>
             </div>
           </Sheet>
