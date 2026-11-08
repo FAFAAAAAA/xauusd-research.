@@ -509,4 +509,7 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
 - Riset prop firm (aturan 8%/5%, harian 5%, total 10%, XAU+NAS 2014–2026): risiko 2% → lulus 2 fase sekali beli ±41%, ±1 bulan bila lulus;
   1% → ±51%, ±3 bulan; 0,5% → ±99%, ±1 tahun. Funded risiko 0,5%: ±0,94%/bulan dengan posisi ditutup tiap Jumat (aturan akun Master FundingPips),
   12 bulan tidak pernah kena batas. Crypto (BTC/ETH) untuk prop firm: tidak ada strategi yang lolos (147 kombinasi, hanya hari kerja, tutup Jumat).
+- Perbaikan bot (9 Nov 2026): posisi baru dianggap tutup hanya bila ada transaksi BUY penutup (qty penuh) di riwayat trade. Sebelumnya jawaban
+  daftar posisi yang kosong/terpotong membuat bot mengira WLD sudah tutup ("Ditutup manual", harga keluar = harga masuk) dan membatalkan SL/TP
+  posisi yang masih terbuka. Sekarang SL/TP tidak disentuh, dan bila posisi tidak terlihat tanpa transaksi penutup bot mengirim peringatan.
 

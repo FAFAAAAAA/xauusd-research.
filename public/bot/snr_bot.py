@@ -227,7 +227,8 @@ class Bot:
         if self.cfg['dry_run']: return {}
         try: rows = self.api.get('/fapi/v3/positionRisk', signed=True)
         except RuntimeError: rows = self.api.get('/fapi/v2/positionRisk', signed=True)
-        return {r['symbol']: float(r['positionAmt']) for r in rows if float(r['positionAmt']) != 0}
+        if not isinstance(rows, list): raise RuntimeError(f'positionRisk: jawaban tidak terduga: {str(rows)[:200]}')
+        return {r['symbol']: float(r['positionAmt']) for r in rows if float(r.get('positionAmt') or 0) != 0}
 
     def positions_mode_hedge(self):
         return bool(self.api.get('/fapi/v1/positionSide/dual', signed=True).get('dualSidePosition'))
@@ -310,15 +311,27 @@ class Bot:
     # ----- every minute: positions that closed at TP/SL -----
     def manage(self):
         if self.cfg['dry_run'] or not self.st['positions']: return
-        live = self.positions()
+        try: live = self.positions()
+        except RuntimeError as e:
+            log.warning('Posisi tidak terbaca (%s) — cek ulang nanti, tidak ada yang diubah.', e); return
         for sym, p in list(self.st['positions'].items()):
-            if live.get(sym, 0) < 0: continue                      # still short
-            try: self.api.delete('/fapi/v1/algoOpenOrders', {'symbol': sym})   # cancel the other TP/SL
+            if live.get(sym, 0) < 0: p.pop('miss', None); continue    # still short
+            # The position is not in the list. Do NOT touch anything until the close is CONFIRMED by closing BUY trades
+            # (8 Nov 2026: an empty/partial positionRisk answer made the bot cancel the SL/TP of a position that was still open).
+            p['miss'] = p.get('miss', 0) + 1
+            try: trades = self.api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': p['opened'] * 1000 - 60000}, signed=True)
+            except RuntimeError as e:
+                log.warning('%s: riwayat trade tidak terbaca (%s) — cek ulang nanti.', sym, e); save_state(self.st); continue
+            buys = [x for x in trades if x['side'] == 'BUY']
+            if sum(float(x['qty']) for x in buys) < 0.99 * float(p['qty']):
+                if p['miss'] in (3, 60):
+                    log.error('%s: posisi tidak terlihat tapi tidak ada transaksi penutupan — dianggap MASIH TERBUKA, SL/TP tidak disentuh. Cek di app Binance.', sym)
+                    notify(self.cfg, f'{sym}: posisi tidak terlihat di daftar posisi, tapi belum ada transaksi penutupan. Bot menganggap posisi masih terbuka (SL/TP tidak disentuh). Tolong cek di app Binance.', 'error')
+                save_state(self.st); continue
+            try: self.api.delete('/fapi/v1/algoOpenOrders', {'symbol': sym})   # closed for sure: cancel the other TP/SL
             except RuntimeError: pass
             pnl, exit_px, reason = 0.0, None, 'manual'
             try:
-                trades = self.api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': p['opened'] * 1000 - 60000}, signed=True)
-                buys = [x for x in trades if x['side'] == 'BUY']
                 pnl = sum(float(x['realizedPnl']) - float(x['commission']) for x in trades if x['commissionAsset'] == 'USDT')
                 if buys:
                     q = sum(float(x['qty']) for x in buys); exit_px = sum(float(x['price']) * float(x['qty']) for x in buys) / q
