@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { CountUp, Metric, Metrics, SecHead } from './Status';
+import { CountUp, Metric, Metrics, SecHead, Sheet } from './Status';
 import { EquityChart, PnlCalendar, type ClosedTrade } from './ResultCharts';
 import { tzOffsetMinutes } from '@/lib/core/time';
 import type { JournalTrade } from '@/lib/core/journal';
@@ -22,13 +22,13 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
 }) {
   const [start, setStart] = useState(fallbackStart);
   useEffect(() => { setStart(readStart(market, fallbackStart)); }, [market, fallbackStart]);
-  const editStart = () => {
-    const v = window.prompt('Saldo awal (USD) untuk menghitung pertumbuhan saldo?', String(start));
-    if (v == null) return;
-    const n = Number(v.replace(',', '.'));
+  // starting balance editor (bottom sheet, not a browser prompt)
+  const [edit, setEdit] = useState<string | null>(null);
+  const saveStart = () => {
+    const n = Number(String(edit ?? '').replace(',', '.'));
     if (!(n > 0)) return;
     try { localStorage.setItem(key(market), String(n)); } catch { /* ignore */ }
-    setStart(n);
+    setStart(n); setEdit(null);
   };
 
   const s = useMemo(() => {
@@ -86,7 +86,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
         <span className="td-row">
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
           <span className={tone(s.total)}>{usd(s.total)}</span>
-          <span className="td-sub">dari saldo awal {usd(start, false)} · <button className="td-link" onClick={editStart}>ubah</button></span>
+          <span className="td-sub">dari saldo awal {usd(start, false)} · <button className="td-link" onClick={() => setEdit(String(start))}>ubah</button></span>
         </span>
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
@@ -96,19 +96,28 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
       </section>
 
       {s.n ? <>
-        <Metrics cols={4}>
+        <Metrics cols={3}>
           <Metric label="Trade selesai" value={s.n} hint={`${s.wins} menang · ${s.losses} kalah${s.be ? ` · ${s.be} impas` : ''}`} />
           <Metric label="Win rate" value={s.winRate == null ? '—' : `${(s.winRate * 100).toFixed(0)}%`} />
-          <Metric label="Profit factor" value={s.pf == null ? '—' : s.pf === Infinity ? '∞' : s.pf.toFixed(2)} hint="untung ÷ rugi" />
-          <Metric label="Drawdown terdalam" value={s.dd ? `−$${s.dd.toFixed(2)}` : '$0.00'} tone={s.dd ? 'neg' : ''} hint={s.dd ? `${s.ddPct.toFixed(1)}% dari puncak` : undefined} />
+          <Metric label="Profit factor" value={s.pf == null ? '—' : s.pf === Infinity ? '∞' : s.pf.toFixed(2)} />
           <Metric label="Rata-rata menang" value={s.avgW == null ? '—' : usd(s.avgW)} tone="pos" />
           <Metric label="Rata-rata kalah" value={s.avgL == null ? '—' : usd(s.avgL)} tone="neg" />
-          <Metric label="Terbaik / terburuk" value={<>{s.best == null ? '—' : usd(s.best)}<span className="mute"> / </span>{s.worst == null ? '—' : usd(s.worst)}</>} />
-          <Metric label="Beruntun" value={s.cur > 0 ? `${s.cur} menang` : s.cur < 0 ? `${-s.cur} kalah` : '—'} hint={`terpanjang: ${s.bestW} menang · ${s.bestL} kalah`} />
+          <Metric label="Drawdown terdalam" value={s.dd ? `−$${s.dd.toFixed(2)}` : '$0.00'} tone={s.dd ? 'neg' : ''} hint={s.dd ? `${s.ddPct.toFixed(1)}% dari puncak` : undefined} />
         </Metrics>
 
         <section className="group">
-          <SecHead title="Pertumbuhan saldo" meta={s.hold != null ? `rata-rata posisi ${dur(s.hold)}` : undefined} />
+          <SecHead title="Detail" />
+          <dl className="kv td-kv">
+            <dt>Trade terbaik</dt><dd className={tone(s.best ?? 0)}>{s.best == null ? '—' : usd(s.best)}</dd>
+            <dt>Trade terburuk</dt><dd className={tone(s.worst ?? 0)}>{s.worst == null ? '—' : usd(s.worst)}</dd>
+            <dt>Sekarang</dt><dd>{s.cur > 0 ? `${s.cur}× menang beruntun` : s.cur < 0 ? `${-s.cur}× kalah beruntun` : '—'}</dd>
+            <dt>Beruntun terpanjang</dt><dd>{s.bestW}× menang · {s.bestL}× kalah</dd>
+            <dt>Lama posisi rata-rata</dt><dd>{s.hold != null ? dur(s.hold) : '—'}</dd>
+          </dl>
+        </section>
+
+        <section className="group">
+          <SecHead title="Pertumbuhan saldo" />
           <EquityChart trades={s.closed} tz={tz} start={start} />
         </section>
 
@@ -128,6 +137,18 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
 
         <PnlCalendar trades={s.closed} tz={tz} />
       </> : <p className="empty-inline">Belum ada trade selesai di pasar ini.</p>}
+
+      {edit != null ? (
+        <Sheet title="Saldo awal" onClose={() => setEdit(null)}>
+          <div className="stack">
+            <p className="mute small" style={{ margin: 0 }}>Dipakai untuk menghitung saldo sekarang dan pertumbuhannya ({market === 'crypto' ? 'Crypto' : 'Forex'}).</p>
+            <label className="field">Saldo awal (USD)
+              <input inputMode="decimal" autoFocus value={edit} onChange={(e) => setEdit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveStart(); }} />
+            </label>
+            <button className="btn primary block" onClick={saveStart} disabled={!(Number(String(edit).replace(',', '.')) > 0)}>Simpan</button>
+          </div>
+        </Sheet>
+      ) : null}
     </div>
   );
 }
