@@ -713,7 +713,7 @@ export async function listBacktestSessions(db: Db) {
     const id = String(r.id);
     const st = fresh[id] ?? cache[id] ?? [0, 0, 0, 0];
     if (r.status === 'completed') { keep[id] = st; if (!cache[id] || cache[id].join() !== st.join()) changed = true; }
-    return { ...r, trades: st[0], pnl: st[1], wins: st[2], losses: st[3] };
+    return { ...r, trades: st[0], pnl: st[1], wins: st[2], losses: st[3] } as Record<string, unknown>;
   });
   if (changed || Object.keys(cache).length !== Object.keys(keep).length) await setAppSetting(db, 'session_stats', keep);
   return out;
