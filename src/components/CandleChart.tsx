@@ -33,7 +33,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     const c = createChart(box.current, {
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: v('--surface', '#ffffff') }, textColor: v('--mute', '#8a94a6'), fontFamily: "-apple-system, BlinkMacSystemFont, system-ui, sans-serif" },
-      grid: { vertLines: { color: v('--sunk', '#f2f4f7') }, horzLines: { color: v('--sunk', '#f2f4f7') } },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },   // plain background (owner's choice, 9 Nov 2026)
       crosshair: { mode: position ? CrosshairMode.Hidden : CrosshairMode.Normal },
       rightPriceScale: { scaleMargins: { top: 0.14, bottom: 0.14 }, borderColor: v('--line', '#e4e7ec') },
       timeScale: { borderColor: v('--line', '#e4e7ec'), timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 9, minBarSpacing: 3 },
