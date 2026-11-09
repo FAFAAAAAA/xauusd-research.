@@ -695,7 +695,7 @@ body::before { display: none; }
 /* calendar: trades of the tapped day/week/month */
 .cal-pick { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--sunk); }
 .cal-pick-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 14px; }
-.cal-pick-head span { font-weight: 700; font-variant-numeric: tabular-nums; }
+.cal-pick-head span { font-size: 20px; font-weight: 750; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 /* full history: one tap opens everything */
 .hist-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; transition: background .2s ease; }
 .hist-toggle:hover { background: var(--hover); }
@@ -735,17 +735,6 @@ body::before { display: none; }
 .b-streak .b-three { margin-top: 4px; }
 .b-stat { padding: 10px 12px; border-radius: 14px; background: var(--sunk); }
 .b-stat .b-v { font-size: 22px; }
-/* compact P&L calendar: square heat cells */
-.cal-simple .cal { gap: 6px; }
-.cal-simple .cal.dow span { font-size: 11px; letter-spacing: .02em; }
-.cal-simple .cal.day .cell { aspect-ratio: 1; min-height: 0; padding: 0; border-radius: 12px; background: var(--sunk); }
-.cal-simple .cal.week .cell, .cal-simple .cal.month .cell { min-height: 58px; border-radius: 14px; background: var(--sunk); }
-.cal-simple .cal .cell.empty .n { color: var(--mute); font-weight: 500; opacity: .7; }
-.cal-simple .cal .cell.up { background: var(--up); } .cal-simple .cal .cell.up .n, .cal-simple .cal .cell.up .v { color: #fff; }
-.cal-simple .cal .cell.down { background: var(--down); } .cal-simple .cal .cell.down .n, .cal-simple .cal .cell.down .v { color: #fff; }
-.cal-simple .cal .cell .n { font-size: 13px; }
-.cal-simple .cal .cell .v { font-size: 10.5px; opacity: .95; }
-.cal-simple .cal .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
 /* streak run chart (Trade + Backtest) */
 .streak2 { gap: 12px; }
 .st-pill { font-size: 12px; font-weight: 650; padding: 4px 10px; border-radius: 999px; }
@@ -794,14 +783,6 @@ body::before { display: none; }
 .hold3-bar { display: block; height: 100%; border-radius: 999px; background: var(--ink); opacity: .75; }
 .hold3-p { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
 .hold3-row.zero .hold3-p, .hold3-row.zero .hold3-l { opacity: .45; }
-/* compact calendar: day squares show only the date (colour = profit / loss; the amount shows when tapped) */
-/* day squares with a result: small date in the corner, amount (+7 / −12) in the middle */
-.cal-simple .cal.day .cell { aspect-ratio: auto; min-height: 0; height: 44px; gap: 0; border-radius: 10px; }
-.cal-simple .cal.day .cell:not(.empty) .n { position: static; font-size: 10.5px; font-weight: 600; opacity: .8; }
-.cal-simple .cal.day .cell:not(.empty) .v { display: block; font-size: 12.5px; font-weight: 750; letter-spacing: -.03em; }
-.cal-simple .cal.day .cell.empty .n { font-size: 13px; }
-.cal-simple .cal.week .cell .n, .cal-simple .cal.month .cell .n { font-size: 12px; }
-.cal-simple .cal.week .cell .v, .cal-simple .cal.month .cell .v { font-size: 12px; }
 /* history cards (Binance-like, simplified) */
 .hcards { display: flex; flex-direction: column; gap: 10px; }
 .hcard { display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 16px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; transition: background .2s ease, transform .12s ease; font: inherit; }
