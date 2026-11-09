@@ -121,19 +121,6 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <EquityChart trades={s.closed} tz={tz} start={start} />
         </section>
 
-        <section className="group">
-          <SecHead title={`Hasil per ${groupLabel}`} meta={`${s.groups.length}`} />
-          <div className="tablewrap">
-            <table className="num-r">
-              <thead><tr><th>{groupLabel[0].toUpperCase() + groupLabel.slice(1)}</th><th>Trade</th><th>Win</th><th>Hasil</th></tr></thead>
-              <tbody>
-                {s.groups.map(([g, c]: [string, { n: number; w: number; l: number; pnl: number }]) => (
-                  <tr key={g}><td>{g}</td><td>{c.n}</td><td>{c.w + c.l ? `${Math.round(c.w / (c.w + c.l) * 100)}%` : '—'}</td><td className={tone(c.pnl)}>{usd(c.pnl)}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
 
         <section className="group">
           <SecHead title="Kalender PnL" />
