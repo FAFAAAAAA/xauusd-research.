@@ -127,8 +127,13 @@ export default function TradePage() {
   );
   // deposit / withdraw row (one compact line)
   const flowsAll: CashFlow[] = (market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? [];
+  // balance after each deposit / withdraw, counted back from the live balance: minus every later closed trade and later deposit / withdraw
+  const liveW = market === 'crypto' ? j.binance?.wallet : j.mt5?.wallet;
+  const balAfter = (c: CashFlow) => (liveW == null || !Number.isFinite(liveW) ? null
+    : liveW - closedT.reduce((a, t) => a + ((t.closedAt ?? t.openedAt) > c.at ? Number(t.pnl ?? 0) : 0), 0)
+      - flowsAll.reduce((a, f) => a + (f.at > c.at || (f.at === c.at && f.id > c.id) ? f.amount : 0), 0));
   const flowRow = (c: CashFlow) => {
-    const inn = c.amount > 0;
+    const inn = c.amount > 0, after = balAfter(c);
     return (
       <div key={`cf-${c.id}`} className="hcard cfcard">
         <span className="hc-top">
@@ -139,8 +144,9 @@ export default function TradePage() {
         </span>
         <span className="hc-mid">
           <span><span className="k">Jumlah</span><strong className={inn ? 'pos' : 'neg'}>{inn ? '+' : '−'}${Math.abs(c.amount).toFixed(2)}</strong></span>
-          <span className="cf-when"><span className="k">Waktu</span><strong>{fmt(c.at, tz)}</strong></span>
+          <span className="cf-when"><span className="k">Saldo</span><strong>{after == null ? '—' : <>{(after - c.amount).toFixed(2)}<span className="cf-arr">›</span>{after.toFixed(2)}</>}</strong></span>
         </span>
+        <span className="hc-foot"><span>{fmt(c.at, tz)}</span></span>
       </div>
     );
   };

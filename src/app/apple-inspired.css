@@ -833,3 +833,4 @@ body::before { display: none; }
 .b-three .b-stat .hc-res { margin-left: 0; align-self: flex-start; font-size: 11px; padding: 2px 8px; margin-bottom: 4px; }
 .b-three .b-stat .hc-res { color: var(--surface); background: var(--ink); border-radius: 6px; font-weight: 700; letter-spacing: .02em; }
 .b-three .b-stat .hc-res.tp { background: var(--up); color: #fff; } .b-three .b-stat .hc-res.sl { background: var(--down); color: #fff; }
+.cf-arr { color: var(--mute); margin: 0 6px; font-weight: 600; }
