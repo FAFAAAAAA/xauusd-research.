@@ -59,7 +59,8 @@ export default function Shell({ children, showLogout = false }: { children: Reac
         </nav>
       </header>
       <main className="main" aria-busy={pending ? true : undefined}>
-        <div className="page">{children}</div>
+        {/* the research-flow / research-section wrappers carry the page styles (pills, cards, radii) */}
+        <div className="page"><div className="research-flow"><section className="research-section"><div className="tool-content">{children}</div></section></div></div>
         {showLogout ? <div className="mobile-only-logout"><button className="btn sm ghost" onClick={logout}>Keluar</button></div> : null}
       </main>
       <footer className="apple-site-footer">

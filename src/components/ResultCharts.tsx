@@ -345,6 +345,14 @@ export function PnlCalendar({ trades, tz, simple = false }: { trades: ClosedTrad
   if (!trades.length) return <p className="mute">Belum ada trade yang selesai.</p>;
   return (
     <div className="stack">
+      {simple ? <>
+        <Seg full label="Periode" options={[['day', 'Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const} value={tab} onChange={(k) => { setTab(k as CalTab); setSel(null); }} />
+        <div className="cal-nav">
+          <button className="cal-arrow" onClick={() => shift(-1)} disabled={!canPrev} aria-label="Sebelumnya">‹</button>
+          <div className="cal-title"><strong>{heading}</strong><span className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : 'mute'}>{`${tot.pnl < 0 ? '−' : tot.pnl > 0 ? '+' : ''}$${Math.abs(tot.pnl).toFixed(2)}`}</span></div>
+          <button className="cal-arrow" onClick={() => shift(1)} disabled={!canNext} aria-label="Berikutnya">›</button>
+        </div>
+      </> : <>
       <div className="tabs" role="tablist">
         {([['day', simple ? 'Harian' : 'PnL Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setSel(null); }}>{l}</button>
@@ -365,13 +373,14 @@ export function PnlCalendar({ trades, tz, simple = false }: { trades: ClosedTrad
           )}
           <button className="btn sm" onClick={() => shift(1)} disabled={!canNext} aria-label="Berikutnya">›</button>
         </div>
-        {simple ? <strong className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : ''}>{money(tot.pnl)}</strong> : <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px' }} aria-label="Tampilkan">
+        {<select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px' }} aria-label="Tampilkan">
           <option value="pnl">PnL</option>
           <option value="wl">Menang/Kalah</option>
           <option value="count">Jumlah trade</option>
         </select>}
       </div>
 
+      </>}
       {simple ? null : <p className="small">
         <strong>{heading}:</strong> <span className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : ''} style={{ fontWeight: 700 }}>{money(tot.pnl)}</span>
         {' '}· {tot.trades} trade · <span className="pos">{tot.wins} menang</span> · <span className="neg">{tot.losses} kalah</span>

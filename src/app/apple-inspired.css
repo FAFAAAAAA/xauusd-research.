@@ -667,3 +667,12 @@ body::before { display: none; }
 .td-period strong { font-size: 16px; font-variant-numeric: tabular-nums; }
 .td-kv dd { text-align: right; font-weight: 600; }
 .td-kv dt { color: var(--mute); }
+/* compact P&L calendar header (Trade page) */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cal-arrow { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 22px; line-height: 1; display: grid; place-items: center; cursor: pointer; transition: background .2s ease, transform .15s ease; }
+.cal-arrow:hover:not(:disabled) { background: var(--hover); }
+.cal-arrow:active:not(:disabled) { transform: scale(.94); }
+.cal-arrow:disabled { opacity: .3; cursor: default; }
+.cal-title { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.cal-title strong { font-size: 17px; letter-spacing: -.02em; }
+.cal-title span { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
