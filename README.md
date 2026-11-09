@@ -526,3 +526,8 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
   jadi margin ≈ 2× risiko (±$20 untuk risiko $10) dan likuidasi ±2× lebih jauh dari SL. Dengan leverage tetap 5× margin per posisi bisa $80–150,
   sehingga dengan saldo ±$200 posisi ke-2/ke-3 bisa ditolak karena margin kurang.
 
+
+### Deposit, penarikan dan transfer Spot (10 Nov 2026)
+- Bot Binance membaca `/fapi/v1/income` (TRANSFER, INTERNAL_TRANSFER, STRATEGY_UMFUTURES_TRANSFER) setiap kali mengirim saldo, lalu mengirim `event: 'cashflow'` ke `/api/ea/report`.
+- EA MT5 mengirim deal BALANCE / CREDIT 30 hari terakhir.
+- Website menyimpan `cashflow_binance` / `cashflow_mt5` (tanpa duplikat), mengirim Telegram sekali per transfer, dan di halaman Trade: saldo ikut berubah, profit = saldo − saldo awal − dana bersih (transfer tidak dihitung profit/rugi). Transfer sebelum trade pertama diabaikan (sudah termasuk saldo awal).

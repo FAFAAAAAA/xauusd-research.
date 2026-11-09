@@ -47,7 +47,7 @@ const view = (trades: JournalTrade[]) => ({
 
 /** Owner's manual live-trade journal (stored as one JSON value in app_settings). */
 export async function GET() {
-  return api(async (db) => ({ ...view(await load(db)), binance: await repo.getAppSetting(db, 'binance_balance', null), mt5: await repo.getAppSetting(db, 'mt5_balance', null) }));
+  return api(async (db) => ({ ...view(await load(db)), binance: await repo.getAppSetting(db, 'binance_balance', null), mt5: await repo.getAppSetting(db, 'mt5_balance', null), cashflow: { crypto: await repo.getAppSetting(db, 'cashflow_binance', []), forex: await repo.getAppSetting(db, 'cashflow_mt5', []) } }));
 }
 
 export async function POST(req: Request) {

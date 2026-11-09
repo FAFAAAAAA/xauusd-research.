@@ -210,12 +210,13 @@ def fmt(x, step):
 
 
 def report(cfg, payload):
-    if not cfg['report_url'] or not cfg['report_key']: return
+    if not cfg['report_url'] or not cfg['report_key']: return False
     try:
         r = requests.post(cfg['report_url'], json={'key': cfg['report_key'], 'strategy': 'snr', **payload}, timeout=15)
-        if r.status_code != 200: log.warning('Website menolak laporan: HTTP %s %s', r.status_code, r.text[:200])
+        if r.status_code != 200: log.warning('Website menolak laporan: HTTP %s %s', r.status_code, r.text[:200]); return False
+        return True
     except requests.RequestException as e:
-        log.warning('Laporan ke website gagal: %s', e)
+        log.warning('Laporan ke website gagal: %s', e); return False
 
 
 def notify(cfg, text, level='info'):
@@ -278,6 +279,33 @@ class Bot:
                               'upnl': round(float(a.get('totalUnrealizedProfit') or 0), 4), 'time': int(time.time())})
         except Exception as e: log.warning('saldo tidak terkirim ke website: %s', e)
         self.bal_pushed = time.time()
+        self.push_cashflow()
+
+    CF_TYPES = ('TRANSFER', 'INTERNAL_TRANSFER', 'STRATEGY_UMFUTURES_TRANSFER')
+    def push_cashflow(self):
+        """money moved in / out of the Futures wallet (deposit via Spot, withdrawal, transfer to Spot): sent to the website so it is
+        recorded and NOT counted as profit or loss. Read from /fapi/v1/income in 7-day windows since the last successful check."""
+        now = int(time.time() * 1000)
+        since = int(self.st.get('cf_since') or now - 30 * 86_400_000)
+        items = []
+        try:
+            for typ in self.CF_TYPES:
+                t0 = since
+                while t0 < now:
+                    t1 = min(now, t0 + 7 * 86_400_000)
+                    rows = self.api.get('/fapi/v1/income', {'incomeType': typ, 'startTime': t0, 'endTime': t1, 'limit': 1000}, signed=True) or []
+                    for r in rows:
+                        amt = float(r.get('income') or 0)
+                        if amt: items.append({'id': f"{r.get('tranId')}:{r.get('incomeType')}:{r.get('asset')}", 'at': int(r['time']),
+                                              'amount': round(amt, 6), 'asset': r.get('asset') or 'USDT', 'type': r.get('incomeType') or typ})
+                    t0 = t1
+        except Exception as e:
+            log.warning('riwayat transfer tidak terbaca: %s', e); return
+        for i in range(0, len(items), 40):
+            if not report(self.cfg, {'event': 'cashflow', 'source': 'binance', 'items': items[i:i + 40]}): return   # retry next time
+        for it in items: log.info('Transfer %s %+.2f %s tercatat', it['type'], it['amount'], it['asset'])
+        self.st['cf_since'] = now - 60_000          # small overlap; the website ignores duplicates
+        save_state(self.st)
 
     def risk_usdt(self):
         if self.cfg['risk_mode'] == 'usdt': return float(self.cfg['risk_usdt'])

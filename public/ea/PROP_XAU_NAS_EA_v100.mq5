@@ -649,6 +649,27 @@ void PushBalance()
    gBalAt = TimeLocal();
    double bal = AccountInfoDouble(ACCOUNT_BALANCE), eq = AccountInfoDouble(ACCOUNT_EQUITY);
    Report(StringFormat("{\"key\":\"%s\",\"event\":\"balance\",\"source\":\"mt5\",\"wallet\":%.2f,\"upnl\":%.2f}", InpEaKey, bal, eq - bal));
+   PushCashflow();
+}
+
+//--- deposits / withdrawals (balance deals) of the last 30 days: recorded on the website, not counted as profit (website ignores duplicates)
+void PushCashflow()
+{
+   if(!HistorySelect(TimeCurrent() - 30 * 86400, TimeCurrent() + 86400)) return;
+   string items = ""; int n = 0;
+   for(int i = HistoryDealsTotal() - 1; i >= 0 && n < 40; i--)
+   {
+      ulong d = HistoryDealGetTicket(i);
+      long typ = HistoryDealGetInteger(d, DEAL_TYPE);
+      if(typ != DEAL_TYPE_BALANCE && typ != DEAL_TYPE_CREDIT) continue;
+      double amt = HistoryDealGetDouble(d, DEAL_PROFIT);
+      if(amt == 0) continue;
+      long at = (long)HistoryDealGetInteger(d, DEAL_TIME_MSC) - (long)(TimeTradeServer() - TimeGMT()) * 1000;   // server time -> UTC
+      items += StringFormat("%s{\"id\":\"%I64u\",\"at\":%I64d,\"amount\":%.2f,\"asset\":\"%s\",\"type\":\"%s\"}", n ? "," : "", d, at, amt,
+                            AccountInfoString(ACCOUNT_CURRENCY), typ == DEAL_TYPE_BALANCE ? "BALANCE" : "CREDIT");
+      n++;
+   }
+   if(n) Report(StringFormat("{\"key\":\"%s\",\"event\":\"cashflow\",\"source\":\"mt5\",\"items\":[%s]}", InpEaKey, items));
 }
 
 void Run()

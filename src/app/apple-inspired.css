@@ -814,3 +814,13 @@ body::before { display: none; }
 .cal-simple .cal.week .cell .n, .cal-simple .cal.month .cell .n { font-size: 12px; }
 .cal-simple .cal.week .cell .v, .cal-simple .cal.month .cell .v { font-size: 12px; }
 .cal-simple .cal .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+
+/* deposit / withdrawal list (Trade page) */
+.cf-list { display: flex; flex-direction: column; gap: 2px; }
+.cf-row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line, rgba(127,127,127,.15)); }
+.cf-row:last-child { border-bottom: 0; }
+.cf-ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; flex: none; }
+.cf-ic.in { background: rgba(14,203,129,.14); color: #0ecb81; }
+.cf-ic.out { background: rgba(246,70,93,.14); color: #f6465d; }
+.cf-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cf-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }

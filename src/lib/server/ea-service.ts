@@ -26,6 +26,7 @@ export async function eaKeyInfo(db: Db): Promise<{ configured: boolean; createdA
 }
 
 export interface EaResponse { status: number; body: Record<string, unknown> }
+export interface CashFlow { id: string; at: number; amount: number; asset: string; type: string }
 const num = (x: unknown) => (typeof x === 'number' ? x : typeof x === 'string' ? Number(x) : NaN);
 
 export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: FetchLike; now?: number } = {}): Promise<EaResponse> {
@@ -44,6 +45,34 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     // source "mt5" = the MetaTrader EA (Forex); otherwise the Binance bot (Crypto)
     await repo.setAppSetting(db, b.source === 'mt5' ? 'mt5_balance' : 'binance_balance', { wallet, upnl: Number.isFinite(upnl) ? upnl : 0, at: now });
     return { status: 200, body: { ok: true } };
+  }
+  // deposits / withdrawals / transfers (Binance: Spot <-> Futures transfers from /fapi/v1/income; MT5: balance deals).
+  // Stored per market, deduplicated by id; each new one is announced once on Telegram.
+  if (b.event === 'cashflow') {
+    const mt5 = b.source === 'mt5', k = mt5 ? 'cashflow_mt5' : 'cashflow_binance';
+    const items = Array.isArray(b.items) ? (b.items as Record<string, unknown>[]).slice(0, 60) : [];
+    const have = await repo.getAppSetting<CashFlow[]>(db, k, []), ids = new Set(have.map((c) => c.id));
+    const fresh: CashFlow[] = [];
+    for (const it of items) {
+      const id = String(it.id ?? '').replace(/[^0-9A-Za-z:_-]/g, '').slice(0, 64), at = num(it.at), amount = num(it.amount);
+      const asset = String(it.asset ?? 'USD').replace(/[^0-9A-Za-z]/g, '').slice(0, 12) || 'USD';
+      if (!id || ids.has(id) || !Number.isFinite(at) || !Number.isFinite(amount) || amount === 0) continue;
+      ids.add(id);
+      fresh.push({ id, at: at < 1e12 ? at * 1000 : at, amount, asset, type: String(it.type ?? '').replace(/[^0-9A-Za-z_]/g, '').slice(0, 40) });
+    }
+    if (!fresh.length) return { status: 200, body: { ok: true, added: 0 } };
+    await repo.setAppSetting(db, k, [...have, ...fresh].sort((a, c) => a.at - c.at).slice(-500));
+    const tg = await repo.getTelegramSettings(db);
+    if (tg.live_enabled) {
+      const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
+      for (const c of fresh) {
+        const inn = c.amount > 0, amt = `${inn ? '+' : '−'}${Math.abs(c.amount).toFixed(2)} ${c.asset}`;
+        const where = mt5 ? 'akun MT5' : 'Binance Futures';
+        const text = `💸 <b>${inn ? 'Dana masuk' : 'Dana keluar'}</b> · ${escapeHtml(where)}\n\n${escapeHtml(amt)}\n${escapeHtml(formatInTz(c.at, tz))}\n\nTercatat di website; tidak dihitung sebagai profit/rugi.`;
+        await sendTelegram(db, { deliveryKey: `ea:cf:${k}:${c.id}`, mode: 'LIVE', text }, { fetchImpl: opts.fetchImpl });
+      }
+    }
+    return { status: 200, body: { ok: true, added: fresh.length } };
   }
   // bot status messages (daily summary, warnings): Telegram only, no journal row
   if (b.event === 'info') {

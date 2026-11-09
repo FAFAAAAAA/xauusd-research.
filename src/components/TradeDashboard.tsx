@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CountUp, SecHead, Sheet } from './Status';
 import { StatsBento, useResultStats } from './StatsBento';
 import { EquityChart, PnlCalendar, type ClosedTrade } from './ResultCharts';
-import { tzOffsetMinutes } from '@/lib/core/time';
+import { formatInTz, tzOffsetMinutes } from '@/lib/core/time';
 import type { JournalTrade } from '@/lib/core/journal';
 
 /* Trade page dashboard (9 Nov 2026): balance, growth, complete P&L figures, balance chart, P&L calendar and P&L per coin / method.
@@ -17,8 +17,10 @@ const dur = (ms: number) => { const h = ms / 3_600_000; return h < 1 ? `${Math.r
 const key = (m: string) => `start_balance_${m}`;
 const readStart = (m: string, fallback: number) => { try { const v = Number(localStorage.getItem(key(m))); return v > 0 ? v : fallback; } catch { return fallback; } };
 
-export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null }: {
-  trades: JournalTrade[]; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
+export interface CashFlow { id: string; at: number; amount: number; asset: string; type: string }
+
+export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null, cashflow = [] }: {
+  trades: JournalTrade[]; cashflow?: CashFlow[]; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
   groupOf: (t: JournalTrade) => string; groupLabel?: string; renderTrades: (list: JournalTrade[]) => React.ReactNode;
 }) {
   const [start, setStart] = useState(fallbackStart);
@@ -79,9 +81,16 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   }, [trades, start, tz, groupOf]);
 
   const rs = useResultStats(s.closed, start);
-  // crypto: the real Binance balance sent by the bot (wallet); otherwise starting balance + journal results
-  const bal = live && Number.isFinite(live.wallet) ? live.wallet : s.bal;
-  const growth = start > 0 ? (bal - start) / start * 100 : 0;
+  // deposits / withdrawals / Spot transfers after the first trade (the starting balance already holds everything before it).
+  // They change the balance but are not profit: P&L = balance − starting balance − net transfers.
+  const firstAt = useMemo(() => trades.reduce((m, t) => Math.min(m, t.openedAt), Infinity), [trades]);
+  const flows = useMemo(() => cashflow.filter((c) => c.at > firstAt || !Number.isFinite(firstAt)).sort((a, b) => b.at - a.at), [cashflow, firstAt]);
+  const netIn = flows.reduce((a, c) => a + c.amount, 0), added = flows.reduce((a, c) => a + Math.max(0, c.amount), 0);
+  const [showFlows, setShowFlows] = useState(false);
+  // live: the real balance sent by the bot / EA (wallet); otherwise starting balance + journal results + transfers
+  const bal = live && Number.isFinite(live.wallet) ? live.wallet : s.bal + netIn;
+  const profit = live ? bal - start - netIn : s.total;
+  const growth = start + added > 0 ? profit / (start + added) * 100 : 0;
   const ago = live ? Math.max(0, Math.round((Date.now() - live.at) / 60_000)) : 0;
   return (
     <div className="stack td">
@@ -90,9 +99,10 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
         <span className="td-bal"><CountUp value={bal} format={(n) => usd(n, false)} /></span>
         <span className="td-row">
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
-          <span className={tone(bal - start)}>{usd(live ? bal - start : s.total)}</span>
+          <span className={tone(profit)}>{usd(profit)}</span>
           <span className="td-sub">dari saldo awal {usd(start, false)} · <button className="td-link" onClick={() => setEdit(String(start))}>ubah</button></span>
         </span>
+        {flows.length ? <span className="td-sub">Dana {netIn >= 0 ? 'masuk' : 'keluar'} bersih <span className={tone(netIn)}>{usd(netIn)}</span> · tidak dihitung profit · <button className="td-link" onClick={() => setShowFlows(true)}>lihat {flows.length}</button></span> : null}
         {live ? <span className="td-sub">{market === 'crypto' ? 'Saldo Binance Futures' : 'Saldo MT5'} · {ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}{Math.abs(live.upnl) >= 0.01 ? <> · posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></> : null}</span> : null}
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
@@ -115,6 +125,23 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
             renderSelection={(match) => renderTrades(trades.filter((t) => t.result !== 'open' && t.pnl != null && match(t.openedAt)).sort((a, b) => b.openedAt - a.openedAt))} />
         </section>
       </> : <p className="empty-inline">Belum ada trade selesai di pasar ini.</p>}
+
+      {showFlows ? (
+        <Sheet title="Deposit & penarikan" onClose={() => setShowFlows(false)}>
+          <div className="cf-list">
+            {flows.map((c) => (
+              <div key={c.id} className="cf-row">
+                <span className={`cf-ic ${c.amount > 0 ? 'in' : 'out'}`} aria-hidden>{c.amount > 0 ? '↓' : '↑'}</span>
+                <span className="cf-main">
+                  <strong>{market === 'crypto' ? (c.amount > 0 ? 'Masuk ke Futures' : 'Keluar dari Futures') : (c.amount > 0 ? 'Deposit' : 'Penarikan')}</strong>
+                  <span className="mute small">{formatInTz(c.at, tz)}{market === 'crypto' && c.type === 'TRANSFER' ? ' · transfer Spot' : ''}</span>
+                </span>
+                <span className={`cf-amt ${tone(c.amount)}`}>{c.amount > 0 ? '+' : '−'}{Math.abs(c.amount).toFixed(2)} {c.asset}</span>
+              </div>
+            ))}
+          </div>
+        </Sheet>
+      ) : null}
 
       {edit != null ? (
         <Sheet title="Saldo awal" onClose={() => setEdit(null)}>
