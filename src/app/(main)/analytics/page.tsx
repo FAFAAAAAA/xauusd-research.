@@ -222,10 +222,6 @@ export default function Analytics() {
                         <div className="b-stat"><span className="b-v">{f(sum.trades / (days / 30.44))}</span><span className="b-h">per bulan</span></div>
                       </div>
                     </div> : null}
-                    {m.avgHoldHours != null ? <div className="b-tile b-wide b-pair">
-                      <div><span className="b-k">Lama posisi menang</span><span className="b-v pos">{hrs(m.avgHoldWinHours)}</span></div>
-                      <div><span className="b-k">Lama posisi kalah</span><span className="b-v neg">{hrs(m.avgHoldLossHours)}</span></div>
-                    </div> : null}
                     <div className="b-tile b-wide b-pair">
                       <div><span className="b-k">Total profit</span><span className="b-v pos">{money(m.grossProfit)}</span></div>
                       <div><span className="b-k">Total rugi</span><span className="b-v neg">{money(-m.grossLoss)}</span></div>

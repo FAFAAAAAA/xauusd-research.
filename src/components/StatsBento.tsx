@@ -28,12 +28,18 @@ export function useResultStats(trades: readonly ClosedTrade[], start = 0) {
     }
     const nz = runs.filter((r) => r !== 0);
     const hold = T.length ? T.reduce((a, t) => a + Math.max(0, t.exit - t.entry), 0) / T.length : null;
+    const avgOf = (xs: ClosedTrade[]) => (xs.length ? xs.reduce((a, t) => a + Math.max(0, t.exit - t.entry), 0) / xs.length : null);
+    const holdW = avgOf(T.filter((t) => t.pnl > 0)), holdL = avgOf(T.filter((t) => t.pnl < 0));
+    // how long positions stay open: share of trades per bucket
+    const EDGES = [3_600_000, 4 * 3_600_000, 12 * 3_600_000, 86_400_000, 3 * 86_400_000];
+    const buckets = [0, 0, 0, 0, 0, 0];
+    for (const t of T) { const d = Math.max(0, t.exit - t.entry); let i = 0; while (i < EDGES.length && d >= EDGES[i]) i++; buckets[i]++; }
     return {
       n: T.length, total: gw - gl, wins: W.length, losses: L.length, be: T.length - W.length - L.length,
       winRate: W.length + L.length ? W.length / (W.length + L.length) : null, pf: gl > 0 ? gw / gl : gw > 0 ? Infinity : null,
       avgW: W.length ? gw / W.length : null, avgL: L.length ? -gl / L.length : null,
       best: pnl.length ? Math.max(...pnl) : null, worst: pnl.length ? Math.min(...pnl) : null, gw, gl,
-      dd, ddPct, hold, runs: nz, maxW: Math.max(0, ...nz), maxL: Math.max(0, ...nz.map((r) => -r)), cur: runs[runs.length - 1] ?? 0,
+      dd, ddPct, hold, holdW, holdL, buckets, runs: nz, maxW: Math.max(0, ...nz), maxL: Math.max(0, ...nz.map((r) => -r)), cur: runs[runs.length - 1] ?? 0,
     };
   }, [trades, start]);
 }
@@ -59,6 +65,33 @@ export function StreakTile({ s }: { s: ResultStats }) {
       <div className="st-recs">
         <span><i className="w" />Menang terpanjang <strong>{s.maxW}×</strong></span>
         <span><i className="l" />Kalah terpanjang <strong>{s.maxL}×</strong></span>
+      </div>
+    </div>
+  );
+}
+
+const HOLD_LABELS = ['< 1 jam', '1–4 jam', '4–12 jam', '12–24 jam', '1–3 hari', '> 3 hari'];
+/** Holding time: average, win vs loss, and how trades spread over duration buckets (mini bar chart). */
+export function HoldTile({ s }: { s: ResultStats }) {
+  const mx = Math.max(1, ...s.buckets);
+  return (
+    <div className="b-tile b-wide hold2">
+      <div className="b-top"><span className="b-k">Lama posisi</span><span className="b-k">rata-rata</span></div>
+      <div className="hold2-main">
+        <span className="b-big hold2-big">{s.hold != null ? dur(s.hold) : '—'}</span>
+        <div className="hold2-pills">
+          <span className="st-pill w">menang {s.holdW != null ? dur(s.holdW) : '—'}</span>
+          <span className="st-pill l">kalah {s.holdL != null ? dur(s.holdL) : '—'}</span>
+        </div>
+      </div>
+      <div className="hold2-bars" role="img" aria-label={`Sebaran lama posisi: ${HOLD_LABELS.map((l, i) => `${l} ${s.buckets[i]}`).join(', ')}`}>
+        {s.buckets.map((c, i) => (
+          <div key={i} className="hold2-col" title={`${HOLD_LABELS[i]}: ${c} trade`}>
+            <span className="hold2-n">{c ? `${Math.round(c / Math.max(1, s.n) * 100)}%` : ''}</span>
+            <span className="hold2-track"><span className="hold2-bar" style={{ height: `${(c / mx) * 100}%` }} /></span>
+            <span className="hold2-l">{HOLD_LABELS[i]}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -94,10 +127,7 @@ export function StatsBento({ s, extra }: { s: ResultStats; extra?: React.ReactNo
         <div><span className="b-k">Terburuk</span><span className={`b-v ${tone(s.worst)}`}>{s.worst == null ? '—' : usd(s.worst)}</span></div>
       </div>
       <StreakTile s={s} />
-      <div className="b-tile b-wide">
-        <span className="b-k">Lama posisi rata-rata</span>
-        <span className="b-v">{s.hold != null ? dur(s.hold) : '—'}</span>
-      </div>
+      <HoldTile s={s} />
       {extra}
     </div>
   );
