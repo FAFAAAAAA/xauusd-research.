@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
 import { JOURNAL_KEYS, marketOfJournal } from '@/lib/core/markets';
 import { liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/lib/core/journal';
+import TradeDashboard from '@/components/TradeDashboard';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const money = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '—' : `${n < 0 ? '−' : n > 0 ? '+' : ''}$${Math.abs(n).toFixed(2)}`);
@@ -105,6 +106,11 @@ export default function TradePage() {
       <PageHead title="Trade"
  />
       <MarketSwitch value={market} onChange={(m) => { setMarket(m); setDraft(null); }} />
+
+      <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz}
+        fallbackStart={market === 'crypto' ? 199.02 : Number(d.risk?.capital) || 1000}
+        groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
+        groupLabel={market === 'crypto' ? 'koin' : 'metode'} />
 
       <div className="riskbar">
         <span>Modal <strong>${d.risk.capital}</strong></span>
