@@ -91,7 +91,6 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   const bal = live && Number.isFinite(live.wallet) ? live.wallet : s.bal + netIn;
   const profit = live ? bal - start - netIn : s.total;
   const growth = start + added > 0 ? profit / (start + added) * 100 : 0;
-  const ago = live ? Math.max(0, Math.round((Date.now() - live.at) / 60_000)) : 0;
   return (
     <div className="stack td">
       <section className="td-hero">
@@ -99,7 +98,6 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <span className="td-k">Saldo</span>
           <span className="td-start">
             <button className="td-startbtn" onClick={() => setEdit(String(start))} aria-label="Ubah saldo awal">{usd(start, false)}</button>
-            {live ? <span className="td-ago">{ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}</span> : null}
           </span>
         </div>
         <span className="td-bal"><CountUp value={bal} format={(n) => usd(n, false)} /></span>
