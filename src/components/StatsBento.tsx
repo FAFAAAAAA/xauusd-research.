@@ -74,25 +74,13 @@ const HOLD_LABELS = ['< 1 jam', '1–4 jam', '4–12 jam', '12–24 jam', '1–3
 const HOLD_SHORT = ['<1j', '1–4j', '4–12j', '12–24j', '1–3h', '>3h'];
 /** Holding time: average, win vs loss, and how trades spread over duration buckets (mini bar chart). */
 export function HoldTile({ s }: { s: ResultStats }) {
-  const mx = Math.max(1, ...s.buckets);
   return (
-    <div className="b-tile b-wide hold2">
+    <div className="b-tile b-wide">
       <span className="b-k">Lama posisi rata-rata</span>
-      <div className="hold2-main">
-        <span className="b-big hold2-big">{s.hold != null ? dur(s.hold) : '—'}</span>
-        <div className="hold2-pills">
-          <span className="st-pill w">TP {s.holdW != null ? dur(s.holdW) : '—'}</span>
-          <span className="st-pill l">SL {s.holdL != null ? dur(s.holdL) : '—'}</span>
-        </div>
-      </div>
-      <div className="hold3-rows" role="img" aria-label={`Sebaran lama posisi: ${HOLD_LABELS.map((l, i) => `${l} ${s.buckets[i]}`).join(', ')}`}>
-        {s.buckets.map((c, i) => (
-          <div key={i} className={`hold3-row${c ? '' : ' zero'}`} title={`${HOLD_LABELS[i]}: ${c} trade`}>
-            <span className="hold3-l">{HOLD_LABELS[i]}</span>
-            <span className="hold3-track"><span className="hold3-bar" style={{ width: `${(c / mx) * 100}%` }} /></span>
-            <span className="hold3-p">{Math.round(c / Math.max(1, s.n) * 100)}%</span>
-          </div>
-        ))}
+      <div className="b-three">
+        <div className="b-stat"><span className="b-v">{s.hold != null ? dur(s.hold) : '—'}</span><span className="b-h">semua trade</span></div>
+        <div className="b-stat"><span className="b-v pos">{s.holdW != null ? dur(s.holdW) : '—'}</span><span className="b-h">sampai TP</span></div>
+        <div className="b-stat"><span className="b-v neg">{s.holdL != null ? dur(s.holdL) : '—'}</span><span className="b-h">sampai SL</span></div>
       </div>
     </div>
   );
