@@ -484,7 +484,7 @@ class Bot:
         notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY.")
         self.push_balance()
         while True:
-            if time.time() - getattr(self, 'bal_pushed', 0) > 900: self.push_balance()      # every 15 min
+            if time.time() - getattr(self, 'bal_pushed', 0) > (60 if self.st['positions'] else 900): self.push_balance()   # every minute while positions are open, else every 15 min
             if os.path.exists(STOP_FILE):
                 log.info('stop.flag ditemukan — bot berhenti.'); notify(self.cfg, 'Bot dihentikan (perintah --stop). Posisi terbuka tetap punya SL/TP di Binance.'); return
             if os.path.exists(RESET_FILE):

@@ -641,11 +641,11 @@ void HistCheck()
    if(bn < 5000) gHistWarn += (gHistWarn != "" ? "\n⚠ " : "") + StringFormat("riwayat H1 %s baru %d candle (butuh 5000): v1 NAS belum bisa trading. Buka chart %s H1 dan scroll ke kiri", NS, bn, NS);
 }
 
-//--- send the account balance to the website (Trade page, Forex) every 15 minutes and after each close
+//--- send the account balance to the website (Trade page, Forex): every minute with open positions, else every 15 minutes, and after each close
 datetime gBalAt = 0;
 void PushBalance()
 {
-   if(TimeLocal() - gBalAt < 900) return;
+   if(TimeLocal() - gBalAt < (PositionsTotal() > 0 ? 60 : 900)) return;   // every minute while positions are open, else every 15 min
    gBalAt = TimeLocal();
    double bal = AccountInfoDouble(ACCOUNT_BALANCE), eq = AccountInfoDouble(ACCOUNT_EQUITY);
    Report(StringFormat("{\"key\":\"%s\",\"event\":\"balance\",\"source\":\"mt5\",\"wallet\":%.2f,\"upnl\":%.2f}", InpEaKey, bal, eq - bal));

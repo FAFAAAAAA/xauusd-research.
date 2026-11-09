@@ -45,7 +45,8 @@ export default function TradePage() {
     call<any>('/api/live').then(setD).catch((e) => setErr(e.message));
     call<any>('/api/journal').then(setJ).catch((e) => setErr(e.message));
   }, []);
-  useEffect(() => { load(); const t = setInterval(load, 60_000); return () => clearInterval(t); }, [load]);
+  // refresh every 30 s while the page is visible (balance / trades stay current)
+  useEffect(() => { load(); const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 30_000); return () => clearInterval(t); }, [load]);
 
   const riskUsd = d?.risk ? (d.risk.capital * d.risk.riskPct) / 100 : NaN;
 
