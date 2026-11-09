@@ -43,8 +43,9 @@ body::before { display: none; }
 .apple-nav-cta:hover { opacity: .86; transform: scale(1.035); }
 .apple-menu-toggle { display: none; width: 38px; height: 38px; padding: 8px; border: 0; background: transparent; cursor: pointer; align-items: center; justify-content: center; flex-direction: column; gap: 5px; }
 .apple-menu-toggle span { width: 19px; height: 1.5px; background: var(--ink); display: block; transition: transform .25s ease; }
-.apple-menu-toggle.is-open span:first-child { transform: translateY(3.25px) rotate(45deg); }
-.apple-menu-toggle.is-open span:last-child { transform: translateY(-3.25px) rotate(-45deg); }
+.apple-menu-toggle.is-open span:first-child { transform: translateY(6.5px) rotate(45deg); }
+.apple-menu-toggle.is-open span:nth-child(2) { opacity: 0; }
+.apple-menu-toggle.is-open span:last-child { transform: translateY(-6.5px) rotate(-45deg); }
 .apple-mobile-menu { display: none; }
 .apple-site-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 22px max(32px, calc((100vw - 1170px) / 2)); color: var(--mute); font-size: 11px; border-top: 1px solid var(--line); background: var(--bg); }
 .apple-site-footer .apple-logout { background: none; border: 0; color: var(--ink-2); cursor: pointer; font-size: 11px; }

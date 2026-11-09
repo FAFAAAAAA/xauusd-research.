@@ -27,9 +27,8 @@ export default function Settings() {
       <General s={s} reload={load} />
       <span className="section-title">Lanjutan</span>
       <details className="group">
-        <summary><span><h2>Lanjutan</h2><span className="s">Data riset, berita, zona, impor, log error</span></span></summary>
+        <summary><span><h2>Lanjutan</h2><span className="s">Data riset, zona, impor, log error</span></span></summary>
         <div className="body">
-          <div className="row"><Link className="btn sm" href="/news">Berita ekonomi</Link></div>
           <HistoricalData />
           <Zones />
           <OtherImports />
