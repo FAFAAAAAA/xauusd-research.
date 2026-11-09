@@ -71,25 +71,25 @@ export function StreakTile({ s }: { s: ResultStats }) {
 }
 
 const HOLD_LABELS = ['< 1 jam', '1–4 jam', '4–12 jam', '12–24 jam', '1–3 hari', '> 3 hari'];
+const HOLD_SHORT = ['<1j', '1–4j', '4–12j', '12–24j', '1–3h', '>3h'];
 /** Holding time: average, win vs loss, and how trades spread over duration buckets (mini bar chart). */
 export function HoldTile({ s }: { s: ResultStats }) {
   const mx = Math.max(1, ...s.buckets);
   return (
     <div className="b-tile b-wide hold2">
-      <div className="b-top"><span className="b-k">Lama posisi</span><span className="b-k">rata-rata</span></div>
+      <span className="b-k">Lama posisi rata-rata</span>
       <div className="hold2-main">
         <span className="b-big hold2-big">{s.hold != null ? dur(s.hold) : '—'}</span>
         <div className="hold2-pills">
-          <span className="st-pill w">menang {s.holdW != null ? dur(s.holdW) : '—'}</span>
-          <span className="st-pill l">kalah {s.holdL != null ? dur(s.holdL) : '—'}</span>
+          <span className="st-pill w">TP {s.holdW != null ? dur(s.holdW) : '—'}</span>
+          <span className="st-pill l">SL {s.holdL != null ? dur(s.holdL) : '—'}</span>
         </div>
       </div>
       <div className="hold2-bars" role="img" aria-label={`Sebaran lama posisi: ${HOLD_LABELS.map((l, i) => `${l} ${s.buckets[i]}`).join(', ')}`}>
         {s.buckets.map((c, i) => (
           <div key={i} className="hold2-col" title={`${HOLD_LABELS[i]}: ${c} trade`}>
-            <span className="hold2-n">{c ? `${Math.round(c / Math.max(1, s.n) * 100)}%` : ''}</span>
-            <span className="hold2-track"><span className="hold2-bar" style={{ height: `${(c / mx) * 100}%` }} /></span>
-            <span className="hold2-l">{HOLD_LABELS[i]}</span>
+            <span className="hold2-track"><span className="hold2-bar" style={{ height: `${(c / mx) * 100}%` }} />{c ? <span className="hold2-n">{Math.round(c / Math.max(1, s.n) * 100)}%</span> : null}</span>
+            <span className="hold2-l">{HOLD_SHORT[i]}</span>
           </div>
         ))}
       </div>

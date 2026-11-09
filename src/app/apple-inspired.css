@@ -778,3 +778,11 @@ body::before { display: none; }
 .hold2-track { width: 100%; height: 56px; display: flex; align-items: flex-end; border-radius: 8px; background: var(--sunk); overflow: hidden; }
 .hold2-bar { width: 100%; background: var(--ink); opacity: .78; border-radius: 8px; min-height: 0; }
 .hold2-l { font-size: 10px; color: var(--mute); text-align: center; line-height: 1.15; }
+/* holding tile v2: less text, % inside the track, short labels */
+.hold2-main { align-items: center; }
+.hold2-big { font-size: 34px; }
+.hold2-track { position: relative; height: 64px; }
+.hold2-n { position: absolute; top: 4px; left: 0; right: 0; text-align: center; font-size: 10.5px; min-height: 0; color: var(--ink); mix-blend-mode: normal; }
+.hold2-bar { opacity: .16; background: var(--ink); }
+.hold2-l { font-size: 11px; white-space: nowrap; }
+@media (max-width: 380px) { .hold2-bars { gap: 4px; } .hold2-l { font-size: 10px; } }
