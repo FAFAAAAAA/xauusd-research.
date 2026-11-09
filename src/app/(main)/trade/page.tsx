@@ -132,7 +132,7 @@ export default function TradePage() {
     return (
       <div key={`cf-${c.id}`} className="hcard cfcard">
         <span className="hc-top">
-          <span className={`hc-side ${inn ? 'b' : 's'}`}>{inn ? 'D' : 'W'}</span>
+          <span className={`hc-side ${inn ? 'b' : 's'}`} aria-hidden><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{inn ? <path d="M12 5v14M6 13l6 6 6-6" /> : <path d="M12 19V5M6 11l6-6 6 6" />}</svg></span>
           <strong className="hc-name">{inn ? 'Deposit' : 'Withdraw'}</strong>
           <span className="hc-tag">{c.asset}</span>
           <span className={`hc-res ${inn ? 'tp' : 'sl'}`}>Selesai</span>

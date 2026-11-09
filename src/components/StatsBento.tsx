@@ -78,9 +78,9 @@ export function HoldTile({ s }: { s: ResultStats }) {
     <div className="b-tile b-wide">
       <span className="b-k">Lama posisi rata-rata</span>
       <div className="b-three">
-        <div className="b-stat"><span className="b-v">{s.hold != null ? dur(s.hold) : '—'}</span><span className="b-h">semua trade</span></div>
-        <div className="b-stat"><span className="b-v pos">{s.holdW != null ? dur(s.holdW) : '—'}</span><span className="b-h">sampai TP</span></div>
-        <div className="b-stat"><span className="b-v neg">{s.holdL != null ? dur(s.holdL) : '—'}</span><span className="b-h">sampai SL</span></div>
+        <div className="b-stat"><span className="hc-res">ALL</span><span className="b-v">{s.hold != null ? dur(s.hold) : '—'}</span></div>
+        <div className="b-stat"><span className="hc-res tp">TP</span><span className="b-v">{s.holdW != null ? dur(s.holdW) : '—'}</span></div>
+        <div className="b-stat"><span className="hc-res sl">SL</span><span className="b-v">{s.holdL != null ? dur(s.holdL) : '—'}</span></div>
       </div>
     </div>
   );

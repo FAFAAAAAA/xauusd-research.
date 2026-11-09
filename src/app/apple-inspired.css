@@ -828,3 +828,8 @@ body::before { display: none; }
 .cfcard:hover { background: var(--surface); }
 .cfcard:active { transform: none; }
 .cfcard .hc-mid .cf-when { grid-column: span 2; align-items: flex-end; text-align: right; }
+
+/* hold tile: ALL / TP / SL badges like the position cards */
+.b-three .b-stat .hc-res { margin-left: 0; align-self: flex-start; font-size: 11px; padding: 2px 8px; margin-bottom: 4px; }
+.b-three .b-stat .hc-res { color: var(--surface); background: var(--ink); border-radius: 6px; font-weight: 700; letter-spacing: .02em; }
+.b-three .b-stat .hc-res.tp { background: var(--up); color: #fff; } .b-three .b-stat .hc-res.sl { background: var(--down); color: #fff; }
