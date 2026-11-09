@@ -104,15 +104,24 @@ export default function TradePage() {
   const closedT = j.trades.filter((t) => t.result !== 'open' && inMarket(t));
   const stratOf = (label: string) => (/^v1 ?snr|snr-sell/i.test(label) ? 'snr' : /^v[12] ?alt|alt-breakdown/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
+  // history card in the style of Binance "Riwayat Posisi", simplified: coin, side, result, P&L, entry → exit, opened / closed, duration
+  const holdTxt = (ms: number) => { const m = Math.round(ms / 60_000); return m < 60 ? `${m} mnt` : m < 2880 ? `${Math.floor(m / 60)} jam ${m % 60} mnt` : `${(m / 1440).toFixed(1)} hari`; };
   const tradeRow = (t: JournalTrade) => (
-    <button key={t.id} className="item btnrow" onClick={() => setDetail(t)}>
-      <span style={{ minWidth: 0 }}>
-        <span className="t" style={{ display: 'block' }}>{fmt(t.openedAt, tz)}</span>
-        <span className="d">{RESULT[t.result] ?? 'Manual'} · {NAME[t.strategy] ?? t.strategy}{coinOf(t) ? ` · ${coinOf(t)}` : ''}</span>
+    <button key={t.id} className="hcard" onClick={() => setDetail(t)}>
+      <span className="hc-top">
+        <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
+        <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
+        <span className="hc-tag">{coinOf(t) ? NAME[t.strategy] ?? t.strategy : t.side}</span>
+        <span className={`hc-res ${t.result}`}>{RESULT[t.result] ?? 'Manual'}</span>
       </span>
-      <span className="row" style={{ gap: 8, flex: 'none' }}>
-        <span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span>
-        <span className={`num ${tone(t.pnl)}`} style={{ fontWeight: 600, minWidth: 72, textAlign: 'right' }}>{money(t.pnl)}</span>
+      <span className="hc-mid">
+        <span><span className="k">PNL</span><strong className={tone(t.pnl)}>{money(t.pnl)}</strong></span>
+        <span><span className="k">Masuk</span><strong>{px(t.entry)}</strong></span>
+        <span><span className="k">Keluar</span><strong>{t.exit != null ? px(t.exit) : '—'}</strong></span>
+      </span>
+      <span className="hc-foot">
+        <span>{fmt(t.openedAt, tz)}{t.closedAt ? ` → ${fmt(t.closedAt, tz)}` : ''}</span>
+        {t.closedAt ? <span>{holdTxt(t.closedAt - t.openedAt)}</span> : null}
       </span>
     </button>
   );
@@ -125,7 +134,7 @@ export default function TradePage() {
       <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz} live={market === 'crypto' ? j.binance ?? null : j.mt5 ?? null}
         fallbackStart={market === 'crypto' ? 199.02 : 10000}
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
-        renderTrades={(list) => <div className="list">{list.map(tradeRow)}</div>} />
+        renderTrades={(list) => <div className="hcards">{list.map(tradeRow)}</div>} />
 
 
       {/* journal form (opens from a signal, the calculator, or the button above) */}
@@ -237,7 +246,7 @@ export default function TradePage() {
             <span><strong>Riwayat lengkap</strong><span className="mute">{closedT.length} trade</span></span>
             <span className="chev" aria-hidden>⌄</span>
           </button>
-          {showHist ? <div className="list appear" style={{ marginTop: 10 }}>{closedT.map(tradeRow)}</div> : null}
+          {showHist ? <div className="hcards appear" style={{ marginTop: 10 }}>{closedT.map(tradeRow)}</div> : null}
         </> : <p className="empty-inline">Belum ada trade.</p>}
         {detail ? (
           <Sheet title={`${detail.side} · ${fmt(detail.openedAt, tz)}`} onClose={() => setDetail(null)}>

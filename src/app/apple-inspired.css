@@ -799,3 +799,21 @@ body::before { display: none; }
 .cal-simple .cal.day .cell .n { font-size: 14px; font-weight: 650; }
 .cal-simple .cal.week .cell .n, .cal-simple .cal.month .cell .n { font-size: 12px; }
 .cal-simple .cal.week .cell .v, .cal-simple .cal.month .cell .v { font-size: 12px; }
+/* history cards (Binance-like, simplified) */
+.hcards { display: flex; flex-direction: column; gap: 10px; }
+.hcard { display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 16px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; transition: background .2s ease, transform .12s ease; font: inherit; }
+.hcard:hover { background: var(--hover); }
+.hcard:active { transform: scale(.99); }
+.hc-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hc-side { width: 22px; height: 22px; flex: none; border-radius: 6px; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; }
+.hc-side.s { background: var(--down); } .hc-side.b { background: var(--up); }
+.hc-name { font-size: 17px; letter-spacing: -.02em; }
+.hc-tag { font-size: 11.5px; color: var(--mute); padding: 3px 8px; border-radius: 6px; background: var(--sunk); white-space: nowrap; }
+.hc-res { margin-left: auto; font-size: 12px; font-weight: 650; padding: 3px 9px; border-radius: 999px; background: var(--sunk); color: var(--ink); white-space: nowrap; }
+.hc-res.tp { background: var(--up-tint); color: var(--up); } .hc-res.sl { background: var(--down-tint); color: var(--down); }
+.hc-mid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; }
+.hc-mid > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hc-mid .k { font-size: 11.5px; color: var(--mute); }
+.hc-mid strong { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc-mid > span:first-child strong { font-size: 19px; letter-spacing: -.02em; }
+.hc-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; font-size: 12px; color: var(--mute); padding-top: 10px; border-top: 1px solid var(--line); }
