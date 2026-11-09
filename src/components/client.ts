@@ -7,10 +7,25 @@ export class ApiError extends Error { constructor(public status: number, message
 const cache = new Map<string, unknown>();
 let cacheEpoch = 0;
 const pending = new Map<string, { epoch: number; request: Promise<unknown> }>();
+// The last GET answers are also kept in this browser (localStorage, guarded) so opening the site shows the last data at once
+// while fresh data loads (9 Nov 2026: the server is in Stockholm, the owner in Korea — every request takes a while).
+const LS = 'api:', LS_MAX = 400_000;
+function lsGet(url: string): unknown {
+  try { const v = localStorage.getItem(LS + url); return v ? JSON.parse(v) : undefined; } catch { return undefined; }
+}
+function lsSet(url: string, data: unknown) {
+  try { const v = JSON.stringify(data); if (v.length <= LS_MAX) localStorage.setItem(LS + url, v); } catch { /* full / blocked */ }
+}
+function lsClear() {
+  try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k?.startsWith(LS)) localStorage.removeItem(k); } } catch { /* ignore */ }
+}
 /** Last successful GET response for `url` (shown instantly while fresh data loads). */
 export function peek<T>(url: string): T | null {
+  if (!cache.has(url) && typeof window !== 'undefined') { const v = lsGet(url); if (v !== undefined) cache.set(url, v); }
   return (cache.get(url) as T) ?? null;
 }
+/** Warm the cache in the background (used after the first page shows). */
+export function warm(urls: string[]) { for (const u of urls) call(u).catch(() => {}); }
 
 /** Coalesce simultaneous reads; never reuse a read from before a write. */
 export function call<T>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
@@ -41,8 +56,8 @@ async function request<T>(url: string, init?: RequestInit & { json?: unknown }):
     const detail = Array.isArray(body.errors) ? `: ${body.errors.join('; ')}` : '';
     throw new ApiError(res.status, (body.error ?? `HTTP ${res.status}`) + detail);
   }
-  if (isGet) { if (epoch === cacheEpoch) cache.set(url, body.data); }
-  else { cacheEpoch++; cache.clear(); } // a write may change any view
+  if (isGet) { if (epoch === cacheEpoch) { cache.set(url, body.data); lsSet(url, body.data); } }
+  else { cacheEpoch++; cache.clear(); lsClear(); } // a write may change any view
   return body.data as T;
 }
 

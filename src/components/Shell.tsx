@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { warm } from '@/components/client';
 import { Toaster } from '@/components/Status';
 
 /* 9 Nov 2026: Trade is the main page; the other pages live in the three-line menu (one page at a time, so nothing else loads
@@ -18,6 +19,15 @@ export default function Shell({ children, showLogout = false }: { children: Reac
   const [pending, setPending] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => { setPending(null); setMenuOpen(false); }, [path]);
+  // after the first page shows: prepare the other pages and their data, so switching is instant
+  const router = useRouter();
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      for (const l of LINKS) router.prefetch(l.href);
+      warm(['/api/journal', '/api/live', '/api/settings', '/api/analytics']);
+    }, 1200);
+    return () => window.clearTimeout(id);
+  }, [router]);
   const cur = pending ?? path;
   const active = (href: string) => cur.startsWith(href);
   const go = (href: string) => () => {
