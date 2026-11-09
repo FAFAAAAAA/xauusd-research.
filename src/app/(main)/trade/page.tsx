@@ -120,8 +120,8 @@ export default function TradePage() {
         <span><span className="k">Keluar</span><strong>{t.exit != null ? px(t.exit) : '—'}</strong></span>
       </span>
       <span className="hc-foot">
-        <span>{fmt(t.openedAt, tz)}{t.closedAt ? ` → ${fmt(t.closedAt, tz)}` : ''}</span>
-        {t.closedAt ? <span>{holdTxt(t.closedAt - t.openedAt)}</span> : null}
+        <span>Durasi</span>
+        <span>{t.closedAt ? holdTxt(t.closedAt - t.openedAt) : 'masih terbuka'}</span>
       </span>
     </button>
   );
@@ -262,6 +262,7 @@ export default function TradePage() {
                 <dt>Hasil</dt><dd className={tone(detail.pnl)} style={{ fontWeight: 600 }}>{money(detail.pnl)}</dd>
                 <dt>Dibuka</dt><dd>{fmt(detail.openedAt, tz)}</dd>
                 <dt>Ditutup</dt><dd>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</dd>
+                {detail.closedAt ? <><dt>Durasi</dt><dd>{holdTxt(detail.closedAt - detail.openedAt)}</dd></> : null}
                 {detail.note ? <><dt>Catatan</dt><dd>{detail.note}</dd></> : null}
               </dl>
               <button className="btn block" onClick={async () => { const t = detail; setDetail(null); await fix(t); }}>Koreksi hasil (TP / SL / harga / $)</button>

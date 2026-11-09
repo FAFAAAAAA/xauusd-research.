@@ -21,7 +21,7 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
     setCandles(null); setErr(false);
     const end = t.closedAt ?? Date.now();
     const ms = TF[iv];
-    const from = t.openedAt - 40 * ms, to = Math.min(Date.now(), end + 20 * ms);
+    const from = t.openedAt - 150 * ms, to = Math.min(Date.now(), end + 80 * ms);   // plenty of context around the trade
     const q = `symbol=${encodeURIComponent(symbol)}&interval=${iv}&startTime=${from}&endTime=${to}&limit=1000`;
     const urls = [`https://fapi.binance.com/fapi/v1/klines?${q}`, `https://data-api.binance.vision/api/v3/klines?${q}`];
     (async () => {
