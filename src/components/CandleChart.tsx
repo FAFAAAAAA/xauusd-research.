@@ -36,7 +36,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       grid: { vertLines: { visible: false }, horzLines: { visible: false } },   // plain background (owner's choice, 9 Nov 2026)
       crosshair: { mode: position ? CrosshairMode.Hidden : CrosshairMode.Normal },
       rightPriceScale: { scaleMargins: { top: 0.14, bottom: 0.14 }, borderColor: v('--line', '#e4e7ec') },
-      timeScale: { borderColor: v('--line', '#e4e7ec'), timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 9, minBarSpacing: 3 },
+      timeScale: { borderColor: v('--line', '#e4e7ec'), timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 9, minBarSpacing: 0.4 },   // allow zooming far out (years of candles)
     });
     series.current = c.addCandlestickSeries({
       upColor: up, borderUpColor: up, wickUpColor: up,

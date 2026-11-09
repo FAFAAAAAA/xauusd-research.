@@ -27,24 +27,25 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
     for (let s0 = from; s0 < to; s0 += 1000 * ms) pages.push([s0, Math.min(to, s0 + 1000 * ms - 1)]);
     const qOf = (a: number, b: number) => `symbol=${encodeURIComponent(symbol)}&interval=${iv}&startTime=${a}&endTime=${b}&limit=1000`;
     const toCandle = (k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]) } as Candle);
-    const getPage = async (a: number, b: number): Promise<any[] | null> => {
-      try {                                                                  // 1) the website's own proxy
-        const r = await fetch(`/api/klines?${qOf(a, b)}`);
-        const j = r.ok ? await r.json() : null;
-        if (j && Array.isArray(j.candles)) return j.candles;
-      } catch { /* fall back to Binance directly */ }
-      for (const u of [`https://fapi.binance.com/fapi/v1/klines?${qOf(a, b)}`, `https://data-api.binance.vision/api/v3/klines?${qOf(a, b)}`]) {
-        try { const r = await fetch(u); if (r.ok) { const rows = await r.json(); if (Array.isArray(rows)) return rows; } } catch { /* next */ }
-      }
-      return null;
+    // every page: the website proxy and Binance directly race each other (first good answer wins); all pages load in parallel
+    const tryUrl = async (u: string, proxy: boolean) => {
+      const r = await fetch(u);
+      if (!r.ok) throw new Error(String(r.status));
+      const j = await r.json();
+      const rows = proxy ? j?.candles : j;
+      if (!Array.isArray(rows)) throw new Error('bad');
+      return rows as any[];
     };
+    const getPage = (a: number, b: number) => Promise.any([
+      tryUrl(`/api/klines?${qOf(a, b)}`, true),
+      tryUrl(`https://fapi.binance.com/fapi/v1/klines?${qOf(a, b)}`, false),
+      tryUrl(`https://data-api.binance.vision/api/v3/klines?${qOf(a, b)}`, false),
+    ]).catch(() => null);
     (async () => {
+      const res = await Promise.all(pages.map(([a, b]) => getPage(a, b)));
+      if (off) return;
       const all: Candle[] = [];
-      for (const [a, b] of pages) {
-        const rows = await getPage(a, b);
-        if (rows) for (const k of rows) all.push(toCandle(k));
-        if (off) return;
-      }
+      for (const rows of res) if (rows) for (const k of rows) all.push(toCandle(k));
       const seen = new Set<number>(), out = all.filter((c) => (seen.has(c.time) ? false : (seen.add(c.time), true))).sort((x, y) => x.time - y.time);
       if (out.length) setCandles(out); else setErr(true);
     })();
