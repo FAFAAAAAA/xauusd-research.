@@ -17,8 +17,8 @@ const dur = (ms: number) => { const h = ms / 3_600_000; return h < 1 ? `${Math.r
 const key = (m: string) => `start_balance_${m}`;
 const readStart = (m: string, fallback: number) => { try { const v = Number(localStorage.getItem(key(m))); return v > 0 ? v : fallback; } catch { return fallback; } };
 
-export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades }: {
-  trades: JournalTrade[]; market: string; tz: string; fallbackStart: number;
+export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null }: {
+  trades: JournalTrade[]; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
   groupOf: (t: JournalTrade) => string; groupLabel?: string; renderTrades: (list: JournalTrade[]) => React.ReactNode;
 }) {
   const [start, setStart] = useState(fallbackStart);
@@ -79,17 +79,21 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   }, [trades, start, tz, groupOf]);
 
   const rs = useResultStats(s.closed, start);
-  const growth = start > 0 ? (s.bal - start) / start * 100 : 0;
+  // crypto: the real Binance balance sent by the bot (wallet); otherwise starting balance + journal results
+  const bal = live && Number.isFinite(live.wallet) ? live.wallet : s.bal;
+  const growth = start > 0 ? (bal - start) / start * 100 : 0;
+  const ago = live ? Math.max(0, Math.round((Date.now() - live.at) / 60_000)) : 0;
   return (
     <div className="stack td">
       <section className="td-hero">
         <span className="td-k">Saldo</span>
-        <span className="td-bal"><CountUp value={s.bal} format={(n) => usd(n, false)} /></span>
+        <span className="td-bal"><CountUp value={bal} format={(n) => usd(n, false)} /></span>
         <span className="td-row">
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
           <span className={tone(s.total)}>{usd(s.total)}</span>
           <span className="td-sub">dari saldo awal {usd(start, false)} · <button className="td-link" onClick={() => setEdit(String(start))}>ubah</button></span>
         </span>
+        {live ? <span className="td-sub">Saldo Binance Futures · {ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}{Math.abs(live.upnl) >= 0.01 ? <> · posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></> : null}</span> : null}
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
           <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}>{usd(s.week)}</strong></span>

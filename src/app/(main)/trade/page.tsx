@@ -30,7 +30,9 @@ const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual
 
 export default function TradePage() {
   const [d, setD] = useState<any>(() => peek('/api/live'));
-  const [j, setJ] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats> } | null>(() => peek('/api/journal'));
+  const [j, setJRaw] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats>; binance?: { wallet: number; upnl: number; at: number } | null } | null>(() => peek('/api/journal'));
+  // edits return the journal without the Binance balance: keep the last one
+  const setJ = (v: any) => setJRaw((old) => (v && v.binance === undefined && old?.binance ? { ...v, binance: old.binance } : v));
   const [err, setErr] = useState<string | null>(null);
   const [market, setMarket] = useMarket();
   // history list: same look as the backtest trade list (hidden until opened, 10 at a time, tap a row for the detail sheet)
@@ -119,7 +121,7 @@ export default function TradePage() {
  />
       <MarketSwitch value={market} onChange={(m) => { setMarket(m); setDraft(null); }} />
 
-      <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz}
+      <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz} live={market === 'crypto' ? j.binance ?? null : null}
         fallbackStart={market === 'crypto' ? 199.02 : Number(d.risk?.capital) || 1000}
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
         renderTrades={(list) => <div className="list">{list.map(tradeRow)}</div>} />

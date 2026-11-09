@@ -37,6 +37,13 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (!stored?.hash) return { status: 503, body: { ok: false, error: 'Kunci EA belum dibuat (Atur → EA)' } };
   if (typeof b.key !== 'string' || !safeEqual(sha(b.key), stored.hash)) return { status: 401, body: { ok: false, error: 'Unauthorized' } };
 
+  // Binance bot: real Futures balance (wallet + unrealized P&L), shown on the Trade page
+  if (b.event === 'balance') {
+    const wallet = num(b.wallet), upnl = num(b.upnl);
+    if (!Number.isFinite(wallet)) return { status: 422, body: { ok: false, error: 'wallet wajib' } };
+    await repo.setAppSetting(db, 'binance_balance', { wallet, upnl: Number.isFinite(upnl) ? upnl : 0, at: now });
+    return { status: 200, body: { ok: true } };
+  }
   // bot status messages (daily summary, warnings): Telegram only, no journal row
   if (b.event === 'info') {
     const txt = String(b.text ?? '').slice(0, 800);

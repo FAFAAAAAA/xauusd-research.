@@ -269,6 +269,16 @@ class Bot:
             if b['asset'] == 'USDT': return float(b['balance'])
         return 0.0
 
+    def push_balance(self):
+        """send the real Binance Futures balance to the website (Trade page shows it as the balance)"""
+        if self.cfg['dry_run']: return
+        try:
+            a = self.api.get('/fapi/v2/account', signed=True)
+            report(self.cfg, {'event': 'balance', 'wallet': round(float(a.get('totalWalletBalance') or 0), 4),
+                              'upnl': round(float(a.get('totalUnrealizedProfit') or 0), 4), 'time': int(time.time())})
+        except Exception as e: log.warning('saldo tidak terkirim ke website: %s', e)
+        self.bal_pushed = time.time()
+
     def risk_usdt(self):
         if self.cfg['risk_mode'] == 'usdt': return float(self.cfg['risk_usdt'])
         if self.cfg['dry_run'] and not self.cfg['api_key']: return 1000 * float(self.cfg['risk_percent']) / 100   # dry run without a key: pretend 1000 USDT
@@ -415,6 +425,7 @@ class Bot:
                 r1 = abs(p['sl'] - p['entry'])                             # 1R in price
                 reason = 'tp' if abs(exit_px - p['tp']) <= 0.25 * r1 else 'sl' if abs(exit_px - p['sl']) <= 0.25 * r1 else 'manual'
             log.info('Posisi %s ditutup (%s) | hasil %.2f USDT', sym, reason.upper(), pnl)
+            self.bal_pushed = 0                                   # send the new balance on the next loop
             report(self.cfg, {'event': 'close', 'strategy': 'btc' if side == 'BUY' else 'snr', 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
                               'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'],
                               'time': int(max(float(x['time']) for x in buys) / 1000) if buys else int(time.time())})
@@ -471,7 +482,9 @@ class Bot:
                  int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
         last_sync = time.time()
         notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY.")
+        self.push_balance()
         while True:
+            if time.time() - getattr(self, 'bal_pushed', 0) > 900: self.push_balance()      # every 15 min
             if os.path.exists(STOP_FILE):
                 log.info('stop.flag ditemukan — bot berhenti.'); notify(self.cfg, 'Bot dihentikan (perintah --stop). Posisi terbuka tetap punya SL/TP di Binance.'); return
             if os.path.exists(RESET_FILE):
