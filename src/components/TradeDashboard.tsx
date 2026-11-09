@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { CountUp, Metric, Metrics, SecHead, Sheet } from './Status';
+import { CountUp, SecHead, Sheet } from './Status';
 import { EquityChart, PnlCalendar, type ClosedTrade } from './ResultCharts';
 import { tzOffsetMinutes } from '@/lib/core/time';
 import type { JournalTrade } from '@/lib/core/journal';
@@ -96,20 +96,46 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
       </section>
 
       {s.n ? <>
-        <Metrics cols={3}>
-          <Metric label="Trade selesai" value={s.n} hint={`${s.wins} menang · ${s.losses} kalah${s.be ? ` · ${s.be} impas` : ''}`} />
-          <Metric label="Win rate" value={s.winRate == null ? '—' : `${(s.winRate * 100).toFixed(0)}%`} />
-          <Metric label="Profit factor" value={s.pf == null ? '—' : s.pf === Infinity ? '∞' : s.pf.toFixed(2)} />
-          <Metric label="Rata-rata menang" value={s.avgW == null ? '—' : usd(s.avgW)} tone="pos" />
-          <Metric label="Rata-rata kalah" value={s.avgL == null ? '—' : usd(s.avgL)} tone="neg" />
-          <Metric label="Drawdown terdalam" value={s.dd ? `−$${s.dd.toFixed(2)}` : '$0.00'} tone={s.dd ? 'neg' : ''} hint={s.dd ? `${s.ddPct.toFixed(1)}% dari puncak` : undefined} />
-          <Metric label="Trade terbaik" value={s.best == null ? '—' : usd(s.best)} tone={tone(s.best ?? 0)} />
-          <Metric label="Trade terburuk" value={s.worst == null ? '—' : usd(s.worst)} tone={tone(s.worst ?? 0)} />
-          <Metric label="Lama posisi" value={s.hold != null ? dur(s.hold) : '—'} hint="rata-rata" />
-          <Metric label="Menang beruntun terpanjang" value={`${s.bestW}×`} tone={s.bestW ? 'pos' : ''} />
-          <Metric label="Kalah beruntun terpanjang" value={`${s.bestL}×`} tone={s.bestL ? 'neg' : ''} />
-          <Metric label="Beruntun sekarang" value={s.cur > 0 ? `${s.cur}× menang` : s.cur < 0 ? `${-s.cur}× kalah` : '—'} tone={s.cur > 0 ? 'pos' : s.cur < 0 ? 'neg' : ''} />
-        </Metrics>
+        {/* bento: tiles of different sizes, short labels, nothing truncated */}
+        <div className="bento">
+          <div className="b-tile b-wide b-win">
+            <div className="b-top"><span className="b-k">Win rate</span><span className="b-k">{s.n} trade</span></div>
+            <div className="b-big">{s.winRate == null ? '—' : `${(s.winRate * 100).toFixed(0)}%`}</div>
+            <div className="b-split" aria-hidden>
+              <span className="w" style={{ flex: s.wins || 0.0001 }} /><span className="l" style={{ flex: s.losses || 0.0001 }} />{s.be ? <span className="e" style={{ flex: s.be }} /> : null}
+            </div>
+            <div className="b-legend"><span className="pos">{s.wins} menang</span><span className="neg">{s.losses} kalah</span>{s.be ? <span className="mute">{s.be} impas</span> : null}</div>
+          </div>
+          <div className="b-tile">
+            <span className="b-k">Profit factor</span>
+            <span className="b-v">{s.pf == null ? '—' : s.pf === Infinity ? '∞' : s.pf.toFixed(2)}</span>
+          </div>
+          <div className="b-tile">
+            <span className="b-k">Drawdown</span>
+            <span className={`b-v ${s.dd ? 'neg' : ''}`}>{s.dd ? `−$${s.dd.toFixed(2)}` : '$0.00'}</span>
+            {s.dd ? <span className="b-h">{s.ddPct.toFixed(1)}% dari puncak</span> : null}
+          </div>
+          <div className="b-tile b-wide b-pair">
+            <div><span className="b-k">Rata-rata menang</span><span className="b-v pos">{s.avgW == null ? '—' : usd(s.avgW)}</span></div>
+            <div><span className="b-k">Rata-rata kalah</span><span className="b-v neg">{s.avgL == null ? '—' : usd(s.avgL)}</span></div>
+          </div>
+          <div className="b-tile b-wide b-pair">
+            <div><span className="b-k">Terbaik</span><span className={`b-v ${tone(s.best ?? 0)}`}>{s.best == null ? '—' : usd(s.best)}</span></div>
+            <div><span className="b-k">Terburuk</span><span className={`b-v ${tone(s.worst ?? 0)}`}>{s.worst == null ? '—' : usd(s.worst)}</span></div>
+          </div>
+          <div className="b-tile b-wide b-streak">
+            <span className="b-k">Beruntun</span>
+            <div className="b-three">
+              <div><span className="b-v pos">{s.bestW}×</span><span className="b-h">menang terpanjang</span></div>
+              <div><span className="b-v neg">{s.bestL}×</span><span className="b-h">kalah terpanjang</span></div>
+              <div><span className={`b-v ${s.cur > 0 ? 'pos' : s.cur < 0 ? 'neg' : ''}`}>{s.cur ? `${Math.abs(s.cur)}×` : '—'}</span><span className="b-h">{s.cur > 0 ? 'menang sekarang' : s.cur < 0 ? 'kalah sekarang' : 'sekarang'}</span></div>
+            </div>
+          </div>
+          <div className="b-tile b-wide">
+            <span className="b-k">Lama posisi rata-rata</span>
+            <span className="b-v">{s.hold != null ? dur(s.hold) : '—'}</span>
+          </div>
+        </div>
 
         <section className="group">
           <SecHead title="Pertumbuhan saldo" />

@@ -295,13 +295,22 @@ export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { t
   const mi = months.findIndex((m) => m[0] === Y && m[1] === M);
   const yi = years.indexOf(Y);
 
+  // simple mode: free month / year stepping between the first trade and today; full mode: only periods that have trades
+  const nowW = wall(Date.now(), tz), first = months[0] ?? [nowW.getUTCFullYear(), nowW.getUTCMonth()];
+  const lastYM = Math.max(nowW.getUTCFullYear() * 12 + nowW.getUTCMonth(), last[0] * 12 + last[1]);
+  const lastY = Math.floor(lastYM / 12), lastM = lastYM % 12;
   const shift = (dir: -1 | 1) => {
     setSel(null);
+    if (simple) {
+      if (tab === 'day') { const t = Y * 12 + M + dir; setYm([Math.floor(t / 12), ((t % 12) + 12) % 12]); }
+      else setYm([Y + dir, M]);
+      return;
+    }
     if (tab === 'day') { const n = months[mi + dir]; if (n) setYm(n); }
     else { const y = years[yi + dir]; if (y !== undefined) setYm([y, months.filter((m) => m[0] === y).slice(-1)[0][1]]); }
   };
-  const canPrev = tab === 'day' ? mi > 0 : yi > 0;
-  const canNext = tab === 'day' ? mi >= 0 && mi < months.length - 1 : yi >= 0 && yi < years.length - 1;
+  const canPrev = simple ? (tab === 'day' ? Y * 12 + M > first[0] * 12 + first[1] : Y > first[0]) : tab === 'day' ? mi > 0 : yi > 0;
+  const canNext = simple ? (tab === 'day' ? Y * 12 + M < lastY * 12 + lastM : Y < lastY) : tab === 'day' ? mi >= 0 && mi < months.length - 1 : yi >= 0 && yi < years.length - 1;
 
   const value = (c: Cell | undefined) => {
     if (!c) return null;
