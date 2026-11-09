@@ -794,3 +794,8 @@ body::before { display: none; }
 .hold3-bar { display: block; height: 100%; border-radius: 999px; background: var(--ink); opacity: .75; }
 .hold3-p { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
 .hold3-row.zero .hold3-p, .hold3-row.zero .hold3-l { opacity: .45; }
+/* compact calendar: day squares show only the date (colour = profit / loss; the amount shows when tapped) */
+.cal-simple .cal.day .cell .v { display: none; }
+.cal-simple .cal.day .cell .n { font-size: 14px; font-weight: 650; }
+.cal-simple .cal.week .cell .n, .cal-simple .cal.month .cell .n { font-size: 12px; }
+.cal-simple .cal.week .cell .v, .cal-simple .cal.month .cell .v { font-size: 12px; }
