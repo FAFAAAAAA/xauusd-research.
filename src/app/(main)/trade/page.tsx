@@ -127,16 +127,20 @@ export default function TradePage() {
   );
   // deposit / withdraw row (one compact line)
   const flowsAll: CashFlow[] = (market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? [];
-  const firstAt = j.trades.filter(inMarket).reduce((m, t) => Math.min(m, t.openedAt), Infinity);
   const flowRow = (c: CashFlow) => {
-    const inn = c.amount > 0, old = Number.isFinite(firstAt) && c.at <= firstAt;
+    const inn = c.amount > 0;
     return (
-      <div key={`cf-${c.id}`} className={`cfcard${old ? ' is-old' : ''}`}>
-        <span className={`cf-ic ${inn ? 'in' : 'out'}`} aria-hidden>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{inn ? <path d="M12 5v14M5 12l7 7 7-7" /> : <path d="M12 19V5M5 12l7-7 7 7" />}</svg>
+      <div key={`cf-${c.id}`} className="hcard cfcard">
+        <span className="hc-top">
+          <span className={`hc-side ${inn ? 'b' : 's'}`}>{inn ? 'D' : 'W'}</span>
+          <strong className="hc-name">{inn ? 'Deposit' : 'Withdraw'}</strong>
+          <span className="hc-tag">{c.asset}</span>
+          <span className={`hc-res ${inn ? 'tp' : 'sl'}`}>Selesai</span>
         </span>
-        <span className="cf-title"><strong>{inn ? 'Deposit' : 'Withdraw'}</strong><span>{fmt(c.at, tz)}</span></span>
-        <span className={`cf-amt ${inn ? 'pos' : 'neg'}`}>{inn ? '+' : '−'}{Math.abs(c.amount).toFixed(2)}<small>{c.asset}</small></span>
+        <span className="hc-mid">
+          <span><span className="k">Jumlah</span><strong className={inn ? 'pos' : 'neg'}>{inn ? '+' : '−'}${Math.abs(c.amount).toFixed(2)}</strong></span>
+          <span className="cf-when"><span className="k">Waktu</span><strong>{fmt(c.at, tz)}</strong></span>
+        </span>
       </div>
     );
   };
@@ -263,7 +267,7 @@ export default function TradePage() {
       <section className="group">
         {closedT.length || flowsAll.length ? <>
           <button className={`hist-toggle${showHist ? ' is-open' : ''}`} onClick={() => setShowHist((v) => !v)} aria-expanded={showHist}>
-            <span><strong>Riwayat lengkap</strong><span className="mute">{closedT.length} trade{flowsAll.length ? ` · ${flowsAll.length} deposit/withdraw` : ''}</span></span>
+            <span><strong>Riwayat</strong></span>
             <span className="chev" aria-hidden>⌄</span>
           </button>
           {showHist ? <div className="appear" style={{ marginTop: 10 }}>
