@@ -77,7 +77,9 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const prev = i >= 0 ? list[i] : null;
     if (prev && prev.result !== 'open') return { status: 200, body: { ok: true, duplicate: true } };
     const reason = b.reason === 'tp' ? 'tp' : b.reason === 'sl' ? 'sl' : 'manual';
-    const base = prev ?? { strategy: strat, side: b.side, entry: num(b.entry), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, note: src };
+    const base = prev ? { ...prev } : { strategy: strat, side: b.side, entry: num(b.entry), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, note: src };
+    // the Binance bot sends its real average entry price with the close (the open report could carry the signal close price)
+    if (prev && strat === 'snr' && num(b.entry) > 0) base.entry = num(b.entry);
     // keep the broker's real exit price and net result (incl. commission & swap)
     // v2 breakeven: a stop that closes at (about) the entry price is the moved SL → record as BE, not SL
     const isBe = strat === 'v2' && reason === 'sl' && Math.abs(num(b.price) - Number(base.entry)) < 0.25 * Math.abs(Number(base.entry) - Number(base.sl));

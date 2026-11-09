@@ -280,8 +280,17 @@ class Bot:
         try: self.api.post('/fapi/v1/leverage', {'symbol': sym, 'leverage': int(self.cfg['leverage'])})
         except RuntimeError as e: log.warning('%s: leverage: %s', sym, e)
         o = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'SELL', 'type': 'MARKET', 'quantity': fmt(qty, f['step']), 'newOrderRespType': 'RESULT'})
-        entry = float(o.get('avgPrice') or 0) or close
-        filled = float(o.get('executedQty') or qty)
+        entry = float(o.get('avgPrice') or 0)
+        filled = float(o.get('executedQty') or 0)
+        for _ in range(5):                                   # the market order answer can come before the fill: ask again for the real fill price
+            if entry > 0 and filled > 0: break
+            time.sleep(0.4)
+            try:
+                q = self.api.get('/fapi/v1/order', {'symbol': sym, 'orderId': o.get('orderId')}, signed=True)
+                entry = float(q.get('avgPrice') or 0); filled = float(q.get('executedQty') or 0)
+            except RuntimeError as e: log.warning('%s: status order tidak terbaca: %s', sym, e)
+        if not entry > 0: log.warning('%s: harga isi tidak terbaca — memakai harga close %.8f', sym, close); entry = close
+        if not filled > 0: filled = qty
         if not (sl > entry):
             log.warning('%s: harga isi %.8f sudah di atas SL %.8f — posisi ditutup lagi', sym, entry, sl); self.close_now(sym, filled); return
         tp = entry - RR * (sl - entry)
@@ -323,6 +332,10 @@ class Bot:
             except RuntimeError as e:
                 log.warning('%s: riwayat trade tidak terbaca (%s) — cek ulang nanti.', sym, e); save_state(self.st); continue
             buys = [x for x in trades if x['side'] == 'BUY']
+            sells = [x for x in trades if x['side'] == 'SELL']
+            if sells:                                                # real average entry (Binance "Harga Masuk Rata-Rata")
+                qs = sum(float(x['qty']) for x in sells)
+                if qs > 0: p['entry'] = sum(float(x['price']) * float(x['qty']) for x in sells) / qs
             if sum(float(x['qty']) for x in buys) < 0.99 * float(p['qty']):
                 if p['miss'] in (3, 60):
                     log.error('%s: posisi tidak terlihat tapi tidak ada transaksi penutupan — dianggap MASIH TERBUKA, SL/TP tidak disentuh. Cek di app Binance.', sym)
@@ -344,7 +357,8 @@ class Bot:
                 reason = 'tp' if abs(exit_px - p['tp']) <= 0.25 * r1 else 'sl' if abs(exit_px - p['sl']) <= 0.25 * r1 else 'manual'
             log.info('Posisi %s ditutup (%s) | hasil %.2f USDT', sym, reason.upper(), pnl)
             report(self.cfg, {'event': 'close', 'ticket': p['ticket'], 'symbol': sym, 'side': 'SELL', 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
-                              'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'], 'time': int(time.time())})
+                              'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'],
+                              'time': int(max(float(x['time']) for x in buys) / 1000) if buys else int(time.time())})
             cl = self.st.setdefault('closed', []); cl.append([int(time.time()), round(pnl, 4), reason]); del cl[:-300]
             if reason == 'sl': self.st['loss_streak'] = self.st.get('loss_streak', 0) + 1
             elif reason == 'tp': self.st['loss_streak'] = 0                     # manual close: streak unchanged
