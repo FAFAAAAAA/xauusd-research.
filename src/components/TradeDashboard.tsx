@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { CountUp, SecHead, Sheet } from './Status';
+import { StatsBento, useResultStats } from './StatsBento';
 import { EquityChart, PnlCalendar, type ClosedTrade } from './ResultCharts';
 import { tzOffsetMinutes } from '@/lib/core/time';
 import type { JournalTrade } from '@/lib/core/journal';
@@ -77,6 +78,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
     };
   }, [trades, start, tz, groupOf]);
 
+  const rs = useResultStats(s.closed, start);
   const growth = start > 0 ? (s.bal - start) / start * 100 : 0;
   return (
     <div className="stack td">
@@ -96,49 +98,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
       </section>
 
       {s.n ? <>
-        {/* bento: tiles of different sizes, short labels, nothing truncated */}
-        <div className="bento">
-          <div className="b-tile b-wide b-win">
-            <div className="b-top"><span className="b-k">Win rate</span><span className="b-k">{s.n} trade</span></div>
-            <div className="b-big">{s.winRate == null ? '—' : `${(s.winRate * 100).toFixed(0)}%`}</div>
-            <div className="b-split" aria-hidden>
-              <span className="w" style={{ flex: s.wins || 0.0001 }} /><span className="l" style={{ flex: s.losses || 0.0001 }} />{s.be ? <span className="e" style={{ flex: s.be }} /> : null}
-            </div>
-            <div className="b-legend"><span className="pos">{s.wins} menang</span><span className="neg">{s.losses} kalah</span>{s.be ? <span className="mute">{s.be} impas</span> : null}</div>
-          </div>
-          <div className="b-tile">
-            <span className="b-k">Profit factor</span>
-            <span className="b-v">{s.pf == null ? '—' : s.pf === Infinity ? '∞' : s.pf.toFixed(2)}</span>
-          </div>
-          <div className="b-tile">
-            <span className="b-k">Drawdown</span>
-            <span className={`b-v ${s.dd ? 'neg' : ''}`}>{s.dd ? `−$${s.dd.toFixed(2)}` : '$0.00'}</span>
-            {s.dd ? <span className="b-h">{s.ddPct.toFixed(1)}% dari puncak</span> : null}
-          </div>
-          <div className="b-tile b-wide b-pair">
-            <div><span className="b-k">Rata-rata menang</span><span className="b-v pos">{s.avgW == null ? '—' : usd(s.avgW)}</span></div>
-            <div><span className="b-k">Rata-rata kalah</span><span className="b-v neg">{s.avgL == null ? '—' : usd(s.avgL)}</span></div>
-          </div>
-          <div className="b-tile b-wide b-pair">
-            <div><span className="b-k">Terbaik</span><span className={`b-v ${tone(s.best ?? 0)}`}>{s.best == null ? '—' : usd(s.best)}</span></div>
-            <div><span className="b-k">Terburuk</span><span className={`b-v ${tone(s.worst ?? 0)}`}>{s.worst == null ? '—' : usd(s.worst)}</span></div>
-          </div>
-          <div className="b-tile b-wide b-streak">
-            <div className="b-top"><span className="b-k">Beruntun</span><span className="b-k">{s.form.length} trade terakhir</span></div>
-            <div className="b-dots" aria-label="Urutan hasil trade terakhir">
-              {s.form.map((x: number, i: number) => <span key={i} className={x > 0 ? 'w' : x < 0 ? 'l' : 'e'} title={usd(x)} />)}
-            </div>
-            <div className="b-three">
-              <div className="b-stat"><span className="b-v pos">{s.bestW}</span><span className="b-h">menang maks</span></div>
-              <div className="b-stat"><span className="b-v neg">{s.bestL}</span><span className="b-h">kalah maks</span></div>
-              <div className="b-stat"><span className={`b-v ${s.cur > 0 ? 'pos' : s.cur < 0 ? 'neg' : ''}`}>{s.cur ? Math.abs(s.cur) : '—'}</span><span className="b-h">{s.cur > 0 ? 'menang sekarang' : s.cur < 0 ? 'kalah sekarang' : 'sekarang'}</span></div>
-            </div>
-          </div>
-          <div className="b-tile b-wide">
-            <span className="b-k">Lama posisi rata-rata</span>
-            <span className="b-v">{s.hold != null ? dur(s.hold) : '—'}</span>
-          </div>
-        </div>
+        <StatsBento s={rs} />
 
         <section className="group">
           <SecHead title="Pertumbuhan saldo" />

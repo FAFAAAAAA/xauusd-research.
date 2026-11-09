@@ -746,3 +746,24 @@ body::before { display: none; }
 .cal-simple .cal .cell .n { font-size: 13px; }
 .cal-simple .cal .cell .v { font-size: 10.5px; opacity: .95; }
 .cal-simple .cal .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+/* streak run chart (Trade + Backtest) */
+.streak2 { gap: 12px; }
+.st-pill { font-size: 12px; font-weight: 650; padding: 4px 10px; border-radius: 999px; }
+.st-pill.w { background: var(--up-tint); color: var(--up); } .st-pill.l { background: var(--down-tint); color: var(--down); }
+.st-chart { display: flex; align-items: stretch; gap: 3px; height: 92px; padding: 2px 0; }
+.st-col { flex: 1 1 0; max-width: 18px; display: flex; flex-direction: column; }
+.st-up, .st-dn { flex: 1; display: flex; }
+.st-up { align-items: flex-end; border-bottom: 1px solid var(--line-2); }
+.st-dn { align-items: flex-start; }
+.st-bar { width: 100%; min-height: 6px; }
+.st-bar.w { background: var(--up); border-radius: 5px 5px 2px 2px; }
+.st-bar.l { background: var(--down); border-radius: 2px 2px 5px 5px; }
+.st-recs { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--mute); }
+.st-recs span { display: inline-flex; align-items: center; gap: 7px; }
+.st-recs strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.st-recs i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.st-recs i.w { background: var(--up); } .st-recs i.l { background: var(--down); }
+.b-three-t { gap: 10px; }
+.st-chart { position: relative; }
+.st-chart::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--line-2); pointer-events: none; }
+.st-up { border-bottom: 0; }

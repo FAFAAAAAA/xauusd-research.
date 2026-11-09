@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px } from '@/components/client';
 import { CountUp, EmptyState, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner } from '@/components/Status';
 import { DrawdownBreakdown, EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
+import { StatsBento, useResultStats } from '@/components/StatsBento';
 import { ReportButton } from '@/components/ReportImage';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
 import { marketOfAdapter, marketOfStrategy, marketOfSymbol, type Market } from '@/lib/core/markets';
@@ -123,6 +124,7 @@ export default function Analytics() {
 
   const m = d?.overall;
   const trades = useMemo(() => closedTrades(d?.trades ?? []), [d?.trades]);
+  const bs = useResultStats(trades, 0);
   const hasRuns = rows.length > 0;
   const winRate = sum.trades ? sum.wins / sum.trades : null;
   const breakEven = 1 / (1 + curRr);
@@ -205,74 +207,40 @@ export default function Analytics() {
                   <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
                   <div className="hero-winrate"><span>Win rate</span><strong className={winRateTone}>{winRate == null ? '—' : `${(winRate * 100).toFixed(1)}%`}</strong></div>
                 </section>
-                <section className="group insight-stats">
-                  <div className="facts overview-facts">
-                    <div><span className="label stat-label">Rata-rata / bulan</span><strong className={tone(perMonth)}>{perMonth == null ? '—' : money(perMonth)}</strong></div>
-                    <div><span className="label stat-label">Menang / kalah</span><div className="streak-pair"><span className="pos" aria-label={`${sum.wins} menang`}><strong>{sum.wins}</strong></span><span className="neg" aria-label={`${sum.losses} kalah`}><strong>{sum.losses}</strong></span></div></div>
-                  </div>
-                  {m && fresh ? <><div className="facts appear">
-                    <div><span className="label stat-label" title="Rata-rata profit per trade menang">Rata-rata menang</span><strong className="pos">{m.wins ? money(m.grossProfit / m.wins) : '—'}</strong></div>
-                    <div><span className="label stat-label" title="Rata-rata rugi per trade kalah">Rata-rata kalah</span><strong className="neg">{m.losses ? money(-m.grossLoss / m.losses) : '—'}</strong></div>
-                    <div><span className="label stat-label">Beruntun maks.</span><div className="streak-pair"><span className="pos" aria-label={`Menang beruntun ${m.maxConsecutiveWins} kali`} title="Menang beruntun"><ResearchIcon name="win" /><strong>{m.maxConsecutiveWins}×</strong></span><span className="neg" aria-label={`Kalah beruntun ${m.maxConsecutiveLosses} kali`} title="Kalah beruntun"><ResearchIcon name="loss" /><strong>{m.maxConsecutiveLosses}×</strong></span></div></div>
-                    <div><span className="label stat-label" title="Rasio total profit terhadap total rugi">Profit factor</span><strong className={m.profitFactor != null && m.profitFactor >= 1 ? 'pos' : 'neg'}>{m.profitFactor == null ? '—' : m.profitFactor.toFixed(2)}</strong></div>
-                    <div><span className="label stat-label" title="Rata-rata hasil bersih per trade">Rata-rata / trade</span><strong className={tone(m.expectancy ?? 0)}>{money(m.expectancy ?? 0)}</strong></div>
-                  </div>
-                  {m.avgHoldHours != null ? (
-                    <div className="hold hold-duration">
-                      <span className="label">Durasi rata-rata</span>
-                      <div className="hold3">
-                        <div><strong data-compact={hrs(m.avgHoldHours).length > 8}>{hrs(m.avgHoldHours)}</strong><span>Semua trade</span></div>
-                        <div className="pos"><strong data-compact={hrs(m.avgHoldWinHours).length > 8}>{hrs(m.avgHoldWinHours)}</strong><span>Menang</span></div>
-                        <div className="neg"><strong data-compact={hrs(m.avgHoldLossHours).length > 8}>{hrs(m.avgHoldLossHours)}</strong><span>Kalah</span></div>
+                {m && fresh ? (() => {
+                  // trade frequency over the tested calendar time of the chosen results (sum of their periods)
+                  const days = picked.reduce((a: number, s: any) => a + Math.max(0, (tsMs(s.period_end) - tsMs(s.period_start)) / 86_400_000 || 0), 0);
+                  const f = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
+                  return <StatsBento s={bs} extra={<>
+                    <div className="b-tile"><span className="b-k">Rata-rata / bulan</span><span className={`b-v ${tone(perMonth)}`}>{perMonth == null ? '—' : money(perMonth)}</span></div>
+                    <div className="b-tile"><span className="b-k">Rata-rata / trade</span><span className={`b-v ${tone(m.expectancy ?? 0)}`}>{money(m.expectancy ?? 0)}</span></div>
+                    {days > 0 && sum.trades ? <div className="b-tile b-wide b-three-t">
+                      <span className="b-k">Jumlah trade</span>
+                      <div className="b-three">
+                        <div className="b-stat"><span className="b-v">{f(sum.trades / (days * 5 / 7))}</span><span className="b-h">per hari bursa</span></div>
+                        <div className="b-stat"><span className="b-v">{f(sum.trades / (days / 7))}</span><span className="b-h">per minggu</span></div>
+                        <div className="b-stat"><span className="b-v">{f(sum.trades / (days / 30.44))}</span><span className="b-h">per bulan</span></div>
                       </div>
+                    </div> : null}
+                    {m.avgHoldHours != null ? <div className="b-tile b-wide b-pair">
+                      <div><span className="b-k">Lama posisi menang</span><span className="b-v pos">{hrs(m.avgHoldWinHours)}</span></div>
+                      <div><span className="b-k">Lama posisi kalah</span><span className="b-v neg">{hrs(m.avgHoldLossHours)}</span></div>
+                    </div> : null}
+                    <div className="b-tile b-wide b-pair">
+                      <div><span className="b-k">Total profit</span><span className="b-v pos">{money(m.grossProfit)}</span></div>
+                      <div><span className="b-k">Total rugi</span><span className="b-v neg">{money(-m.grossLoss)}</span></div>
                     </div>
-                  ) : null}
-                  {(() => {
-                    // trade frequency over the tested calendar time of the chosen results (sum of their periods)
-                    const days = picked.reduce((a: number, s: any) => a + Math.max(0, (tsMs(s.period_end) - tsMs(s.period_start)) / 86_400_000 || 0), 0);
-                    if (!(days > 0) || !sum.trades) return null;
-                    const f = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
-                    return (
-                      <div className="hold">
-                        <span className="label">Rata-rata jumlah trade</span>
-                        <div className="hold3">
-                          <div><strong>{f(sum.trades / (days * 5 / 7))}</strong><span>per hari bursa</span></div>
-                          <div><strong>{f(sum.trades / (days / 7))}</strong><span>per minggu</span></div>
-                          <div><strong>{f(sum.trades / (days / 30.44))}</strong><span>per bulan</span></div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  <div className="facts supplemental-facts">
-                    <div><span className="label stat-label" title="Total profit dari seluruh trade menang">Total profit</span><strong className="pos">{money(m.grossProfit)}</strong></div>
-                    <div><span className="label stat-label" title="Total rugi dari seluruh trade kalah">Total rugi</span><strong className="neg">{money(-m.grossLoss)}</strong></div>
-                    <div><span className="label stat-label" title="Median lama posisi terbuka">Durasi median</span><strong>{hrs(m.medianHoldHours)}</strong></div>
-                    <div><span className="label stat-label" title="Posisi terbuka bersamaan paling banyak">Posisi bersamaan</span><strong>{m.maxOpenPositions}</strong></div>
-                    {String(cfgSel ?? '').startsWith('snr') ? <div className="zone-outcomes"><span className="label stat-label">Zona bertahan / jebol</span><strong>{d.zoneOutcomes.respect} / {d.zoneOutcomes.breakout}</strong></div> : null}
-                  </div></> : <div className="facts"><div><span className="label row" style={{ gap: 8 }}><Spinner />Memuat detail…</span></div></div>}
-                </section>
+                    <div className="b-tile"><span className="b-k">Posisi bersamaan</span><span className="b-v">{m.maxOpenPositions}</span></div>
+                    <div className="b-tile"><span className="b-k">Durasi median</span><span className="b-v">{hrs(m.medianHoldHours)}</span></div>
+                  </>} />;
+                })() : <section className="group"><span className="label row" style={{ gap: 8 }}><Spinner />Memuat detail…</span></section>}
 
                 {fresh ? <>
                 {m ? <DrawdownBreakdown key={key} trades={trades} tz={tz} /> : null}
-                {m ? <section className="group">
-                  <SecHead title="Beruntun" />
-                  <div className="tablewrap">
-                    <table className="num-r">
-                      <thead><tr><th>Rangkaian</th><th className="pos"><span className="streak-column">Menang</span></th><th className="neg"><span className="streak-column">Kalah</span></th></tr></thead>
-                      <tbody>
-                        {Array.from({ length: Math.max(m.maxConsecutiveWins, m.maxConsecutiveLosses) }, (_, index) => index + 1).filter((length) => (m.winStreaks?.[length] ?? 0) + (m.lossStreaks?.[length] ?? 0) > 0).map((length) => <tr key={length}>
-                          <td>{length}×</td>
-                          <td>{m.winStreaks?.[length] ? <strong className="pos">{m.winStreaks[length]} kali</strong> : '—'}</td>
-                          <td>{m.lossStreaks?.[length] ? <strong className="neg">{m.lossStreaks[length]} kali</strong> : '—'}</td>
-                        </tr>)}
-                      </tbody>
-                    </table>
-                  </div>
-                </section> : null}
                 <CapitalGrowth key={key} months={monthsTested} trades={trades} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group calcard">
-                  <PnlCalendar key={key} trades={trades} tz={tz} />
+                  <PnlCalendar key={key} trades={trades} tz={tz} simple />
                 </section>
 
                 {fresh && d.byRegime?.length ? (
