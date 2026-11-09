@@ -815,19 +815,25 @@ body::before { display: none; }
 .cal-simple .cal.week .cell .v, .cal-simple .cal.month .cell .v { font-size: 12px; }
 .cal-simple .cal .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
 
-/* deposit / withdrawal list (Trade page) */
-.cf-list { display: flex; flex-direction: column; gap: 2px; }
-.cf-row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line, rgba(127,127,127,.15)); }
-.cf-row:last-child { border-bottom: 0; }
-.cf-ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; flex: none; }
-.cf-ic.in { background: rgba(14,203,129,.14); color: #0ecb81; }
-.cf-ic.out { background: rgba(246,70,93,.14); color: #f6465d; }
-.cf-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.cf-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.cf-row.cf-old { opacity: .55; }
 
 /* hero: starting balance top-right (tap to edit) + last update minutes under it */
 .td-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .td-start { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .td-startbtn { background: var(--fill, rgba(127,127,127,.12)); border: 0; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; font-weight: 600; color: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
 .td-ago { font-size: 12px; opacity: .55; }
+
+/* deposit / withdrawal card in Riwayat (Binance transfer history style) */
+.cfcard { cursor: default; }
+.cfcard:active { transform: none; }
+.cfcard.is-old { opacity: .6; }
+.cf-ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none; }
+.cf-ic.in { background: var(--up-tint); color: var(--up); }
+.cf-ic.out { background: var(--down-tint); color: var(--down); }
+.cf-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cf-title strong { font-size: 16px; letter-spacing: -.02em; }
+.cf-route { font-size: 12px; color: var(--mute); }
+.cf-amt { margin-left: auto; font-size: 19px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cf-amt small { font-size: 11.5px; font-weight: 600; color: var(--mute); margin-left: 4px; }
+.cf-amt.pos { color: var(--up); } .cf-amt.neg { color: var(--down); }
+.cf-ok { color: var(--up); font-weight: 600; }
+.cfcard.is-old .cf-ok { color: var(--mute); }
