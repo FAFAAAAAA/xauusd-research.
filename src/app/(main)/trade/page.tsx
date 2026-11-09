@@ -120,7 +120,6 @@ export default function TradePage() {
         <span><span className="k">Keluar</span><strong>{t.exit != null ? px(t.exit) : '—'}</strong></span>
       </span>
       <span className="hc-foot">
-        <span>Durasi</span>
         <span>{t.closedAt ? holdTxt(t.closedAt - t.openedAt) : 'masih terbuka'}</span>
       </span>
     </button>
