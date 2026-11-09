@@ -728,3 +728,21 @@ body::before { display: none; }
   .b-v { font-size: 19px; }
   .b-big { font-size: 40px; }
 }
+/* streak tile: recent results as dots + three stats */
+.b-dots { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; margin: 4px 0 2px; }
+.b-dots span { aspect-ratio: 1; border-radius: 50%; background: var(--line-2); }
+.b-dots .w { background: var(--up); } .b-dots .l { background: var(--down); }
+.b-streak .b-three { margin-top: 4px; }
+.b-stat { padding: 10px 12px; border-radius: 14px; background: var(--sunk); }
+.b-stat .b-v { font-size: 22px; }
+/* compact P&L calendar: square heat cells */
+.cal-simple .cal { gap: 6px; }
+.cal-simple .cal.dow span { font-size: 11px; letter-spacing: .02em; }
+.cal-simple .cal.day .cell { aspect-ratio: 1; min-height: 0; padding: 0; border-radius: 12px; background: var(--sunk); }
+.cal-simple .cal.week .cell, .cal-simple .cal.month .cell { min-height: 58px; border-radius: 14px; background: var(--sunk); }
+.cal-simple .cal .cell.empty .n { color: var(--mute); font-weight: 500; opacity: .7; }
+.cal-simple .cal .cell.up { background: var(--up); } .cal-simple .cal .cell.up .n, .cal-simple .cal .cell.up .v { color: #fff; }
+.cal-simple .cal .cell.down { background: var(--down); } .cal-simple .cal .cell.down .n, .cal-simple .cal .cell.down .v { color: #fff; }
+.cal-simple .cal .cell .n { font-size: 13px; }
+.cal-simple .cal .cell .v { font-size: 10.5px; opacity: .95; }
+.cal-simple .cal .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }

@@ -73,7 +73,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
       winRate: W.length + L.length ? W.length / (W.length + L.length) : null, pf: gl > 0 ? gw / gl : gw > 0 ? Infinity : null,
       avgW: W.length ? gw / W.length : null, avgL: L.length ? -gl / L.length : null, best: pnl.length ? Math.max(...pnl) : null, worst: pnl.length ? Math.min(...pnl) : null,
       dd, ddPct, cur, bestW, bestL, today, week, month, hold: holds.length ? holds.reduce((a, b) => a + b, 0) / holds.length : null,
-      groups: [...groups.entries()].sort((a, b) => b[1].pnl - a[1].pnl), closed,
+      groups: [...groups.entries()].sort((a, b) => b[1].pnl - a[1].pnl), closed, form: pnl.slice(-24),
     };
   }, [trades, start, tz, groupOf]);
 
@@ -124,11 +124,14 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
             <div><span className="b-k">Terburuk</span><span className={`b-v ${tone(s.worst ?? 0)}`}>{s.worst == null ? '—' : usd(s.worst)}</span></div>
           </div>
           <div className="b-tile b-wide b-streak">
-            <span className="b-k">Beruntun</span>
+            <div className="b-top"><span className="b-k">Beruntun</span><span className="b-k">{s.form.length} trade terakhir</span></div>
+            <div className="b-dots" aria-label="Urutan hasil trade terakhir">
+              {s.form.map((x: number, i: number) => <span key={i} className={x > 0 ? 'w' : x < 0 ? 'l' : 'e'} title={usd(x)} />)}
+            </div>
             <div className="b-three">
-              <div><span className="b-v pos">{s.bestW}×</span><span className="b-h">menang terpanjang</span></div>
-              <div><span className="b-v neg">{s.bestL}×</span><span className="b-h">kalah terpanjang</span></div>
-              <div><span className={`b-v ${s.cur > 0 ? 'pos' : s.cur < 0 ? 'neg' : ''}`}>{s.cur ? `${Math.abs(s.cur)}×` : '—'}</span><span className="b-h">{s.cur > 0 ? 'menang sekarang' : s.cur < 0 ? 'kalah sekarang' : 'sekarang'}</span></div>
+              <div className="b-stat"><span className="b-v pos">{s.bestW}</span><span className="b-h">menang maks</span></div>
+              <div className="b-stat"><span className="b-v neg">{s.bestL}</span><span className="b-h">kalah maks</span></div>
+              <div className="b-stat"><span className={`b-v ${s.cur > 0 ? 'pos' : s.cur < 0 ? 'neg' : ''}`}>{s.cur ? Math.abs(s.cur) : '—'}</span><span className="b-h">{s.cur > 0 ? 'menang sekarang' : s.cur < 0 ? 'kalah sekarang' : 'sekarang'}</span></div>
             </div>
           </div>
           <div className="b-tile b-wide">

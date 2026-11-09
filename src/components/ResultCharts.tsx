@@ -398,6 +398,7 @@ export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { t
         {' '}· {tot.trades} trade · <span className="pos">{tot.wins} menang</span> · <span className="neg">{tot.losses} kalah</span>
       </p>}
 
+      <div className={simple ? 'cal-simple' : undefined} style={{ display: 'contents' }}>
       {tab === 'day' ? <div className="cal dow">{DOW.map((d) => <span key={d}>{d}</span>)}</div> : null}
       <div className={`cal ${tab}`}>
         {view.map((v) => v.blank ? <span key={v.key} /> : (
@@ -406,6 +407,7 @@ export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { t
             <span className="v">{value(v.cell) ?? ''}</span>
           </button>
         ))}
+      </div>
       </div>
 
       {selected && renderSelection ? (
