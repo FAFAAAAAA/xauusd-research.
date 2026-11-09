@@ -84,7 +84,9 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   // deposits / withdrawals / Spot transfers after the first trade (the starting balance already holds everything before it).
   // They change the balance but are not profit: P&L = balance − starting balance − net transfers.
   const firstAt = useMemo(() => trades.reduce((m, t) => Math.min(m, t.openedAt), Infinity), [trades]);
-  const flows = useMemo(() => cashflow.filter((c) => c.at > firstAt || !Number.isFinite(firstAt)).sort((a, b) => b.at - a.at), [cashflow, firstAt]);
+  const counted = (c: CashFlow) => c.at > firstAt || !Number.isFinite(firstAt);
+  const all = useMemo(() => [...cashflow].sort((a, b) => b.at - a.at), [cashflow]);
+  const flows = useMemo(() => all.filter(counted), [all, firstAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const netIn = flows.reduce((a, c) => a + c.amount, 0), added = flows.reduce((a, c) => a + Math.max(0, c.amount), 0);
   const [showFlows, setShowFlows] = useState(false);
   // live: the real balance sent by the bot / EA (wallet); otherwise starting balance + journal results + transfers
@@ -102,7 +104,8 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <span className={tone(profit)}>{usd(profit)}</span>
           <span className="td-sub">dari saldo awal {usd(start, false)} · <button className="td-link" onClick={() => setEdit(String(start))}>ubah</button></span>
         </span>
-        {flows.length ? <span className="td-sub">Dana {netIn >= 0 ? 'masuk' : 'keluar'} bersih <span className={tone(netIn)}>{usd(netIn)}</span> · tidak dihitung profit · <button className="td-link" onClick={() => setShowFlows(true)}>lihat {flows.length}</button></span> : null}
+        {flows.length ? <span className="td-sub">Dana {netIn >= 0 ? 'masuk' : 'keluar'} bersih <span className={tone(netIn)}>{usd(netIn)}</span> · tidak dihitung profit · <button className="td-link" onClick={() => setShowFlows(true)}>lihat {all.length}</button></span>
+          : all.length ? <span className="td-sub">Deposit & penarikan · <button className="td-link" onClick={() => setShowFlows(true)}>lihat {all.length}</button></span> : null}
         {live ? <span className="td-sub">{market === 'crypto' ? 'Saldo Binance Futures' : 'Saldo MT5'} · {ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}{Math.abs(live.upnl) >= 0.01 ? <> · posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></> : null}</span> : null}
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
@@ -129,12 +132,12 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
       {showFlows ? (
         <Sheet title="Deposit & penarikan" onClose={() => setShowFlows(false)}>
           <div className="cf-list">
-            {flows.map((c) => (
-              <div key={c.id} className="cf-row">
+            {all.map((c) => (
+              <div key={c.id} className={`cf-row${counted(c) ? '' : ' cf-old'}`}>
                 <span className={`cf-ic ${c.amount > 0 ? 'in' : 'out'}`} aria-hidden>{c.amount > 0 ? '↓' : '↑'}</span>
                 <span className="cf-main">
                   <strong>{market === 'crypto' ? (c.amount > 0 ? 'Masuk ke Futures' : 'Keluar dari Futures') : (c.amount > 0 ? 'Deposit' : 'Penarikan')}</strong>
-                  <span className="mute small">{formatInTz(c.at, tz)}{market === 'crypto' && c.type === 'TRANSFER' ? ' · transfer Spot' : ''}</span>
+                  <span className="mute small">{formatInTz(c.at, tz)}{market === 'crypto' && c.type === 'TRANSFER' ? ' · transfer Spot' : ''}{counted(c) ? '' : ' · sebelum trade pertama (sudah termasuk saldo awal)'}</span>
                 </span>
                 <span className={`cf-amt ${tone(c.amount)}`}>{c.amount > 0 ? '+' : '−'}{Math.abs(c.amount).toFixed(2)} {c.asset}</span>
               </div>

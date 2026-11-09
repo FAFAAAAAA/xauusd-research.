@@ -824,3 +824,4 @@ body::before { display: none; }
 .cf-ic.out { background: rgba(246,70,93,.14); color: #f6465d; }
 .cf-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .cf-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cf-row.cf-old { opacity: .55; }
