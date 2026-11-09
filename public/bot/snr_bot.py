@@ -10,6 +10,10 @@ v1 SNR bot — Binance USDⓈ-M Futures (support break SELL for altcoins). Same 
   TP       = entry - 2 x (SL - entry)   ->  TAKE_PROFIT_MARKET (close position)          RR 1:2, exits only at TP or SL
   Portfolio: at most MAX_POSITIONS open positions, 1 per coin; several signals at once -> random order (as in the backtest).
 
+BUY part (v1 BTC rules, 9 Nov 2026, on the largest coins: BTC ETH SOL BNB XRP DOGE; config buy_enabled / buy_coins / max_buy_positions):
+  BUY      = an H4 candle CLOSES above the highest high of the 50 H4 candles before it (first close beyond) and the last completed
+             D1 close is above EMA200 (D1).   SL = H4 close - 1.0 x ATR14(D1);  TP = entry + 2 x (entry - SL).   Max 2 BUY positions.
+
 Runs on YOUR computer / VPS. Your API key stays in snr_bot_config.json on that machine (never send it to anyone).
 Start on the Binance Futures TESTNET (demo money). Trading is risky; backtest results are not a promise.
 
@@ -47,7 +51,10 @@ DEFAULT_CONFIG = {
     "risk_mode": "percent",          # "percent" = % dari saldo USDT, "usdt" = jumlah tetap
     "risk_percent": 0.5,             # risiko per trade (% saldo) bila risk_mode = percent
     "risk_usdt": 5.0,                # risiko per trade (USDT) bila risk_mode = usdt
-    "max_positions": 3,              # maks posisi terbuka (backtest: 3)
+    "max_positions": 3,              # maks posisi SELL (v1 SNR) terbuka (backtest: 3)
+    "buy_enabled": True,             # BUY v1 BTC di koin terbesar (buy_coins)
+    "buy_coins": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"],
+    "max_buy_positions": 2,          # maks posisi BUY terbuka (backtest: 2)
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
     "max_loss_streak": 7,            # rem kalah beruntun: setelah N kali SL berturut-turut tidak buka posisi baru (0 = mati); lanjut lagi: python snr_bot.py --reset
     "leverage": 5,                   # leverage per koin (hanya margin; risiko tetap dari jarak SL)
@@ -64,6 +71,7 @@ DEFAULT_COINS = ['GMTUSDT', 'FILUSDT', '1000SHIBUSDT', 'SANDUSDT', 'DOTUSDT', 'G
                  'WLDUSDT', 'AAVEUSDT', 'NEOUSDT', '1000PEPEUSDT', 'LUNA2USDT', 'ARBUSDT', 'IMXUSDT', 'THETAUSDT', 'FTMUSDT', 'KSMUSDT',
                  '1000LUNCUSDT', '1INCHUSDT', 'ROSEUSDT', 'ARKMUSDT', 'ANKRUSDT', 'HOTUSDT']   # FTMUSDT is skipped automatically when delisted
 PV, KEEP, SLK, RR, H4_LIMIT, D1_LIMIT = 5, 10, 0.5, 2.0, 600, 400
+BUY_N, BUY_SLK, BUY_D1_LIMIT = 50, 1.0, 1000
 H4 = 4 * 3600
 
 log = logging.getLogger('snr')
@@ -166,6 +174,25 @@ def snr_signal(h4):
     return (hit, atr) if hit is not None and atr > 0 else None
 
 
+def buy_signal(h4, d1):
+    """v1 BTC (identical to the website adapter metode_crypto_donchian): the LAST closed H4 candle closes above the highest high of the
+    50 H4 candles before it while the candle before it did not, and the last completed D1 close is above EMA200 (D1).
+    Returns (level, atr14_d1) or None."""
+    if len(h4) < BUY_N + 2 or len(d1) < 210: return None
+    k = len(h4) - 1
+    hh = lambda j: max(r[2] for r in h4[j - BUY_N:j])
+    lvl = hh(k)
+    if not h4[k][4] > lvl: return None
+    if h4[k - 1][4] > hh(k - 1): return None                   # not the first close beyond the channel
+    closes = [r[4] for r in d1]
+    if not closes[-1] > ema_last(closes, 200): return None
+    atr = None; dd = d1[-400:]
+    for i in range(1, len(dd)):
+        pc = dd[i - 1][4]; tr = max(dd[i][2] - dd[i][3], abs(dd[i][2] - pc), abs(dd[i][3] - pc))
+        atr = tr if atr is None else atr + (tr - atr) / 14
+    return (lvl, atr) if atr and atr > 0 else None
+
+
 def closed_klines(api, sym, interval, limit, now_s):
     rows = api.get('/fapi/v1/klines', {'symbol': sym, 'interval': interval, 'limit': limit})
     return [[int(r[0]) // 1000, float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[7])] for r in rows if int(r[6]) // 1000 < now_s]
@@ -220,6 +247,9 @@ class Bot:
         missing = [x for x in coins if x not in self.filters]
         if missing: log.info('Tidak aktif di Binance Futures, dilewati: %s', ', '.join(missing))
         self.coins = [x for x in coins if x in self.filters and x not in set(self.cfg['exclude'])]
+        bc = list(self.cfg.get('buy_coins') or []) if self.cfg.get('buy_enabled') else []
+        self.buy_coins = [x for x in bc if x in self.filters and x not in set(self.cfg['exclude']) and x not in self.coins]
+        if bc: log.info('BUY v1 BTC: %s', ', '.join(self.buy_coins) or 'tidak ada koin aktif')
         log.info('Memantau %d koin (%s)', len(self.coins), 'TESTNET' if self.cfg['testnet'] else 'AKUN ASLI')
 
     # ----- account -----
@@ -257,29 +287,41 @@ class Bot:
                 h4 = closed_klines(self.api, sym, '4h', H4_LIMIT + 1, now_s)[-H4_LIMIT:]
                 if not h4 or h4[-1][0] + H4 > now_s + 5 or now_s - (h4[-1][0] + H4) > 600: continue   # last closed H4 must be the one that just closed
                 s = snr_signal(h4)
-                if s: sigs.append((sym, s[0], s[1], h4[-1][4]))
+                if s: sigs.append((sym, 'SELL', s[0] + SLK * s[1], h4[-1][4], s[0]))
+            except Exception as e:
+                log.warning('%s: %s', sym, e)
+            time.sleep(0.15)
+        for sym in getattr(self, 'buy_coins', []):
+            try:
+                h4 = closed_klines(self.api, sym, '4h', BUY_N + 10, now_s)
+                if not h4 or h4[-1][0] + H4 > now_s + 5 or now_s - (h4[-1][0] + H4) > 600: continue
+                d1 = closed_klines(self.api, sym, '1d', BUY_D1_LIMIT, now_s)
+                s = buy_signal(h4, d1)
+                if s: sigs.append((sym, 'BUY', h4[-1][4] - BUY_SLK * s[1], h4[-1][4], s[0]))
             except Exception as e:
                 log.warning('%s: %s', sym, e)
             time.sleep(0.15)
         return sigs
 
-    def open_short(self, sym, level, atr, close):
+    def open_pos(self, sym, side, sl, close):
+        """market order on `side` (SELL = v1 SNR, BUY = v1 BTC), then SL and TP (RR 1:2) as Binance algo orders (closePosition)"""
         f = self.filters[sym]
-        sl = level + SLK * atr
+        s = 1 if side == 'BUY' else -1; ex = 'SELL' if side == 'BUY' else 'BUY'
+        if not s * (close - sl) > 0: log.warning('%s: SL %.8f di sisi yang salah dari harga %.8f — dilewati', sym, sl, close); return
         risk = self.risk_usdt()
-        qty = step_floor(risk / (sl - close), f['step'])
+        qty = step_floor(risk / (s * (close - sl)), f['step'])
         qty = min(qty, f['maxQty'])
         if qty < f['minQty'] or qty * close < f['minNotional']:
             log.info('%s: jumlah %.8f di bawah minimum Binance untuk risiko %.2f USDT — dilewati', sym, qty, risk); return
         if self.cfg['dry_run']:
-            log.info('[DRY RUN] SELL %s qty %s ~%s SL %s TP %s', sym, fmt(qty, f['step']), close, fmt(sl, f['tick']), fmt(close - RR * (sl - close), f['tick'])); return
+            log.info('[DRY RUN] %s %s qty %s ~%s SL %s TP %s', side, sym, fmt(qty, f['step']), close, fmt(sl, f['tick']), fmt(close + s * RR * s * (close - sl), f['tick'])); return
         if self.cfg.get('margin_isolated', True):
             try: self.api.post('/fapi/v1/marginType', {'symbol': sym, 'marginType': 'ISOLATED'})
             except RuntimeError as e:
                 if '-4046' not in str(e): log.warning('%s: margin isolated: %s', sym, e)   # -4046 = already isolated
         try: self.api.post('/fapi/v1/leverage', {'symbol': sym, 'leverage': int(self.cfg['leverage'])})
         except RuntimeError as e: log.warning('%s: leverage: %s', sym, e)
-        o = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'SELL', 'type': 'MARKET', 'quantity': fmt(qty, f['step']), 'newOrderRespType': 'RESULT'})
+        o = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': side, 'type': 'MARKET', 'quantity': fmt(qty, f['step']), 'newOrderRespType': 'RESULT'})
         entry = float(o.get('avgPrice') or 0)
         filled = float(o.get('executedQty') or 0)
         for _ in range(5):                                   # the market order answer can come before the fill: ask again for the real fill price
@@ -291,36 +333,37 @@ class Bot:
             except RuntimeError as e: log.warning('%s: status order tidak terbaca: %s', sym, e)
         if not entry > 0: log.warning('%s: harga isi tidak terbaca — memakai harga close %.8f', sym, close); entry = close
         if not filled > 0: filled = qty
-        if not (sl > entry):
-            log.warning('%s: harga isi %.8f sudah di atas SL %.8f — posisi ditutup lagi', sym, entry, sl); self.close_now(sym, filled); return
+        if not s * (entry - sl) > 0:
+            log.warning('%s: harga isi %.8f sudah melewati SL %.8f — posisi ditutup lagi', sym, entry, sl); self.close_now(sym, filled, side); return
         # risk was sized on the signal close; if the real fill is further from the SL, buy back the excess so the loss at SL stays ≈ the planned risk
-        want = step_floor(risk / (sl - entry), f['step']); trim_id = None
-        if filled - want >= f['minQty'] and filled * (sl - entry) > 1.05 * risk:
+        want = step_floor(risk / (s * (entry - sl)), f['step']); trim_id = None
+        if filled - want >= f['minQty'] and filled * s * (entry - sl) > 1.05 * risk:
             try:
-                trim_id = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'BUY', 'type': 'MARKET', 'quantity': fmt(filled - want, f['step']), 'reduceOnly': 'true'}).get('orderId')
+                trim_id = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': ex, 'type': 'MARKET', 'quantity': fmt(filled - want, f['step']), 'reduceOnly': 'true'}).get('orderId')
                 log.info('%s: harga isi %.8f (sinyal %.8f) — jumlah dikurangi %s → %s supaya rugi di SL tetap ±%.2f USDT', sym, entry, close, fmt(filled, f['step']), fmt(want, f['step']), risk)
                 filled = want
             except RuntimeError as e: log.warning('%s: gagal mengurangi jumlah: %s', sym, e)
-        tp = entry - RR * (sl - entry)
-        sl_r = math.ceil(sl / f['tick'] - 1e-9) * f['tick']; tp_r = math.floor(tp / f['tick'] + 1e-9) * f['tick']
+        tp = entry + s * RR * s * (entry - sl)
+        if s < 0: sl_r = math.ceil(sl / f['tick'] - 1e-9) * f['tick']; tp_r = math.floor(tp / f['tick'] + 1e-9) * f['tick']
+        else: sl_r = math.floor(sl / f['tick'] + 1e-9) * f['tick']; tp_r = math.ceil(tp / f['tick'] - 1e-9) * f['tick']
         try:
-            a = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': 'BUY', 'type': 'STOP_MARKET', 'triggerPrice': fmt(sl_r, f['tick']),
+            a = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': ex, 'type': 'STOP_MARKET', 'triggerPrice': fmt(sl_r, f['tick']),
                                                      'closePosition': 'true', 'workingType': 'CONTRACT_PRICE'})
-            b = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': 'BUY', 'type': 'TAKE_PROFIT_MARKET', 'triggerPrice': fmt(tp_r, f['tick']),
+            b = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': ex, 'type': 'TAKE_PROFIT_MARKET', 'triggerPrice': fmt(tp_r, f['tick']),
                                                      'closePosition': 'true', 'workingType': 'CONTRACT_PRICE'})
         except RuntimeError as e:
             log.error('%s: SL/TP gagal dipasang (%s) — posisi ditutup demi keamanan', sym, e)
             notify(self.cfg, f'{sym}: SL/TP gagal dipasang ({e}). Posisi langsung ditutup demi keamanan — cek Binance.', 'error')
-            self.close_now(sym, filled); return
+            self.close_now(sym, filled, side); return
         t = int(time.time())
         ticket = f"{sym}-{o['orderId']}"
-        self.st['positions'][sym] = {'ticket': ticket, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'trim_id': trim_id, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
+        self.st['positions'][sym] = {'ticket': ticket, 'side': side, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'trim_id': trim_id, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
         save_state(self.st)
-        log.info('SELL %s qty %s @ %s | SL %s | TP %s', sym, filled, entry, fmt(sl_r, f['tick']), fmt(tp_r, f['tick']))
-        report(self.cfg, {'event': 'open', 'ticket': ticket, 'symbol': sym, 'side': 'SELL', 'price': entry, 'sl': sl_r, 'tp': tp_r, 'lot': filled, 'time': t})
+        log.info('%s %s qty %s @ %s | SL %s | TP %s', side, sym, filled, entry, fmt(sl_r, f['tick']), fmt(tp_r, f['tick']))
+        report(self.cfg, {'event': 'open', 'strategy': 'btc' if side == 'BUY' else 'snr', 'ticket': ticket, 'symbol': sym, 'side': side, 'price': entry, 'sl': sl_r, 'tp': tp_r, 'lot': filled, 'time': t})
 
-    def close_now(self, sym, qty):
-        try: self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'BUY', 'type': 'MARKET', 'quantity': fmt(qty, self.filters[sym]['step']), 'reduceOnly': 'true'})
+    def close_now(self, sym, qty, side='SELL'):
+        try: self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'SELL' if side == 'BUY' else 'BUY', 'type': 'MARKET', 'quantity': fmt(qty, self.filters[sym]['step']), 'reduceOnly': 'true'})
         except RuntimeError as e:
             log.error('%s: GAGAL menutup posisi — tutup manual di Binance! (%s)', sym, e)
             notify(self.cfg, f'{sym}: GAGAL menutup posisi ({e}). TUTUP MANUAL di Binance sekarang!', 'error')
@@ -332,15 +375,16 @@ class Bot:
         except RuntimeError as e:
             log.warning('Posisi tidak terbaca (%s) — cek ulang nanti, tidak ada yang diubah.', e); return
         for sym, p in list(self.st['positions'].items()):
-            if live.get(sym, 0) < 0: p.pop('miss', None); continue    # still short
+            side = p.get('side', 'SELL'); ex = 'SELL' if side == 'BUY' else 'BUY'
+            if (live.get(sym, 0) > 0) if side == 'BUY' else (live.get(sym, 0) < 0): p.pop('miss', None); continue    # still open
             # The position is not in the list. Do NOT touch anything until the close is CONFIRMED by closing BUY trades
             # (8 Nov 2026: an empty/partial positionRisk answer made the bot cancel the SL/TP of a position that was still open).
             p['miss'] = p.get('miss', 0) + 1
             try: trades = self.api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': p['opened'] * 1000 - 60000}, signed=True)
             except RuntimeError as e:
                 log.warning('%s: riwayat trade tidak terbaca (%s) — cek ulang nanti.', sym, e); save_state(self.st); continue
-            buys = [x for x in trades if x['side'] == 'BUY' and x.get('orderId') != p.get('trim_id')]   # not the size trim right after entry
-            sells = [x for x in trades if x['side'] == 'SELL']
+            buys = [x for x in trades if x['side'] == ex and x.get('orderId') != p.get('trim_id')]   # closing fills (not the size trim right after entry)
+            sells = [x for x in trades if x['side'] == side]                                       # entry fills
             if sells:                                                # real average entry (Binance "Harga Masuk Rata-Rata")
                 qs = sum(float(x['qty']) for x in sells)
                 if qs > 0: p['entry'] = sum(float(x['price']) * float(x['qty']) for x in sells) / qs
@@ -361,10 +405,10 @@ class Bot:
             except RuntimeError as e:
                 log.warning('%s: hasil trade tidak terbaca: %s', sym, e)
             if exit_px is not None:
-                r1 = p['sl'] - p['entry']                                  # 1R in price
+                r1 = abs(p['sl'] - p['entry'])                             # 1R in price
                 reason = 'tp' if abs(exit_px - p['tp']) <= 0.25 * r1 else 'sl' if abs(exit_px - p['sl']) <= 0.25 * r1 else 'manual'
             log.info('Posisi %s ditutup (%s) | hasil %.2f USDT', sym, reason.upper(), pnl)
-            report(self.cfg, {'event': 'close', 'ticket': p['ticket'], 'symbol': sym, 'side': 'SELL', 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
+            report(self.cfg, {'event': 'close', 'strategy': 'btc' if side == 'BUY' else 'snr', 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
                               'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'],
                               'time': int(max(float(x['time']) for x in buys) / 1000) if buys else int(time.time())})
             cl = self.st.setdefault('closed', []); cl.append([int(time.time()), round(pnl, 4), reason]); del cl[:-300]
@@ -389,7 +433,7 @@ class Bot:
         except RuntimeError: bal = float('nan')
         done = [c for c in self.st.get('closed', []) if c[0] > since]
         res = sum(c[1] for c in done); tp = sum(1 for c in done if c[2] == 'tp'); sl = sum(1 for c in done if c[2] == 'sl')
-        pos = ', '.join(k.replace('USDT', '') for k in self.st['positions']) or 'tidak ada'
+        pos = ', '.join(f"{k.replace('USDT', '')} ({v.get('side', 'SELL')})" for k, v in self.st['positions'].items()) or 'tidak ada'
         mx = int(self.cfg.get('max_loss_streak') or 0); ls = self.st.get('loss_streak', 0)
         pos += f"\nKalah beruntun: {ls}" + (f" dari {mx}" + (' — REM AKTIF (--reset untuk lanjut)' if ls >= mx else '') if mx > 0 else '')
         notify(self.cfg, f"Ringkasan {kst.strftime('%H:%M')} (waktu Korea) — bot aktif.\nSaldo Futures: {bal:.2f} USDT\n"
@@ -415,10 +459,11 @@ class Bot:
         mx = int(self.cfg.get('max_loss_streak') or 0)
         if mx > 0: log.info('Rem kalah beruntun: berhenti buka posisi baru setelah %d SL berturut-turut (sekarang %d)', mx, self.st['loss_streak'])
         if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
-        log.info('Mode: %s · risiko %s · maks %d posisi · leverage %dx', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
-                 f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'], self.cfg['leverage'])
+        log.info('Mode: %s · risiko %s · maks %d posisi SELL + %d BUY · leverage %dx', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
+                 f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'],
+                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, self.cfg['leverage'])
         last_sync = time.time()
-        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} posisi.")
+        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY.")
         while True:
             if os.path.exists(STOP_FILE):
                 log.info('stop.flag ditemukan — bot berhenti.'); notify(self.cfg, 'Bot dihentikan (perintah --stop). Posisi terbuka tetap punya SL/TP di Binance.'); return
@@ -436,6 +481,9 @@ class Bot:
                 random.shuffle(sigs)                                   # several signals at once: random order (as in the backtest)
                 live = self.positions()
                 busy = set(self.st['positions']) | {s for s, a in live.items() if a != 0}
+                n_side = {'SELL': {k for k, v in self.st['positions'].items() if v.get('side', 'SELL') == 'SELL'} | {k for k, a in live.items() if a < 0},
+                          'BUY': {k for k, v in self.st['positions'].items() if v.get('side') == 'BUY'} | {k for k, a in live.items() if a > 0}}
+                cap = {'SELL': int(self.cfg['max_positions']), 'BUY': int(self.cfg.get('max_buy_positions') or 0)}
                 stop = float(self.cfg.get('stop_balance_usdt') or 0)
                 if sigs and stop > 0 and not self.cfg['dry_run']:
                     bal = self.balance()
@@ -448,14 +496,14 @@ class Bot:
                 if sigs and mx > 0 and self.st.get('loss_streak', 0) >= mx:
                     log.error('REM KALAH BERUNTUN aktif (%d SL berturut-turut) — %d sinyal dilewati. Lanjut lagi: python snr_bot.py --reset', self.st['loss_streak'], len(sigs))
                     sigs = []
-                for sym, level, atr, close in sigs:
+                for sym, side, sl, close, level in sigs:
                     if sym in busy: continue
-                    if not self.cfg['dry_run'] and len(busy) >= int(self.cfg['max_positions']):
-                        log.info('Sinyal %s dilewati: sudah %d posisi', sym, len(busy)); continue
-                    log.info('Sinyal SELL %s: close %s menembus support %s', sym, close, level)
-                    try: self.open_short(sym, level, atr, close)
+                    if not self.cfg['dry_run'] and len(n_side[side]) >= cap[side]:
+                        log.info('Sinyal %s %s dilewati: sudah %d posisi %s', side, sym, len(n_side[side]), side); continue
+                    log.info('Sinyal %s %s: close %s menembus %s %s', side, sym, close, 'high 50 H4' if side == 'BUY' else 'support', level)
+                    try: self.open_pos(sym, side, sl, close)
                     except RuntimeError as e: log.error('%s: order gagal: %s', sym, e)
-                    busy.add(sym)
+                    busy.add(sym); n_side[side].add(sym)
                 if not sigs: log.info('Tidak ada sinyal.')
             try: self.manage()
             except RuntimeError as e: log.warning('Cek posisi gagal: %s', e)

@@ -422,9 +422,9 @@ type PairStatus = { symbol: string; label: string; years: number[]; done: number
 // Website cleaned up (owner's choice, 7 Nov 2026): only the best gold strategy is offered and shown, named "v1 XAU"
 // (= metode volbreak-v5, internal key v2). All other strategies stay in the code and their results stay in the
 // database, they are only hidden (other pairs get their own best strategy later).
-const STRAT_ORDER = ['metode_volbreak', 'metode_nas_donchian', 'metode_snr_sell'];
+const STRAT_ORDER = ['metode_volbreak', 'metode_nas_donchian', 'metode_snr_sell', 'metode_crypto_donchian'];
 // crypto: only v1 SNR for now (owner, 7 Nov 2026); v1 BTC / v2 ALT stay in the code
-const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5', 'metode nas-donchian-v1', 'metode snr-sell-v1']);
+const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5', 'metode nas-donchian-v1', 'metode snr-sell-v1', 'metode crypto-donchian-v1']);
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),

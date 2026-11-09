@@ -45,7 +45,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     await repo.setAppSetting(db, 'ea_last_report', { at: now, event: 'info', ticket: sym || 'bot' });
     const tg = await repo.getTelegramSettings(db);
     if (!tg.live_enabled) return { status: 200, body: { ok: true, telegram: 'disabled' } };
-    const head = b.strategy === 'snr' ? 'Bot v1 SNR' : 'EA';
+    const head = b.strategy === 'snr' || b.strategy === 'btc' ? 'Bot Binance' : 'EA';
     const level = b.level === 'error' ? '⚠️' : 'ℹ️';
     const key = createHash('sha256').update(`${now}:${txt}`).digest('hex').slice(0, 16);
     const r = await sendTelegram(db, { deliveryKey: `ea:info:${key}`, mode: 'LIVE', text: `${level} <b>${escapeHtml(head)}</b>\n\n${escapeHtml(txt)}` }, { fetchImpl: opts.fetchImpl });
@@ -62,11 +62,13 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   const timeMs = num(b.time) > 0 ? num(b.time) * (num(b.time) < 1e12 ? 1000 : 1) : now;
 
   // which EA / bot: v1 XAU (journal key v2, default), v1 NAS ("strategy":"nas") or the Binance v1 SNR bot ("strategy":"snr", sends "symbol")
-  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'snr' ? 'snr' : 'v2';
-  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'v1 SNR' : 'v1 XAU';
+  // the Binance bot also sends "strategy":"btc" for its BUY part (v1 BTC rules on the largest coins)
+  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : 'v2';
+  const bot = strat === 'snr' || strat === 'btc';
+  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'v1 SNR' : strat === 'btc' ? 'v1 BTC' : 'v1 XAU';
   const symbol = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24).toUpperCase() : '';
-  const src = strat === 'snr' ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
-  const who = strat === 'snr' ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;
+  const src = bot ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
+  const who = bot ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;
   // prices of small coins need more than 2 decimals
   const fp = (x: number) => (Math.abs(x) >= 100 ? x.toFixed(2) : Math.abs(x) >= 1 ? x.toFixed(4) : x.toPrecision(5));
   let trade: JournalTrade | string;
@@ -79,7 +81,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const reason = b.reason === 'tp' ? 'tp' : b.reason === 'sl' ? 'sl' : 'manual';
     const base = prev ? { ...prev } : { strategy: strat, side: b.side, entry: num(b.entry), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, note: src };
     // the Binance bot sends its real average entry price with the close (the open report could carry the signal close price)
-    if (prev && strat === 'snr' && num(b.entry) > 0) base.entry = num(b.entry);
+    if (prev && bot && num(b.entry) > 0) base.entry = num(b.entry);
     // keep the broker's real exit price and net result (incl. commission & swap)
     // v2 breakeven: a stop that closes at (about) the entry price is the moved SL → record as BE, not SL
     const isBe = strat === 'v2' && reason === 'sl' && Math.abs(num(b.price) - Number(base.entry)) < 0.25 * Math.abs(Number(base.entry) - Number(base.sl));
@@ -97,14 +99,14 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (tg.live_enabled) {
     const tz = await repo.getAppSetting<string>(db, 'display_timezone', 'UTC');
     const t = trade;
-    const snrText = snrMessage(t, symbol, event, tz, now);
-    const text = strat === 'snr' ? snrText : event === 'open'
+    const snrText = snrMessage(t, symbol, event, tz, now, lbl);
+    const text = bot ? snrText : event === 'open'
       ? [`🤖 <b>${escapeHtml(who)} — ${t.side} terbuka</b>`, '', `<b>Entry:</b> <code>${fp(t.entry)}</code>`, `<b>SL:</b> <code>${fp(t.sl)}</code>`, `<b>TP:</b> <code>${fp(t.tp)}</code>`, `<b>Lot:</b> <code>${t.lot.toFixed(2)}</code>`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
       : [`${(t.pnl ?? 0) >= 0 ? '✅' : '❌'} <b>${escapeHtml(who)} — ${t.side} ditutup (${t.result === 'tp' ? 'TP' : t.result === 'sl' ? 'SL' : t.result === 'be' ? 'BE — SL di entry' : 'manual'})</b>`, '',
         `<b>Entry → keluar:</b> ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `<b>Hasil:</b> ${(t.pnl ?? 0) >= 0 ? '+' : '−'}$${Math.abs(t.pnl ?? 0).toFixed(2)}`,
         `<b>Waktu:</b> ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
-    const copy = event === 'open' && strat !== 'snr' ? [{ text: 'Salin entry', value: fp(t.entry) }, { text: 'Salin SL', value: fp(t.sl) }, { text: 'Salin TP', value: fp(t.tp) }] : undefined;
+    const copy = event === 'open' && !bot ? [{ text: 'Salin entry', value: fp(t.entry) }, { text: 'Salin SL', value: fp(t.sl) }, { text: 'Salin TP', value: fp(t.tp) }] : undefined;
     const r = await sendTelegram(db, { deliveryKey: `ea:${event}:${ticket}`, mode: 'LIVE', text, copy }, { fetchImpl: opts.fetchImpl });
     telegram = r.status;
   }
@@ -112,17 +114,17 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
 }
 
 /** Telegram layout of the Binance v1 SNR bot: coin, SL/TP distance in %, risk in USDT, result in R and duration. */
-export function snrMessage(t: JournalTrade, symbol: string, event: 'open' | 'close', tz: string, now: number): string {
+export function snrMessage(t: JournalTrade, symbol: string, event: 'open' | 'close', tz: string, now: number, label = 'v1 SNR'): string {
   const fp = (x: number) => (Math.abs(x) >= 100 ? x.toFixed(2) : Math.abs(x) >= 1 ? x.toFixed(4) : x.toPrecision(5));
     const pctOf = (x: number) => `${x >= t.entry ? '+' : '−'}${(Math.abs(x / t.entry - 1) * 100).toFixed(2)}%`;
   const riskUsd = Math.abs(t.entry - t.sl) * t.lot;
   const dur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}h ${Math.floor((m % 1440) / 60)}j` : `${Math.floor(m / 60)}j ${m % 60}m`; };
   const coin = escapeHtml(symbol.replace(/USDT$/, '') || 'koin');
   return event === 'open'
-    ? [`${t.side === 'SELL' ? '🔴' : '🟢'} <b>${t.side} ${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
+    ? [`${t.side === 'SELL' ? '🔴' : '🟢'} <b>${t.side} ${coin}</b> · ${escapeHtml(label)}`, '━━━━━━━━━━━━',
       `Entry   <code>${fp(t.entry)}</code>`, `SL      <code>${fp(t.sl)}</code>  (${pctOf(t.sl)})`, `TP      <code>${fp(t.tp)}</code>  (${pctOf(t.tp)})`,
       `Risiko  <b>${riskUsd.toFixed(2)} USDT</b> · ${t.lot} ${coin}`, '', `🕐 ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
-    : [`${t.result === 'tp' ? '✅ <b>TP</b>' : t.result === 'sl' ? '❌ <b>SL</b>' : '⚪ <b>Ditutup manual</b>'} · <b>${coin}</b> · v1 SNR`, '━━━━━━━━━━━━',
+    : [`${t.result === 'tp' ? '✅ <b>TP</b>' : t.result === 'sl' ? '❌ <b>SL</b>' : '⚪ <b>Ditutup manual</b>'} · <b>${coin}</b> · ${escapeHtml(label)}`, '━━━━━━━━━━━━',
       `Hasil   <b>${(t.pnl ?? 0) >= 0 ? '+' : '−'}${Math.abs(t.pnl ?? 0).toFixed(2)} USDT</b>${riskUsd > 0 ? `  (${(t.pnl ?? 0) >= 0 ? '+' : '−'}${(Math.abs(t.pnl ?? 0) / riskUsd).toFixed(1)}R)` : ''}`,
       `Harga   ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `Durasi  ${dur((t.closedAt ?? now) - t.openedAt)}`, '', `🕐 ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
 }

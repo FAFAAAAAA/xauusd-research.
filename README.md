@@ -516,4 +516,10 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
   lebih jauh dari SL daripada harga sinyal, kelebihan jumlah dibeli kembali (reduceOnly) supaya rugi di SL ≈ risiko rencana (SAND −12,16 = −1,2R
   dengan versi lama). Laporan tutup membawa harga masuk rata-rata dan jam tutup dari Binance; website memakai harga masuk itu. Koreksi sekali
   jalan untuk FIL/WLD/SAND (nilai dari Riwayat Posisi Binance) ada di /api/journal; tombol "Koreksi hasil" di Trade → Riwayat.
+- Bot Binance + BUY (9 Nov 2026): bagian BUY memakai aturan v1 BTC (close H4 di atas high 50 H4 pertama kali, close D1 > EMA200, SL close − 1×ATR14 D1,
+  TP 2R) di 6 koin terbesar (BTC ETH SOL BNB XRP DOGE), maks 2 posisi BUY (terpisah dari maks 3 SELL v1 SNR). Riset: BUY altcoin kecil/menengah gagal
+  (48 kombinasi baru: tembus resistance, breakout volume 3×, breakdown gagal, filter breadth — semua PF portofolio < 1,05); v1 BTC di 10 alt besar:
+  SOL 1,30 BNB 1,31 XRP 1,20 DOGE 1,25 ADA 1,23, AVAX/LINK/LTC/BCH/DOT rugi. Gabungan SNR + BUY 6 koin (R, 2020–2026): PF 1,36, +588R (SNR saja +521R),
+  DD 27R (28R), bulan rugi 29% (32%); 5% compounding rem $100: kena rem 21% (SNR saja 30%) dengan urutan asli. Sinyal BUY bot = backtest
+  (SOL 185/185, BNB 237/237). Laporan BUY ke website: "strategy":"btc" (jurnal v1 BTC, tab Crypto).
 
