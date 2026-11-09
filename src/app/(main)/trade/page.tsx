@@ -76,11 +76,13 @@ export default function TradePage() {
     if (r == null) return;
     const result = r.trim().toLowerCase();
     if (!['tp', 'sl', 'be', 'manual'].includes(result)) { setJErr('Hasil harus tp, sl, be, atau manual'); return; }
+    const en = window.prompt('Harga masuk (lihat di Binance / MT5)?', String(t.entry));
+    if (en == null) return;
     const ex = window.prompt('Harga keluar (lihat di Binance / MT5)?', String(t.exit ?? t.entry));
     if (ex == null) return;
     const pl = window.prompt('Untung/rugi bersih dalam $ (pakai minus untuk rugi)?', t.pnl == null ? '' : String(t.pnl));
     if (pl == null) return;
-    try { setJ(await call<any>('/api/journal', { method: 'PUT', json: { id: t.id, result, exit: num(ex), pnl: num(pl), closedAt: t.closedAt ?? Date.now() } })); toast('Trade dikoreksi'); }
+    try { setJ(await call<any>('/api/journal', { method: 'PUT', json: { id: t.id, result, entry: num(en), exit: num(ex), pnl: num(pl), closedAt: t.closedAt ?? Date.now() } })); toast('Trade dikoreksi'); }
     catch (e) { setJErr((e as Error).message); }
   };
   const remove = async (t: JournalTrade) => {
