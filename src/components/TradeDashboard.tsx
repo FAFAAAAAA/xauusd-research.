@@ -90,10 +90,10 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
         <span className="td-bal"><CountUp value={bal} format={(n) => usd(n, false)} /></span>
         <span className="td-row">
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
-          <span className={tone(s.total)}>{usd(s.total)}</span>
+          <span className={tone(bal - start)}>{usd(live ? bal - start : s.total)}</span>
           <span className="td-sub">dari saldo awal {usd(start, false)} · <button className="td-link" onClick={() => setEdit(String(start))}>ubah</button></span>
         </span>
-        {live ? <span className="td-sub">Saldo Binance Futures · {ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}{Math.abs(live.upnl) >= 0.01 ? <> · posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></> : null}</span> : null}
+        {live ? <span className="td-sub">{market === 'crypto' ? 'Saldo Binance Futures' : 'Saldo MT5'} · {ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}{Math.abs(live.upnl) >= 0.01 ? <> · posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></> : null}</span> : null}
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
           <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}>{usd(s.week)}</strong></span>

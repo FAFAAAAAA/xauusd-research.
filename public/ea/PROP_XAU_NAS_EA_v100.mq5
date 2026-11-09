@@ -641,9 +641,20 @@ void HistCheck()
    if(bn < 5000) gHistWarn += (gHistWarn != "" ? "\n⚠ " : "") + StringFormat("riwayat H1 %s baru %d candle (butuh 5000): v1 NAS belum bisa trading. Buka chart %s H1 dan scroll ke kiri", NS, bn, NS);
 }
 
+//--- send the account balance to the website (Trade page, Forex) every 15 minutes and after each close
+datetime gBalAt = 0;
+void PushBalance()
+{
+   if(TimeLocal() - gBalAt < 900) return;
+   gBalAt = TimeLocal();
+   double bal = AccountInfoDouble(ACCOUNT_BALANCE), eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   Report(StringFormat("{\"key\":\"%s\",\"event\":\"balance\",\"source\":\"mt5\",\"wallet\":%.2f,\"upnl\":%.2f}", InpEaKey, bal, eq - bal));
+}
+
 void Run()
 {
    PropUpdate();
+   PushBalance();
    HistCheck();
    if(InpUseXau && InpTrade) XauBreakeven();
    if(InpUseXau) XauCheck();
@@ -704,6 +715,7 @@ void OnTradeTransaction(const MqlTradeTransaction &tx, const MqlTradeRequest &rq
       long why = HistoryDealGetInteger(tx.deal, DEAL_REASON);
       string reason = why == DEAL_REASON_TP ? "tp" : why == DEAL_REASON_SL ? "sl" : "manual";
       string side = dtype == DEAL_TYPE_SELL ? "BUY" : "SELL";
+      gBalAt = 0;                                                     // new balance on the next timer
       Report(StringFormat("{\"key\":\"%s\"%s,\"event\":\"close\",\"ticket\":\"%I64d\",\"side\":\"%s\",\"price\":%.3f,\"profit\":%.2f,\"reason\":\"%s\",\"lot\":%.2f,\"time\":%I64d}",
                           InpEaKey, strat, pos, side, price, profit, reason, vol, t));
    }

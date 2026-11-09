@@ -786,3 +786,11 @@ body::before { display: none; }
 .hold2-bar { opacity: .16; background: var(--ink); }
 .hold2-l { font-size: 11px; white-space: nowrap; }
 @media (max-width: 380px) { .hold2-bars { gap: 4px; } .hold2-l { font-size: 10px; } }
+/* holding distribution as horizontal rows */
+.hold3-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+.hold3-row { display: grid; grid-template-columns: 72px 1fr 40px; align-items: center; gap: 10px; font-size: 13px; }
+.hold3-l { color: var(--mute); white-space: nowrap; }
+.hold3-track { height: 8px; border-radius: 999px; background: var(--sunk); overflow: hidden; }
+.hold3-bar { display: block; height: 100%; border-radius: 999px; background: var(--ink); opacity: .75; }
+.hold3-p { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
+.hold3-row.zero .hold3-p, .hold3-row.zero .hold3-l { opacity: .45; }

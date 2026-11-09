@@ -85,11 +85,12 @@ export function HoldTile({ s }: { s: ResultStats }) {
           <span className="st-pill l">SL {s.holdL != null ? dur(s.holdL) : '—'}</span>
         </div>
       </div>
-      <div className="hold2-bars" role="img" aria-label={`Sebaran lama posisi: ${HOLD_LABELS.map((l, i) => `${l} ${s.buckets[i]}`).join(', ')}`}>
+      <div className="hold3-rows" role="img" aria-label={`Sebaran lama posisi: ${HOLD_LABELS.map((l, i) => `${l} ${s.buckets[i]}`).join(', ')}`}>
         {s.buckets.map((c, i) => (
-          <div key={i} className="hold2-col" title={`${HOLD_LABELS[i]}: ${c} trade`}>
-            <span className="hold2-track"><span className="hold2-bar" style={{ height: `${(c / mx) * 100}%` }} />{c ? <span className="hold2-n">{Math.round(c / Math.max(1, s.n) * 100)}%</span> : null}</span>
-            <span className="hold2-l">{HOLD_SHORT[i]}</span>
+          <div key={i} className={`hold3-row${c ? '' : ' zero'}`} title={`${HOLD_LABELS[i]}: ${c} trade`}>
+            <span className="hold3-l">{HOLD_LABELS[i]}</span>
+            <span className="hold3-track"><span className="hold3-bar" style={{ width: `${(c / mx) * 100}%` }} /></span>
+            <span className="hold3-p">{Math.round(c / Math.max(1, s.n) * 100)}%</span>
           </div>
         ))}
       </div>

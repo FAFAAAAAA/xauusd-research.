@@ -41,7 +41,8 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (b.event === 'balance') {
     const wallet = num(b.wallet), upnl = num(b.upnl);
     if (!Number.isFinite(wallet)) return { status: 422, body: { ok: false, error: 'wallet wajib' } };
-    await repo.setAppSetting(db, 'binance_balance', { wallet, upnl: Number.isFinite(upnl) ? upnl : 0, at: now });
+    // source "mt5" = the MetaTrader EA (Forex); otherwise the Binance bot (Crypto)
+    await repo.setAppSetting(db, b.source === 'mt5' ? 'mt5_balance' : 'binance_balance', { wallet, upnl: Number.isFinite(upnl) ? upnl : 0, at: now });
     return { status: 200, body: { ok: true } };
   }
   // bot status messages (daily summary, warnings): Telegram only, no journal row
