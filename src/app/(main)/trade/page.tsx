@@ -38,7 +38,6 @@ export default function TradePage() {
   const [market, setMarket] = useMarket();
   // history list: same look as the backtest trade list (hidden until opened, 10 at a time, tap a row for the detail sheet)
   const [showHist, setShowHist] = useState(false);
-  const [histKind, setHistKind] = useState<'all' | 'pos' | 'cf'>('all');
   const [histLimit, setHistLimit] = useState(10);
   const [detail, setDetail] = useState<JournalTrade | null>(null);
   const load = useCallback(() => {
@@ -126,33 +125,24 @@ export default function TradePage() {
       </span>
     </button>
   );
-  // deposit / withdrawal / Spot transfer card (Binance "Riwayat Transfer" style)
+  // deposit / withdraw row (one compact line)
   const flowsAll: CashFlow[] = (market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? [];
   const firstAt = j.trades.filter(inMarket).reduce((m, t) => Math.min(m, t.openedAt), Infinity);
   const flowRow = (c: CashFlow) => {
     const inn = c.amount > 0, old = Number.isFinite(firstAt) && c.at <= firstAt;
     return (
-      <div key={`cf-${c.id}`} className={`hcard cfcard${old ? ' is-old' : ''}`}>
-        <span className="hc-top">
-          <span className={`cf-ic ${inn ? 'in' : 'out'}`} aria-hidden>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{inn ? <path d="M12 5v14M5 12l7 7 7-7" /> : <path d="M12 19V5M5 12l7-7 7 7" />}</svg>
-          </span>
-          <span className="cf-title">
-            <strong>{market === 'crypto' ? (inn ? 'Transfer masuk' : 'Transfer keluar') : (inn ? 'Deposit' : 'Penarikan')}</strong>
-            <span className="cf-route">{market === 'crypto' ? (inn ? 'Spot → Futures' : 'Futures → Spot') : 'Akun MT5'}</span>
-          </span>
-          <span className={`cf-amt ${inn ? 'pos' : 'neg'}`}>{inn ? '+' : '−'}{Math.abs(c.amount).toFixed(2)}<small>{c.asset}</small></span>
+      <div key={`cf-${c.id}`} className={`cfcard${old ? ' is-old' : ''}`}>
+        <span className={`cf-ic ${inn ? 'in' : 'out'}`} aria-hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{inn ? <path d="M12 5v14M5 12l7 7 7-7" /> : <path d="M12 19V5M5 12l7-7 7 7" />}</svg>
         </span>
-        <span className="hc-foot">
-          <span>{fmt(c.at, tz)}</span>
-          <span className="cf-ok">{old ? 'Termasuk saldo awal' : 'Selesai'}</span>
-        </span>
+        <span className="cf-title"><strong>{inn ? 'Deposit' : 'Withdraw'}</strong><span>{fmt(c.at, tz)}</span></span>
+        <span className={`cf-amt ${inn ? 'pos' : 'neg'}`}>{inn ? '+' : '−'}{Math.abs(c.amount).toFixed(2)}<small>{c.asset}</small></span>
       </div>
     );
   };
   const histItems = [
-    ...(histKind === 'cf' ? [] : closedT.map((t) => ({ at: t.closedAt ?? t.openedAt, el: tradeRow(t) }))),
-    ...(histKind === 'pos' ? [] : flowsAll.map((c) => ({ at: c.at, el: flowRow(c) }))),
+    ...closedT.map((t) => ({ at: t.closedAt ?? t.openedAt, el: tradeRow(t) })),
+    ...flowsAll.map((c) => ({ at: c.at, el: flowRow(c) })),
   ].sort((a, b) => b.at - a.at);
   return (
     <div className="stack">
@@ -273,11 +263,10 @@ export default function TradePage() {
       <section className="group">
         {closedT.length || flowsAll.length ? <>
           <button className={`hist-toggle${showHist ? ' is-open' : ''}`} onClick={() => setShowHist((v) => !v)} aria-expanded={showHist}>
-            <span><strong>Riwayat lengkap</strong><span className="mute">{closedT.length} trade{flowsAll.length ? ` · ${flowsAll.length} transfer` : ''}</span></span>
+            <span><strong>Riwayat lengkap</strong><span className="mute">{closedT.length} trade{flowsAll.length ? ` · ${flowsAll.length} deposit/withdraw` : ''}</span></span>
             <span className="chev" aria-hidden>⌄</span>
           </button>
           {showHist ? <div className="appear" style={{ marginTop: 10 }}>
-            {flowsAll.length ? <div style={{ marginBottom: 10 }}><Seg full options={[['all', 'Semua'], ['pos', 'Posisi'], ['cf', 'Transfer']] as const} value={histKind} onChange={setHistKind} label="Jenis riwayat" /></div> : null}
             <div className="hcards">{histItems.map((x) => x.el)}</div>
           </div> : null}
         </> : <p className="empty-inline">Belum ada trade.</p>}
