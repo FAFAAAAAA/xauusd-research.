@@ -101,6 +101,18 @@ export default function TradePage() {
   const closedT = j.trades.filter((t) => t.result !== 'open' && inMarket(t));
   const stratOf = (label: string) => (/^v1 ?snr|snr-sell/i.test(label) ? 'snr' : /^v[12] ?alt|alt-breakdown/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
+  const tradeRow = (t: JournalTrade) => (
+    <button key={t.id} className="item btnrow" onClick={() => setDetail(t)}>
+      <span style={{ minWidth: 0 }}>
+        <span className="t" style={{ display: 'block' }}>{fmt(t.openedAt, tz)}</span>
+        <span className="d">{RESULT[t.result] ?? 'Manual'} · {NAME[t.strategy] ?? t.strategy}{coinOf(t) ? ` · ${coinOf(t)}` : ''}</span>
+      </span>
+      <span className="row" style={{ gap: 8, flex: 'none' }}>
+        <span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span>
+        <span className={`num ${tone(t.pnl)}`} style={{ fontWeight: 600, minWidth: 72, textAlign: 'right' }}>{money(t.pnl)}</span>
+      </span>
+    </button>
+  );
   return (
     <div className="stack">
       <PageHead title="Trade"
@@ -110,7 +122,7 @@ export default function TradePage() {
       <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz}
         fallbackStart={market === 'crypto' ? 199.02 : Number(d.risk?.capital) || 1000}
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
-        groupLabel={market === 'crypto' ? 'koin' : 'metode'} />
+        renderTrades={(list) => <div className="list">{list.map(tradeRow)}</div>} />
 
 
       {/* journal form (opens from a signal, the calculator, or the button above) */}
@@ -217,32 +229,12 @@ export default function TradePage() {
       </section>
 
       <section className="group">
-        <SecHead title="Riwayat" meta={`${closedT.length} total`} />
         {closedT.length ? <>
-          {/* up to 10 trades: shown directly; more: hidden behind the button like the backtest list */}
-          {closedT.length > 10 ? <div className="row">
-            <button className="btn sm" onClick={() => setShowHist((v) => !v)}>{showHist ? 'Sembunyikan trade' : `Tampilkan trade (${closedT.length})`}</button>
-          </div> : null}
-          {showHist || closedT.length <= 10 ? <>
-            <div className="list" style={{ marginTop: 8 }}>
-              {closedT.slice(0, histLimit).map((t) => (
-                <button key={t.id} className="item btnrow" onClick={() => setDetail(t)}>
-                  <span style={{ minWidth: 0 }}>
-                    <span className="t" style={{ display: 'block' }}>{fmt(t.openedAt, tz)}</span>
-                    <span className="d">{RESULT[t.result] ?? 'Manual'} · {NAME[t.strategy] ?? t.strategy}{coinOf(t) ? ` · ${coinOf(t)}` : ''}</span>
-                  </span>
-                  <span className="row" style={{ gap: 8, flex: 'none' }}>
-                    <span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span>
-                    <span className={`num ${tone(t.pnl)}`} style={{ fontWeight: 600, minWidth: 72, textAlign: 'right' }}>{money(t.pnl)}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="row" style={{ marginTop: 12 }}>
-              {closedT.length > histLimit ? <button className="btn sm" onClick={() => setHistLimit((n) => n + 30)}>Tampilkan lebih banyak</button> : null}
-              {closedT.length > histLimit ? <button className="btn sm" onClick={() => setHistLimit(closedT.length)}>Tampilkan semua</button> : null}
-            </div>
-          </> : null}
+          <button className={`hist-toggle${showHist ? ' is-open' : ''}`} onClick={() => setShowHist((v) => !v)} aria-expanded={showHist}>
+            <span><strong>Riwayat lengkap</strong><span className="mute">{closedT.length} trade</span></span>
+            <span className="chev" aria-hidden>⌄</span>
+          </button>
+          {showHist ? <div className="list appear" style={{ marginTop: 10 }}>{closedT.map(tradeRow)}</div> : null}
         </> : <p className="empty-inline">Belum ada trade.</p>}
         {detail ? (
           <Sheet title={`${detail.side} · ${fmt(detail.openedAt, tz)}`} onClose={() => setDetail(null)}>

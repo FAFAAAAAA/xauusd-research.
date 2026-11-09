@@ -16,9 +16,9 @@ const dur = (ms: number) => { const h = ms / 3_600_000; return h < 1 ? `${Math.r
 const key = (m: string) => `start_balance_${m}`;
 const readStart = (m: string, fallback: number) => { try { const v = Number(localStorage.getItem(key(m))); return v > 0 ? v : fallback; } catch { return fallback; } };
 
-export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, groupLabel }: {
+export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades }: {
   trades: JournalTrade[]; market: string; tz: string; fallbackStart: number;
-  groupOf: (t: JournalTrade) => string; groupLabel: string;
+  groupOf: (t: JournalTrade) => string; groupLabel?: string; renderTrades: (list: JournalTrade[]) => React.ReactNode;
 }) {
   const [start, setStart] = useState(fallbackStart);
   useEffect(() => { setStart(readStart(market, fallbackStart)); }, [market, fallbackStart]);
@@ -105,7 +105,10 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <Metric label="Drawdown terdalam" value={s.dd ? `−$${s.dd.toFixed(2)}` : '$0.00'} tone={s.dd ? 'neg' : ''} hint={s.dd ? `${s.ddPct.toFixed(1)}% dari puncak` : undefined} />
           <Metric label="Trade terbaik" value={s.best == null ? '—' : usd(s.best)} tone={tone(s.best ?? 0)} />
           <Metric label="Trade terburuk" value={s.worst == null ? '—' : usd(s.worst)} tone={tone(s.worst ?? 0)} />
-          <Metric label="Lama posisi" value={s.hold != null ? dur(s.hold) : '—'} hint={`beruntun terpanjang: ${s.bestW} menang · ${s.bestL} kalah`} />
+          <Metric label="Lama posisi" value={s.hold != null ? dur(s.hold) : '—'} hint="rata-rata" />
+          <Metric label="Menang beruntun terpanjang" value={`${s.bestW}×`} tone={s.bestW ? 'pos' : ''} />
+          <Metric label="Kalah beruntun terpanjang" value={`${s.bestL}×`} tone={s.bestL ? 'neg' : ''} />
+          <Metric label="Beruntun sekarang" value={s.cur > 0 ? `${s.cur}× menang` : s.cur < 0 ? `${-s.cur}× kalah` : '—'} tone={s.cur > 0 ? 'pos' : s.cur < 0 ? 'neg' : ''} />
         </Metrics>
 
         <section className="group">
@@ -115,7 +118,8 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
 
 
         <section className="group">
-          <PnlCalendar trades={s.closed} tz={tz} simple />
+          <PnlCalendar trades={s.closed} tz={tz} simple
+            renderSelection={(match) => renderTrades(trades.filter((t) => t.result !== 'open' && t.pnl != null && match(t.openedAt)).sort((a, b) => b.openedAt - a.openedAt))} />
         </section>
       </> : <p className="empty-inline">Belum ada trade selesai di pasar ini.</p>}
 

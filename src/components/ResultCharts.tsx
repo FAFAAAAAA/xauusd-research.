@@ -262,7 +262,9 @@ const compact = (n: number, dollar = true) => {
   return `${Math.round(a) === 0 ? '' : n > 0 ? '+' : '−'}${dollar ? '$' : ''}${v}`;
 };
 
-export function PnlCalendar({ trades, tz, simple = false }: { trades: ClosedTrade[]; tz: string; simple?: boolean }) {
+/** simple: compact header (Trade page). renderSelection: what to show for a tapped day/week/month (gets a matcher for entry times). */
+export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { trades: ClosedTrade[]; tz: string; simple?: boolean;
+  renderSelection?: (match: (entryMs: number) => boolean, label: string) => React.ReactNode }) {
   const [tab, setTab] = useState<CalTab>('day');
   const [metric, setMetric] = useState<Metric>('pnl');
   const [sel, setSel] = useState<string | null>(null);
@@ -397,7 +399,16 @@ export function PnlCalendar({ trades, tz, simple = false }: { trades: ClosedTrad
         ))}
       </div>
 
-      {selected ? (
+      {selected && renderSelection ? (
+        <div className="cal-pick">
+          <div className="cal-pick-head"><strong>{selected.label}</strong>{selected.cell ? <span className={selected.cell.pnl > 0 ? 'pos' : selected.cell.pnl < 0 ? 'neg' : 'mute'}>{`${selected.cell.pnl < 0 ? '−' : selected.cell.pnl > 0 ? '+' : ''}$${Math.abs(selected.cell.pnl).toFixed(2)}`}</span> : null}</div>
+          {selected.cell ? renderSelection((ms) => {
+            const d = wall(ms, tz), y = d.getUTCFullYear(), m = d.getUTCMonth(), dd = d.getUTCDate();
+            const k = tab === 'day' ? `${y}-${m}-${dd}` : tab === 'week' ? String(Date.UTC(y, m, dd - ((d.getUTCDay() + 6) % 7))) : `${y}-${m}`;
+            return k === sel;
+          }, selected.label) : <p className="mute small" style={{ margin: 0 }}>Tidak ada trade.</p>}
+        </div>
+      ) : selected ? (
         <div className="notice">
           <strong>{selected.label}</strong><br />
           {selected.cell

@@ -692,3 +692,15 @@ body::before { display: none; }
 .perf-facts > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .perf-facts .k { font-size: 11px; color: var(--mute); }
 .perf-facts strong { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* calendar: trades of the tapped day/week/month */
+.cal-pick { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--sunk); }
+.cal-pick-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 14px; }
+.cal-pick-head span { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* full history: one tap opens everything */
+.hist-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; transition: background .2s ease; }
+.hist-toggle:hover { background: var(--hover); }
+.hist-toggle > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.hist-toggle strong { font-size: 16px; letter-spacing: -.02em; }
+.hist-toggle .mute { font-size: 13px; }
+.hist-toggle .chev { font-size: 20px; line-height: 1; transition: transform .25s ease; color: var(--mute); }
+.hist-toggle.is-open .chev { transform: rotate(180deg); }
