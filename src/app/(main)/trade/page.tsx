@@ -103,7 +103,7 @@ export default function TradePage() {
   return (
     <div className="stack">
       <PageHead title="Trade"
-        actions={!draft ? <button className="btn sm primary" onClick={() => openDraft({ strategy: JOURNAL_KEYS[market][0] })}>+ Catat trade</button> : null} />
+ />
       <MarketSwitch value={market} onChange={(m) => { setMarket(m); setDraft(null); }} />
 
       <div className="riskbar">

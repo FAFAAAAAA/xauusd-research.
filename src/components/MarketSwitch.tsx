@@ -5,13 +5,13 @@ import { MARKETS, type Market } from '@/lib/core/markets';
 
 /* Forex | Crypto switch shared by every page. The choice is a per-browser convenience (localStorage, guarded),
  * kept in sync between components on the same page through a window event. */
-const KEY = 'market';
+const KEY = 'market_v2';   // new key (9 Nov 2026) so every browser starts on Crypto once
 const EVT = 'market-change';
 function read(): Market {
-  try { const v = localStorage.getItem(KEY); return v === 'crypto' ? 'crypto' : 'forex'; } catch { return 'forex'; }
+  try { const v = localStorage.getItem(KEY); return v === 'forex' ? 'forex' : 'crypto'; } catch { return 'crypto'; }
 }
 export function useMarket(): [Market, (m: Market) => void] {
-  const [m, setM] = useState<Market>('forex');
+  const [m, setM] = useState<Market>('crypto');
   useEffect(() => {
     setM(read());
     const on = () => setM(read());
