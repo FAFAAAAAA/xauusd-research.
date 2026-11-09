@@ -97,16 +97,21 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   return (
     <div className="stack td">
       <section className="td-hero">
-        <span className="td-k">Saldo</span>
+        <div className="td-head">
+          <span className="td-k">Saldo</span>
+          <span className="td-start">
+            <button className="td-startbtn" onClick={() => setEdit(String(start))} aria-label="Ubah saldo awal">{usd(start, false)}</button>
+            {live ? <span className="td-ago">{ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}</span> : null}
+          </span>
+        </div>
         <span className="td-bal"><CountUp value={bal} format={(n) => usd(n, false)} /></span>
         <span className="td-row">
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
           <span className={tone(profit)}>{usd(profit)}</span>
-          <span className="td-sub">dari saldo awal {usd(start, false)} · <button className="td-link" onClick={() => setEdit(String(start))}>ubah</button></span>
         </span>
         {flows.length ? <span className="td-sub">Dana {netIn >= 0 ? 'masuk' : 'keluar'} bersih <span className={tone(netIn)}>{usd(netIn)}</span> · tidak dihitung profit · <button className="td-link" onClick={() => setShowFlows(true)}>lihat {all.length}</button></span>
           : all.length ? <span className="td-sub">Deposit & penarikan · <button className="td-link" onClick={() => setShowFlows(true)}>lihat {all.length}</button></span> : null}
-        {live ? <span className="td-sub">{market === 'crypto' ? 'Saldo Binance Futures' : 'Saldo MT5'} · {ago < 1 ? 'baru saja' : ago < 60 ? `${ago} mnt lalu` : `${Math.round(ago / 60)} jam lalu`}{Math.abs(live.upnl) >= 0.01 ? <> · posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></> : null}</span> : null}
+        {live && Math.abs(live.upnl) >= 0.01 ? <span className="td-sub">Posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></span> : null}
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
           <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}>{usd(s.week)}</strong></span>

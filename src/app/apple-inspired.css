@@ -825,3 +825,9 @@ body::before { display: none; }
 .cf-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .cf-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cf-row.cf-old { opacity: .55; }
+
+/* hero: starting balance top-right (tap to edit) + last update minutes under it */
+.td-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.td-start { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.td-startbtn { background: var(--fill, rgba(127,127,127,.12)); border: 0; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; font-weight: 600; color: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.td-ago { font-size: 12px; opacity: .55; }
