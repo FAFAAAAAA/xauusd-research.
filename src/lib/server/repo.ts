@@ -682,19 +682,41 @@ export async function listTrades(db: Db, backtestSessionId: string | string[] | 
      from simulated_trades where ($1::uuid[] is null or backtest_session_id = any($1::uuid[])) order by entry_time asc limit 50000`,
     [ids]);
 }
+/**
+ * Backtest session list with trade count / pnl / wins / losses per session.
+ * The totals of a COMPLETED session never change, so they are cached in app_settings ('session_stats') and only new or running
+ * sessions are counted (9 Nov 2026: counting every simulated trade on each page load made the site slow as backtests piled up).
+ */
+type SessionStats = [number, number, number, number];
 export async function listBacktestSessions(db: Db) {
-  return db.query<Record<string, unknown>>(
+  const rows = await db.query<Record<string, unknown>>(
     `select b.id, b.name, b.confirmation_profile, b.status, b.timeframe, b.period_start, b.period_end, b.is_test, b.cost_config,
             extract(epoch from b.created_at)*1000 as created_ms,
-            sv.strategy_key || ' ' || sv.version as strategy, i.symbol,
-            coalesce(a.trades, 0) as trades, coalesce(a.pnl, 0) as pnl, coalesce(a.wins, 0) as wins, coalesce(a.losses, 0) as losses
+            sv.strategy_key || ' ' || sv.version as strategy, i.symbol
      from backtest_sessions b
      left join strategy_versions sv on sv.id=b.strategy_version_id
      left join instruments i on i.id = b.instrument_id
-     left join (select backtest_session_id, count(*)::int as trades, coalesce(sum(pnl), 0)::float8 as pnl,
-                       count(*) filter (where pnl > 0)::int as wins, count(*) filter (where pnl < 0)::int as losses
-                from simulated_trades group by backtest_session_id) a on a.backtest_session_id = b.id
      order by b.created_at desc`);
+  const cache = await getAppSetting<Record<string, SessionStats>>(db, 'session_stats', {});
+  const need = rows.filter((r) => !cache[String(r.id)] || r.status !== 'completed').map((r) => String(r.id));
+  const fresh: Record<string, SessionStats> = {};
+  if (need.length) {
+    const agg = await db.query<Record<string, unknown>>(
+      `select backtest_session_id as id, count(*)::int as trades, coalesce(sum(pnl), 0)::float8 as pnl,
+              count(*) filter (where pnl > 0)::int as wins, count(*) filter (where pnl < 0)::int as losses
+       from simulated_trades where backtest_session_id = any($1::uuid[]) group by backtest_session_id`, [need]);
+    for (const a of agg) fresh[String(a.id)] = [Number(a.trades), Number(a.pnl), Number(a.wins), Number(a.losses)];
+  }
+  const keep: Record<string, SessionStats> = {};
+  let changed = false;
+  const out = rows.map((r) => {
+    const id = String(r.id);
+    const st = fresh[id] ?? cache[id] ?? [0, 0, 0, 0];
+    if (r.status === 'completed') { keep[id] = st; if (!cache[id] || cache[id].join() !== st.join()) changed = true; }
+    return { ...r, trades: st[0], pnl: st[1], wins: st[2], losses: st[3] };
+  });
+  if (changed || Object.keys(cache).length !== Object.keys(keep).length) await setAppSetting(db, 'session_stats', keep);
+  return out;
 }
 /** Deletes backtest sessions with their trades and the signal events they produced. Returns deleted ids. */
 export async function deleteBacktestSessions(db: Db, ids: string[]): Promise<string[]> {
