@@ -512,4 +512,8 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
 - Perbaikan bot (9 Nov 2026): posisi baru dianggap tutup hanya bila ada transaksi BUY penutup (qty penuh) di riwayat trade. Sebelumnya jawaban
   daftar posisi yang kosong/terpotong membuat bot mengira WLD sudah tutup ("Ditutup manual", harga keluar = harga masuk) dan membatalkan SL/TP
   posisi yang masih terbuka. Sekarang SL/TP tidak disentuh, dan bila posisi tidak terlihat tanpa transaksi penutup bot mengirim peringatan.
+- Perbaikan bot (9 Nov 2026, siang): harga masuk = harga isi asli (status order ditanya ulang bila jawaban order belum terisi); bila harga isi
+  lebih jauh dari SL daripada harga sinyal, kelebihan jumlah dibeli kembali (reduceOnly) supaya rugi di SL ≈ risiko rencana (SAND −12,16 = −1,2R
+  dengan versi lama). Laporan tutup membawa harga masuk rata-rata dan jam tutup dari Binance; website memakai harga masuk itu. Koreksi sekali
+  jalan untuk FIL/WLD/SAND (nilai dari Riwayat Posisi Binance) ada di /api/journal; tombol "Koreksi hasil" di Trade → Riwayat.
 

@@ -293,6 +293,14 @@ class Bot:
         if not filled > 0: filled = qty
         if not (sl > entry):
             log.warning('%s: harga isi %.8f sudah di atas SL %.8f — posisi ditutup lagi', sym, entry, sl); self.close_now(sym, filled); return
+        # risk was sized on the signal close; if the real fill is further from the SL, buy back the excess so the loss at SL stays ≈ the planned risk
+        want = step_floor(risk / (sl - entry), f['step']); trim_id = None
+        if filled - want >= f['minQty'] and filled * (sl - entry) > 1.05 * risk:
+            try:
+                trim_id = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'BUY', 'type': 'MARKET', 'quantity': fmt(filled - want, f['step']), 'reduceOnly': 'true'}).get('orderId')
+                log.info('%s: harga isi %.8f (sinyal %.8f) — jumlah dikurangi %s → %s supaya rugi di SL tetap ±%.2f USDT', sym, entry, close, fmt(filled, f['step']), fmt(want, f['step']), risk)
+                filled = want
+            except RuntimeError as e: log.warning('%s: gagal mengurangi jumlah: %s', sym, e)
         tp = entry - RR * (sl - entry)
         sl_r = math.ceil(sl / f['tick'] - 1e-9) * f['tick']; tp_r = math.floor(tp / f['tick'] + 1e-9) * f['tick']
         try:
@@ -306,7 +314,7 @@ class Bot:
             self.close_now(sym, filled); return
         t = int(time.time())
         ticket = f"{sym}-{o['orderId']}"
-        self.st['positions'][sym] = {'ticket': ticket, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
+        self.st['positions'][sym] = {'ticket': ticket, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'trim_id': trim_id, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
         save_state(self.st)
         log.info('SELL %s qty %s @ %s | SL %s | TP %s', sym, filled, entry, fmt(sl_r, f['tick']), fmt(tp_r, f['tick']))
         report(self.cfg, {'event': 'open', 'ticket': ticket, 'symbol': sym, 'side': 'SELL', 'price': entry, 'sl': sl_r, 'tp': tp_r, 'lot': filled, 'time': t})
@@ -331,7 +339,7 @@ class Bot:
             try: trades = self.api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': p['opened'] * 1000 - 60000}, signed=True)
             except RuntimeError as e:
                 log.warning('%s: riwayat trade tidak terbaca (%s) — cek ulang nanti.', sym, e); save_state(self.st); continue
-            buys = [x for x in trades if x['side'] == 'BUY']
+            buys = [x for x in trades if x['side'] == 'BUY' and x.get('orderId') != p.get('trim_id')]   # not the size trim right after entry
             sells = [x for x in trades if x['side'] == 'SELL']
             if sells:                                                # real average entry (Binance "Harga Masuk Rata-Rata")
                 qs = sum(float(x['qty']) for x in sells)
