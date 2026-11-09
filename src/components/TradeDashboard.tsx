@@ -103,18 +103,10 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <Metric label="Rata-rata menang" value={s.avgW == null ? '—' : usd(s.avgW)} tone="pos" />
           <Metric label="Rata-rata kalah" value={s.avgL == null ? '—' : usd(s.avgL)} tone="neg" />
           <Metric label="Drawdown terdalam" value={s.dd ? `−$${s.dd.toFixed(2)}` : '$0.00'} tone={s.dd ? 'neg' : ''} hint={s.dd ? `${s.ddPct.toFixed(1)}% dari puncak` : undefined} />
+          <Metric label="Trade terbaik" value={s.best == null ? '—' : usd(s.best)} tone={tone(s.best ?? 0)} />
+          <Metric label="Trade terburuk" value={s.worst == null ? '—' : usd(s.worst)} tone={tone(s.worst ?? 0)} />
+          <Metric label="Lama posisi" value={s.hold != null ? dur(s.hold) : '—'} hint={`beruntun terpanjang: ${s.bestW} menang · ${s.bestL} kalah`} />
         </Metrics>
-
-        <section className="group">
-          <SecHead title="Detail" />
-          <dl className="kv td-kv">
-            <dt>Trade terbaik</dt><dd className={tone(s.best ?? 0)}>{s.best == null ? '—' : usd(s.best)}</dd>
-            <dt>Trade terburuk</dt><dd className={tone(s.worst ?? 0)}>{s.worst == null ? '—' : usd(s.worst)}</dd>
-            <dt>Sekarang</dt><dd>{s.cur > 0 ? `${s.cur}× menang beruntun` : s.cur < 0 ? `${-s.cur}× kalah beruntun` : '—'}</dd>
-            <dt>Beruntun terpanjang</dt><dd>{s.bestW}× menang · {s.bestL}× kalah</dd>
-            <dt>Lama posisi rata-rata</dt><dd>{s.hold != null ? dur(s.hold) : '—'}</dd>
-          </dl>
-        </section>
 
         <section className="group">
           <SecHead title="Pertumbuhan saldo" />
@@ -123,7 +115,6 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
 
 
         <section className="group">
-          <SecHead title="Kalender PnL" />
           <PnlCalendar trades={s.closed} tz={tz} simple />
         </section>
       </> : <p className="empty-inline">Belum ada trade selesai di pasar ini.</p>}

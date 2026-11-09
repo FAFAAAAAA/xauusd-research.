@@ -112,12 +112,6 @@ export default function TradePage() {
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
         groupLabel={market === 'crypto' ? 'koin' : 'metode'} />
 
-      <div className="riskbar">
-        <span>Modal <strong>${d.risk.capital}</strong></span>
-        <span>Risiko <strong>{d.risk.riskPct}%</strong></span>
-        <span><strong>${riskUsd.toFixed(2)}</strong> per trade</span>
-        <Link href="/calculator">Ubah</Link>
-      </div>
 
       {/* journal form (opens from a signal, the calculator, or the button above) */}
       {draft ? (
@@ -197,25 +191,28 @@ export default function TradePage() {
       ) : null}
 
       <section className="group">
-        <SecHead title="Performa" />
-        <div className="tablewrap">
-          <table className="num-r">
-            <thead><tr><th>Metode</th><th>Selesai</th><th>Win</th><th>Win backtest</th><th>Hasil</th><th>Rata-rata</th></tr></thead>
-            <tbody>
-              {JOURNAL_KEYS[market].map((k) => {
-                const s = j.stats[k];
-                if (!s) return null;
-                return (
-                  <tr key={k} className={k === 'all' ? 'total' : undefined}>
-                    <td>{NAME[k] ?? k}</td><td>{s.closed}</td>
-                    <td>{s.winRate == null ? '—' : `${(s.winRate * 100).toFixed(0)}%`}</td>
-                    <td className="mute">{BT[k] ? `${(BT[k].win * 100).toFixed(0)}%` : '—'}</td>
-                    <td className={tone(s.pnl)}>{money(s.pnl)}</td><td className={tone(s.closed ? s.pnl / s.closed : null)}>{s.closed ? money(s.pnl / s.closed) : '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <SecHead title="Performa per metode" />
+        <div className="perf-cards">
+          {JOURNAL_KEYS[market].map((k) => {
+            const s = j.stats[k];
+            if (!s) return null;
+            const win = s.winRate == null ? null : s.winRate * 100, bt = BT[k] ? BT[k].win * 100 : null;
+            return (
+              <div key={k} className="perf-card">
+                <div className="perf-head"><span className="perf-name">{NAME[k] ?? k}</span><span className={`perf-pnl ${tone(s.pnl)}`}>{money(s.pnl)}</span></div>
+                <div className="perf-bar" aria-label={`Win ${win == null ? '—' : win.toFixed(0) + '%'}, backtest ${bt == null ? '—' : bt.toFixed(0) + '%'}`}>
+                  <span className="fill" style={{ width: `${Math.min(100, win ?? 0)}%` }} />
+                  {bt != null ? <span className="mark" style={{ left: `${bt}%` }} /> : null}
+                </div>
+                <div className="perf-facts">
+                  <span><span className="k">Win</span><strong>{win == null ? '—' : `${win.toFixed(0)}%`}</strong></span>
+                  <span><span className="k">Backtest</span><strong>{bt == null ? '—' : `${bt.toFixed(0)}%`}</strong></span>
+                  <span><span className="k">Trade</span><strong>{s.closed}</strong></span>
+                  <span><span className="k">Rata-rata</span><strong className={tone(s.closed ? s.pnl / s.closed : null)}>{s.closed ? money(s.pnl / s.closed) : '—'}</strong></span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 

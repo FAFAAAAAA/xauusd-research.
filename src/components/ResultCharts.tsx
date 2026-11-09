@@ -346,10 +346,11 @@ export function PnlCalendar({ trades, tz, simple = false }: { trades: ClosedTrad
   return (
     <div className="stack">
       {simple ? <>
+        <div className="cal-top"><h2>Kalender PnL</h2><strong className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : 'mute'}>{`${tot.pnl < 0 ? '−' : tot.pnl > 0 ? '+' : ''}$${Math.abs(tot.pnl).toFixed(2)}`}</strong></div>
         <Seg full label="Periode" options={[['day', 'Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const} value={tab} onChange={(k) => { setTab(k as CalTab); setSel(null); }} />
         <div className="cal-nav">
           <button className="cal-arrow" onClick={() => shift(-1)} disabled={!canPrev} aria-label="Sebelumnya">‹</button>
-          <div className="cal-title"><strong>{heading}</strong><span className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : 'mute'}>{`${tot.pnl < 0 ? '−' : tot.pnl > 0 ? '+' : ''}$${Math.abs(tot.pnl).toFixed(2)}`}</span></div>
+          <div className="cal-title"><strong>{heading}</strong></div>
           <button className="cal-arrow" onClick={() => shift(1)} disabled={!canNext} aria-label="Berikutnya">›</button>
         </div>
       </> : <>

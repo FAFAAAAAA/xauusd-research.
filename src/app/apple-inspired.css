@@ -676,3 +676,19 @@ body::before { display: none; }
 .cal-title { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
 .cal-title strong { font-size: 17px; letter-spacing: -.02em; }
 .cal-title span { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.cal-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.cal-top h2 { margin: 0; }
+.cal-top strong { font-size: 17px; font-variant-numeric: tabular-nums; }
+/* Trade: performance per method as cards */
+.perf-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.perf-card { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); }
+.perf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.perf-name { font-size: 16px; font-weight: 650; letter-spacing: -.02em; }
+.perf-pnl { font-size: 20px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.perf-bar { position: relative; height: 8px; border-radius: 999px; background: var(--sunk); }
+.perf-bar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--ink); opacity: .8; }
+.perf-bar .mark { position: absolute; top: -3px; width: 2px; height: 14px; border-radius: 1px; background: var(--mute); transform: translateX(-1px); }
+.perf-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.perf-facts > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.perf-facts .k { font-size: 11px; color: var(--mute); }
+.perf-facts strong { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
