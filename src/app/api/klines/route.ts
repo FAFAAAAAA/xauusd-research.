@@ -4,7 +4,7 @@ import { HttpError } from '@/lib/server/db';
 export const dynamic = 'force-dynamic';
 
 /** Binance candles for the live-trade chart (Trade → Riwayat). Public market data; spot mirror first (not region-blocked), futures as fallback. */
-const IV = new Set(['5m', '15m', '1h', '4h']);
+const IV = new Set(['5m', '15m', '1h', '4h', '1d']);
 export async function GET(req: Request) {
   return api(async () => {
     const u = new URL(req.url);

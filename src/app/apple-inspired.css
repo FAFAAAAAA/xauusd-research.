@@ -801,3 +801,16 @@ body::before { display: none; }
 .hc-mid strong { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hc-mid > span:first-child strong { font-size: 19px; letter-spacing: -.02em; }
 .hc-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; font-size: 12px; color: var(--mute); padding-top: 10px; border-top: 1px solid var(--line); }
+/* compact P&L calendar (Trade + Backtest): square colour cells; day cells show only the date, the amount shows when tapped */
+.cal-simple .cal { gap: 6px; }
+.cal-simple .cal.dow span { font-size: 11px; letter-spacing: .02em; }
+.cal-simple .cal.day .cell { aspect-ratio: 1; min-height: 0; padding: 0; border-radius: 12px; background: var(--sunk); }
+.cal-simple .cal.week .cell, .cal-simple .cal.month .cell { min-height: 58px; border-radius: 14px; background: var(--sunk); }
+.cal-simple .cal .cell.empty .n { color: var(--mute); font-weight: 500; opacity: .7; }
+.cal-simple .cal .cell.up { background: var(--up); } .cal-simple .cal .cell.up .n, .cal-simple .cal .cell.up .v { color: #fff; }
+.cal-simple .cal .cell.down { background: var(--down); } .cal-simple .cal .cell.down .n, .cal-simple .cal .cell.down .v { color: #fff; }
+.cal-simple .cal.day .cell .v { display: none; }
+.cal-simple .cal.day .cell .n { font-size: 14px; font-weight: 650; }
+.cal-simple .cal.week .cell .n, .cal-simple .cal.month .cell .n { font-size: 12px; }
+.cal-simple .cal.week .cell .v, .cal-simple .cal.month .cell .v { font-size: 12px; }
+.cal-simple .cal .cell[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
