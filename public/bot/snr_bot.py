@@ -57,7 +57,8 @@ DEFAULT_CONFIG = {
     "max_buy_positions": 2,          # maks posisi BUY terbuka (backtest: 2)
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
     "max_loss_streak": 7,            # rem kalah beruntun: setelah N kali SL berturut-turut tidak buka posisi baru (0 = mati); lanjut lagi: python snr_bot.py --reset
-    "leverage": 5,                   # leverage per koin (hanya margin; risiko tetap dari jarak SL)
+    "leverage": 5,                   # leverage tetap per koin (dipakai hanya bila leverage_auto = false)
+    "leverage_auto": True,           # leverage per posisi = 0,5 / jarak SL (maks 20x): margin ≈ 2x risiko, likuidasi ±2x lebih jauh dari SL
     "margin_isolated": True,         # true = margin Isolated per posisi (lebih aman), false = Cross
     "daily_summary": True,           # ringkasan ke Telegram
     "summary_hours_kst": [8, 23],    # jam ringkasan (waktu Korea): 08:00 pagi dan 23:00 malam
@@ -319,8 +320,14 @@ class Bot:
             try: self.api.post('/fapi/v1/marginType', {'symbol': sym, 'marginType': 'ISOLATED'})
             except RuntimeError as e:
                 if '-4046' not in str(e): log.warning('%s: margin isolated: %s', sym, e)   # -4046 = already isolated
-        try: self.api.post('/fapi/v1/leverage', {'symbol': sym, 'leverage': int(self.cfg['leverage'])})
-        except RuntimeError as e: log.warning('%s: leverage: %s', sym, e)
+        # leverage only sets the margin; the risk comes from the SL distance. Auto: liquidation ≈ 2x further than the SL, margin ≈ 2x the risk.
+        if self.cfg.get('leverage_auto', True):
+            lev = int(max(2, min(20, 0.5 / (s * (close - sl) / close))))
+            tries = [lev] + [x for x in (10, 5, 3, 2) if x < lev]
+        else: tries = [int(self.cfg['leverage'])]
+        for lv in tries:
+            try: self.api.post('/fapi/v1/leverage', {'symbol': sym, 'leverage': lv}); break
+            except RuntimeError as e: log.warning('%s: leverage %dx: %s', sym, lv, e)
         o = self.api.post('/fapi/v1/order', {'symbol': sym, 'side': side, 'type': 'MARKET', 'quantity': fmt(qty, f['step']), 'newOrderRespType': 'RESULT'})
         entry = float(o.get('avgPrice') or 0)
         filled = float(o.get('executedQty') or 0)
@@ -459,9 +466,9 @@ class Bot:
         mx = int(self.cfg.get('max_loss_streak') or 0)
         if mx > 0: log.info('Rem kalah beruntun: berhenti buka posisi baru setelah %d SL berturut-turut (sekarang %d)', mx, self.st['loss_streak'])
         if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
-        log.info('Mode: %s · risiko %s · maks %d posisi SELL + %d BUY · leverage %dx', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
+        log.info('Mode: %s · risiko %s · maks %d posisi SELL + %d BUY · leverage %s', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'],
-                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, self.cfg['leverage'])
+                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
         last_sync = time.time()
         notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY.")
         while True:

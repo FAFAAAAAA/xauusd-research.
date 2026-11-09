@@ -522,4 +522,7 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
   SOL 1,30 BNB 1,31 XRP 1,20 DOGE 1,25 ADA 1,23, AVAX/LINK/LTC/BCH/DOT rugi. Gabungan SNR + BUY 6 koin (R, 2020–2026): PF 1,36, +588R (SNR saja +521R),
   DD 27R (28R), bulan rugi 29% (32%); 5% compounding rem $100: kena rem 21% (SNR saja 30%) dengan urutan asli. Sinyal BUY bot = backtest
   (SOL 185/185, BNB 237/237). Laporan BUY ke website: "strategy":"btc" (jurnal v1 BTC, tab Crypto).
+- Leverage otomatis (9 Nov 2026, `leverage_auto`, bawaan true): leverage per posisi = 0,5 / jarak SL (maks 20×, turun ke 10/5/3/2 bila ditolak),
+  jadi margin ≈ 2× risiko (±$20 untuk risiko $10) dan likuidasi ±2× lebih jauh dari SL. Dengan leverage tetap 5× margin per posisi bisa $80–150,
+  sehingga dengan saldo ±$200 posisi ke-2/ke-3 bisa ditolak karena margin kurang.
 
