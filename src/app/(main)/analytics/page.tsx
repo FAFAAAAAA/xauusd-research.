@@ -257,24 +257,31 @@ export default function Analytics() {
                 {detail ? <TradeDetail d={detail} tz={tz} onClose={() => setDetail(null)} /> : null}
 
                 <section className="group">
-                  <SecHead title="Daftar trade" meta={`${d.trades.length} total`} />
-                  <div className="row">
-                    <button className="btn sm" onClick={() => setShowTrades((v) => !v)}>{showTrades ? 'Sembunyikan trade' : `Tampilkan trade (${d.trades.length})`}</button>
-                  </div>
+                  <button className={`hist-toggle${showTrades ? ' is-open' : ''}`} onClick={() => setShowTrades((v) => !v)} aria-expanded={showTrades}>
+                    <span><strong>Riwayat</strong></span>
+                    <span className="chev" aria-hidden>⌄</span>
+                  </button>
                   {showTrades ? <>
-                  <div className="list" style={{ marginTop: 8 }}>
-                    {d.trades.slice(-tradeLimit).reverse().map((t: any) => (
-                      <button key={t.id} className="item btnrow" onClick={() => open(t.id)}>
-                        <span style={{ minWidth: 0 }}>
-                          <span className="t" style={{ display: 'block' }}>{fmt(Number(t.entry_ms), tz)}</span>
-                          <span className="d">{EXIT[t.exit_reason] ?? t.exit_reason}</span>
-                        </span>
-                        <span className="row" style={{ gap: 8, flex: 'none' }}>
-                          <span className={`tag ${t.side === 'long' ? 'buy' : 'sell'}`}>{t.side === 'long' ? 'BUY' : 'SELL'}</span>
-                          <span className={`num ${tone(t.pnl)}`} style={{ fontWeight: 600, minWidth: 72, textAlign: 'right' }}>{money(t.pnl)}</span>
-                        </span>
-                      </button>
-                    ))}
+                  <div className="hcards appear" style={{ marginTop: 10 }}>
+                    {d.trades.slice(-tradeLimit).reverse().map((t: any) => {
+                      const res = t.exit_reason === 'tp' || t.exit_reason === 'ambiguous_best' ? 'tp' : t.exit_reason === 'sl' || t.exit_reason === 'ambiguous_worst' ? 'sl' : '';
+                      const held = t.exit_ms ? Math.max(0, Number(t.exit_ms) - Number(t.entry_ms)) : null;
+                      return (
+                        <button key={t.id} className="hcard" onClick={() => open(t.id)}>
+                          <span className="hc-top">
+                            <span className={`hc-side ${t.side === 'long' ? 'b' : 's'}`}>{t.side === 'long' ? 'B' : 'S'}</span>
+                            <strong className="hc-name">{pairLabel}</strong>
+                            <span className={`hc-res ${res}`}>{res ? res.toUpperCase() : (EXIT[t.exit_reason] ?? t.exit_reason)}</span>
+                          </span>
+                          <span className="hc-mid">
+                            <span><span className="k">PNL</span><strong className={tone(t.pnl)}>{money(t.pnl)}</strong></span>
+                            <span><span className="k">R</span><strong className={tone(t.pnl_r)}>{t.pnl_r != null ? `${Number(t.pnl_r) > 0 ? '+' : ''}${Number(t.pnl_r).toFixed(2)}` : '—'}</strong></span>
+                            <span><span className="k">Masuk</span><strong>{fmt(Number(t.entry_ms), tz).slice(0, 10)}</strong></span>
+                          </span>
+                          {held != null ? <span className="hc-foot"><span>{held < 3_600_000 ? `${Math.round(held / 60_000)} mnt` : held < 172_800_000 ? `${Math.floor(held / 3_600_000)} jam ${Math.round(held % 3_600_000 / 60_000)} mnt` : `${(held / 86_400_000).toFixed(1)} hari`}</span></span> : null}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="row" style={{ marginTop: 12 }}>
                     {d.trades.length > tradeLimit ? <button className="btn sm" onClick={() => setTradeLimit((n) => n + 30)}>Tampilkan lebih banyak</button> : null}

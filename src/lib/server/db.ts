@@ -23,7 +23,7 @@ export async function getDb(): Promise<Db> {
     connectionString: url,
     max: Number(process.env.DATABASE_POOL_MAX ?? 3),
     ssl: url.includes('localhost') || url.includes('127.0.0.1') ? undefined : { rejectUnauthorized: false },
-    idleTimeoutMillis: 10_000,
+    idleTimeoutMillis: 60_000,   // keep warm connections between page loads (new TLS connections are the slow part)
     connectionTimeoutMillis: 8_000,
   });
   pool = {

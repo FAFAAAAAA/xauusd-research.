@@ -13,11 +13,11 @@ const TZS = ['UTC', 'America/New_York', 'Asia/Seoul'];
 export async function GET() {
   return api(async (db) => {
     const cfg = getConfig();
-    const tg = await resolveCredentials(db, cfg);
+    const [tg, v] = await Promise.all([resolveCredentials(db, cfg), repo.getAppSettings(db, ['display_timezone', 'replay_defaults', 'providers'])]);
     return {
-      timezone: await repo.getAppSetting(db, 'display_timezone', 'UTC'),
-      replay: await repo.getAppSetting(db, 'replay_defaults', {}),
-      providers: await repo.getAppSetting(db, 'providers', {}),
+      timezone: v.display_timezone ?? 'UTC',
+      replay: v.replay_defaults ?? {},
+      providers: v.providers ?? {},
       telegram: {
         tokenHint: tg.tokenSource === 'env' ? `${maskToken(cfg.telegramBotTokenEnv!)} (env)` : tg.settings.bot_token_hint,
         tokenSource: tg.tokenSource, chatId: tg.chatId, chatSource: tg.settings.chat_id ? 'database' : cfg.telegramChatIdEnv ? 'env' : null,

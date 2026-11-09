@@ -9,6 +9,11 @@ export async function getAppSetting<T>(db: Db, key: string, fallback: T): Promis
   const r = await db.query<{ value: T }>('select value from app_settings where key = $1', [key]);
   return r[0]?.value ?? fallback;
 }
+/** several settings in one round trip (missing keys are absent from the result) */
+export async function getAppSettings(db: Db, keys: string[]): Promise<Record<string, unknown>> {
+  const r = await db.query<{ key: string; value: unknown }>('select key, value from app_settings where key = any($1::text[])', [keys]);
+  return Object.fromEntries(r.map((x) => [x.key, x.value]));
+}
 export async function setAppSetting(db: Db, key: string, value: unknown) {
   await db.query(
     `insert into app_settings (key, value, updated_at) values ($1, $2::jsonb, now())

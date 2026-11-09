@@ -10,6 +10,7 @@ export const usd = (n: number, sign = true) => {
   return `${s}$${a >= 1000 ? Math.round(a).toLocaleString('en-US') : a.toFixed(2)}`;
 };
 const tone = (n: number | null | undefined) => (n == null ? '' : n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+const hrs = (ms: number) => (ms / 3_600_000).toFixed(1);   // hold tile: hours, number only
 const dur = (ms: number) => { const h = ms / 3_600_000; return h < 1 ? `${Math.round(h * 60)} mnt` : h < 48 ? `${h.toFixed(1)} jam` : `${(h / 24).toFixed(1)} hari`; };
 
 export function useResultStats(trades: readonly ClosedTrade[], start = 0) {
@@ -78,9 +79,9 @@ export function HoldTile({ s }: { s: ResultStats }) {
     <div className="b-tile b-wide">
       <span className="b-k">Lama posisi rata-rata</span>
       <div className="b-three">
-        <div className="b-stat"><span className="hc-res">ALL</span><span className="b-v">{s.hold != null ? dur(s.hold) : '—'}</span></div>
-        <div className="b-stat"><span className="hc-res tp">TP</span><span className="b-v">{s.holdW != null ? dur(s.holdW) : '—'}</span></div>
-        <div className="b-stat"><span className="hc-res sl">SL</span><span className="b-v">{s.holdL != null ? dur(s.holdL) : '—'}</span></div>
+        <div className="b-stat"><span className="hc-res">ALL</span><span className="b-v">{s.hold != null ? hrs(s.hold) : '—'}</span></div>
+        <div className="b-stat"><span className="hc-res tp">TP</span><span className="b-v">{s.holdW != null ? hrs(s.holdW) : '—'}</span></div>
+        <div className="b-stat"><span className="hc-res sl">SL</span><span className="b-v">{s.holdL != null ? hrs(s.holdL) : '—'}</span></div>
       </div>
     </div>
   );
