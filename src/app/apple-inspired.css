@@ -833,4 +833,8 @@ body::before { display: none; }
 .b-three .b-stat .hc-res { margin-left: 0; align-self: flex-start; font-size: 11px; padding: 2px 8px; margin-bottom: 4px; }
 .b-three .b-stat .hc-res { color: var(--surface); background: var(--ink); border-radius: 6px; font-weight: 700; letter-spacing: .02em; }
 .b-three .b-stat .hc-res.tp { background: var(--up); color: #fff; } .b-three .b-stat .hc-res.sl { background: var(--down); color: #fff; }
-.cf-arr { color: var(--mute); margin: 0 6px; font-weight: 600; }
+/* deposit / withdraw: balance before → after */
+.cf-bal { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 12px; background: var(--sunk); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cf-b0 { font-size: 13px; color: var(--mute); font-weight: 500; }
+.cf-arr { color: var(--mute); flex: none; }
+.cfcard .hc-mid .cf-b1 { font-size: 15px; font-weight: 700; color: var(--ink); }

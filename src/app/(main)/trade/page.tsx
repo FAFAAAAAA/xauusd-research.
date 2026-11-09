@@ -132,6 +132,7 @@ export default function TradePage() {
   const balAfter = (c: CashFlow) => (liveW == null || !Number.isFinite(liveW) ? null
     : liveW - closedT.reduce((a, t) => a + ((t.closedAt ?? t.openedAt) > c.at ? Number(t.pnl ?? 0) : 0), 0)
       - flowsAll.reduce((a, f) => a + (f.at > c.at || (f.at === c.at && f.id > c.id) ? f.amount : 0), 0));
+  const usd2 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const flowRow = (c: CashFlow) => {
     const inn = c.amount > 0, after = balAfter(c);
     return (
@@ -144,7 +145,11 @@ export default function TradePage() {
         </span>
         <span className="hc-mid">
           <span><span className="k">Jumlah</span><strong className={inn ? 'pos' : 'neg'}>{inn ? '+' : '−'}${Math.abs(c.amount).toFixed(2)}</strong></span>
-          <span className="cf-when"><span className="k">Saldo</span><strong>{after == null ? '—' : <>{(after - c.amount).toFixed(2)}<span className="cf-arr">›</span>{after.toFixed(2)}</>}</strong></span>
+          <span className="cf-when"><span className="k">Saldo</span>{after == null ? <strong>—</strong> : <span className="cf-bal">
+            <span className="cf-b0">${usd2(after - c.amount)}</span>
+            <svg className="cf-arr" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-label="menjadi"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            <strong className="cf-b1">${usd2(after)}</strong>
+          </span>}</span>
         </span>
         <span className="hc-foot"><span>{fmt(c.at, tz)}</span></span>
       </div>
