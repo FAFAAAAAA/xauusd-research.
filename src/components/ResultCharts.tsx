@@ -262,7 +262,7 @@ const compact = (n: number, dollar = true) => {
   return `${Math.round(a) === 0 ? '' : n > 0 ? '+' : '−'}${dollar ? '$' : ''}${v}`;
 };
 
-export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string }) {
+export function PnlCalendar({ trades, tz, compact = false }: { trades: ClosedTrade[]; tz: string; compact?: boolean }) {
   const [tab, setTab] = useState<CalTab>('day');
   const [metric, setMetric] = useState<Metric>('pnl');
   const [sel, setSel] = useState<string | null>(null);
@@ -346,7 +346,7 @@ export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string 
   return (
     <div className="stack">
       <div className="tabs" role="tablist">
-        {([['day', 'PnL Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const).map(([k, l]) => (
+        {([['day', compact ? 'Harian' : 'PnL Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setSel(null); }}>{l}</button>
         ))}
       </div>
@@ -365,17 +365,17 @@ export function PnlCalendar({ trades, tz }: { trades: ClosedTrade[]; tz: string 
           )}
           <button className="btn sm" onClick={() => shift(1)} disabled={!canNext} aria-label="Berikutnya">›</button>
         </div>
-        <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px' }} aria-label="Tampilkan">
+        {compact ? <strong className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : ''}>{money(tot.pnl)}</strong> : <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ width: 'auto', minHeight: 34, padding: '4px 30px 4px 10px' }} aria-label="Tampilkan">
           <option value="pnl">PnL</option>
           <option value="wl">Menang/Kalah</option>
           <option value="count">Jumlah trade</option>
-        </select>
+        </select>}
       </div>
 
-      <p className="small">
+      {compact ? null : <p className="small">
         <strong>{heading}:</strong> <span className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : ''} style={{ fontWeight: 700 }}>{money(tot.pnl)}</span>
         {' '}· {tot.trades} trade · <span className="pos">{tot.wins} menang</span> · <span className="neg">{tot.losses} kalah</span>
-      </p>
+      </p>}
 
       {tab === 'day' ? <div className="cal dow">{DOW.map((d) => <span key={d}>{d}</span>)}</div> : null}
       <div className={`cal ${tab}`}>

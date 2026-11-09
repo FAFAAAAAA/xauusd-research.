@@ -135,7 +135,10 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           </div>
         </section>
 
-        <PnlCalendar trades={s.closed} tz={tz} />
+        <section className="group">
+          <SecHead title="Kalender PnL" />
+          <PnlCalendar trades={s.closed} tz={tz} compact />
+        </section>
       </> : <p className="empty-inline">Belum ada trade selesai di pasar ini.</p>}
 
       {edit != null ? (
