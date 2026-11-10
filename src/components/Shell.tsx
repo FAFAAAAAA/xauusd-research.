@@ -35,8 +35,8 @@ export default function Shell({ children, showLogout = false }: { children: Reac
   // Not started on charts, the calendar, inputs, open sheets or anything that scrolls sideways.
   const pageRef = useRef<HTMLDivElement>(null);
   const [market, setMarket] = useMarket();
-  const gesture = useRef({ path, market, setMarket });
-  gesture.current = { path, market, setMarket };
+  const gesture = useRef({ path, market, setMarket, menuOpen, setMenuOpen });
+  gesture.current = { path, market, setMarket, menuOpen, setMenuOpen };
   useEffect(() => {
     let x0 = 0, y0 = 0, t0 = 0, dx = 0, on = false, locked = false;
     const set = (v: number, anim: boolean) => {
@@ -67,7 +67,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       }
       const g = gesture.current, onTrade = g.path.startsWith('/trade');
       // allowed directions: Trade = towards the other market; elsewhere = right (back)
-      const ok = onTrade ? (g.market === 'crypto' ? mx < 0 : mx > 0) : mx > 0;
+      const ok = g.menuOpen ? mx < 0 : onTrade ? (g.market === 'crypto' ? true : mx > 0) : mx > 0;   // Trade · Crypto: right opens the menu
       dx = mx; set(ok ? mx * 0.9 : mx * 0.15, false); e.preventDefault();
     };
     const end = () => {
@@ -77,6 +77,8 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       const fast = Math.abs(dx) > 30 && Math.abs(dx) / Math.max(1, Date.now() - t0) > 0.35;
       const far = Math.abs(dx) > Math.min(110, window.innerWidth * 0.28);
       if (!(fast || far)) { set(0, true); return; }
+      if (g.menuOpen) { set(0, true); if (dx < 0) g.setMenuOpen(false); return; }      // menu open: swipe left closes it
+      if (onTrade && g.market === 'crypto' && dx > 0) { set(0, true); g.setMenuOpen(true); return; }   // leftmost screen: swipe right opens the menu
       if (onTrade) {
         const next = dx < 0 ? 'forex' : 'crypto';
         if (next === g.market) { set(0, true); return; }
