@@ -564,3 +564,6 @@ Data 1h 448 koin 2020 – 6 Nov 2026, portofolio maks 3 posisi (1 per koin). Fil
 | Emas + dolar (EURUSD D1 vs EMA20/50) pada v1 XAU | tidak konsisten antar periode |
 | Crypto rotasi momentum mingguan BUY (12 variasi) | semua rugi 2024–2026 (PF 0,61–0,78) |
 Data perak, DAX, Nikkei, minyak, DXY belum ada (tidak bisa diunduh dari lingkungan riset).
+- v1 SNR tanpa menunggu H4 tutup (11 Nov 2026): support H4 sama, masuk saat candle **H1** tutup di bawahnya. 26 koin bot, portofolio maks 3:
+  H4 tutup 27 trade/bln win 41,0% PF 1,28 DD 29R; H1 tutup 34/bln win 40,3% PF 1,23 DD 36R (per trade PF 1,34 → 1,22, sama di 2020–23 dan 2024–26).
+  Untung per tahun hampir sama (+58 vs +60R) tapi lebih banyak trade, drawdown lebih dalam → bot tetap menunggu H4 tutup.
