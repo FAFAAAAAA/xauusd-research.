@@ -46,7 +46,14 @@ export default function TradePage() {
     call<any>('/api/journal').then(setJ).catch((e) => setErr(e.message));
   }, []);
   // refresh every 30 s while the page is visible (balance / trades stay current)
-  useEffect(() => { load(); const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 30_000); return () => clearInterval(t); }, [load]);
+  useEffect(() => {
+    load();
+    const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 30_000);
+    // back to the app / tab (e.g. reopened from the iPhone home screen): refresh right away
+    const onShow = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onShow); window.addEventListener('pageshow', onShow);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onShow); window.removeEventListener('pageshow', onShow); };
+  }, [load]);
 
   const riskUsd = d?.risk ? (d.risk.capital * d.risk.riskPct) / 100 : NaN;
 
