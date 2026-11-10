@@ -531,3 +531,12 @@ SNR, Pola N dan base breakout diuji di 440 koin likuid (BUY semua rugi; SNR pant
 - Bot Binance membaca `/fapi/v1/income` (TRANSFER, INTERNAL_TRANSFER, STRATEGY_UMFUTURES_TRANSFER) setiap kali mengirim saldo, lalu mengirim `event: 'cashflow'` ke `/api/ea/report`.
 - EA MT5 mengirim deal BALANCE / CREDIT 30 hari terakhir.
 - Website menyimpan `cashflow_binance` / `cashflow_mt5` (tanpa duplikat), mengirim Telegram sekali per transfer, dan di halaman Trade: saldo ikut berubah, profit = saldo − saldo awal − dana bersih (transfer tidak dihitung profit/rugi). Transfer sebelum trade pertama diabaikan (sudah termasuk saldo awal).
+
+### Bedah ulang v2 ALT (11 Nov 2026)
+Data 1h 448 koin 2020 – 6 Nov 2026, portofolio maks 3 posisi (1 per koin). Filter dipilih dari 2020–2023 (IS), dicek di 2024–2026 (OOS).
+- Base `kv1.5 k0.35`: 18 trade/bln, win 47,5%, PF 1,73 (IS 1,46, OOS 2,03), +572R, DD 36R, tanpa 5 bulan terbaik +181R, ±40% bulan rugi.
+- Per trade: koin yang sudah turun > ±14% dalam 7 hari (PF 0,51 IS / 1,01 OOS) dan koin paling volatil (ATR% D1 tinggi) paling lemah di kedua periode.
+- Terbaik untuk kv1.5: filter ATR% D1 ≤ 14,2% dan ret7 > −14,7% (batas dari IS) + saat sinyal bersamaan pilih koin yang paling sedikit turun 7 hari:
+  16 trade/bln, win 50,4%, PF 1,93 (IS 1,54, OOS 2,28), DD 30R, tanpa 5 bulan terbaik +224R.
+- Tapi tidak konsisten di setelan tetangga: kv1.25 tidak membaik (DD naik 45 → 65R), kv2.0 sedikit membaik. Hanya prioritas ret7 yang aman
+  (kv1.5 PF 1,81, DD 31R; kv2.0 PF 1,90; kv1.25 netral). Kelemahan utama (profit dari bulan crash, ±40% bulan rugi) tidak hilang.
