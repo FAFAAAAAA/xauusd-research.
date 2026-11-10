@@ -84,7 +84,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   // deposits / withdrawals / Spot transfers after the first trade (the starting balance already holds everything before it).
   // They change the balance but are not profit: P&L = balance − starting balance − net transfers.
   const firstAt = useMemo(() => trades.reduce((m, t) => Math.min(m, t.openedAt), Infinity), [trades]);
-  const counted = (c: CashFlow) => c.at > firstAt || !Number.isFinite(firstAt);
+  const counted = (c: CashFlow) => c.at > firstAt;   // no trade yet: every deposit so far is part of the starting balance
   const flows = useMemo(() => cashflow.filter(counted), [cashflow, firstAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const netIn = flows.reduce((a, c) => a + c.amount, 0), added = flows.reduce((a, c) => a + Math.max(0, c.amount), 0);
   // live: the real balance sent by the bot / EA (wallet); otherwise starting balance + journal results + transfers
