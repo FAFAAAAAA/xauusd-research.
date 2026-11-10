@@ -544,3 +544,10 @@ Data 1h 448 koin 2020 – 6 Nov 2026, portofolio maks 3 posisi (1 per koin). Fil
   dibuang (≥ 8 trade dan PF < 0,8 di seluruh data, 39 koin): PEOPLE, AUCTION, HNT, KAVA, COTI, STMX, ALPHA, MKR, CHR, TRB, YGG, MTL, C98, RVN, GTC, CELO,
   1000XEC, BB, NKN, IOTX, 1000CAT, HOT, HIGH, SKL, HIFI, WOO, DUSK, AXL, ACT, HIPPO, ARC, NOT, T, ARK, MOODENG, CTSI, TLM, ASTER, RESOLV.
   Portofolio (prioritas ret7): PF 1,81 → 1,84, DD 31 → 29R, untung total sama (+638 → +628R). Daftar dibuat dari seluruh data (sedikit bias).
+- **KOREKSI (11 Nov 2026): bug simulasi portofolio.** Trade yang masuk dan keluar di candle 1h yang sama (te == tx) langsung membebaskan slot,
+  sehingga saat crash (mis. 10 Okt 2025) puluhan trade "masuk" di detik yang sama melebihi batas 3 posisi. Dengan slot yang benar:
+  v2 ALT maks 3 = 15 trade/bln, win 38,6%, PF 1,20 (IS 1,15, OOS 1,26), DD 34R (dulu ditulis win 47%, PF 1,68–1,74 — salah).
+  Dengan filter + prioritas ret7: PF 1,30, tanpa koin rugi PF 1,25. Bot sekarang (SNR maks 3 + BUY maks 2) dihitung ulang: 32 trade/bln,
+  win 41%, PF 1,29, DD 25R; risiko 5% + rem $100: kena rem dalam 12 bulan ±26%, saldo median 12 bulan ±$924 dari $199.
+  Gabungan dengan v2 ALT (maks 2 atau 3 sendiri, atau berbagi 3 slot SELL) tidak memperbaiki PF (1,27) dan menaikkan peluang kena rem (39–59%).
+  Kesimpulan: v2 ALT tidak ditambahkan ke bot.
