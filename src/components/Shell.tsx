@@ -52,7 +52,9 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       return false;
     };
     const start = (e: TouchEvent) => {
-      on = e.touches.length === 1 && !document.querySelector('dialog[open]') && !blocked(e.target);
+      // in Safari (not the installed app) the very left edge belongs to Safari's own back gesture
+      const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+      on = e.touches.length === 1 && (standalone || e.touches[0].clientX > 30) && !document.querySelector('dialog[open]') && !blocked(e.target);
       locked = false; dx = 0; const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
     };
     const move = (e: TouchEvent) => {
