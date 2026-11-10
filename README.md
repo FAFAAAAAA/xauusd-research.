@@ -540,3 +540,7 @@ Data 1h 448 koin 2020 – 6 Nov 2026, portofolio maks 3 posisi (1 per koin). Fil
   16 trade/bln, win 50,4%, PF 1,93 (IS 1,54, OOS 2,28), DD 30R, tanpa 5 bulan terbaik +224R.
 - Tapi tidak konsisten di setelan tetangga: kv1.25 tidak membaik (DD naik 45 → 65R), kv2.0 sedikit membaik. Hanya prioritas ret7 yang aman
   (kv1.5 PF 1,81, DD 31R; kv2.0 PF 1,90; kv1.25 netral). Kelemahan utama (profit dari bulan crash, ±40% bulan rugi) tidak hilang.
+- Pilih koin (11 Nov 2026): memilih koin terbaik 2020–23 memperburuk 2024–26 (PF 2,12 → 1,77). Atas permintaan pemilik hanya koin yang jelas rugi
+  dibuang (≥ 8 trade dan PF < 0,8 di seluruh data, 39 koin): PEOPLE, AUCTION, HNT, KAVA, COTI, STMX, ALPHA, MKR, CHR, TRB, YGG, MTL, C98, RVN, GTC, CELO,
+  1000XEC, BB, NKN, IOTX, 1000CAT, HOT, HIGH, SKL, HIFI, WOO, DUSK, AXL, ACT, HIPPO, ARC, NOT, T, ARK, MOODENG, CTSI, TLM, ASTER, RESOLV.
+  Portofolio (prioritas ret7): PF 1,81 → 1,84, DD 31 → 29R, untung total sama (+638 → +628R). Daftar dibuat dari seluruh data (sedikit bias).
