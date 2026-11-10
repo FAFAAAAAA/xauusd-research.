@@ -551,3 +551,16 @@ Data 1h 448 koin 2020 – 6 Nov 2026, portofolio maks 3 posisi (1 per koin). Fil
   win 41%, PF 1,29, DD 25R; risiko 5% + rem $100: kena rem dalam 12 bulan ±26%, saldo median 12 bulan ±$924 dari $199.
   Gabungan dengan v2 ALT (maks 2 atau 3 sendiri, atau berbagi 3 slot SELL) tidak memperbaiki PF (1,27) dan menaikkan peluang kena rem (39–59%).
   Kesimpulan: v2 ALT tidak ditambahkan ke bot.
+
+### Uji ide baru (11 Nov 2026) — semua dengan mesin website (biaya instrumen, RR 1:2, $10), data M30
+| Uji | Hasil |
+|---|---|
+| v1 NAS di US30 / EURUSD / GBPUSD / USDJPY / USDCAD / USDCHF / BTC / ETH | PF 0,66–1,08, tidak ada yang lolos |
+| v1 XAU di US30 / US100 / 5 forex major / BTC / ETH | PF 0,74–1,11 (USDJPY 1,11 dengan 9/16 tahun rugi), tidak lolos |
+| v1 NAS di emas (2005–2026) | PF 1,26, +109R, 6/22 tahun rugi; 57% trade-nya bertumpuk searah dengan v1 XAU → tidak ditambah |
+| Pembanding: v1 XAU emas M30 2005–2026 / M15 2018–2026 | PF 1,48 (3/22 tahun rugi) / PF 1,46 (1/9) |
+| Pembanding: v1 NAS US100 M30 2014–2026 | PF 1,29, 1/13 tahun rugi (mesin website, biaya lebih berat dari riset 1,52) |
+| Musiman Nasdaq (hari, awal/akhir bulan) pada v1 NAS | hari tidak konsisten antar periode; awal/akhir bulan PF 1,41 tapi memotong 80% trade |
+| Emas + dolar (EURUSD D1 vs EMA20/50) pada v1 XAU | tidak konsisten antar periode |
+| Crypto rotasi momentum mingguan BUY (12 variasi) | semua rugi 2024–2026 (PF 0,61–0,78) |
+Data perak, DAX, Nikkei, minyak, DXY belum ada (tidak bisa diunduh dari lingkungan riset).
