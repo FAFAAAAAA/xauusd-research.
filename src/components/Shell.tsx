@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { warm } from '@/components/client';
@@ -27,6 +27,33 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       warm(['/api/journal', '/api/live', '/api/settings', '/api/analytics']);
     }, 1200);
     return () => window.clearTimeout(id);
+  }, [router]);
+  // installed app (home screen) has no browser back gesture: swipe right from the left edge = back (the page follows the finger)
+  const pageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    if (!standalone) return;
+    let x0 = 0, y0 = 0, dx = 0, on = false, locked = false;
+    const el = () => pageRef.current;
+    const set = (v: number, anim: boolean) => { const e = el(); if (!e) return; e.style.transition = anim ? 'transform .22s ease, opacity .22s ease' : 'none'; e.style.transform = v ? `translateX(${v}px)` : ''; e.style.opacity = v ? String(1 - Math.min(0.4, v / 600)) : ''; };
+    const start = (e: TouchEvent) => { const t = e.touches[0]; on = t.clientX < 28 && e.touches.length === 1; locked = false; x0 = t.clientX; y0 = t.clientY; dx = 0; };
+    const move = (e: TouchEvent) => {
+      if (!on) return;
+      const t = e.touches[0], mx = t.clientX - x0, my = Math.abs(t.clientY - y0);
+      if (!locked) { if (my > 12 && my > mx) { on = false; return; } if (mx > 10) locked = true; else return; }
+      dx = Math.max(0, mx); set(dx * 0.7, false); e.preventDefault();
+    };
+    const end = () => {
+      if (!on) return; on = false;
+      if (locked && dx > 90) {
+        set(window.innerWidth, true);
+        window.setTimeout(() => { if (window.history.length > 1 && location.pathname !== '/trade') router.back(); else if (location.pathname !== '/trade') router.push('/trade'); set(0, false); }, 180);
+      } else set(0, true);
+    };
+    document.addEventListener('touchstart', start, { passive: true });
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', end); document.addEventListener('touchcancel', end);
+    return () => { document.removeEventListener('touchstart', start); document.removeEventListener('touchmove', move); document.removeEventListener('touchend', end); document.removeEventListener('touchcancel', end); };
   }, [router]);
   const cur = pending ?? path;
   const active = (href: string) => cur.startsWith(href);
@@ -70,7 +97,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       </header>
       <main className="main" aria-busy={pending ? true : undefined}>
         {/* the research-flow / research-section wrappers carry the page styles (pills, cards, radii) */}
-        <div className="page"><div className="research-flow"><section className="research-section"><div className="tool-content">{children}</div></section></div></div>
+        <div className="page" ref={pageRef}><div className="research-flow"><section className="research-section"><div className="tool-content">{children}</div></section></div></div>
         {showLogout ? <div className="mobile-only-logout"><button className="btn sm ghost" onClick={logout}>Keluar</button></div> : null}
       </main>
       <footer className="apple-site-footer">
