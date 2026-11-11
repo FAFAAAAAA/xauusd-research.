@@ -958,5 +958,3 @@ body::before { display: none; }
 .office-home { position: fixed; inset: 0; background: #a9d5f2; overflow: hidden; }
 .office.office-full { width: 100%; height: 100%; border-radius: 0; background: transparent; }
 .office.office-full .office-canvas { display: block; }
-/* status bar is translucent (the office runs under it); keep its white clock readable on light pages */
-.apple-topbar::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background: #141518; pointer-events: none; }

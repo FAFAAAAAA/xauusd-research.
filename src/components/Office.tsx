@@ -23,7 +23,7 @@ const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
 const TV = { x0: 6.85, x1: 11.0, z0: 34, z1: 79 };
-const ROSTER = { x0: 2.7, x1: 5.75, z0: 37, z1: 77 };
+const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3, TOPM = 50, TOTAL = RH * ROOMS + TOPM;         // three rooms stacked (one scene height each)
 const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the three rooms)
@@ -319,15 +319,11 @@ function drawStatic(c: C, night: boolean, room: number) {
   if (room === 1) {
     poly(c, wallB(0.7, 2.1, 40, 64), '#1e1f23'); poly(c, wallB(0.8, 2.0, 42, 62), '#f7f4ec');
     poly(c, wallB(1.05, 1.75, 46, 58), '#f2c230'); poly(c, wallB(1.25, 1.55, 49, 55), '#26272c');
-    poly(c, wallB(ROSTER.x0 - 0.08, ROSTER.x1 + 0.08, ROSTER.z0 - 3, ROSTER.z1 + 3), '#1e1f23');
-    poly(c, wallB(ROSTER.x0, ROSTER.x1, ROSTER.z0, ROSTER.z1), '#fbfaf6');
     poly(c, wallB(TV.x0 - 0.1, TV.x1 + 0.1, TV.z0 - 3, TV.z1 + 2.5), '#111214');
   }
-  if (room === 0) {     // the boss's gold painting, a clock, a small framed photo
-    poly(c, wallB(0.9, 3.6, 30, 70), '#b8901a'); poly(c, wallB(1.0, 3.5, 32, 68), '#1a1b1f');
-    const pts = [0.1, 0.25, 0.18, 0.42, 0.35, 0.6, 0.52, 0.78, 0.9];
-    c.strokeStyle = '#f2c230'; c.lineWidth = 1.3; c.beginPath();
-    pts.forEach((v, i) => { const [x, y] = iso(1.15 + i * 0.27, 0, 36 + v * 28); if (i) c.lineTo(x, y); else c.moveTo(x, y); }); c.stroke();
+  if (room === 0) {     // the team board (names + roles), a clock
+    poly(c, wallB(ROSTER.x0 - 0.08, ROSTER.x1 + 0.08, ROSTER.z0 - 3, ROSTER.z1 + 3), '#b8901a');
+    poly(c, wallB(ROSTER.x0, ROSTER.x1, ROSTER.z0, ROSTER.z1), '#fbfaf6');
     const [cx, cy] = iso(10.6, 0, 64); c.save(); c.translate(cx, cy); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 5.5, 0, 7); c.fillStyle = '#1e1f23'; c.fill(); c.beginPath(); c.arc(0, 0, 4.6, 0, 7); c.fillStyle = '#fff'; c.fill();
     c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -3.2); c.moveTo(0, 0); c.lineTo(2.4, 0.6); c.stroke(); c.restore();
   }
@@ -1080,7 +1076,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       if (bg) c.drawImage(bg, Math.round(k * (V.tx - mx * V.z)), Math.round(k * (V.ty - my * V.z)));
       for (let r = ROOMS - 1; r >= 0; r--) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
-        if (r === 1) drawWallText(c, scrRef.current, wall, t);
+        if (r <= 1) drawWallText(c, scrRef.current, r, t);
         if (r === 1) drawPositions(c, posRef.current, t);
         drawBoards(c, r, wall, t);
         const list: Item[] = items[r].slice();
@@ -1143,10 +1139,10 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
 }
 
 /* the live numbers on the wall TV and the team board, drawn in perspective on the back wall */
-function drawWallText(c: C, lines: ScreenLine[], wall: number, t: number) {
+function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
   const onWall = (x0: number, z1: number, fn: () => void) => { const [ox, oy] = iso(x0, 0, z1); c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0); fn(); c.restore(); };
   const tw = (TV.x1 - TV.x0) * TW, th = TV.z1 - TV.z0;
-  onWall(TV.x0, TV.z1, () => {
+  if (room === 1) onWall(TV.x0, TV.z1, () => {
     const g = c.createLinearGradient(0, 0, 0, th); g.addColorStop(0, '#0d2340'); g.addColorStop(1, '#081626');
     c.fillStyle = g; c.fillRect(0, 0, tw, th);
     c.fillStyle = 'rgba(255,255,255,.05)'; c.fillRect(0, 0, tw, 7.5);
@@ -1167,14 +1163,14 @@ function drawWallText(c: C, lines: ScreenLine[], wall: number, t: number) {
     c.textBaseline = 'alphabetic';
   });
   const rw = (ROSTER.x1 - ROSTER.x0) * TW, rh2 = ROSTER.z1 - ROSTER.z0;
-  onWall(ROSTER.x0, ROSTER.z1, () => {
+  if (room === 0) onWall(ROSTER.x0, ROSTER.z1, () => {
     c.textBaseline = 'middle';
-    c.font = '900 5.2px system-ui, sans-serif'; c.fillStyle = '#b8901a'; c.textAlign = 'center'; c.fillText('T I M', rw / 2, 4); c.textAlign = 'left';
-    const lh = (rh2 - 8) / PEOPLE.length;
+    c.font = '900 6px system-ui, sans-serif'; c.fillStyle = '#b8901a'; c.textAlign = 'center'; c.fillText('T I M', rw / 2, 5); c.textAlign = 'left';
+    const lh = (rh2 - 10) / PEOPLE.length;
     PEOPLE.forEach((p, i) => {
-      const y = 8 + lh * (i + 0.5);
-      c.font = '800 4.6px system-ui, sans-serif'; c.fillStyle = '#1e1f23'; c.fillText(p.name, 2.5, y);
-      c.font = '600 3.9px ui-monospace, Menlo, monospace'; c.fillStyle = p.id === 'bos' ? '#c0392b' : '#6b6f78'; c.textAlign = 'right'; c.fillText(p.role, rw - 2.5, y); c.textAlign = 'left';
+      const y = 10 + lh * (i + 0.5);
+      c.font = '800 5px system-ui, sans-serif'; c.fillStyle = '#1e1f23'; c.fillText(p.name, 3, y);
+      c.font = '600 4px ui-monospace, Menlo, monospace'; c.fillStyle = p.id === 'bos' ? '#c0392b' : '#6b6f78'; c.textAlign = 'right'; c.fillText(p.role, rw - 3, y); c.textAlign = 'left';
     });
     c.textBaseline = 'alphabetic';
   });
@@ -1231,9 +1227,9 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
   if (room === 1) {
     const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
     const txt = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
-    board(1.2, 5.6, 82, 114, (w, h) => {
-      c.font = '700 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('CANDLE H4 BARU DALAM', w / 2, 7);
-      c.font = '800 15px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 ? (Math.floor(t * 4) % 2 ? '#f2c230' : '#ffffff') : '#f2c230'; c.fillText(txt, w / 2, h / 2 + 4);
+    board(2.75, 5.7, 38, 74, (w, h) => {
+      c.font = '700 4.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('CANDLE H4 BARU', w / 2, 8);
+      c.font = '800 10.5px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 ? (Math.floor(t * 4) % 2 ? '#f2c230' : '#ffffff') : '#f2c230'; c.fillText(txt, w / 2, h / 2 + 4);
     });
   }
   if (room === 2) {

@@ -36,10 +36,13 @@ export default function Shell({ children, showLogout = false }: { children: Reac
     return () => document.removeEventListener('visibilitychange', vis);
   }, [router]);
   useEffect(() => {
+    // the installed app keeps its shell in a service worker, so the next opening is instant
+    if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // prepare the other pages later on the office screen, so it gets the network first
     const id = window.setTimeout(() => {
       for (const l of LINKS) router.prefetch(l.href);
-      warm(['/api/journal', '/api/live', '/api/settings', '/api/analytics']);
-    }, 1200);
+      warm(['/api/live', '/api/settings', '/api/analytics']);
+    }, window.location.pathname === '/' ? 5000 : 1200);
     return () => window.clearTimeout(id);
   }, [router]);
   // swipe gestures (anywhere on the screen, not only the edge):
