@@ -25,6 +25,7 @@ const SILENT = 35 * 60_000;
 const TV = { x0: 6.85, x1: 11.0, z0: 34, z1: 79 };
 const ROSTER = { x0: 2.7, x1: 5.75, z0: 37, z1: 77 };
 const PS = 1.14;                                     // character scale
+const HOME = { z: 1.18, tx: (W - W * 1.18) / 2, ty: (H - H * 1.18) / 2 + 6 };   // default view: a bit closer than the whole room
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
 type Pose = 'stand' | 'sit' | 'sleep' | 'bean' | 'stretch' | 'squat' | 'jump' | 'nap';
@@ -686,16 +687,16 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
   const grid = useMemo(() => buildGrid(items), [items]);
   const night = (() => { const h = new Date(now).getHours(); return h >= 18 || h < 6; })();
   const nightRef = useRef(night); nightRef.current = night;
-  const view = useRef({ z: 1, tx: 0, ty: 0 });
+  const view = useRef({ ...HOME });
   const [zoomed, setZoomed] = useState(false);
 
   // pinch / pan / double tap / wheel zoom (page scroll keeps working while not zoomed)
   useEffect(() => {
     const cv = ref.current; if (!cv) return;
     const V = view.current;
-    const clamp = () => { V.z = Math.max(1, Math.min(4, V.z)); V.tx = Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = Math.min(0, Math.max(H - H * V.z, V.ty)); setZoomed(V.z > 1.01); cv.style.touchAction = V.z > 1.01 ? 'none' : 'pan-y'; };
+    const clamp = () => { V.z = Math.max(HOME.z, Math.min(4, V.z)); V.tx = Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = Math.min(0, Math.max(H - H * V.z, V.ty)); setZoomed(V.z > HOME.z + 0.01); cv.style.touchAction = V.z > HOME.z + 0.01 ? 'none' : 'pan-y'; };
     const pt = (cx: number, cy: number) => { const r = cv.getBoundingClientRect(); return [(cx - r.left) * W / r.width, (cy - r.top) * H / r.height] as const; };
-    const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(1, Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
+    const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(HOME.z, Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
     let pinch: { d: number; z: number; wx: number; wy: number } | null = null, pan: { x: number; y: number } | null = null, lastTap = 0;
     const ts = (e: TouchEvent) => {
       if (e.touches.length === 2) {
@@ -705,16 +706,16 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
       } else if (e.touches.length === 1) {
         const [x, y] = pt(e.touches[0].clientX, e.touches[0].clientY);
         const nowT = Date.now();
-        if (nowT - lastTap < 300) { e.preventDefault(); zoomAt(x, y, V.z > 1.01 ? 1 : 2.4); lastTap = 0; return; }
+        if (nowT - lastTap < 300) { e.preventDefault(); if (V.z > HOME.z + 0.01) Object.assign(V, HOME); else zoomAt(x, y, 2.4); clamp(); lastTap = 0; return; }
         lastTap = nowT;
-        if (V.z > 1.01) { e.preventDefault(); pan = { x, y }; }
+        if (V.z > HOME.z + 0.01) { e.preventDefault(); pan = { x, y }; }
       }
     };
     const tm = (e: TouchEvent) => {
       if (pinch && e.touches.length === 2) {
         e.preventDefault();
         const a = e.touches[0], b = e.touches[1], [mx, my] = pt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
-        V.z = Math.max(1, Math.min(4, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
+        V.z = Math.max(HOME.z, Math.min(4, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
         V.tx = mx - pinch.wx * V.z; V.ty = my - pinch.wy * V.z; clamp();
       } else if (pan && e.touches.length === 1) {
         e.preventDefault();
@@ -722,12 +723,12 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
       }
     };
     const te = (e: TouchEvent) => { if (e.touches.length < 2) pinch = null; if (!e.touches.length) pan = null; };
-    const wheel = (e: WheelEvent) => { if (!e.ctrlKey && V.z <= 1.01 && e.deltaY > 0) return; e.preventDefault(); const [x, y] = pt(e.clientX, e.clientY); zoomAt(x, y, V.z * Math.exp(-e.deltaY * 0.0025)); };
+    const wheel = (e: WheelEvent) => { if (!e.ctrlKey && V.z <= HOME.z + 0.01 && e.deltaY > 0) return; e.preventDefault(); const [x, y] = pt(e.clientX, e.clientY); zoomAt(x, y, V.z * Math.exp(-e.deltaY * 0.0025)); };
     let drag: { x: number; y: number } | null = null;
-    const md = (e: MouseEvent) => { if (V.z > 1.01) drag = { x: e.clientX, y: e.clientY }; };
+    const md = (e: MouseEvent) => { if (V.z > HOME.z + 0.01) drag = { x: e.clientX, y: e.clientY }; };
     const mm = (e: MouseEvent) => { if (!drag) return; const r = cv.getBoundingClientRect(); V.tx += (e.clientX - drag.x) * W / r.width; V.ty += (e.clientY - drag.y) * H / r.height; drag = { x: e.clientX, y: e.clientY }; clamp(); };
     const mu = () => { drag = null; };
-    const dbl = (e: MouseEvent) => { const [x, y] = pt(e.clientX, e.clientY); zoomAt(x, y, V.z > 1.01 ? 1 : 2.4); };
+    const dbl = (e: MouseEvent) => { const [x, y] = pt(e.clientX, e.clientY); if (V.z > HOME.z + 0.01) { Object.assign(V, HOME); clamp(); } else zoomAt(x, y, 2.4); };
     cv.addEventListener('touchstart', ts, { passive: false }); cv.addEventListener('touchmove', tm, { passive: false }); cv.addEventListener('touchend', te); cv.addEventListener('touchcancel', te);
     cv.addEventListener('wheel', wheel, { passive: false }); cv.addEventListener('mousedown', md); window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); cv.addEventListener('dblclick', dbl);
     clamp();
@@ -882,8 +883,8 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
       <canvas ref={ref} className="office-canvas" style={{ aspectRatio: `${W} / ${H}`, touchAction: 'pan-y' }} aria-label="Kantor virtual: status bot dan EA" />
       <div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div>
-      {zoomed ? <button type="button" className="office-reset" onClick={() => { view.current.z = 1; view.current.tx = 0; view.current.ty = 0; setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
-        : <div className="office-hint">cubit / ketuk 2× untuk zoom</div>}
+      {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, HOME); setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
+        : null}
     </div>
   );
 }

@@ -949,7 +949,8 @@ body::before { display: none; }
 .office-count { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 8px; background: rgba(18,19,23,.78); color: #e8eaee; font-size: 8.5px; pointer-events: none; }
 .office-count i { width: 5px; height: 5px; border-radius: 50%; background: #2ee59d; display: inline-block; }
 /* office dock on top of every page */
-.office-dock { padding: 8px 10px 0; max-width: 980px; margin: 0 auto; }
+.office-dock { padding: 16px 4px 4px; max-width: 980px; margin: 0 auto; }
+@media (max-width: 640px) { .office-dock { padding: 18px 0 4px; } .office-dock .office { border-radius: 0; } }
 .office-ph { aspect-ratio: 380 / 292; width: 100%; }
 .office-hint, .office-reset { position: absolute; right: 8px; bottom: 8px; border-radius: 8px; background: rgba(18,19,23,.7); color: #c8ccd4; font-size: 8px; padding: 3px 7px; pointer-events: none; }
 .office-reset { pointer-events: auto; border: 0; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 10px; }
