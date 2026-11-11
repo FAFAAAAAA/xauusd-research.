@@ -179,12 +179,12 @@ export default function TradePage() {
               const fl = pos && key in pos ? pos[key] : openT.length === 1 && live && Number.isFinite(live.upnl) ? live.upnl : null;
               return (
                 <button key={t.id} className="hcard opencard" onClick={() => setDetail(t)}>
-                  <span className="hc-top">
+                  <span className="op-left">
                     <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
                     <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
                     <span className="live-dot" aria-label="terbuka" />
                   </span>
-                  <span className="op-row">
+                  <span className="op-right">
                     <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
                     <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
                   </span>

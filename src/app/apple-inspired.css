@@ -860,3 +860,10 @@ body::before { display: none; }
 .group .hcard .hc-foot { border-top: 0; padding-top: 0; }
 .group .hcards:first-child .hcard:first-child, .group .sec-head + .hcards .hcard:first-child { padding-top: 6px; }
 .group .hcard:last-child { padding-bottom: 4px; }
+
+/* open position row: coin on the left, floating P&L on the right with the strategy under it */
+.hcard.opencard { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.op-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.op-left .live-dot { margin-left: 2px; }
+.op-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.opencard .op-pnl { font-size: 24px; }
