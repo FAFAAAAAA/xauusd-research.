@@ -26,8 +26,8 @@ const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'v1 BTC
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
 // coin of a bot trade: the note is "Bot Binance SANDUSDT …"
-/** duration as plain numbers, hours:minutes (e.g. 5:12, 27:05) */
-const hm = (ms: number) => { const m = Math.max(0, Math.round(ms / 60_000)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+/** duration as plain numbers, hours.minutes (e.g. 5.12, 27.05) */
+const hm = (ms: number) => { const m = Math.max(0, Math.round(ms / 60_000)); return `${Math.floor(m / 60)}.${String(m % 60).padStart(2, '0')}`; };
 const coinOf = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
 
