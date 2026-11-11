@@ -850,3 +850,13 @@ body::before { display: none; }
 .op-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .op-strat { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--mute); white-space: nowrap; }
 .hc-foot { display: flex; align-items: center; }
+
+/* cards inside a section card: flat rows with thin dividers (no card-in-card stacking) */
+.group .hcards { gap: 0; }
+.group .hcard { border: 0; border-radius: 0; background: none; padding: 14px 2px; }
+.group .hcard + .hcard { border-top: 1px solid var(--line); }
+.group .hcard:hover { background: none; }
+.group .hcard:active { transform: none; opacity: .7; }
+.group .hcard .hc-foot { border-top: 0; padding-top: 0; }
+.group .hcards:first-child .hcard:first-child, .group .sec-head + .hcards .hcard:first-child { padding-top: 6px; }
+.group .hcard:last-child { padding-bottom: 4px; }
