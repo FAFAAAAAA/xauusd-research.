@@ -187,6 +187,9 @@ export default function TradePage() {
     // older bot / EA without per-position values: with a single open position the account total is that position
     return openT.length === 1 && live && Number.isFinite(live.upnl) ? live.upnl : null;
   };
+  // total of the open positions (same realtime numbers as the list); null when one of them is unknown
+  const openVals = openT.map(floatOf);
+  const openTotal = openT.length && openVals.every((v) => v != null) ? openVals.reduce((a: number, v) => a + (v as number), 0) : null;
   const openSection = openT.length ? (
         <section className="group">
           <SecHead title="Posisi terbuka" />
@@ -217,6 +220,7 @@ export default function TradePage() {
       <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz} live={market === 'crypto' ? j.binance ?? null : j.mt5 ?? null}
         cashflow={(market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? []}
         openSlot={openSection}
+        openPnl={openTotal}
         fallbackStart={market === 'crypto' ? 199.02 : 10000}
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
         renderTrades={(list) => <div className="hcards">{list.map(tradeRow)}</div>} />

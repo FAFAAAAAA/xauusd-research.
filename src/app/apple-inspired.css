@@ -903,3 +903,19 @@ body::before { display: none; }
 .dt-grid strong { font-size: 14.5px; font-weight: 650; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dt-grid strong.pos { color: var(--up); } .dt-grid strong.neg { color: var(--down); }
 .dt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* Kantor: pixel-art office */
+.office { position: relative; border-radius: 18px; overflow: hidden; background: #20232b; }
+.office-canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+.office-tag { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; }
+.ot-card { display: flex; flex-direction: column; align-items: center; background: rgba(20, 22, 28, .86); border: 1px solid rgba(255,255,255,.16); border-radius: 4px; padding: 1px 5px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; line-height: 1.15; white-space: nowrap; }
+.ot-card strong { color: #fff; font-size: 9.5px; }
+.ot-role { color: #c8ccd4; font-size: 7px; letter-spacing: .03em; }
+.ot-st { display: inline-flex; align-items: center; gap: 3px; color: #f1f3f6; font-size: 7px; font-weight: 700; letter-spacing: .04em; }
+.ot-st i { width: 6px; height: 6px; border-radius: 1px; display: inline-block; }
+.ot-bubble { background: rgba(20, 22, 28, .92); border-radius: 6px; padding: 1px 6px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 8.5px; font-weight: 700; white-space: nowrap; }
+.office-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.office-board > span { display: flex; flex-direction: column; gap: 2px; padding: 9px 10px; border-radius: 14px; background: var(--card, #fff); border: 1px solid var(--line); min-width: 0; }
+.office-board .k { font-size: 10.5px; color: var(--mute); }
+.office-board strong { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.office-board strong.pos { color: var(--up); } .office-board strong.neg { color: var(--down); }

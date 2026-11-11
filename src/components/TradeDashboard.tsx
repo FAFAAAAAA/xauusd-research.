@@ -19,8 +19,8 @@ const readStart = (m: string, fallback: number) => { try { const v = Number(loca
 
 export interface CashFlow { id: string; at: number; amount: number; asset: string; type: string }
 
-export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null, cashflow = [], openSlot = null }: {
-  trades: JournalTrade[]; cashflow?: CashFlow[]; openSlot?: React.ReactNode; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
+export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null, cashflow = [], openSlot = null, openPnl = null }: {
+  trades: JournalTrade[]; cashflow?: CashFlow[]; openSlot?: React.ReactNode; openPnl?: number | null; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
   groupOf: (t: JournalTrade) => string; groupLabel?: string; renderTrades: (list: JournalTrade[]) => React.ReactNode;
 }) {
   const [start, setStart] = useState(fallbackStart);
@@ -105,7 +105,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
           <span className={tone(profit)}>{usd(profit)}</span>
         </span>
-        {live && Math.abs(live.upnl) >= 0.01 ? <span className="td-sub">Posisi terbuka <span className={tone(live.upnl)}>{usd(live.upnl)}</span></span> : null}
+        {(() => { const u = openPnl ?? live?.upnl ?? 0; return live && Math.abs(u) >= 0.01 ? <span className="td-sub">Posisi terbuka <span className={tone(u)}>{usd(u)}</span></span> : null; })()}
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
           <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}>{usd(s.week)}</strong></span>

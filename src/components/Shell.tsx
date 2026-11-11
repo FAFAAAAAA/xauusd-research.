@@ -11,6 +11,7 @@ import { Toaster } from '@/components/Status';
 const LINKS = [
   { href: '/trade', label: 'Trade' },
   { href: '/analytics', label: 'Backtest' },
+  { href: '/kantor', label: 'Kantor' },
   { href: '/calculator', label: 'Kalkulator' },
   { href: '/settings', label: 'Atur' },
 ] as const;
