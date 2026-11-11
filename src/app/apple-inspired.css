@@ -867,3 +867,10 @@ body::before { display: none; }
 .op-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .op-left .op-strat { margin-left: 0; }
 .opencard .op-pnl { font-size: 22px; text-align: right; }
+
+/* history row: same as an open position, plus duration and the TP/SL label under the P&L */
+.histrow .op-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.histrow .op-pnl { font-size: 19px; }
+.histrow .hc-res { margin-left: 0; font-size: 11px; padding: 2px 8px; }
+.cfrow { cursor: default; }
+.histrow .op-right .op-strat { margin-left: 0; font-variant-numeric: tabular-nums; }

@@ -115,20 +115,15 @@ export default function TradePage() {
   // history card in the style of Binance "Riwayat Posisi", simplified: coin, side, result, P&L, entry → exit, opened / closed, duration
   const holdTxt = (ms: number) => { const m = Math.round(ms / 60_000); return m < 60 ? `${m} mnt` : m < 2880 ? `${Math.floor(m / 60)} jam ${m % 60} mnt` : `${(m / 1440).toFixed(1)} hari`; };
   const tradeRow = (t: JournalTrade) => (
-    <button key={t.id} className="hcard" onClick={() => setDetail(t)}>
-      <span className="hc-top">
-        <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
+    <button key={t.id} className="hcard opencard histrow" onClick={() => setDetail(t)}>
+      <span className={`hc-side op-badge ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
+      <span className="op-left">
         <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
+        <span className="op-strat">{NAME[t.strategy] ?? t.strategy} · {t.closedAt ? holdTxt(t.closedAt - t.openedAt) : 'masih terbuka'}</span>
+      </span>
+      <span className="op-right">
+        <span className={`op-pnl ${tone(t.pnl)}`}>{money(t.pnl)}</span>
         <span className={`hc-res ${t.result}`}>{RESULT[t.result] ?? 'Manual'}</span>
-      </span>
-      <span className="hc-mid">
-        <span><span className="k">PNL</span><strong className={tone(t.pnl)}>{money(t.pnl)}</strong></span>
-        <span><span className="k">Masuk</span><strong>{px(t.entry)}</strong></span>
-        <span><span className="k">Keluar</span><strong>{t.exit != null ? px(t.exit) : '—'}</strong></span>
-      </span>
-      <span className="hc-foot">
-        <span>{t.closedAt ? holdTxt(t.closedAt - t.openedAt) : 'masih terbuka'}</span>
-        <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
       </span>
     </button>
   );
@@ -143,22 +138,16 @@ export default function TradePage() {
   const flowRow = (c: CashFlow) => {
     const inn = c.amount > 0, after = balAfter(c);
     return (
-      <div key={`cf-${c.id}`} className="hcard cfcard">
-        <span className="hc-top">
-          <span className={`hc-side ${inn ? 'b' : 's'}`} aria-hidden><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{inn ? <path d="M12 5v14M6 13l6 6 6-6" /> : <path d="M12 19V5M6 11l6-6 6 6" />}</svg></span>
+      <div key={`cf-${c.id}`} className="hcard opencard histrow cfrow">
+        <span className={`hc-side op-badge ${inn ? 'b' : 's'}`} aria-hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{inn ? <path d="M12 5v14M6 13l6 6 6-6" /> : <path d="M12 19V5M6 11l6-6 6 6" />}</svg></span>
+        <span className="op-left">
           <strong className="hc-name">{inn ? 'Deposit' : 'Withdraw'}</strong>
-          <span className="hc-tag">{c.asset}</span>
-          <span className={`hc-res ${inn ? 'tp' : 'sl'}`}>Selesai</span>
+          <span className="op-strat">{fmt(c.at, tz)}</span>
         </span>
-        <span className="hc-mid">
-          <span><span className="k">Jumlah</span><strong className={inn ? 'pos' : 'neg'}>{inn ? '+' : '−'}${Math.abs(c.amount).toFixed(2)}</strong></span>
-          <span className="cf-when"><span className="k">Saldo</span>{after == null ? <strong>—</strong> : <span className="cf-bal">
-            <span className="cf-b0">${usd2(after - c.amount)}</span>
-            <svg className="cf-arr" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-label="menjadi"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            <strong className="cf-b1">${usd2(after)}</strong>
-          </span>}</span>
+        <span className="op-right">
+          <span className={`op-pnl ${inn ? 'pos' : 'neg'}`}>{inn ? '+' : '−'}${Math.abs(c.amount).toFixed(2)}</span>
+          {after == null ? null : <span className="op-strat">${usd2(after - c.amount)} → ${usd2(after)}</span>}
         </span>
-        <span className="hc-foot"><span>{fmt(c.at, tz)}</span></span>
       </div>
     );
   };
