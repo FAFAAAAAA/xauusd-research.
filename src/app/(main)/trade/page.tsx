@@ -168,7 +168,7 @@ export default function TradePage() {
   ].sort((a, b) => b.at - a.at);
   const openSection = openT.length ? (
         <section className="group">
-          <SecHead title="Posisi terbuka" meta={openT.length} />
+          <SecHead title="Posisi terbuka" />
           <div className="hcards">
             {openT.map((t) => {
               // floating P&L sent by the bot (per coin) / EA (per method); null until the new bot / EA reports it
