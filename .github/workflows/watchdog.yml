@@ -1,0 +1,12 @@
+name: watchdog
+# Every 10 minutes: ask the website whether the Binance bot / MT5 EA still report (Telegram warning if silent > 35 min).
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: curl -fsS --max-time 60 https://xauusd-research.vercel.app/api/watchdog
