@@ -23,17 +23,15 @@ export default function Shell({ children, showLogout = false }: { children: Reac
   useEffect(() => { setPending(null); setMenuOpen(false); }, [path]);
   // after the first page shows: prepare the other pages and their data, so switching is instant
   const router = useRouter();
-  // opening the app always starts in the office (also after it was in the background for 2+ minutes);
+  // opening the app always starts in the office;
   // iOS otherwise resumes on the last page (usually Trade)
   useEffect(() => {
     try {
       if (!sessionStorage.getItem('xau_booted')) { sessionStorage.setItem('xau_booted', '1'); if (window.location.pathname !== '/') router.replace('/'); }
     } catch { /* storage blocked: nothing to do */ }
-    let hiddenAt = 0;
-    const vis = () => {
-      if (document.visibilityState === 'hidden') hiddenAt = Date.now();
-      else if (hiddenAt && Date.now() - hiddenAt > 120_000 && window.location.pathname !== '/') router.replace('/');
-    };
+    // leaving the app (home button / app switcher) puts it back on the office, so it always opens there
+    const standalone = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    const vis = () => { if (standalone && document.visibilityState === 'hidden' && window.location.pathname !== '/') router.replace('/'); };
     document.addEventListener('visibilitychange', vis);
     return () => document.removeEventListener('visibilitychange', vis);
   }, [router]);

@@ -25,7 +25,7 @@ const SILENT = 35 * 60_000;
 const TV = { x0: 6.85, x1: 11.0, z0: 34, z1: 79 };
 const ROSTER = { x0: 2.7, x1: 5.75, z0: 37, z1: 77 };
 const PS = 1.14;                                     // character scale
-const RH = 290, ROOMS = 3, TOPM = 26, TOTAL = RH * ROOMS + TOPM;         // three rooms stacked (one scene height each)
+const RH = 290, ROOMS = 3, TOPM = 50, TOTAL = RH * ROOMS + TOPM;         // three rooms stacked (one scene height each)
 const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the three rooms)
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
@@ -198,19 +198,57 @@ const wallB = (x0: number, x1: number, z0: number, z1: number): Array<[number, n
 /* ---------- the static room ---------- */
 const CITY = Array.from({ length: 26 }, (_, i) => ({ y: 0.5 + i * 0.4 + hash(`b${i}`) * 0.15, w: 0.25 + hash(`w${i}`) * 0.3, h: 22 + hash(`h${i}`) * 42 }));
 function drawBackdrop(c: C, night: boolean) {
-  c.fillStyle = night ? '#0a0f1e' : '#2b2c31'; c.fillRect(-W, -H, 3 * W, TOTAL + 2 * H);
+  const y0 = -H, y1 = TOTAL + H;
+  const sky = c.createLinearGradient(0, y0, 0, TOTAL);
+  if (night) { sky.addColorStop(0, '#03060f'); sky.addColorStop(0.6, '#0b1430'); sky.addColorStop(1, '#1a2550'); }
+  else { sky.addColorStop(0, '#5aa8e0'); sky.addColorStop(0.55, '#a9d5f2'); sky.addColorStop(1, '#e6f3fb'); }
+  c.fillStyle = sky; c.fillRect(-W, y0, 3 * W, y1 - y0);
   if (night) {
-    for (let i = 0; i < 90; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.4})`; c.fillRect(hash(`st${i}`) * W, hash(`sy${i}`) * TOTAL, 0.8, 0.8); }
-    for (let i = 0; i < 46; i++) {
-      const x = hash(`sx${i}`) * W * 1.2 - 20, w = 8 + hash(`sw${i}`) * 18, h = 20 + hash(`sh${i}`) * 90, y = TOTAL - h;
-      c.fillStyle = '#121a2e'; c.fillRect(x, y, w, h + 40);
-      for (let k = 0; k < 8; k++) if (hash(`l${i}${k}`) > 0.55) { c.fillStyle = 'rgba(255,214,120,.75)'; c.fillRect(x + 2 + (k % 2) * (w / 2), y + 4 + Math.floor(k / 2) * 9, 2, 2.5); }
+    for (let i = 0; i < 140; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.5})`; const r = hash(`r${i}`) > 0.9 ? 1.1 : 0.7; c.fillRect(-20 + hash(`st${i}`) * (W + 40), -40 + hash(`sy${i}`) * TOTAL * 0.8, r, r); }
+    const mg = c.createRadialGradient(60, 70, 2, 60, 70, 45); mg.addColorStop(0, 'rgba(255,248,220,.35)'); mg.addColorStop(1, 'rgba(255,248,220,0)'); c.fillStyle = mg; c.fillRect(15, 25, 90, 90);
+    c.fillStyle = '#f4efd9'; c.beginPath(); c.arc(60, 70, 11, 0, 7); c.fill(); c.fillStyle = '#0b1430'; c.beginPath(); c.arc(65, 66, 10, 0, 7); c.fill();
+  } else {
+    const sg = c.createRadialGradient(W - 55, 60, 4, W - 55, 60, 70); sg.addColorStop(0, 'rgba(255,250,215,.95)'); sg.addColorStop(0.25, 'rgba(255,240,180,.45)'); sg.addColorStop(1, 'rgba(255,240,180,0)');
+    c.fillStyle = sg; c.fillRect(W - 140, -20, 170, 170);
+    for (let i = 0; i < 9; i++) {      // soft clouds
+      const cx = hash(`cx${i}`) * (W + 60) - 30, cy = 30 + hash(`cy${i}`) * TOTAL * 0.62, sc = 0.6 + hash(`cs${i}`) * 0.9;
+      c.fillStyle = 'rgba(255,255,255,.75)';
+      for (const [dx, dy, r] of [[0, 0, 12], [13, -5, 14], [27, 0, 11], [8, 4, 10], [20, 5, 10]]) { c.beginPath(); c.ellipse(cx + dx * sc, cy + dy * sc, r * sc * 1.2, r * sc * 0.75, 0, 0, 7); c.fill(); }
+    }
+  }
+  // two layers of city skyline behind the tower
+  for (const [layer, base, hmax, col, win] of [[0, TOTAL - 40, 260, night ? '#0f1730' : '#bdd0e2', night ? 'rgba(255,214,120,.55)' : 'rgba(255,255,255,.55)'], [1, TOTAL + 10, 190, night ? '#141d38' : '#a3b8cd', night ? 'rgba(255,214,120,.8)' : 'rgba(255,255,255,.6)']] as const) {
+    let x = -30;
+    for (let i = 0; x < W + 30; i++) {
+      const w = 16 + hash(`w${layer}${i}`) * 28, h = 50 + hash(`h${layer}${i}`) * hmax, y = base - h;
+      c.fillStyle = col; c.fillRect(x, y, w, h + 300);
+      if (hash(`ant${layer}${i}`) > 0.75) c.fillRect(x + w / 2 - 0.5, y - 12, 1, 12);
+      for (let ry = y + 6; ry < base - 6; ry += 8) for (let rx = x + 3; rx < x + w - 4; rx += 6) if (hash(`${layer}${i}:${rx}:${ry}`) > (night ? 0.55 : 0.75)) { c.fillStyle = win; c.fillRect(rx, ry, 2.4, 3); }
+      c.fillStyle = col; x += w + 2 + hash(`g${layer}${i}`) * 6;
     }
   }
 }
 function drawStatic(c: C, night: boolean, room: number) {
   // one building: the walls of a lower floor go all the way up to the floor slab of the room above (glass facade)
   const wh = room === 0 ? WALL + 26 : RH - 8;
+  if (room === 2) {    // the street level: lawn, pavement and a road around the tower
+    poly(c, [iso(-9, -9, -8), iso(NX + 9, -9, -8), iso(NX + 9, NY + 9, -8), iso(-9, NY + 9, -8)], night ? '#16231b' : '#86b96f');
+    poly(c, [iso(-1.4, -1.4, -8), iso(NX + 1.4, -1.4, -8), iso(NX + 1.4, NY + 1.4, -8), iso(-1.4, NY + 1.4, -8)], night ? '#3a3b40' : '#d6d3cc');
+    poly(c, [iso(NX + 3, -9, -8), iso(NX + 5.5, -9, -8), iso(NX + 5.5, NY + 9, -8), iso(NX + 3, NY + 9, -8)], night ? '#1c1d22' : '#4a4c53');
+    poly(c, [iso(-9, NY + 3, -8), iso(NX + 9, NY + 3, -8), iso(NX + 9, NY + 5.5, -8), iso(-9, NY + 5.5, -8)], night ? '#1c1d22' : '#4a4c53');
+    for (let k = -8; k < NY + 8; k += 1.6) poly(c, [iso(NX + 4.2, k, -7.9), iso(NX + 4.3, k, -7.9), iso(NX + 4.3, k + 0.8, -7.9), iso(NX + 4.2, k + 0.8, -7.9)], '#f2c230');
+    for (let k = -8; k < NX + 8; k += 1.6) poly(c, [iso(k, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.3, -7.9), iso(k, NY + 4.3, -7.9)], '#f2c230');
+    for (const [tx, ty] of [[-2.6, 2], [-2.6, 6], [-2.6, 10], [3, -2.6], [8, -2.6], [NX + 2.2, 13.5], [-4, NY + 2.2]]) { c.save(); c.translate(0, 8); plant(c, tx, ty, 2.1); c.restore(); }
+  }
+  if (room === 0) {    // roof: parapet, AC units, antenna and the black / yellow logo sign
+    for (const [x, y] of [[1.4, -1.25], [2.6, -1.25], [8.8, -1.25]]) { box(c, x, y, 0.9, 0.8, wh + 8, 9, '#d9dade', '#b5b7bd', '#c7c9ce'); ell(c, x + 0.45, y + 0.4, wh + 17.2, 0.25, '#8b8f99'); }
+    const [a0, a1] = iso(-0.15, -0.15, wh + 8), [b0, b1] = iso(-0.15, -0.15, wh + 48); c.strokeStyle = '#3a3b42'; c.lineWidth = 1; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
+    c.fillStyle = night ? '#ff4d4f' : '#c0392b'; c.beginPath(); c.arc(b0, b1, 1.5, 0, 7); c.fill();
+    box(c, 4.6, -0.5, 3.4, 0.22, wh + 8, 26, '#141518', '#1e1f23', '#2a2b30');
+    const [lx, ly] = iso(5.1, -0.28, wh + 13); c.fillStyle = '#f2c230'; c.beginPath(); c.ellipse(lx, ly + 0.5, 3.2, 3.2, 0, 0, 7); c.fill();
+    poly(c, [iso(5.9, -0.28, wh + 27), iso(7.8, -0.28, wh + 27), iso(7.8, -0.28, wh + 11), iso(5.9, -0.28, wh + 11)], '#1e1f23');
+    c.save(); const [tx0, ty0] = iso(5.95, -0.28, wh + 25); c.translate(tx0, ty0); c.transform(1, 0.5, 0, 1, 0, 0); c.fillStyle = '#ffffff'; c.font = '900 10px system-ui, sans-serif'; c.textBaseline = 'top'; c.fillText('XAU', 1, 1); c.restore();
+  }
   box(c, 0, 0, NX, NY, -8, 8, night ? '#b9b6b0' : '#dcd9d3', '#3a3b41', '#4a4b52', false);
   const [fcx, fcy] = iso(4, 5);
   const fg = c.createRadialGradient(fcx, fcy, 10, fcx, fcy, 240);
@@ -266,6 +304,15 @@ function drawStatic(c: C, night: boolean, room: number) {
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), '#2f3036');
   }
   if (room > 0) { poly(c, wallL(0, NY, wh - 6, wh), '#2b2c31'); poly(c, wallB(0, NX, wh - 6, wh), '#2b2c31'); }
+  if (room > 0) {   // pendant lamps hanging from the floor above
+    const lamps = room === 1 ? [[7.5, 5.1], [4.2, 5.4], [10.4, 8.6]] : [[7.6, 5.4], [4.8, 8.8], [10.2, 9.9]];
+    for (const [lx, ly] of lamps) {
+      const [a0, a1] = iso(lx, ly, wh), [b0, b1] = iso(lx, ly, 120);
+      c.strokeStyle = '#2b2c31'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
+      c.fillStyle = '#1e1f23'; c.beginPath(); c.moveTo(b0 - 2, b1); c.lineTo(b0 + 2, b1); c.lineTo(b0 + 7, b1 + 7); c.lineTo(b0 - 7, b1 + 7); c.closePath(); c.fill();
+      c.fillStyle = '#ffe9a8'; c.beginPath(); c.ellipse(b0, b1 + 7, 7, 2, 0, 0, 7); c.fill();
+    }
+  }
   // lift on every floor (the way between the rooms)
   poly(c, wallB(11.1, 12.2, 0, 54), '#1e1f23');
   poly(c, wallB(11.2, 11.64, 0, 50), night ? '#8d939c' : '#b9bfc8'); poly(c, wallB(11.66, 12.1, 0, 50), night ? '#868c95' : '#aeb4bd');
@@ -858,7 +905,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
     const clamp = () => { const LH = lhRef.current; V.z = Math.max(HOMEz(), Math.min(4, V.z)); V.tx = W * V.z <= W ? (W - W * V.z) / 2 : Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = TOTAL * V.z <= LH ? (LH - TOTAL * V.z) / 2 : Math.min(0, Math.max(LH - TOTAL * V.z, V.ty)); setZoomed(V.z > HOMEz() + 0.01); cv.style.touchAction = fullRef.current || V.z > HOMEz() + 0.01 ? 'none' : 'pan-y'; };
     const pt = (cx: number, cy: number) => { const r = cv.getBoundingClientRect(); return [(cx - r.left) * W / r.width, (cy - r.top) * W / r.width] as const; };
     const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(HOMEz(), Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
-    let pinch: { d: number; z: number; wx: number; wy: number } | null = null, pan: { x: number; y: number } | null = null, lastTap = 0, sw: { x: number; y: number } | null = null;
+    let vpan = false, pinch: { d: number; z: number; wx: number; wy: number } | null = null, pan: { x: number; y: number } | null = null, lastTap = 0, sw: { x: number; y: number } | null = null;
     const ts = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         e.preventDefault(); sw = null;
@@ -870,7 +917,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         if (nowT - lastTap < 300) { e.preventDefault(); if (V.z > HOMEz() + 0.01) Object.assign(V, homeRef.current); else zoomAt(x, y, 2.4); clamp(); lastTap = 0; return; }
         lastTap = nowT;
         sw = V.z <= HOMEz() + 0.01 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
-        if (V.z > HOMEz() + 0.01) { e.preventDefault(); pan = { x, y }; }
+        if (V.z > HOMEz() + 0.01) { e.preventDefault(); pan = { x, y }; } else { pan = { x, y }; vpan = true; }
       }
     };
     const tm = (e: TouchEvent) => {
@@ -880,8 +927,11 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         V.z = Math.max(HOMEz(), Math.min(4, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
         V.tx = mx - pinch.wx * V.z; V.ty = my - pinch.wy * V.z; clamp();
       } else if (pan && e.touches.length === 1) {
-        e.preventDefault();
-        const [x, y] = pt(e.touches[0].clientX, e.touches[0].clientY); V.tx += x - pan.x; V.ty += y - pan.y; pan = { x, y }; clamp();
+        if (e.cancelable) e.preventDefault();
+        const [x, y] = pt(e.touches[0].clientX, e.touches[0].clientY);
+        if (vpan) { if (sw && Math.abs(e.touches[0].clientY - sw.y) > Math.abs(e.touches[0].clientX - sw.x)) { V.ty += y - pan.y; clamp(); } }
+        else { V.tx += x - pan.x; V.ty += y - pan.y; clamp(); }
+        pan = { x, y };
       }
     };
     const te = (e: TouchEvent) => {
@@ -890,7 +940,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         if (Math.abs(dx) > 55 && Math.abs(dy) < Math.abs(dx) * 0.7) swipeRef.current?.();
       }
       if (e.touches.length) sw = null;
-      if (e.touches.length < 2) pinch = null; if (!e.touches.length) pan = null;
+      if (e.touches.length < 2) pinch = null; if (!e.touches.length) { pan = null; vpan = false; }
     };
     const wheel = (e: WheelEvent) => { if (!e.ctrlKey && V.z <= HOMEz() + 0.01 && e.deltaY > 0) return; e.preventDefault(); const [x, y] = pt(e.clientX, e.clientY); zoomAt(x, y, V.z * Math.exp(-e.deltaY * 0.0025)); };
     let drag: { x: number; y: number } | null = null;
@@ -916,7 +966,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = fullRef.current ? Math.max(1.12, (LH / TOTAL) * 1.24) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       lhRef.current = LH; homeRef.current = { z, tx: (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
       if (atHome) Object.assign(view.current, homeRef.current);
@@ -1016,7 +1066,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       /* ---- draw world: three rooms stacked ---- */
       const V = view.current, nightNow = nightRef.current;
       // the static rooms are rendered once per zoom level into one picture and only moved while panning
-      const mx = 30, my = 30;
+      const mx = 60, my = 60;
       const key = `${cv.width}x${cv.height}:${nightNow}:${V.z.toFixed(3)}`;
       if (key !== bgKey) {
         const bw = Math.ceil((W + 2 * mx) * k * V.z), bh = Math.ceil((TOTAL + 2 * my) * k * V.z);
@@ -1026,7 +1076,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         for (let r = ROOMS - 1; r >= 0; r--) { b.save(); b.translate(0, r * RH + TOPM); drawStatic(b, nightNow, r); b.restore(); }
         bgKey = key;
       }
-      c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0a0f1e' : '#2b2c31'; c.fillRect(0, 0, cv.width, cv.height);
+      c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; c.fillRect(0, 0, cv.width, cv.height);
       if (bg) c.drawImage(bg, Math.round(k * (V.tx - mx * V.z)), Math.round(k * (V.ty - my * V.z)));
       for (let r = ROOMS - 1; r >= 0; r--) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
@@ -1061,6 +1111,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
           if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
           if (r === 2) { glow(8.0, 0.4, 30, 30, 'rgba(255,200,90,.18)'); glow(4.8, 8.8, 20, 34, 'rgba(255,200,90,.12)'); }
+          if (r > 0) for (const [lx, ly] of r === 1 ? [[7.5, 5.1], [4.2, 5.4], [10.4, 8.6]] : [[7.6, 5.4], [4.8, 8.8], [10.2, 9.9]]) { glow(lx, ly, 112, 34, 'rgba(255,214,140,.22)'); glow(lx, ly, 30, 46, 'rgba(255,214,140,.08)'); }
         }
         c.globalCompositeOperation = 'source-over';
       }
