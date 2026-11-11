@@ -886,3 +886,19 @@ body::before { display: none; }
 .histrow .op-right { gap: 4px; }
 .group .hcards .hcard.opencard:first-child { padding-top: 4px; }
 .group .hcards .hcard.opencard:last-child { padding-bottom: 2px; }
+
+/* trade detail sheet: header, compact chart, 2-column tiles */
+.dt-sheet { gap: 14px; }
+.dt-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+.dt-head .op-badge { width: 38px; height: 38px; border-radius: 11px; font-size: 15px; }
+.dt-head .hc-name { font-size: 17px; font-weight: 650; }
+.dt-pnl { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.dt-pnl strong { font-size: 24px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.dt-pnl .hc-res { margin-left: 0; font-size: 11px; padding: 2px 8px; }
+.dt-sheet .trade-review-chart { height: 240px; min-height: 0; }
+.dt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dt-grid > span { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; border-radius: 14px; background: var(--sunk); min-width: 0; }
+.dt-grid .k { font-size: 11.5px; color: var(--mute); font-weight: 500; }
+.dt-grid strong { font-size: 14.5px; font-weight: 650; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-grid strong.pos { color: var(--up); } .dt-grid strong.neg { color: var(--down); }
+.dt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

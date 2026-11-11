@@ -154,17 +154,21 @@ export default function TradePage() {
     ...closedT.map((t) => ({ at: t.closedAt ?? t.openedAt, el: tradeRow(t) })),
     ...flowsAll.map((c) => ({ at: c.at, el: flowRow(c) })),
   ].sort((a, b) => b.at - a.at);
+  // floating P&L of an open trade, sent by the bot (per coin) / EA (per method)
+  const floatOf = (t: JournalTrade): number | null => {
+    const live = market === 'crypto' ? j.binance : j.mt5, pos = live?.pos;
+    const key = market === 'crypto' ? `${coinOf(t)}USDT` : t.strategy === 'nas' ? 'nas' : 'xau';
+    if (pos && key in pos) return pos[key];
+    // older bot / EA without per-position values: with a single open position the account total is that position
+    return openT.length === 1 && live && Number.isFinite(live.upnl) ? live.upnl : null;
+  };
   const openSection = openT.length ? (
         <section className="group">
           <SecHead title="Posisi terbuka" />
           <div className="hcards">
             {openT.map((t) => {
               // floating P&L sent by the bot (per coin) / EA (per method); null until the new bot / EA reports it
-              const pos = market === 'crypto' ? j.binance?.pos : j.mt5?.pos;
-              const key = market === 'crypto' ? `${coinOf(t)}USDT` : t.strategy === 'nas' ? 'nas' : 'xau';
-              const live = market === 'crypto' ? j.binance : j.mt5;
-              // older bot / EA without per-position values: with a single open position the account total is that position
-              const fl = pos && key in pos ? pos[key] : openT.length === 1 && live && Number.isFinite(live.upnl) ? live.upnl : null;
+              const fl = floatOf(t);
               return (
                 <button key={t.id} className="hcard opencard" onClick={() => setDetail(t)}>
                   <span className={`hc-side op-badge ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
@@ -280,24 +284,35 @@ export default function TradePage() {
           </div> : null}
         </> : <p className="empty-inline">Belum ada trade.</p>}
         {detail ? (
-          <Sheet title={`${detail.side} · ${fmt(detail.openedAt, tz)}`} onClose={() => setDetail(null)}>
-            <div className="stack">
+          <Sheet title={coinOf(detail) || (NAME[detail.strategy] ?? detail.strategy)} onClose={() => setDetail(null)}>
+            <div className="stack dt-sheet">
+              <div className="dt-head">
+                <span className={`hc-side op-badge ${detail.side === 'BUY' ? 'b' : 's'}`}>{detail.side === 'BUY' ? 'B' : 'S'}</span>
+                <span className="op-left">
+                  <strong className="hc-name">{detail.side === 'BUY' ? 'Buy' : 'Sell'} {coinOf(detail) || ''}</strong>
+                  <span className="op-strat">{NAME[detail.strategy] ?? detail.strategy}</span>
+                </span>
+                <span className="dt-pnl">
+                  {detail.result === 'open'
+                    ? <><strong className={tone(floatOf(detail))}>{floatOf(detail) == null ? '—' : money(floatOf(detail))}</strong><span className="hc-res">Terbuka</span></>
+                    : <><strong className={tone(detail.pnl)}>{money(detail.pnl)}</strong><span className={`hc-res ${detail.result}`}>{RESULT[detail.result] ?? 'Manual'}</span></>}
+                </span>
+              </div>
               {coinOf(detail) ? <LiveTradeChart symbol={`${coinOf(detail)}USDT`} t={detail} tz={tz} /> : null}
-              <dl className="kv">
-                <dt>Metode</dt><dd>{NAME[detail.strategy] ?? detail.strategy}{coinOf(detail) ? ` · ${coinOf(detail)}` : ''}</dd>
-                <dt>{['btc', 'alt', 'snr'].includes(detail.strategy) ? 'Jumlah' : 'Lot'}</dt><dd>{['btc', 'alt', 'snr'].includes(detail.strategy) ? detail.lot : detail.lot.toFixed(2)}</dd>
-                <dt>Entry</dt><dd>{px(detail.entry)}</dd>
-                <dt>Stop loss</dt><dd>{px(detail.sl)}</dd>
-                <dt>Take profit</dt><dd>{px(detail.tp)}</dd>
-                <dt>Keluar</dt><dd>{px(detail.exit)} · {RESULT[detail.result] ?? 'Manual'}</dd>
-                <dt>Hasil</dt><dd className={tone(detail.pnl)} style={{ fontWeight: 600 }}>{money(detail.pnl)}</dd>
-                <dt>Dibuka</dt><dd>{fmt(detail.openedAt, tz)}</dd>
-                <dt>Ditutup</dt><dd>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</dd>
-                {detail.closedAt ? <><dt>Durasi</dt><dd>{holdTxt(detail.closedAt - detail.openedAt)}</dd></> : null}
-                {detail.note ? <><dt>Catatan</dt><dd>{detail.note}</dd></> : null}
-              </dl>
-              <button className="btn block" onClick={async () => { const t = detail; setDetail(null); await fix(t); }}>Koreksi hasil (TP / SL / harga / $)</button>
-              <button className="btn block" onClick={async () => { const t = detail; setDetail(null); await remove(t); }}>Hapus trade ini</button>
+              <div className="dt-grid">
+                <span><span className="k">Entry</span><strong>{px(detail.entry)}</strong></span>
+                <span><span className="k">Keluar</span><strong>{detail.exit != null ? px(detail.exit) : '—'}</strong></span>
+                <span><span className="k">Stop loss</span><strong className="neg">{px(detail.sl)}</strong></span>
+                <span><span className="k">Take profit</span><strong className="pos">{px(detail.tp)}</strong></span>
+                <span><span className="k">Dibuka</span><strong>{fmt(detail.openedAt, tz)}</strong></span>
+                <span><span className="k">Ditutup</span><strong>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</strong></span>
+                <span><span className="k">Durasi</span><strong>{detail.closedAt ? hm(detail.closedAt - detail.openedAt) : hm(Date.now() - detail.openedAt)}</strong></span>
+                <span><span className="k">{['btc', 'alt', 'snr'].includes(detail.strategy) ? 'Jumlah' : 'Lot'}</span><strong>{['btc', 'alt', 'snr'].includes(detail.strategy) ? detail.lot : detail.lot.toFixed(2)}</strong></span>
+              </div>
+              <div className="dt-actions">
+                <button className="btn" onClick={async () => { const t = detail; setDetail(null); await fix(t); }}>Koreksi</button>
+                <button className="btn" onClick={async () => { const t = detail; setDetail(null); await remove(t); }}>Hapus</button>
+              </div>
             </div>
           </Sheet>
         ) : null}
