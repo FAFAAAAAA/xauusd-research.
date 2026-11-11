@@ -26,6 +26,8 @@ const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'v1 BTC
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
 // coin of a bot trade: the note is "Bot Binance SANDUSDT …"
+/** duration as plain numbers, hours:minutes (e.g. 5:12, 27:05) */
+const hm = (ms: number) => { const m = Math.max(0, Math.round(ms / 60_000)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 const coinOf = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
 
@@ -119,12 +121,9 @@ export default function TradePage() {
       <span className={`hc-side op-badge ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
       <span className="op-left">
         <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
-        <span className="op-strat">{NAME[t.strategy] ?? t.strategy} · {t.closedAt ? holdTxt(t.closedAt - t.openedAt) : 'masih terbuka'}</span>
+        <span className="op-strat">{NAME[t.strategy] ?? t.strategy} · {t.closedAt ? hm(t.closedAt - t.openedAt) : 'terbuka'}</span>
       </span>
-      <span className="op-right">
-        <span className={`op-pnl ${tone(t.pnl)}`}>{money(t.pnl)}</span>
-        <span className={`hc-res ${t.result}`}>{RESULT[t.result] ?? 'Manual'}</span>
-      </span>
+      <span className={`op-pnl ${tone(t.pnl)}`}>{money(t.pnl)}</span>
     </button>
   );
   // deposit / withdraw row (one compact line)

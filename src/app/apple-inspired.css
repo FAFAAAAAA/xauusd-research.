@@ -874,3 +874,15 @@ body::before { display: none; }
 .histrow .hc-res { margin-left: 0; font-size: 11px; padding: 2px 8px; }
 .cfrow { cursor: default; }
 .histrow .op-right .op-strat { margin-left: 0; font-variant-numeric: tabular-nums; }
+
+/* calmer list rows: smaller badge and numbers, more air */
+.hcard.opencard { column-gap: 14px; }
+.group .hcard.opencard { padding: 16px 2px; }
+.opencard .op-badge { width: 30px; height: 30px; border-radius: 9px; font-size: 13px; }
+.opencard .hc-name { font-size: 16px; font-weight: 650; }
+.opencard .op-left { gap: 4px; }
+.opencard .op-strat { font-size: 12.5px; font-weight: 500; }
+.opencard .op-pnl, .histrow .op-pnl { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.histrow .op-right { gap: 4px; }
+.group .hcards .hcard.opencard:first-child { padding-top: 4px; }
+.group .hcards .hcard.opencard:last-child { padding-bottom: 2px; }
