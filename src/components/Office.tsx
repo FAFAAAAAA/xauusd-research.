@@ -25,11 +25,11 @@ interface Person {
   hair: string; skin: string; shirt: string; pants: string; hairStyle: 'short' | 'long' | 'cap' | 'bun';
 }
 const PEOPLE: Person[] = [
-  { id: 'alt', name: 'Na', role: 'ALT · SELL ALTCOIN', desk: { x: 1.0, y: 1.0 }, rest: { x: 8.6, y: 3.9 }, hair: '#3b2a1f', skin: '#f1c7a0', shirt: '#e5484d', pants: '#2c3e66', hairStyle: 'short' },
-  { id: 'big', name: 'Ni', role: 'BIG · BUY KOIN BESAR', desk: { x: 4.6, y: 1.0 }, rest: { x: 8.3, y: 5.6 }, hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#3d3d3d', hairStyle: 'cap' },
-  { id: 'xau', name: 'Nu', role: 'XAU · EA EMAS', desk: { x: 1.0, y: 4.0 }, rest: { x: 1.9, y: 7.1 }, hair: '#c9772f', skin: '#f3cfae', shirt: '#f0b429', pants: '#5b4a3a', hairStyle: 'long' },
-  { id: 'nas', name: 'Noel', role: 'NAS · EA NASDAQ', desk: { x: 4.6, y: 4.0 }, rest: { x: 2.9, y: 7.1 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
-  { id: 'jaga', name: 'Penjaga', role: 'WATCHDOG', desk: { x: 7.6, y: 1.8 }, rest: { x: 7.6, y: 1.8 }, hair: '#222', skin: '#c99064', shirt: '#33415c', pants: '#1f2a3a', hairStyle: 'cap' },
+  { id: 'alt', name: 'Na', role: 'ALT', desk: { x: 1.0, y: 1.0 }, rest: { x: 8.6, y: 3.9 }, hair: '#3b2a1f', skin: '#f1c7a0', shirt: '#e5484d', pants: '#2c3e66', hairStyle: 'short' },
+  { id: 'big', name: 'Ni', role: 'BTC', desk: { x: 4.6, y: 1.0 }, rest: { x: 8.3, y: 5.6 }, hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#3d3d3d', hairStyle: 'cap' },
+  { id: 'xau', name: 'Nu', role: 'XAU', desk: { x: 1.0, y: 4.0 }, rest: { x: 1.9, y: 7.1 }, hair: '#c9772f', skin: '#f3cfae', shirt: '#f0b429', pants: '#5b4a3a', hairStyle: 'long' },
+  { id: 'nas', name: 'Noel', role: 'NASDAQ', desk: { x: 4.6, y: 4.0 }, rest: { x: 2.9, y: 7.1 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
+  { id: 'jaga', name: 'Pentoel', role: 'SECURITY', desk: { x: 7.6, y: 1.8 }, rest: { x: 7.6, y: 1.8 }, hair: '#222', skin: '#c99064', shirt: '#33415c', pants: '#1f2a3a', hairStyle: 'cap' },
   { id: 'bos', name: 'Marcel', role: 'OWNER', desk: { x: 3.9, y: 3.2 }, rest: { x: 3.9, y: 3.2 }, hair: '#111', skin: '#e2b088', shirt: '#f5f5f5', pants: '#30343b', hairStyle: 'short' },
 ];
 
@@ -253,7 +253,7 @@ function plan(p: Person, s: Status, t: number): { spot: Spot; pose: Pose } {
   return r < 0.45 ? { spot: seat, pose: 'sit' } : pick;                         // monitoring: half at the desk, half around the office
 }
 
-export const OFFICE_LEGEND = PEOPLE.map((p) => `${p.name} = ${p.role}`).join(' · ');
+export const OFFICE_LEGEND = 'Na = ALT (SELL altcoin) · Ni = BTC / BIG (BUY koin besar) · Nu = XAU (EA emas) · Noel = NASDAQ (EA) · Pentoel = security (watchdog) · Marcel = owner';
 
 export default function Office({ data, now }: { data: OfficeData; now: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -326,7 +326,7 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
       if (what) s = { ...s0, label: s0.label === 'LIBUR' ? `LIBUR · ${what}` : what, color: s0.label === 'LIBUR' ? '#a78bfa' : '#f5b83d' };
     }
     const [sx, sy] = iso(q.x, q.y);
-    return { p, s, left: (sx / W) * 100, top: ((sy - 24) / H) * 100 };
+    return { p, s, left: (sx / W) * 100, top: ((sy - 25) / H) * 100 };
   }).filter(Boolean) as Array<{ p: Person; s: Status; left: number; top: number }>;
 
   return (
@@ -336,7 +336,7 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
         <div key={p.id} className="office-tag" style={{ left: `${left}%`, top: `${top}%` }}>
           <span className="ot-card">
             <span className="ot-line"><strong>{p.name}</strong><span className="ot-st"><i style={{ background: s.color }} />{s.label}</span></span>
-            {s.tag ? <span className="ot-role" style={{ color: s.tag.color, fontWeight: 700 }}>{s.tag.text}</span> : null}
+            <span className="ot-role">{p.role}{s.tag ? <b style={{ color: s.tag.color }}> · {s.tag.text}</b> : null}</span>
           </span>
         </div>
       ))}
