@@ -9,7 +9,7 @@ import { fileProvider, parseFileSource } from '@/lib/server/market-files';
 export const dynamic = 'force-dynamic';
 
 /** Trade review: chart around entry, setup reason, news known AT ENTRY, outcome. */
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   return api(async (db) => {
     const id = reqUuid(params.id, 'id');
     const r = await db.query<Record<string, unknown>>(
@@ -25,12 +25,20 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     const tf = isTimeframe(t.timeframe) ? t.timeframe : 'H1';
     let candles: Awaited<ReturnType<typeof repo.candlesUpTo>> = [];
     const file = parseFileSource(t.broker_symbol as string | null);
-    const chartTimeframe = file?.tf ?? tf;
-    const window = tradeChartWindow(entry, exit, TIMEFRAME_MS[chartTimeframe]);
+    // ?tf= picks the chart timeframe (M5…D1, never below the data's own timeframe); then a long history is sent:
+    // up to 1200 candles before the entry and 300 after the exit, like the live trade chart
+    const want = new URL(req.url).searchParams.get('tf');
+    const base = file?.tf ?? tf;
+    const picked = want && isTimeframe(want) && ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'].includes(want) && TIMEFRAME_MS[want] >= TIMEFRAME_MS[base] ? want : null;
+    const chartTimeframe = picked ?? base;
+    const window = picked
+      ? { from: entry - 1200 * TIMEFRAME_MS[picked], to: Math.max(entry, exit ?? entry) + 300 * TIMEFRAME_MS[picked] + 1 }
+      : tradeChartWindow(entry, exit, TIMEFRAME_MS[chartTimeframe]);
     if (file) {
-      candles = fileProvider(file.symbol, file.tf).between(file.tf, window.from, window.to);
+      candles = fileProvider(file.symbol, file.tf).between(chartTimeframe, window.from, window.to);
     } else if (t.source_id) {
-      candles = await repo.candlesBetween(db, String(t.source_id), tf, window.from, window.to, 10000);
+      candles = await repo.candlesBetween(db, String(t.source_id), chartTimeframe, window.from, window.to, 10000);
+      if (!candles.length && chartTimeframe !== tf) candles = await repo.candlesBetween(db, String(t.source_id), tf, window.from, window.to, 10000);
     }
 
     const news = snapshotAt(await loadNewsWindow(db, entry, entry), entry);
