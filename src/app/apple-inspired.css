@@ -846,3 +846,7 @@ body::before { display: none; }
 .live-dot { margin-left: auto; width: 9px; height: 9px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 0 rgba(14,203,129,.5); animation: livepulse 1.6s ease-out infinite; }
 @keyframes livepulse { 0% { box-shadow: 0 0 0 0 rgba(14,203,129,.45); } 100% { box-shadow: 0 0 0 9px rgba(14,203,129,0); } }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+.op-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.op-strat { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--mute); white-space: nowrap; }
+.hc-foot { display: flex; align-items: center; }

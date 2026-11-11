@@ -119,7 +119,6 @@ export default function TradePage() {
       <span className="hc-top">
         <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
         <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
-        <span className="hc-tag">{coinOf(t) ? NAME[t.strategy] ?? t.strategy : t.side}</span>
         <span className={`hc-res ${t.result}`}>{RESULT[t.result] ?? 'Manual'}</span>
       </span>
       <span className="hc-mid">
@@ -129,6 +128,7 @@ export default function TradePage() {
       </span>
       <span className="hc-foot">
         <span>{t.closedAt ? holdTxt(t.closedAt - t.openedAt) : 'masih terbuka'}</span>
+        <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
       </span>
     </button>
   );
@@ -244,10 +244,12 @@ export default function TradePage() {
                   <span className="hc-top">
                     <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
                     <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
-                    <span className="hc-tag">{coinOf(t) ? NAME[t.strategy] ?? t.strategy : t.side}</span>
                     <span className="live-dot" aria-label="terbuka" />
                   </span>
-                  <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
+                  <span className="op-row">
+                    <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
+                    <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
+                  </span>
                 </button>
               );
             })}

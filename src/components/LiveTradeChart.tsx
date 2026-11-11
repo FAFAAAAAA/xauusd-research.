@@ -13,7 +13,7 @@ const TF: Record<string, number> = { '5m': 300_000, '15m': 900_000, '1h': 3_600_
 const auto = (ms: number) => (ms < 6 * 3_600_000 ? '5m' : ms < 2 * 86_400_000 ? '15m' : ms < 7 * 86_400_000 ? '1h' : '4h');
 
 export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: JournalTrade; tz: string }) {
-  const [candles, setCandles] = useState<Candle[] | null>(null);
+  const [candles, setCandles] = useState<Candle[] | null>(null);   // newest candles refresh while the trade is open
   const [err, setErr] = useState(false);
   const [iv, setIv] = useState(() => auto((t.closedAt ?? Date.now()) - t.openedAt));
   useEffect(() => {
@@ -51,6 +51,28 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
     })();
     return () => { off = true; };
   }, [symbol, t.openedAt, t.closedAt, iv]);
+  // open trade: refresh the newest candles every 10 s while the page is visible (realtime price, boxes grow with it)
+  useEffect(() => {
+    if (t.closedAt) return;
+    const tick = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now(), q = `symbol=${encodeURIComponent(symbol)}&interval=${iv}&startTime=${now - 3 * TF[iv]}&endTime=${now}&limit=3`;
+      const rows = await Promise.any([
+        fetch(`https://fapi.binance.com/fapi/v1/klines?${q}`).then((r) => (r.ok ? r.json() : Promise.reject())),
+        fetch(`/api/klines?${q}`).then((r) => (r.ok ? r.json() : Promise.reject())).then((j) => j?.candles ?? Promise.reject()),
+      ]).catch(() => null);
+      if (!Array.isArray(rows) || !rows.length) return;
+      const fresh = rows.map((k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]) } as Candle));
+      setCandles((cur) => {
+        if (!cur || !cur.length) return cur;
+        const m = new Map(cur.map((c) => [c.time, c] as const));
+        for (const c of fresh) m.set(c.time, c);
+        return [...m.values()].sort((a, b) => a.time - b.time);
+      });
+    };
+    const id = window.setInterval(tick, 10_000);
+    return () => window.clearInterval(id);
+  }, [symbol, iv, t.closedAt]);
   return (
     <div className="stack" style={{ gap: 10 }}>
     <Seg full label="Timeframe" options={[['5m', 'M5'], ['15m', 'M15'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1']] as const} value={iv} onChange={(v) => setIv(v)} />

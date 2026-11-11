@@ -83,7 +83,8 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       return index;
     };
     const entryIndex = indexAt(position.entry);
-    const exitIndex = position.exit == null ? entryIndex + 24 : indexAt(position.exit);
+    // open trade: entry / SL / TP boxes run up to the newest candle (and a little past it) until one is hit
+    const exitIndex = position.exit == null ? candles.length - 1 + 3 : indexAt(position.exit);
     const overlay = new TradePositionOverlay(position, entryIndex, exitIndex);
     s.attachPrimitive(overlay);
     focus.current = () => {
@@ -91,8 +92,8 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       c.priceScale('right').applyOptions({ autoScale: true });
       c.timeScale().setVisibleLogicalRange({ from: entryIndex - 16, to: entryIndex + span - 16 });
     };
-    focus.current();
-    lastFit.current = fitKey;
+    // focus once per trade / timeframe; live candle updates keep the view where the person left it
+    if (lastFit.current !== fitKey) { focus.current(); lastFit.current = fitKey; }
     return () => { s.detachPrimitive(overlay); };
   }, [position, candles, fitKey]);
 
