@@ -5,13 +5,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { warm } from '@/components/client';
 import { useMarket } from '@/components/MarketSwitch';
 import { Toaster } from '@/components/Status';
+import OfficeDock from '@/components/OfficeDock';
 
 /* 9 Nov 2026: Trade is the main page; the other pages live in the three-line menu (one page at a time, so nothing else loads
    in the background). The news page is no longer in the menu. */
 const LINKS = [
   { href: '/trade', label: 'Trade' },
   { href: '/analytics', label: 'Backtest' },
-  { href: '/kantor', label: 'Kantor' },
   { href: '/calculator', label: 'Kalkulator' },
   { href: '/settings', label: 'Atur' },
 ] as const;
@@ -139,6 +139,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       </header>
       <main className="main" aria-busy={pending ? true : undefined}>
         {/* the research-flow / research-section wrappers carry the page styles (pills, cards, radii) */}
+        <OfficeDock />
         <div className="page" ref={pageRef}><div className="research-flow"><section className="research-section"><div className="tool-content">{children}</div></section></div></div>
         {showLogout ? <div className="mobile-only-logout"><button className="btn sm ghost" onClick={logout}>Keluar</button></div> : null}
       </main>
