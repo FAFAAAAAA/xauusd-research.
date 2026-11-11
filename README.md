@@ -567,3 +567,8 @@ Data perak, DAX, Nikkei, minyak, DXY belum ada (tidak bisa diunduh dari lingkung
 - v1 SNR tanpa menunggu H4 tutup (11 Nov 2026): support H4 sama, masuk saat candle **H1** tutup di bawahnya. 26 koin bot, portofolio maks 3:
   H4 tutup 27 trade/bln win 41,0% PF 1,28 DD 29R; H1 tutup 34/bln win 40,3% PF 1,23 DD 36R (per trade PF 1,34 → 1,22, sama di 2020–23 dan 2024–26).
   Untung per tahun hampir sama (+58 vs +60R) tapi lebih banyak trade, drawdown lebih dalam → bot tetap menunggu H4 tutup.
+
+### Konsep TikTok @tradersarena.id (11 Nov 2026)
+Aturan tetap, RR 1:2, biaya (emas 0,35, US100 2,0, EURUSD 0,00012), simulasi M30, 2011–2026, satu posisi per strategi.
+CRT H4, FVG H1/H4 (limit di tepi gap), Order Block H1/H4 (setelah close menembus swing), pin bar dan engulfing di support/resistance H1/H4:
+semua PF 0,73–1,05 di emas, US100 dan EURUSD; win rate 29–36% (≈ acak untuk RR 1:2). Terbaik engulfing H4 emas PF 1,05 (2019–26 PF 0,93). Tidak ada yang lolos.
