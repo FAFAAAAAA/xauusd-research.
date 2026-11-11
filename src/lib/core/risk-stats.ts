@@ -158,7 +158,7 @@ export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3' | 'nas' |
     "p75Sl": 11.73
   }
 };
-export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 Level', v2: 'v1 XAU', v3: 'v3 BOS', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan', nas: 'v1 NAS', btc: 'v1 BTC', alt: 'v2 ALT', snr: 'v1 SNR' };
+export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 Level', v2: 'v1 XAU', v3: 'v3 BOS', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT' };
 /** Instrument facts per entry: USD per 1.00 price move per 1 lot, the broker's minimum lot (Exness) and the backtest period. */
 export const RISK_META: Record<keyof typeof RISK_STATS, { contract: number; minLot: number; period: string; unit: string; dp?: number; broker?: string; noLot?: boolean }> = {
   v1: { contract: 100, minLot: 0.01, period: '2004–2026', unit: '$' }, v2: { contract: 100, minLot: 0.01, period: '2004–2026', unit: '$' },

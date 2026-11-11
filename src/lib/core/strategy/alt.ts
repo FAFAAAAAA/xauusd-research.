@@ -29,7 +29,7 @@ interface St { lastH1?: number; done?: number; dk?: number; rng?: number; atrD?:
 export const ALT_VOLBREAK_KEY = 'metode_alt_volbreak';
 export const altVolbreakAdapter: StrategyAdapter = {
   key: ALT_VOLBREAK_KEY,
-  name: 'v1 ALT',
+  name: 'v1 ALT (lama)',
   configured: true,
   testOnly: false,
   warmupCandles: 30,

@@ -22,7 +22,7 @@ interface St { lastH4?: number; dk?: number; down?: boolean }
 export const SNR_SELL_KEY = 'metode_snr_sell';
 export const snrSellAdapter: StrategyAdapter = {
   key: SNR_SELL_KEY,
-  name: 'v1 SNR',
+  name: 'ALT',
   configured: true,
   testOnly: false,
   warmupCandles: 30,

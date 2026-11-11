@@ -108,7 +108,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   // the Binance bot also sends "strategy":"btc" for its BUY part (v1 BTC rules on the largest coins)
   const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : 'v2';
   const bot = strat === 'snr' || strat === 'btc';
-  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'v1 SNR' : strat === 'btc' ? 'v1 BTC' : 'v1 XAU';
+  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : 'v1 XAU';
   const symbol = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24).toUpperCase() : '';
   const src = bot ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
   const who = bot ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;
@@ -157,7 +157,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
 }
 
 /** Telegram layout of the Binance v1 SNR bot: coin, SL/TP distance in %, risk in USDT, result in R and duration. */
-export function snrMessage(t: JournalTrade, symbol: string, event: 'open' | 'close', tz: string, now: number, label = 'v1 SNR'): string {
+export function snrMessage(t: JournalTrade, symbol: string, event: 'open' | 'close', tz: string, now: number, label = 'ALT'): string {
   const fp = (x: number) => (Math.abs(x) >= 100 ? x.toFixed(2) : Math.abs(x) >= 1 ? x.toFixed(4) : x.toPrecision(5));
     const pctOf = (x: number) => `${x >= t.entry ? '+' : '−'}${(Math.abs(x / t.entry - 1) * 100).toFixed(2)}%`;
   const riskUsd = Math.abs(t.entry - t.sl) * t.lot;
@@ -179,7 +179,7 @@ export async function sendBotTest(db: Db, opts: { fetchImpl?: FetchLike; now?: n
   const t: JournalTrade = { id: 'test', strategy: 'snr', side: 'SELL', openedAt: now - 7 * 3_600_000 - 20 * 60_000, entry: 0.2345, sl: 0.2412, tp: 0.2211, lot: 597,
     closedAt: now, exit: 0.2211, result: 'tp', pnl: 7.95, note: 'Bot Binance SANDUSDT' };
   const msgs = [snrMessage({ ...t, result: 'open', exit: null, closedAt: null, pnl: null }, 'SANDUSDT', 'open', tz, now), snrMessage(t, 'SANDUSDT', 'close', tz, now),
-    `ℹ️ <b>Bot v1 SNR</b>\n\nRingkasan 08:00 (waktu Korea) — bot aktif.\nSaldo Futures: 207.95 USDT\nSejak ringkasan terakhir: 1 trade selesai (TP 1, SL 0), hasil +7.95 USDT\nPosisi terbuka: tidak ada`];
+    `ℹ️ <b>Bot Binance</b>\n\nRingkasan 08:00 (waktu Korea) — bot aktif.\nSaldo Futures: 207.95 USDT\nSejak ringkasan terakhir: 1 trade selesai (TP 1, SL 0), hasil +7.95 USDT\nPosisi terbuka: tidak ada`];
   // a TEST row in the journal (closed at TP) so the owner can see how bot trades look there; deletable like any trade
   const all = await repo.getAppSetting<JournalTrade[]>(db, 'live_journal', []);
   const list = Array.isArray(all) ? all : [];

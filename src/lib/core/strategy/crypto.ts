@@ -20,7 +20,7 @@ interface St { lastH4?: number; tk?: number; up?: boolean; atrD?: number }
 export const CRYPTO_DONCHIAN_KEY = 'metode_crypto_donchian';
 export const cryptoDonchianAdapter: StrategyAdapter = {
   key: CRYPTO_DONCHIAN_KEY,
-  name: 'v1 BTC',
+  name: 'BIG',
   configured: true,
   testOnly: false,
   warmupCandles: 30,

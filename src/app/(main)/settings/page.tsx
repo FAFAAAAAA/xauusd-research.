@@ -218,7 +218,7 @@ function EaSetup({ tz }: { tz: string }) {
         <a className="btn sm primary" href="/ea/XAU_v2_EA_v114.mq5" download>Unduh EA v1 XAU (XAU_v2_EA_v114.mq5)</a>
         <a className="btn sm primary" href="/ea/NAS_v1_EA_v100.mq5" download>Unduh EA v1 NAS (NAS_v1_EA_v100.mq5)</a>
         <a className="btn sm primary" href="/ea/PROP_XAU_NAS_EA_v100.mq5" download>Unduh EA prop firm v1 XAU + v1 NAS (PROP_XAU_NAS_EA_v100.mq5)</a>
-        <a className="btn sm primary" href="/bot/snr_bot.py" download>Unduh bot v1 SNR Binance (snr_bot.py)</a>
+        <a className="btn sm primary" href="/bot/snr_bot.py" download>Unduh bot Binance — ALT + BIG (snr_bot.py)</a>
         <a className="btn sm" href="/ea/XAU_v2_EA_DIAGNOSTIK.mq5" download>Unduh EA Diagnostik (MT5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
         <button className="btn sm" onClick={async () => { try { const r = await call<any>('/api/ea/test', { method: 'POST' }); toast(r.sent?.every((x: string) => x === 'sent') ? 'Contoh pesan bot terkirim ke Telegram + 1 trade TES di jurnal (Trade → Crypto)' : `Telegram: ${(r.sent ?? []).join(', ')}`); } catch (e) { setErr((e as Error).message); } }}>Tes pesan bot di Telegram</button>
