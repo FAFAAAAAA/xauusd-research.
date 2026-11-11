@@ -895,7 +895,8 @@ body::before { display: none; }
 .dt-pnl { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .dt-pnl strong { font-size: 24px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .dt-pnl .hc-res { margin-left: 0; font-size: 11px; padding: 2px 8px; }
-.dt-sheet .trade-review-chart { height: 240px; min-height: 0; }
+.dt-sheet .trade-review-chart { height: min(52svh, 420px); min-height: 320px; }
+.dt-sheet .trade-chart-tools { display: none; }   /* pinch and drag on the chart instead of buttons */
 .dt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .dt-grid > span { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; border-radius: 14px; background: var(--sunk); min-width: 0; }
 .dt-grid .k { font-size: 11.5px; color: var(--mute); font-weight: 500; }
