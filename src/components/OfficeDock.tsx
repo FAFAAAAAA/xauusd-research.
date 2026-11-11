@@ -10,7 +10,7 @@ const coinOf = (t: { note?: string | null }) => (/Bot Binance ([0-9A-Z]+)/.exec(
 
 /** The virtual office on top of every page (stays mounted while switching pages).
  *  Journal every 30 s + Binance mark price every 3 s, so the wall TV and the floating P&L are realtime. */
-export default function OfficeDock() {
+export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; onSwipe?: () => void } = {}) {
   const [j, setJ] = useState<OfficeData | null>(() => peek<OfficeData>('/api/journal'));
   const [now, setNow] = useState(() => Date.now());
   const [mark, setMark] = useState<Record<string, number>>({});
@@ -42,7 +42,8 @@ export default function OfficeDock() {
     return () => { off = true; window.clearInterval(id); };
   }, [syms]);
 
-  if (!j) return <div className="office-dock"><div className="office office-ph" /></div>;
+  const cls = full ? 'office-home' : 'office-dock';
+  if (!j) return <div className={cls}><div className={'office office-ph' + (full ? ' office-full' : '')} /></div>;
   // realtime floating P&L per crypto position from the mark price (falls back to the bot report)
   const posB: Record<string, number> = { ...(j.binance?.pos ?? {}) };
   let floatB = 0, liveB = false;
@@ -68,5 +69,5 @@ export default function OfficeDock() {
     { k: 'HARI INI', v: usd(pnlToday, true), color: tone(pnlToday) },
     { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet + floatM) : '—' },
   ];
-  return <div className="office-dock"><Office data={data} now={now} screen={screen} /></div>;
+  return <div className={cls}><Office data={data} now={now} screen={screen} full={full} onSwipe={onSwipe} /></div>;
 }

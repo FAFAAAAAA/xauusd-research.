@@ -5,11 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { warm } from '@/components/client';
 import { useMarket } from '@/components/MarketSwitch';
 import { Toaster } from '@/components/Status';
-import OfficeDock from '@/components/OfficeDock';
 
 /* 9 Nov 2026: Trade is the main page; the other pages live in the three-line menu (one page at a time, so nothing else loads
    in the background). The news page is no longer in the menu. */
 const LINKS = [
+  { href: '/', label: 'Kantor' },
   { href: '/trade', label: 'Trade' },
   { href: '/analytics', label: 'Backtest' },
   { href: '/calculator', label: 'Kalkulator' },
@@ -98,7 +98,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
     return () => { document.removeEventListener('touchstart', start); document.removeEventListener('touchmove', move); document.removeEventListener('touchend', end); document.removeEventListener('touchcancel', end); };
   }, [router]);
   const cur = pending ?? path;
-  const active = (href: string) => cur.startsWith(href);
+  const active = (href: string) => (href === '/' ? cur === '/' : cur.startsWith(href));
   const go = (href: string) => () => {
     setMenuOpen(false);
     if (href !== path) setPending(href);
@@ -108,11 +108,13 @@ export default function Shell({ children, showLogout = false }: { children: Reac
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   };
+  // the home screen is only the office, full screen (swipe sideways to open Trade)
+  if (path === '/') return <>{children}<Toaster /></>;
   return (
     <div className="shell apple-shell">
       <header className="apple-topbar">
         <div className="apple-topbar-inner">
-          <Link href="/trade" className="apple-brand" aria-label="Trade" onClick={go('/trade')}>
+          <Link href="/" className="apple-brand" aria-label="Kantor" onClick={go('/')}>
             <span className="apple-brand-symbol" aria-hidden>Au</span>
           </Link>
           <nav className="apple-nav-links" aria-label="Navigasi utama">
@@ -139,7 +141,6 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       </header>
       <main className="main" aria-busy={pending ? true : undefined}>
         {/* the research-flow / research-section wrappers carry the page styles (pills, cards, radii) */}
-        <OfficeDock />
         <div className="page" ref={pageRef}><div className="research-flow"><section className="research-section"><div className="tool-content">{children}</div></section></div></div>
         {showLogout ? <div className="mobile-only-logout"><button className="btn sm ghost" onClick={logout}>Keluar</button></div> : null}
       </main>

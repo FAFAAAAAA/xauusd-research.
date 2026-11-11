@@ -677,7 +677,9 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
 }
 
 /* ---------- component ---------- */
-export default function Office({ data, now, screen = [] }: { data: OfficeData; now: number; screen?: ScreenLine[] }) {
+export default function Office({ data, now, screen = [], full = false, onSwipe }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void }) {
+  const lhRef = useRef(H), homeRef = useRef({ ...HOME });
+  const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
   const wrap = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLCanvasElement>(null);
   const st = useMemo(() => statuses(data, now), [data, now]);
@@ -688,47 +690,57 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
   const night = (() => { const h = new Date(now).getHours(); return h >= 18 || h < 6; })();
   const nightRef = useRef(night); nightRef.current = night;
   const view = useRef({ ...HOME });
+  const fullRef = useRef(full); fullRef.current = full;
   const [zoomed, setZoomed] = useState(false);
 
   // pinch / pan / double tap / wheel zoom (page scroll keeps working while not zoomed)
   useEffect(() => {
     const cv = ref.current; if (!cv) return;
     const V = view.current;
-    const clamp = () => { V.z = Math.max(HOME.z, Math.min(4, V.z)); V.tx = Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = Math.min(0, Math.max(H - H * V.z, V.ty)); setZoomed(V.z > HOME.z + 0.01); cv.style.touchAction = V.z > HOME.z + 0.01 ? 'none' : 'pan-y'; };
-    const pt = (cx: number, cy: number) => { const r = cv.getBoundingClientRect(); return [(cx - r.left) * W / r.width, (cy - r.top) * H / r.height] as const; };
-    const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(HOME.z, Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
-    let pinch: { d: number; z: number; wx: number; wy: number } | null = null, pan: { x: number; y: number } | null = null, lastTap = 0;
+    const HOMEz = () => homeRef.current.z;
+    const clamp = () => { const LH = lhRef.current; V.z = Math.max(HOMEz(), Math.min(4, V.z)); V.tx = Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = H * V.z <= LH ? (LH - H * V.z) / 2 : Math.min(0, Math.max(LH - H * V.z, V.ty)); setZoomed(V.z > HOMEz() + 0.01); cv.style.touchAction = fullRef.current || V.z > HOMEz() + 0.01 ? 'none' : 'pan-y'; };
+    const pt = (cx: number, cy: number) => { const r = cv.getBoundingClientRect(); return [(cx - r.left) * W / r.width, (cy - r.top) * W / r.width] as const; };
+    const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(HOMEz(), Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
+    let pinch: { d: number; z: number; wx: number; wy: number } | null = null, pan: { x: number; y: number } | null = null, lastTap = 0, sw: { x: number; y: number } | null = null;
     const ts = (e: TouchEvent) => {
       if (e.touches.length === 2) {
-        e.preventDefault();
+        e.preventDefault(); sw = null;
         const a = e.touches[0], b = e.touches[1], [mx, my] = pt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
         pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, z: V.z, wx: (mx - V.tx) / V.z, wy: (my - V.ty) / V.z }; pan = null;
       } else if (e.touches.length === 1) {
         const [x, y] = pt(e.touches[0].clientX, e.touches[0].clientY);
         const nowT = Date.now();
-        if (nowT - lastTap < 300) { e.preventDefault(); if (V.z > HOME.z + 0.01) Object.assign(V, HOME); else zoomAt(x, y, 2.4); clamp(); lastTap = 0; return; }
+        if (nowT - lastTap < 300) { e.preventDefault(); if (V.z > HOMEz() + 0.01) Object.assign(V, homeRef.current); else zoomAt(x, y, 2.4); clamp(); lastTap = 0; return; }
         lastTap = nowT;
-        if (V.z > HOME.z + 0.01) { e.preventDefault(); pan = { x, y }; }
+        sw = V.z <= HOMEz() + 0.01 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+        if (V.z > HOMEz() + 0.01) { e.preventDefault(); pan = { x, y }; }
       }
     };
     const tm = (e: TouchEvent) => {
       if (pinch && e.touches.length === 2) {
         e.preventDefault();
         const a = e.touches[0], b = e.touches[1], [mx, my] = pt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
-        V.z = Math.max(HOME.z, Math.min(4, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
+        V.z = Math.max(HOMEz(), Math.min(4, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
         V.tx = mx - pinch.wx * V.z; V.ty = my - pinch.wy * V.z; clamp();
       } else if (pan && e.touches.length === 1) {
         e.preventDefault();
         const [x, y] = pt(e.touches[0].clientX, e.touches[0].clientY); V.tx += x - pan.x; V.ty += y - pan.y; pan = { x, y }; clamp();
       }
     };
-    const te = (e: TouchEvent) => { if (e.touches.length < 2) pinch = null; if (!e.touches.length) pan = null; };
-    const wheel = (e: WheelEvent) => { if (!e.ctrlKey && V.z <= HOME.z + 0.01 && e.deltaY > 0) return; e.preventDefault(); const [x, y] = pt(e.clientX, e.clientY); zoomAt(x, y, V.z * Math.exp(-e.deltaY * 0.0025)); };
+    const te = (e: TouchEvent) => {
+      if (sw && !e.touches.length && e.changedTouches[0]) {      // horizontal swipe on the full-screen office opens Trade
+        const dx = e.changedTouches[0].clientX - sw.x, dy = e.changedTouches[0].clientY - sw.y;
+        if (Math.abs(dx) > 55 && Math.abs(dy) < Math.abs(dx) * 0.7) swipeRef.current?.();
+      }
+      if (e.touches.length) sw = null;
+      if (e.touches.length < 2) pinch = null; if (!e.touches.length) pan = null;
+    };
+    const wheel = (e: WheelEvent) => { if (!e.ctrlKey && V.z <= HOMEz() + 0.01 && e.deltaY > 0) return; e.preventDefault(); const [x, y] = pt(e.clientX, e.clientY); zoomAt(x, y, V.z * Math.exp(-e.deltaY * 0.0025)); };
     let drag: { x: number; y: number } | null = null;
-    const md = (e: MouseEvent) => { if (V.z > HOME.z + 0.01) drag = { x: e.clientX, y: e.clientY }; };
+    const md = (e: MouseEvent) => { if (V.z > HOMEz() + 0.01) drag = { x: e.clientX, y: e.clientY }; };
     const mm = (e: MouseEvent) => { if (!drag) return; const r = cv.getBoundingClientRect(); V.tx += (e.clientX - drag.x) * W / r.width; V.ty += (e.clientY - drag.y) * H / r.height; drag = { x: e.clientX, y: e.clientY }; clamp(); };
     const mu = () => { drag = null; };
-    const dbl = (e: MouseEvent) => { const [x, y] = pt(e.clientX, e.clientY); if (V.z > HOME.z + 0.01) { Object.assign(V, HOME); clamp(); } else zoomAt(x, y, 2.4); };
+    const dbl = (e: MouseEvent) => { const [x, y] = pt(e.clientX, e.clientY); if (V.z > HOMEz() + 0.01) { Object.assign(V, homeRef.current); clamp(); } else zoomAt(x, y, 2.4); };
     cv.addEventListener('touchstart', ts, { passive: false }); cv.addEventListener('touchmove', tm, { passive: false }); cv.addEventListener('touchend', te); cv.addEventListener('touchcancel', te);
     cv.addEventListener('wheel', wheel, { passive: false }); cv.addEventListener('mousedown', md); window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); cv.addEventListener('dblclick', dbl);
     clamp();
@@ -745,7 +757,12 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
     const agents: Record<string, Agent> = {};
     const resize = () => {
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
-      cv.width = Math.round(w * dpr); cv.height = Math.round((w * H / W) * dpr); k = cv.width / W; css = w / W; bgKey = '';
+      const h = fullRef.current ? box0.clientHeight || w * H / W : w * H / W;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
+      const LH = W * h / w, z = fullRef.current ? Math.min(1.25, Math.max(1, (LH * 0.62) / H)) : HOME.z;
+      const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
+      lhRef.current = LH; homeRef.current = { z, tx: (W - W * z) / 2, ty: fullRef.current ? (LH - H * z) / 2 - LH * 0.03 : HOME.ty };
+      if (atHome) Object.assign(view.current, homeRef.current);
     };
     resize();
     const ro = new ResizeObserver(resize); ro.observe(box0);
@@ -879,11 +896,11 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
   const day = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'][d.getDay()];
   const active = PEOPLE.filter((p) => st[p.id] && st[p.id].label !== 'BELUM AKTIF' && !st[p.id].sleep).length;
   return (
-    <div className="office" ref={wrap}>
-      <canvas ref={ref} className="office-canvas" style={{ aspectRatio: `${W} / ${H}`, touchAction: 'pan-y' }} aria-label="Kantor virtual: status bot dan EA" />
-      <div className="office-clock"><b>{clock}</b><span>{day}</span></div>
-      <div className="office-count"><i />{active} karyawan aktif</div>
-      {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, HOME); setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
+    <div className={'office' + (full ? ' office-full' : '')} ref={wrap}>
+      <canvas ref={ref} className="office-canvas" style={full ? { width: '100%', height: '100%', touchAction: 'none' } : { aspectRatio: `${W} / ${H}`, touchAction: 'pan-y' }} aria-label="Kantor virtual: status bot dan EA" />
+      {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
+      <div className="office-count"><i />{active} karyawan aktif</div></>}
+      {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, homeRef.current); setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
         : null}
     </div>
   );

@@ -1,7 +1,7 @@
 {
  "name": "XAUUSD Research",
  "short_name": "XAU",
- "start_url": "/trade",
+ "start_url": "/",
  "display": "standalone",
  "background_color": "#f2f4f7",
  "theme_color": "#ffffff",
