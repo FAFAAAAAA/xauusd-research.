@@ -262,27 +262,25 @@ export default function Analytics() {
                     <span className="chev" aria-hidden>⌄</span>
                   </button>
                   {showTrades ? <>
-                  <div className="hcards appear" style={{ marginTop: 10 }}>
+                  <div className="group" style={{ marginTop: 10, paddingTop: 6, paddingBottom: 6 }}><div className="hcards appear">
                     {d.trades.slice(-tradeLimit).reverse().map((t: any) => {
-                      const res = t.exit_reason === 'tp' || t.exit_reason === 'ambiguous_best' ? 'tp' : t.exit_reason === 'sl' || t.exit_reason === 'ambiguous_worst' ? 'sl' : '';
                       const held = t.exit_ms ? Math.max(0, Number(t.exit_ms) - Number(t.entry_ms)) : null;
+                      const r = t.pnl_r != null ? Number(t.pnl_r) : null;
                       return (
-                        <button key={t.id} className="hcard" onClick={() => open(t.id)}>
-                          <span className="hc-top">
-                            <span className={`hc-side ${t.side === 'long' ? 'b' : 's'}`}>{t.side === 'long' ? 'B' : 'S'}</span>
+                        <button key={t.id} className="hcard opencard histrow" onClick={() => open(t.id)}>
+                          <span className={`hc-side op-badge ${t.side === 'long' ? 'b' : 's'}`}>{t.side === 'long' ? 'B' : 'S'}</span>
+                          <span className="op-left">
                             <strong className="hc-name">{pairLabel}</strong>
-                            <span className={`hc-res ${res}`}>{res ? res.toUpperCase() : (EXIT[t.exit_reason] ?? t.exit_reason)}</span>
+                            <span className="op-strat">{fmt(Number(t.entry_ms), tz).slice(0, 10)}{held != null ? ` · ${hm(held)}` : ''}</span>
                           </span>
-                          <span className="hc-mid">
-                            <span><span className="k">PNL</span><strong className={tone(t.pnl)}>{money(t.pnl)}</strong></span>
-                            <span><span className="k">R</span><strong className={tone(t.pnl_r)}>{t.pnl_r != null ? `${Number(t.pnl_r) > 0 ? '+' : ''}${Number(t.pnl_r).toFixed(2)}` : '—'}</strong></span>
-                            <span><span className="k">Masuk</span><strong>{fmt(Number(t.entry_ms), tz).slice(0, 10)}</strong></span>
+                          <span className="op-right">
+                            <span className={`op-pnl ${tone(t.pnl)}`}>{money(t.pnl)}</span>
+                            {r != null ? <span className="op-strat">{r > 0 ? '+' : ''}{r.toFixed(2)}R</span> : null}
                           </span>
-                          {held != null ? <span className="hc-foot"><span>{held < 3_600_000 ? `${Math.round(held / 60_000)} mnt` : held < 172_800_000 ? `${Math.floor(held / 3_600_000)} jam ${Math.round(held % 3_600_000 / 60_000)} mnt` : `${(held / 86_400_000).toFixed(1)} hari`}</span></span> : null}
                         </button>
                       );
                     })}
-                  </div>
+                  </div></div>
                   <div className="row" style={{ marginTop: 12 }}>
                     {d.trades.length > tradeLimit ? <button className="btn sm" onClick={() => setTradeLimit((n) => n + 30)}>Tampilkan lebih banyak</button> : null}
                     {d.trades.length > tradeLimit ? <button className="btn sm" onClick={() => setTradeLimit(d.trades.length)}>Tampilkan semua</button> : null}
@@ -353,10 +351,13 @@ function Breakdown({ title, rows, label = (k: string) => k, plain = false }: { t
   return <section className="group"><h2>{title}</h2>{body}</section>;
 }
 
+/** duration as hours.minutes (5.12 = 5 h 12 min), same as the Trade page */
+const hm = (ms: number) => { const m = Math.max(0, Math.round(ms / 60_000)); return `${Math.floor(m / 60)}.${String(m % 60).padStart(2, '0')}`; };
+
 function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => void }) {
   const t = d.trade;
   return (
-    <Sheet title={t ? `${t.side === 'long' ? 'BUY' : 'SELL'} · ${fmt(t.entry, tz)}` : 'Detail trade'} onClose={onClose}>
+    <Sheet title={t ? fmt(t.entry, tz) : 'Detail trade'} onClose={onClose}>
       {d.loading ? <div className="stack"><div className="chartbox" style={{ height: 300, minHeight: 0 }}><div className="empty"><Spinner /></div></div><Loading what="trade" variant="list" /></div>
         : d.error ? <ErrorBox error={d.error} /> : <TradeDetailBody d={d} tz={tz} />}
     </Sheet>
@@ -364,19 +365,36 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
 }
 function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
   const t = d.trade;
+  const res = t.exitReason === 'tp' || t.exitReason === 'ambiguous_best' ? 'tp' : t.exitReason === 'sl' || t.exitReason === 'ambiguous_worst' ? 'sl' : '';
+  // R from the prices (+ = win): (exit − entry) / (entry − stop), signed by side
+  const risk = Math.abs(Number(t.entryPrice) - Number(t.stopLoss));
+  const r = risk > 0 && t.exitPrice != null ? (t.side === 'long' ? 1 : -1) * (Number(t.exitPrice) - Number(t.entryPrice)) / risk : null;
   return (
-    <div className="stack">
+    <div className="stack dt-sheet">
+      <div className="dt-head">
+        <span className={`hc-side op-badge ${t.side === 'long' ? 'b' : 's'}`}>{t.side === 'long' ? 'B' : 'S'}</span>
+        <span className="op-left">
+          <strong className="hc-name">{t.side === 'long' ? 'Buy' : 'Sell'}</strong>
+          <span className="op-strat">{r != null ? `${Number(r) > 0 ? '+' : ''}${Number(r).toFixed(2)}R` : 'Backtest'}</span>
+        </span>
+        <span className="dt-pnl">
+          <strong className={tone(t.pnl)}>{money(t.pnl)}</strong>
+          <span className={`hc-res ${res}`}>{res ? res.toUpperCase() : (EXIT[t.exitReason] ?? t.exitReason)}</span>
+        </span>
+      </div>
       <div className="chartbox trade-review-chart">
         {d.candles.length ? <CandleChart candles={d.candles} timezone={tz} fitKey={t.id} position={{ side: t.side, entry: t.entry, exit: t.exit, entryPrice: t.entryPrice, stopLoss: t.stopLoss, takeProfit: t.takeProfit, exitPrice: t.exitPrice }} /> : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
       </div>
-      <dl className="kv">
-        {t.setupReason?.risk_usd != null ? <><dt>Risiko</dt><dd>${Math.round(Number(t.setupReason.risk_usd))} · lot {t.setupReason.lot}</dd></> : null}
-        <dt>Entry</dt><dd>{px(t.entryPrice)}</dd>
-        <dt>Stop loss</dt><dd>{px(t.stopLoss)}</dd>
-        <dt>Take profit</dt><dd>{px(t.takeProfit)}</dd>
-        <dt>Keluar</dt><dd>{px(t.exitPrice)} · {EXIT[t.exitReason] ?? t.exitReason}</dd>
-        <dt>Hasil</dt><dd className={tone(t.pnl)} style={{ fontWeight: 600 }}>{money(t.pnl)}</dd>
-      </dl>
+      <div className="dt-grid">
+        <span><span className="k">Entry</span><strong>{px(t.entryPrice)}</strong></span>
+        <span><span className="k">Keluar</span><strong>{px(t.exitPrice)}</strong></span>
+        <span><span className="k">Stop loss</span><strong className="neg">{px(t.stopLoss)}</strong></span>
+        <span><span className="k">Take profit</span><strong className="pos">{px(t.takeProfit)}</strong></span>
+        <span><span className="k">Dibuka</span><strong>{fmt(t.entry, tz)}</strong></span>
+        <span><span className="k">Ditutup</span><strong>{t.exit ? fmt(t.exit, tz) : '—'}</strong></span>
+        <span><span className="k">Durasi</span><strong>{t.exit ? hm(t.exit - t.entry) : '—'}</strong></span>
+        <span><span className="k">Risiko</span><strong>{t.setupReason?.risk_usd != null ? `$${Math.round(Number(t.setupReason.risk_usd))}${t.setupReason.lot != null ? ` · ${t.setupReason.lot} lot` : ''}` : '—'}</strong></span>
+      </div>
       <details className="more">
         <summary>Alasan entry & berita</summary>
         {t.setupReason?.trend ? <p className="small">{t.setupReason.trend}</p> : null}
