@@ -30,7 +30,8 @@ const PEOPLE: Person[] = [
   { id: 'alt', name: 'Na', role: 'ALT', desk: { x: 1.0, y: 1.0 }, rest: { x: 8.6, y: 3.9 }, hair: '#3b2a1f', skin: '#f1c7a0', shirt: '#e5484d', pants: '#2c3e66', hairStyle: 'short' },
   { id: 'big', name: 'Ni', role: 'BTC', desk: { x: 4.6, y: 1.0 }, rest: { x: 8.3, y: 5.6 }, hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#3d3d3d', hairStyle: 'cap' },
   { id: 'xau', name: 'Nu', role: 'XAU', desk: { x: 1.0, y: 4.0 }, rest: { x: 1.9, y: 7.1 }, hair: '#c9772f', skin: '#f3cfae', shirt: '#f0b429', pants: '#5b4a3a', hairStyle: 'long' },
-  { id: 'nas', name: 'Noel', role: 'NASDAQ', desk: { x: 4.6, y: 4.0 }, rest: { x: 2.9, y: 7.1 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
+  { id: 'nas', name: 'Ne', role: 'NASDAQ', desk: { x: 4.6, y: 4.0 }, rest: { x: 2.9, y: 7.1 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
+  { id: 'tg', name: 'Noel', role: 'TELEGRAM', desk: { x: 5.0, y: 6.1 }, rest: { x: 8.3, y: 5.6 }, hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', hairStyle: 'short' },
   { id: 'jaga', name: 'Pentoel', role: 'SECURITY', desk: { x: 7.6, y: 1.8 }, rest: { x: 7.6, y: 1.8 }, hair: '#222', skin: '#c99064', shirt: '#33415c', pants: '#1f2a3a', hairStyle: 'cap' },
   { id: 'bos', name: 'Marcel', role: 'OWNER', desk: { x: 3.9, y: 3.2 }, rest: { x: 3.9, y: 3.2 }, hair: '#111', skin: '#e2b088', shirt: '#f5f5f5', pants: '#30343b', hairStyle: 'short' },
 ];
@@ -64,8 +65,12 @@ function statuses(data: OfficeData, now: number, breakPhase: boolean): Record<st
   const xauS = one('v2', mOn, data.mt5, wk, () => 'xau');
   const nasS = one('nas', mOn, data.mt5, wk, () => 'nas');
   const silent = (data.binance && !bOn) || (data.mt5 && !mOn && !wk);
+  const lastMsg = data.trades.map((t) => ({ t, at: Math.max(t.openedAt ?? 0, t.closedAt ?? 0) })).filter((x) => now - x.at < 3 * 60_000).sort((a, b) => b.at - a.at)[0];
+  const tgS: Status = !data.binance && !data.mt5 ? { label: 'BELUM AKTIF', color: '#8a8f98', atDesk: false, sleep: false, tag: null }
+    : lastMsg ? { label: 'KIRIM PESAN', color: '#229ed9', atDesk: true, sleep: false, tag: { text: `📨 ${coin(lastMsg.t) || (lastMsg.t.strategy === 'nas' ? 'NAS' : 'XAU')} ${lastMsg.t.result === 'open' ? 'BUKA' : (lastMsg.t.result ?? '').toUpperCase()}`, color: '#7cc8f0' } }
+    : { label: 'MEMANTAU', color: '#58a6ff', atDesk: true, sleep: false, tag: null };
   return {
-    alt: altS, big: bigS, xau: xauS, nas: nasS,
+    alt: altS, big: bigS, xau: xauS, nas: nasS, tg: tgS,
     jaga: silent ? { label: 'ALARM', color: '#ff5a5f', atDesk: true, sleep: false, tag: { text: '⚠ ada yang diam', color: '#ff6b6b' } } : { label: 'AMAN', color: '#2ee59d', atDesk: true, sleep: false, tag: null },
     bos: { label: 'SIAGA', color: '#58a6ff', atDesk: true, sleep: false, tag: null },
   };
@@ -217,7 +222,7 @@ function drawRoom(c: CanvasRenderingContext2D, glow: string) {
   box(c, 1.4, 6.6, 2.3, 0.18, 6, 7, '#6f7dff', '#4555d6', '#5868f0');            // backrest
   box(c, 1.2, 6.6, 0.2, 0.75, 0, 10, '#6f7dff', '#4555d6', '#5868f0');           // arms
   box(c, 3.7, 6.6, 0.2, 0.75, 0, 10, '#6f7dff', '#4555d6', '#5868f0');
-  plant(c, 0.25, 0.25); plant(c, 9.4, 0.3); plant(c, 5.3, 7.3); plant(c, 0.3, 7.4);
+  plant(c, 0.25, 0.25); plant(c, 9.4, 0.3); plant(c, 4.3, 7.4); plant(c, 0.3, 7.4);
   void glow;
 }
 
@@ -244,6 +249,7 @@ function plan(p: Person, s: Status, t: number): { spot: Spot; pose: Pose } {
   }
   const seat = SEAT(p);
   if (s.sleep) return { spot: seat, pose: 'sleep' };
+  if (s.label === 'KIRIM PESAN') return { spot: seat, pose: 'sit' };
   if (s.label.startsWith('POSISI')) return r < 0.82 ? { spot: seat, pose: 'sit' } : { spot: { x: seat.x + 0.9, y: seat.y - 0.1 }, pose: 'stand' };   // short stretch next to the desk
   const chat = PARTNER[p.id] ? (() => { const q = PEOPLE.find((x) => x.id === PARTNER[p.id])!; return { x: q.desk.x + 1.9, y: q.desk.y + 1.6 }; })() : seat;
   const roam: Array<{ spot: Spot; pose: Pose }> = [
