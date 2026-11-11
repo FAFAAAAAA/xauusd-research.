@@ -19,8 +19,8 @@ const readStart = (m: string, fallback: number) => { try { const v = Number(loca
 
 export interface CashFlow { id: string; at: number; amount: number; asset: string; type: string }
 
-export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null, cashflow = [] }: {
-  trades: JournalTrade[]; cashflow?: CashFlow[]; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
+export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null, cashflow = [], openSlot = null }: {
+  trades: JournalTrade[]; cashflow?: CashFlow[]; openSlot?: React.ReactNode; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
   groupOf: (t: JournalTrade) => string; groupLabel?: string; renderTrades: (list: JournalTrade[]) => React.ReactNode;
 }) {
   const [start, setStart] = useState(fallbackStart);
@@ -112,6 +112,8 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <span><span className="td-k">Bulan ini</span><strong className={tone(s.month)}>{usd(s.month)}</strong></span>
         </div>
       </section>
+
+      {openSlot /* open positions: between the balance and the win rate, only when there are any */}
 
       {s.n ? <>
         <StatsBento s={rs} />

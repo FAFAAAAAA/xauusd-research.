@@ -166,6 +166,34 @@ export default function TradePage() {
     ...closedT.map((t) => ({ at: t.closedAt ?? t.openedAt, el: tradeRow(t) })),
     ...flowsAll.map((c) => ({ at: c.at, el: flowRow(c) })),
   ].sort((a, b) => b.at - a.at);
+  const openSection = openT.length ? (
+        <section className="group">
+          <SecHead title="Posisi terbuka" meta={openT.length} />
+          <div className="hcards">
+            {openT.map((t) => {
+              // floating P&L sent by the bot (per coin) / EA (per method); null until the new bot / EA reports it
+              const pos = market === 'crypto' ? j.binance?.pos : j.mt5?.pos;
+              const key = market === 'crypto' ? `${coinOf(t)}USDT` : t.strategy === 'nas' ? 'nas' : 'xau';
+              const live = market === 'crypto' ? j.binance : j.mt5;
+              // older bot / EA without per-position values: with a single open position the account total is that position
+              const fl = pos && key in pos ? pos[key] : openT.length === 1 && live && Number.isFinite(live.upnl) ? live.upnl : null;
+              return (
+                <button key={t.id} className="hcard opencard" onClick={() => setDetail(t)}>
+                  <span className="hc-top">
+                    <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
+                    <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
+                    <span className="live-dot" aria-label="terbuka" />
+                  </span>
+                  <span className="op-row">
+                    <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
+                    <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null;
   return (
     <div className="stack">
       <PageHead title="Trade"
@@ -174,6 +202,7 @@ export default function TradePage() {
 
       <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz} live={market === 'crypto' ? j.binance ?? null : j.mt5 ?? null}
         cashflow={(market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? []}
+        openSlot={openSection}
         fallbackStart={market === 'crypto' ? 199.02 : 10000}
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
         renderTrades={(list) => <div className="hcards">{list.map(tradeRow)}</div>} />
@@ -228,34 +257,6 @@ export default function TradePage() {
         ) : <p className="empty-inline">Belum ada sinyal.</p>}
       </section> : null}
 
-      {openT.length ? (
-        <section className="group">
-          <SecHead title="Posisi terbuka" meta={openT.length} />
-          <div className="hcards">
-            {openT.map((t) => {
-              // floating P&L sent by the bot (per coin) / EA (per method); null until the new bot / EA reports it
-              const pos = market === 'crypto' ? j.binance?.pos : j.mt5?.pos;
-              const key = market === 'crypto' ? `${coinOf(t)}USDT` : t.strategy === 'nas' ? 'nas' : 'xau';
-              const live = market === 'crypto' ? j.binance : j.mt5;
-              // older bot / EA without per-position values: with a single open position the account total is that position
-              const fl = pos && key in pos ? pos[key] : openT.length === 1 && live && Number.isFinite(live.upnl) ? live.upnl : null;
-              return (
-                <button key={t.id} className="hcard opencard" onClick={() => setDetail(t)}>
-                  <span className="hc-top">
-                    <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
-                    <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
-                    <span className="live-dot" aria-label="terbuka" />
-                  </span>
-                  <span className="op-row">
-                    <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
-                    <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
 
       <section className="group">
         <SecHead title="Performa per metode" />
