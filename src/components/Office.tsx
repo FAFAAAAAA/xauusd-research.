@@ -244,10 +244,8 @@ function drawStatic(c: C, night: boolean, room: number) {
     for (const [x, y] of [[1.4, -1.25], [2.6, -1.25], [8.8, -1.25]]) { box(c, x, y, 0.9, 0.8, wh + 8, 9, '#d9dade', '#b5b7bd', '#c7c9ce'); ell(c, x + 0.45, y + 0.4, wh + 17.2, 0.25, '#8b8f99'); }
     const [a0, a1] = iso(-0.15, -0.15, wh + 8), [b0, b1] = iso(-0.15, -0.15, wh + 48); c.strokeStyle = '#3a3b42'; c.lineWidth = 1; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
     c.fillStyle = night ? '#ff4d4f' : '#c0392b'; c.beginPath(); c.arc(b0, b1, 1.5, 0, 7); c.fill();
-    box(c, 4.6, -0.5, 3.4, 0.22, wh + 8, 26, '#141518', '#1e1f23', '#2a2b30');
-    const [lx, ly] = iso(5.1, -0.28, wh + 13); c.fillStyle = '#f2c230'; c.beginPath(); c.ellipse(lx, ly + 0.5, 3.2, 3.2, 0, 0, 7); c.fill();
-    poly(c, [iso(5.9, -0.28, wh + 27), iso(7.8, -0.28, wh + 27), iso(7.8, -0.28, wh + 11), iso(5.9, -0.28, wh + 11)], '#1e1f23');
-    c.save(); const [tx0, ty0] = iso(5.95, -0.28, wh + 25); c.translate(tx0, ty0); c.transform(1, 0.5, 0, 1, 0, 0); c.fillStyle = '#ffffff'; c.font = '900 10px system-ui, sans-serif'; c.textBaseline = 'top'; c.fillText('XAU', 1, 1); c.restore();
+    box(c, 5.6, -0.5, 1.6, 0.22, wh + 8, 22, '#141518', '#1e1f23', '#2a2b30');
+    const [lx, ly] = iso(6.0, -0.28, wh + 13); c.fillStyle = '#f2c230'; c.beginPath(); c.ellipse(lx, ly + 0.5, 3.2, 3.2, 0, 0, 7); c.fill();
   }
   box(c, 0, 0, NX, NY, -8, 8, night ? '#b9b6b0' : '#dcd9d3', '#3a3b41', '#4a4b52', false);
   const [fcx, fcy] = iso(4, 5);

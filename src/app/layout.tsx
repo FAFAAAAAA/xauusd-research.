@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Sinyal, jurnal, kalkulator risiko dan backtest strategi emas (XAUUSD).',
   robots: { index: false, follow: false },
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'XAU', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'XAU', statusBarStyle: 'black-translucent' },
   icons: { apple: '/apple-touch-icon.png' },
 };
 export const viewport: Viewport = {

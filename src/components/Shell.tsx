@@ -80,7 +80,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       }
       const g = gesture.current, onTrade = g.path.startsWith('/trade');
       // allowed directions: Trade = towards the other market; elsewhere = right (back)
-      const ok = g.menuOpen ? mx < 0 : onTrade ? (g.market === 'crypto' ? true : mx > 0) : mx > 0;   // Trade · Crypto: right opens the menu
+      const ok = g.menuOpen ? mx < 0 : onTrade ? (g.market === 'crypto' ? true : mx > 0) : mx > 0;   // Trade · Crypto: right goes back to the office
       dx = mx; set(ok ? mx * 0.9 : mx * 0.15, false); e.preventDefault();
     };
     const end = () => {
@@ -91,7 +91,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
       const far = Math.abs(dx) > Math.min(110, window.innerWidth * 0.28);
       if (!(fast || far)) { set(0, true); return; }
       if (g.menuOpen) { set(0, true); if (dx < 0) g.setMenuOpen(false); return; }      // menu open: swipe left closes it
-      if (onTrade && g.market === 'crypto' && dx > 0) { set(0, true); g.setMenuOpen(true); return; }   // leftmost screen: swipe right opens the menu
+      if (onTrade && g.market === 'crypto' && dx > 0) { set(window.innerWidth, true); router.push('/'); window.setTimeout(() => set(0, false), 260); return; }   // leftmost screen: swipe right = the office
       if (onTrade) {
         const next = dx < 0 ? 'forex' : 'crypto';
         if (next === g.market) { set(0, true); return; }

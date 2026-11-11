@@ -1,10 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { call, peek } from '@/components/client';
-import type { OfficeData, ScreenLine } from '@/components/Office';
+import Office, { type OfficeData, type ScreenLine } from '@/components/Office';
 
-const Office = dynamic(() => import('@/components/Office'), { ssr: false, loading: () => <div className="office office-ph" /> });
 const usd = (n: number, sign = false) => `${n < 0 ? '−' : sign && n > 0 ? '+' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const coinOf = (t: { note?: string | null }) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
 
@@ -43,7 +41,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   }, [syms]);
 
   const cls = full ? 'office-home' : 'office-dock';
-  if (!j) return <div className={cls}><div className={'office office-ph' + (full ? ' office-full' : '')} /></div>;
+  if (!j) return <div className={cls}><Office data={{ trades: [] }} now={now} screen={[]} full={full} onSwipe={onSwipe} /></div>;   // the building shows at once, people appear when the data arrives
   // realtime floating P&L per crypto position from the mark price (falls back to the bot report)
   const posB: Record<string, number> = { ...(j.binance?.pos ?? {}) };
   let floatB = 0, liveB = false;
