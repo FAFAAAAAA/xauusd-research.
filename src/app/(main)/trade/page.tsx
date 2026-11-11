@@ -104,6 +104,28 @@ export default function TradePage() {
     try { setJ(await call<any>(`/api/journal?id=${t.id}`, { method: 'DELETE' })); toast('Trade dihapus'); } catch (e) { setJErr((e as Error).message); }
   };
 
+  // realtime floating P&L for open crypto positions: Binance mark price every 3 s while the page is visible
+  // (Binance computes unrealized P&L from the mark price; funding is not included, so it can differ by a few cents)
+  const openSyms = (market === 'crypto' && j ? j.trades.filter((t) => t.result === 'open' && marketOfJournal(t.strategy) !== 'forex' && coinOf(t)).map((t) => `${coinOf(t)}USDT`) : [])
+    .filter((x, i, a) => a.indexOf(x) === i).sort().join(',');
+  const [mark, setMark] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!openSyms) return;
+    let off = false;
+    const tick = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const got: Record<string, number> = {};
+      await Promise.all(openSyms.split(',').map(async (sym) => {
+        const p = await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`).then((r) => (r.ok ? r.json() : null)).then((x) => Number(x?.markPrice))
+          .catch(() => fetch(`https://data-api.binance.vision/api/v3/ticker/price?symbol=${sym}`).then((r) => (r.ok ? r.json() : null)).then((x) => Number(x?.price)).catch(() => NaN));
+        if (Number.isFinite(p) && p > 0) got[sym] = p;
+      }));
+      if (!off && Object.keys(got).length) setMark((m) => ({ ...m, ...got }));
+    };
+    tick(); const id = window.setInterval(tick, 3000);
+    return () => { off = true; window.clearInterval(id); };
+  }, [openSyms]);
+
   if (err && !d) return <><PageHead title="Trade" /><ErrorBox error={err} retry={load} /></>;
   if (!d || !j) return <><PageHead title="Trade" /><Loading /></>;
   const tz = d.timezone;
@@ -156,6 +178,9 @@ export default function TradePage() {
   ].sort((a, b) => b.at - a.at);
   // floating P&L of an open trade, sent by the bot (per coin) / EA (per method)
   const floatOf = (t: JournalTrade): number | null => {
+    // crypto: computed live from the mark price (quantity × distance from the entry), updated every 3 s
+    const mp = market === 'crypto' ? mark[`${coinOf(t)}USDT`] : undefined;
+    if (mp && Number(t.lot) > 0 && Number(t.entry) > 0) return (t.side === 'BUY' ? 1 : -1) * (mp - Number(t.entry)) * Number(t.lot);
     const live = market === 'crypto' ? j.binance : j.mt5, pos = live?.pos;
     const key = market === 'crypto' ? `${coinOf(t)}USDT` : t.strategy === 'nas' ? 'nas' : 'xau';
     if (pos && key in pos) return pos[key];
