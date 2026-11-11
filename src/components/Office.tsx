@@ -1082,6 +1082,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
         if (r === 1) drawWallText(c, scrRef.current, wall, t);
         if (r === 1) drawPositions(c, posRef.current, t);
+        drawBoards(c, r, wall, t);
         const list: Item[] = items[r].slice();
         for (const p of PEOPLE) {
           const a = agents[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
@@ -1143,8 +1144,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
 
 /* the live numbers on the wall TV and the team board, drawn in perspective on the back wall */
 function drawWallText(c: C, lines: ScreenLine[], wall: number, t: number) {
-  const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
-  const h4 = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
   const onWall = (x0: number, z1: number, fn: () => void) => { const [ox, oy] = iso(x0, 0, z1); c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0); fn(); c.restore(); };
   const tw = (TV.x1 - TV.x0) * TW, th = TV.z1 - TV.z0;
   onWall(TV.x0, TV.z1, () => {
@@ -1155,7 +1154,6 @@ function drawWallText(c: C, lines: ScreenLine[], wall: number, t: number) {
     c.fillStyle = live ? '#ff4d4f' : '#7a2a2a'; c.beginPath(); c.arc(4, 3.9, 1.4, 0, 7); c.fill();
     c.textBaseline = 'middle';
     c.font = '800 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('LIVE', 7, 4);
-    c.fillStyle = '#9ec3e6'; c.textAlign = 'right'; c.fillText(`H4 ${h4}`, tw - 2.5, 4); c.textAlign = 'left';
     const rows = lines.slice(0, 4), rh = (th - 8) / Math.max(1, rows.length);
     rows.forEach((l, i) => {
       const y = 8 + rh * (i + 0.5);
@@ -1220,6 +1218,34 @@ function drawPositions(c: C, list: Pos[], t: number) {
     if (list.length > 5) { c.font = '600 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.fillText(`+${list.length - 5} lagi`, 6, h - 4); }
   }
   c.textBaseline = 'alphabetic'; c.restore();
+}
+
+/* small wall boards: the H4 candle countdown (trading floor) and the clock + date (lobby) */
+function drawBoards(c: C, room: number, wall: number, t: number) {
+  const board = (x0: number, x1: number, z0: number, z1: number, fn: (w: number, h: number) => void) => {
+    const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
+    c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
+    c.fillStyle = '#111214'; c.fillRect(-2.5, -2.5, w + 5, h + 5); c.fillStyle = '#0b1220'; c.fillRect(0, 0, w, h);
+    c.textBaseline = 'middle'; c.textAlign = 'center'; fn(w, h); c.textAlign = 'left'; c.textBaseline = 'alphabetic'; c.restore();
+  };
+  if (room === 1) {
+    const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
+    const txt = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
+    board(1.2, 5.6, 82, 114, (w, h) => {
+      c.font = '700 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('CANDLE H4 BARU DALAM', w / 2, 7);
+      c.font = '800 15px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 ? (Math.floor(t * 4) % 2 ? '#f2c230' : '#ffffff') : '#f2c230'; c.fillText(txt, w / 2, h / 2 + 4);
+    });
+  }
+  if (room === 2) {
+    const d = new Date(wall);
+    const hm = `${String(d.getHours()).padStart(2, '0')}${d.getSeconds() % 2 ? ':' : ' '}${String(d.getMinutes()).padStart(2, '0')}`;
+    const day = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'][d.getDay()];
+    const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'][d.getMonth()];
+    board(7.2, 11.8, 100, 168, (w, h) => {
+      c.font = '800 19px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(hm, w / 2, h * 0.42);
+      c.font = '700 5.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#f2c230'; c.fillText(`${day}, ${d.getDate()} ${mon} ${d.getFullYear()}`, w / 2, h * 0.8);
+    });
+  }
 }
 
 function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>, wall: number, toScreen: (x: number, y: number, room: number) => [number, number], cw: number, unit: number, ts = 1) {
