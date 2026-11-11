@@ -572,3 +572,5 @@ Data perak, DAX, Nikkei, minyak, DXY belum ada (tidak bisa diunduh dari lingkung
 Aturan tetap, RR 1:2, biaya (emas 0,35, US100 2,0, EURUSD 0,00012), simulasi M30, 2011–2026, satu posisi per strategi.
 CRT H4, FVG H1/H4 (limit di tepi gap), Order Block H1/H4 (setelah close menembus swing), pin bar dan engulfing di support/resistance H1/H4:
 semua PF 0,73–1,05 di emas, US100 dan EURUSD; win rate 29–36% (≈ acak untuk RR 1:2). Terbaik engulfing H4 emas PF 1,05 (2019–26 PF 0,93). Tidak ada yang lolos.
+- Video @terussbelajar "trendline 3 aturan" (3 swing segaris, tunggu balik ke trendline, konfirmasi engulfing/penolakan, SL di atas candle, TP 2R),
+  H1/H4, swing 3/5: emas, US100, EURUSD, BTC 2011–2026 semua PF 0,51–1,19; yang > 1 hanya 0,1–0,3 trade/bulan dan berbalik antar paruh. Tidak lolos.
