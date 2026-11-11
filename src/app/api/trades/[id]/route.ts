@@ -32,7 +32,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const picked = want && isTimeframe(want) && ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'].includes(want) && TIMEFRAME_MS[want] >= TIMEFRAME_MS[base] ? want : null;
     const chartTimeframe = picked ?? base;
     const window = picked
-      ? { from: entry - 1200 * TIMEFRAME_MS[picked], to: Math.max(entry, exit ?? entry) + 300 * TIMEFRAME_MS[picked] + 1 }
+      ? { from: entry - (new URL(req.url).searchParams.get('wide') ? 7 : 1) * 1200 * TIMEFRAME_MS[picked], to: Math.max(entry, exit ?? entry) + (new URL(req.url).searchParams.get('wide') ? 7 : 1) * 300 * TIMEFRAME_MS[picked] + 1 }   // wide = weekly chart (D1 x 7)
       : tradeChartWindow(entry, exit, TIMEFRAME_MS[chartTimeframe]);
     if (file) {
       candles = fileProvider(file.symbol, file.tf).between(chartTimeframe, window.from, window.to);

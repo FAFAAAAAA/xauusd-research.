@@ -9,7 +9,7 @@ const CandleChart = dynamic(() => import('./CandleChart'), { ssr: false });
 
 /* Chart of a live Binance trade (Trade → Riwayat detail), like the backtest trade review (9 Nov 2026).
  * Candles are read in the browser from Binance's public market data (futures, with the spot data mirror as fallback). */
-const TF: Record<string, number> = { '5m': 300_000, '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000, '1d': 86_400_000 };
+const TF: Record<string, number> = { '1m': 60_000, '5m': 300_000, '15m': 900_000, '30m': 1_800_000, '1h': 3_600_000, '4h': 14_400_000, '1d': 86_400_000, '1w': 604_800_000 };
 const auto = (ms: number) => (ms < 6 * 3_600_000 ? '5m' : ms < 2 * 86_400_000 ? '15m' : ms < 7 * 86_400_000 ? '1h' : '4h');
 
 export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: JournalTrade; tz: string }) {
@@ -75,7 +75,7 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
   }, [symbol, iv, t.closedAt]);
   return (
     <div className="stack" style={{ gap: 10 }}>
-    <Seg full label="Timeframe" options={[['5m', 'M5'], ['15m', 'M15'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1']] as const} value={iv} onChange={(v) => setIv(v)} />
+    <Seg scroll label="Timeframe" options={[['1m', 'M1'], ['5m', 'M5'], ['15m', 'M15'], ['30m', 'M30'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1'], ['1w', 'W1']] as const} value={iv} onChange={(v) => setIv(v)} />
     <div className="chartbox trade-review-chart">
       {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`${t.id}-${iv}`} position={{ side: t.side === 'BUY' ? 'long' : 'short', entry: t.openedAt, exit: t.closedAt ?? null, entryPrice: t.entry, stopLoss: t.sl, takeProfit: t.tp, exitPrice: t.exit ?? null } as any} />
         : err ? <div className="empty">Chart tidak bisa dimuat.</div> : <div className="empty"><Spinner /></div>}

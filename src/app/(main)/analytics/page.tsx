@@ -363,8 +363,8 @@ function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => vo
     </Sheet>
   );
 }
-const TFS = [['M5', 'M5'], ['M15', 'M15'], ['H1', 'H1'], ['H4', 'H4'], ['D1', 'D1']] as const;
-const TF_MS: Record<string, number> = { M5: 300_000, M15: 900_000, M30: 1_800_000, H1: 3_600_000, H4: 14_400_000, D1: 86_400_000 };
+const TFS = [['M1', 'M1'], ['M5', 'M5'], ['M15', 'M15'], ['M30', 'M30'], ['H1', 'H1'], ['H4', 'H4'], ['D1', 'D1'], ['W1', 'W1']] as const;
+const TF_MS: Record<string, number> = { M1: 60_000, W1: 604_800_000, M5: 300_000, M15: 900_000, M30: 1_800_000, H1: 3_600_000, H4: 14_400_000, D1: 86_400_000 };
 function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
   const t = d.trade;
   // timeframe switch like the live trade chart; default picked from the trade length, never below the data's timeframe
@@ -376,7 +376,20 @@ function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
   const [candles, setCandles] = useState<any[] | null>(null);
   useEffect(() => {
     let off = false; setCandles(null);
-    call<any>(`/api/trades/${t.id}?tf=${iv}`).then((x) => { if (!off) setCandles(x.candles ?? []); }).catch(() => { if (!off) setCandles(d.candles); });
+    // W1 is built here from D1 (weeks start Monday 00:00 UTC)
+    const week = (cs: any[]) => {
+      const out: any[] = [];
+      for (const c of cs) {
+        const day = new Date(c.time).getUTCDay(), start = c.time - ((day + 6) % 7) * 86_400_000;
+        const w = out[out.length - 1];
+        if (w && w.time === start) { w.high = Math.max(w.high, c.high); w.low = Math.min(w.low, c.low); w.close = c.close; }
+        else out.push({ time: start, open: c.open, high: c.high, low: c.low, close: c.close });
+      }
+      return out;
+    };
+    call<any>(`/api/trades/${t.id}?tf=${iv === 'W1' ? 'D1' : iv}${iv === 'W1' ? '&wide=1' : ''}`)
+      .then((x) => { if (!off) setCandles(iv === 'W1' ? week(x.candles ?? []) : x.candles ?? []); })
+      .catch(() => { if (!off) setCandles(d.candles); });
     return () => { off = true; };
   }, [t.id, iv]);   // eslint-disable-line react-hooks/exhaustive-deps
   const res = t.exitReason === 'tp' || t.exitReason === 'ambiguous_best' ? 'tp' : t.exitReason === 'sl' || t.exitReason === 'ambiguous_worst' ? 'sl' : '';
@@ -396,7 +409,7 @@ function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
           <span className={`hc-res ${res}`}>{res ? res.toUpperCase() : (EXIT[t.exitReason] ?? t.exitReason)}</span>
         </span>
       </div>
-      {opts.length > 1 ? <Seg full label="Timeframe" options={opts} value={iv as any} onChange={(v) => setIv(v)} /> : null}
+      {opts.length > 1 ? <Seg scroll label="Timeframe" options={opts} value={iv as any} onChange={(v) => setIv(v)} /> : null}
       <div className="chartbox trade-review-chart">
         {!candles ? <div className="empty"><Spinner /></div>
           : candles.length ? <CandleChart candles={candles} timezone={tz} fitKey={`${t.id}-${iv}`} position={{ side: t.side, entry: t.entry, exit: t.exit, entryPrice: t.entryPrice, stopLoss: t.stopLoss, takeProfit: t.takeProfit, exitPrice: t.exitPrice }} />
