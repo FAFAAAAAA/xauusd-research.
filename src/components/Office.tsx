@@ -886,8 +886,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
   const st = useMemo(() => statuses(data, now), [data, now]);
   const stRef = useRef(st); stRef.current = st;
   const scrRef = useRef(screen); scrRef.current = screen;
-  const growth = useMemo(() => growthStats(data, now), [data, now]);
-  const growRef = useRef(growth); growRef.current = growth;
+  const positions = useMemo(() => openPositions(data), [data]);
+  const posRef = useRef(positions); posRef.current = positions;
   const items = useMemo(() => furniture(), []);
   const grids = useMemo(() => items.map((list) => buildGrid(list)), [items]);
   const night = (() => { const h = new Date(now).getHours(); return h >= 18 || h < 6; })();
@@ -966,7 +966,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.16) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       lhRef.current = LH; homeRef.current = { z, tx: (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
       if (atHome) Object.assign(view.current, homeRef.current);
@@ -1081,7 +1081,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       for (let r = ROOMS - 1; r >= 0; r--) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
         if (r === 1) drawWallText(c, scrRef.current, wall, t);
-        if (r === 1 || r === 2) drawGrowth(c, growRef.current, r, t);
+        if (r === 1) drawPositions(c, posRef.current, t);
         const list: Item[] = items[r].slice();
         for (const p of PEOPLE) {
           const a = agents[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
@@ -1182,110 +1182,44 @@ function drawWallText(c: C, lines: ScreenLine[], wall: number, t: number) {
   });
 }
 
-/* ---------- balance growth and P&L, painted on the tall back walls ---------- */
-type Series = { pts: number[]; now: number | null; total: number; n: number };
-type Growth = { strat: Array<[string, number]>; bin: Series; mt5: Series; days: Array<{ label: string; v: number }>; total: number; win: number; n: number; best: number; worst: number; today: number };
-function growthStats(data: OfficeData, now: number): Growth {
-  const closed = data.trades.filter((t) => t.result !== 'open' && t.closedAt && Number.isFinite(Number(t.pnl))).sort((a, b) => (a.closedAt ?? 0) - (b.closedAt ?? 0));
-  const isMt5 = (t: JournalTrade) => t.strategy === 'v2' || t.strategy === 'nas';
-  const series = (list: JournalTrade[], wallet: number | null): Series => {
-    const total = list.reduce((a, t) => a + Number(t.pnl), 0);
-    const base = wallet != null ? wallet - total : 0;            // balance before the first trade (deposits ignored)
-    const pts = [base]; let cum = 0;
-    for (const t of list) { cum += Number(t.pnl); pts.push(base + cum); }
-    return { pts, now: wallet, total, n: list.length };
-  };
-  const day0 = new Date(now); day0.setHours(0, 0, 0, 0);
-  const days = Array.from({ length: 14 }, (_, i) => {
-    const d0 = day0.getTime() - (13 - i) * 86_400_000, d1 = d0 + 86_400_000;
-    return { label: String(new Date(d0).getDate()), v: closed.filter((t) => (t.closedAt ?? 0) >= d0 && (t.closedAt ?? 0) < d1).reduce((a, t) => a + Number(t.pnl), 0) };
+/* ---------- the open positions, on a screen high on the trading-floor wall ---------- */
+type Pos = { name: string; side: string; who: string; pnl: number | null };
+function openPositions(data: OfficeData): Pos[] {
+  const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
+  const who: Record<string, string> = { snr: 'Na', btc: 'Ni', v2: 'Nu', nas: 'Ne' };
+  return data.trades.filter((t) => t.result === 'open').map((t) => {
+    const mt5 = t.strategy === 'v2' || t.strategy === 'nas', name = mt5 ? (t.strategy === 'nas' ? 'NASDAQ' : 'XAUUSD') : coin(t) || '—';
+    const live = mt5 ? data.mt5 : data.binance, key = mt5 ? (t.strategy === 'nas' ? 'nas' : 'xau') : `${coin(t)}USDT`;
+    const v = live?.pos?.[key];
+    return { name, side: t.side === 'BUY' ? 'BUY' : 'SELL', who: who[t.strategy] ?? '', pnl: Number.isFinite(v) ? Number(v) : null };
   });
-  const pn = closed.map((t) => Number(t.pnl)), wins = pn.filter((v) => v > 0).length;
-  return {
-    bin: series(closed.filter((t) => !isMt5(t)), data.binance?.wallet ?? null),
-    mt5: series(closed.filter(isMt5), data.mt5?.wallet ?? null),
-    strat: (['snr', 'btc', 'v2', 'nas'] as const).map((k, i) => [['ALT', 'BTC', 'XAU', 'NAS'][i], closed.filter((t) => t.strategy === k).reduce((a, t) => a + Number(t.pnl), 0)] as [string, number]),
-    days, total: pn.reduce((a, v) => a + v, 0), win: pn.length ? wins / pn.length : 0, n: pn.length,
-    best: pn.length ? Math.max(...pn) : 0, worst: pn.length ? Math.min(...pn) : 0, today: days[13].v,
-  };
 }
-function drawGrowth(c: C, g: Growth, room: number, t: number) {
-  const usd = (n: number, sign = false) => `${n < 0 ? '−' : sign && n > 0 ? '+' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const panel = (x0: number, x1: number, z0: number, z1: number, fn: (w: number, h: number) => void) => {
-    const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
-    c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
-    c.fillStyle = '#111214'; c.fillRect(-2.5, -2.5, w + 5, h + 5);
-    const bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#0f2640'); bg.addColorStop(1, '#07121f'); c.fillStyle = bg; c.fillRect(0, 0, w, h);
-    c.fillStyle = 'rgba(255,255,255,.04)'; c.fillRect(0, 0, w, h * 0.4);
-    fn(w, h); c.restore();
-  };
-  const line = (s: Series, w: number, h: number, top: number) => {
-    const pts = s.pts.length > 1 ? s.pts : [s.pts[0] ?? 0, s.pts[0] ?? 0];
-    const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1, x0 = 5, x1 = w - 5, y0 = top, y1 = h - 10;
-    const X = (i: number) => x0 + (i / (pts.length - 1)) * (x1 - x0), Y = (v: number) => y1 - ((v - lo) / span) * (y1 - y0);
-    const up = pts[pts.length - 1] >= pts[0], col = up ? '#2ee59d' : '#ff6b6b';
-    c.strokeStyle = 'rgba(255,255,255,.06)'; c.lineWidth = 0.4;
-    for (let k = 0; k <= 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); c.beginPath(); c.moveTo(x0, yy); c.lineTo(x1, yy); c.stroke(); }
-    const area = c.createLinearGradient(0, y0, 0, y1); area.addColorStop(0, up ? 'rgba(46,229,157,.35)' : 'rgba(255,107,107,.35)'); area.addColorStop(1, 'rgba(0,0,0,0)');
-    c.beginPath(); c.moveTo(X(0), y1); pts.forEach((v, i) => c.lineTo(X(i), Y(v))); c.lineTo(X(pts.length - 1), y1); c.closePath(); c.fillStyle = area; c.fill();
-    c.beginPath(); pts.forEach((v, i) => (i ? c.lineTo(X(i), Y(v)) : c.moveTo(X(i), Y(v)))); c.strokeStyle = col; c.lineWidth = 1.2; c.stroke();
-    const lx = X(pts.length - 1), ly = Y(pts[pts.length - 1]), pulse = 1.6 + Math.abs(Math.sin(t * 3)) * 1.6;
-    c.fillStyle = col; c.beginPath(); c.arc(lx, ly, 1.5, 0, 7); c.fill(); c.globalAlpha = 0.35; c.beginPath(); c.arc(lx, ly, pulse, 0, 7); c.fill(); c.globalAlpha = 1;
-    c.font = '600 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.textBaseline = 'middle';
-    c.fillText(usd(hi), x0, y0 - 3); c.fillText(usd(lo), x0, y1 + 4.5);
-    c.textAlign = 'right'; c.fillText(`${s.n} trade`, x1, y1 + 4.5); c.textAlign = 'left';
-  };
-  const head = (title: string, value: string, sub: string, subCol: string, w: number) => {
-    c.textBaseline = 'middle';
-    c.font = '700 5.4px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(title, 5, 7);
-    c.font = '800 11px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(value, 5, 18);
-    c.font = '700 6px ui-monospace, Menlo, monospace'; c.fillStyle = subCol; c.textAlign = 'right'; c.fillText(sub, w - 5, 18); c.textAlign = 'left';
-  };
-  const pct = (s: Series) => (s.pts[0] ? (s.total / s.pts[0]) * 100 : 0);
-  const tone = (v: number) => (v > 0 ? '#2ee59d' : v < 0 ? '#ff6b6b' : '#ffffff');
-  // only the part of the tall wall that is not hidden behind the floor above: a wide band on the right, a short one on the left
-  const cols = (w: number, title: string, list: Array<[string, string, string]>) => {
-    c.textBaseline = 'middle'; c.font = '700 4.8px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(title, 4, 5.5);
-    const cw = (w - 8) / list.length;
-    list.forEach(([k, v, col], i) => {
-      const x = 4 + i * cw;
-      c.font = '600 4.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.fillText(k, x, 14);
-      let fs = 7.4; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; while (fs > 4 && c.measureText(v).width > cw - 2) { fs -= 0.3; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; }
-      c.fillStyle = col; c.fillText(v, x, 22.5);
+function drawPositions(c: C, list: Pos[], t: number) {
+  const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
+  const x0 = 6.6, x1 = 12.3, z0 = 96, z1 = 176;
+  const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
+  c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
+  c.fillStyle = '#111214'; c.fillRect(-2.5, -2.5, w + 5, h + 5);
+  const bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#0f2640'); bg.addColorStop(1, '#07121f'); c.fillStyle = bg; c.fillRect(0, 0, w, h);
+  c.textBaseline = 'middle';
+  c.fillStyle = list.length ? (Math.floor(t * 2) % 2 ? '#2ee59d' : '#1d6b4c') : '#4a5566'; c.beginPath(); c.arc(5.5, 7, 1.6, 0, 7); c.fill();
+  c.font = '800 6.4px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
+  if (!list.length) {
+    c.font = '700 7px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, h / 2 + 4); c.textAlign = 'left';
+  } else {
+    const rows = list.slice(0, 5), rh = Math.min(14, (h - 16) / rows.length);
+    rows.forEach((p, i) => {
+      const y = 18 + rh * (i + 0.5);
+      c.fillStyle = 'rgba(255,255,255,.05)'; c.fillRect(3, y - rh / 2 + 1, w - 6, rh - 2);
+      c.font = '800 7px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(p.name, 6, y);
+      const nw = c.measureText(p.name).width;
+      c.font = '700 5px ui-monospace, Menlo, monospace'; c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side, 9 + nw, y + 0.4);
+      c.font = '800 7.4px ui-monospace, Menlo, monospace'; c.textAlign = 'right';
+      c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 6, y); c.textAlign = 'left';
     });
-  };
-  if (room === 1) {
-    panel(6.6, 12.3, 86, 180, (w, h) => {
-      c.textBaseline = 'middle'; c.font = '700 5.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('PERTUMBUHAN SALDO', 4, 6);
-      const half = (h - 10) / 2;
-      ([[g.bin, 'BINANCE'], [g.mt5, 'MT5']] as const).forEach(([s, name], i) => {
-        c.save(); c.translate(0, 10 + i * half);
-        c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.textBaseline = 'middle'; c.fillText(name, 4, 4);
-        c.font = '800 7.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(s.now != null ? usd(s.now) : '—', 4, 11.5);
-        c.font = '700 5px ui-monospace, Menlo, monospace'; c.fillStyle = tone(s.total); c.textAlign = 'right';
-        c.fillText(`${usd(s.total, true)} (${pct(s) >= 0 ? '+' : ''}${pct(s).toFixed(1)}%)`, w - 4, 11.5); c.textAlign = 'left';
-        line(s, w, half - 1, 18);
-        c.restore();
-      });
-    });
-    panel(0.8, 6.0, 84, 113, (w) => cols(w, 'RINGKASAN SEMUA TRADE', [
-      ['TOTAL PNL', usd(g.total, true), tone(g.total)], ['WIN RATE', `${(g.win * 100).toFixed(0)}%`, '#ffffff'], ['TRADE', String(g.n), '#ffffff'], ['HARI INI', usd(g.today, true), tone(g.today)],
-    ]));
+    if (list.length > 5) { c.font = '600 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.fillText(`+${list.length - 5} lagi`, 6, h - 4); }
   }
-  if (room === 2) {
-    panel(6.6, 12.3, 86, 180, (w, h) => {
-      head('PNL HARIAN · 14 HARI', usd(g.today, true), 'hari ini', tone(g.today), w);
-      const top = 30, base = h - 9, mx = Math.max(1, ...g.days.map((d) => Math.abs(d.v))), mid = (top + base) / 2, bw = (w - 10) / g.days.length;
-      c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 0.4; c.beginPath(); c.moveTo(5, mid); c.lineTo(w - 5, mid); c.stroke();
-      g.days.forEach((d, i) => {
-        const hh = (Math.abs(d.v) / mx) * (mid - top), x = 5 + i * bw + bw * 0.18;
-        c.fillStyle = d.v >= 0 ? '#2ee59d' : '#ff6b6b'; if (d.v) c.fillRect(x, d.v >= 0 ? mid - hh : mid, bw * 0.64, Math.max(0.6, hh));
-        c.font = '600 4px ui-monospace, Menlo, monospace'; c.fillStyle = i === 13 ? '#ffffff' : '#6f93b8'; c.textAlign = 'center'; c.fillText(d.label, x + bw * 0.32, base + 4); c.textAlign = 'left';
-      });
-    });
-    panel(0.8, 6.0, 84, 113, (w) => cols(w, 'PNL PER STRATEGI', g.strat.map(([k, v]) => [k, usd(v, true), tone(v)])));
-  }
-  c.textBaseline = 'alphabetic';
+  c.textBaseline = 'alphabetic'; c.restore();
 }
 
 function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>, wall: number, toScreen: (x: number, y: number, room: number) => [number, number], cw: number, unit: number, ts = 1) {
