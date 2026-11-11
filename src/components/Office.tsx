@@ -25,12 +25,12 @@ interface Person {
   hair: string; skin: string; shirt: string; pants: string; hairStyle: 'short' | 'long' | 'cap' | 'bun';
 }
 const PEOPLE: Person[] = [
-  { id: 'alt', name: 'ALT', role: 'SELL ALTCOIN', desk: { x: 0.9, y: 1.0 }, rest: { x: 5.7, y: 3.3 }, hair: '#3b2a1f', skin: '#f1c7a0', shirt: '#e5484d', pants: '#2c3e66', hairStyle: 'short' },
-  { id: 'big', name: 'BIG', role: 'BUY KOIN BESAR', desk: { x: 4.1, y: 0.9 }, rest: { x: 5.9, y: 3.9 }, hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#3d3d3d', hairStyle: 'cap' },
-  { id: 'xau', name: 'XAU', role: 'EA EMAS', desk: { x: 0.9, y: 4.0 }, rest: { x: 5.6, y: 5.4 }, hair: '#c9772f', skin: '#f3cfae', shirt: '#f0b429', pants: '#5b4a3a', hairStyle: 'long' },
-  { id: 'nas', name: 'NAS', role: 'EA NASDAQ', desk: { x: 4.1, y: 3.9 }, rest: { x: 6.1, y: 5.8 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
+  { id: 'alt', name: 'Na', role: 'ALT · SELL ALTCOIN', desk: { x: 0.9, y: 1.0 }, rest: { x: 5.7, y: 3.3 }, hair: '#3b2a1f', skin: '#f1c7a0', shirt: '#e5484d', pants: '#2c3e66', hairStyle: 'short' },
+  { id: 'big', name: 'Ni', role: 'BIG · BUY KOIN BESAR', desk: { x: 4.1, y: 0.9 }, rest: { x: 5.9, y: 3.9 }, hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#3d3d3d', hairStyle: 'cap' },
+  { id: 'xau', name: 'Nu', role: 'XAU · EA EMAS', desk: { x: 0.9, y: 4.0 }, rest: { x: 5.6, y: 5.4 }, hair: '#c9772f', skin: '#f3cfae', shirt: '#f0b429', pants: '#5b4a3a', hairStyle: 'long' },
+  { id: 'nas', name: 'Noel', role: 'NAS · EA NASDAQ', desk: { x: 4.1, y: 3.9 }, rest: { x: 6.1, y: 5.8 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
   { id: 'jaga', name: 'Penjaga', role: 'WATCHDOG', desk: { x: 6.6, y: 1.3 }, rest: { x: 6.6, y: 1.3 }, hair: '#222', skin: '#c99064', shirt: '#33415c', pants: '#1f2a3a', hairStyle: 'cap' },
-  { id: 'bos', name: 'Bos', role: 'PEMILIK', desk: { x: 1.0, y: 6.3 }, rest: { x: 1.0, y: 6.3 }, hair: '#111', skin: '#e2b088', shirt: '#f5f5f5', pants: '#30343b', hairStyle: 'short' },
+  { id: 'bos', name: 'Marcel', role: 'OWNER', desk: { x: 1.0, y: 6.3 }, rest: { x: 1.0, y: 6.3 }, hair: '#111', skin: '#e2b088', shirt: '#f5f5f5', pants: '#30343b', hairStyle: 'short' },
 ];
 
 type Status = { label: string; color: string; atDesk: boolean; sleep: boolean; tag?: { text: string; color: string } | null };
