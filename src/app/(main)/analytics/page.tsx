@@ -8,6 +8,7 @@ import { DrawdownBreakdown, EquityChart, PnlCalendar, closedTrades, type ClosedT
 import { StatsBento, useResultStats } from '@/components/StatsBento';
 import { ReportButton } from '@/components/ReportImage';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
+import LiveTradeChart from '@/components/LiveTradeChart';
 import { marketOfAdapter, marketOfStrategy, marketOfSymbol, type Market } from '@/lib/core/markets';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
 import { METHODS, methodByKey, methodByStrategy } from '@/lib/core/strategy/methods-meta';
@@ -254,7 +255,7 @@ export default function Analytics() {
                     </div>
                   </section>
                 ) : null}
-                {detail ? <TradeDetail d={detail} tz={tz} onClose={() => setDetail(null)} /> : null}
+                {detail ? <TradeDetail d={detail} tz={tz} symbol={pairSel ?? ''} onClose={() => setDetail(null)} /> : null}
 
                 <section className="group">
                   <button className={`hist-toggle${showTrades ? ' is-open' : ''}`} onClick={() => setShowTrades((v) => !v)} aria-expanded={showTrades}>
@@ -354,27 +355,30 @@ function Breakdown({ title, rows, label = (k: string) => k, plain = false }: { t
 /** duration as hours.minutes (5.12 = 5 h 12 min), same as the Trade page */
 const hm = (ms: number) => { const m = Math.max(0, Math.round(ms / 60_000)); return `${Math.floor(m / 60)}.${String(m % 60).padStart(2, '0')}`; };
 
-function TradeDetail({ d, tz, onClose }: { d: any; tz: string; onClose: () => void }) {
+function TradeDetail({ d, tz, symbol, onClose }: { d: any; tz: string; symbol: string; onClose: () => void }) {
   const t = d.trade;
   return (
     <Sheet title={t ? fmt(t.entry, tz) : 'Detail trade'} onClose={onClose}>
       {d.loading ? <div className="stack"><div className="chartbox" style={{ height: 300, minHeight: 0 }}><div className="empty"><Spinner /></div></div><Loading what="trade" variant="list" /></div>
-        : d.error ? <ErrorBox error={d.error} /> : <TradeDetailBody d={d} tz={tz} />}
+        : d.error ? <ErrorBox error={d.error} /> : <TradeDetailBody d={d} tz={tz} symbol={symbol} />}
     </Sheet>
   );
 }
 const TFS = [['M1', 'M1'], ['M5', 'M5'], ['M15', 'M15'], ['M30', 'M30'], ['H1', 'H1'], ['H4', 'H4'], ['D1', 'D1'], ['W1', 'W1']] as const;
 const TF_MS: Record<string, number> = { M1: 60_000, W1: 604_800_000, M5: 300_000, M15: 900_000, M30: 1_800_000, H1: 3_600_000, H4: 14_400_000, D1: 86_400_000 };
-function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
+function TradeDetailBody({ d, tz, symbol }: { d: any; tz: string; symbol: string }) {
   const t = d.trade;
   // timeframe switch like the live trade chart; default picked from the trade length, never below the data's timeframe
   const baseMs = TF_MS[d.chartTimeframe] ?? 900_000;
   const held = t.exit ? t.exit - t.entry : 0;
   const auto = held < 6 * 3_600_000 ? 'M5' : held < 2 * 86_400_000 ? 'M15' : held < 7 * 86_400_000 ? 'H1' : 'H4';
-  const opts = TFS.filter(([k]) => TF_MS[k] >= baseMs);
-  const [iv, setIv] = useState<string>(() => (TF_MS[auto] >= baseMs ? auto : opts[0]?.[0] ?? d.chartTimeframe));
+  // timeframes the server can serve (smaller datasets of the same symbol included) + W1 built from D1
+  const can: string[] = Array.isArray(d.tfs) && d.tfs.length ? d.tfs : TFS.map(([k]) => k).filter((k) => TF_MS[k] >= baseMs);
+  const opts = TFS.filter(([k]) => can.includes(k) || (k === 'W1' && can.includes('D1')));
+  const [iv, setIv] = useState<string>(() => (opts.some(([k]) => k === auto) ? auto : opts[0]?.[0] ?? d.chartTimeframe));
   const [candles, setCandles] = useState<any[] | null>(null);
   useEffect(() => {
+    if (/^[0-9A-Z]+USDT$/.test(symbol)) return;   // crypto chart loads its own Binance candles
     let off = false; setCandles(null);
     // W1 is built here from D1 (weeks start Monday 00:00 UTC)
     const week = (cs: any[]) => {
@@ -409,12 +413,17 @@ function TradeDetailBody({ d, tz }: { d: any; tz: string }) {
           <span className={`hc-res ${res}`}>{res ? res.toUpperCase() : (EXIT[t.exitReason] ?? t.exitReason)}</span>
         </span>
       </div>
+      {/^[0-9A-Z]+USDT$/.test(symbol)
+        // crypto: the bundled data is M30 only, so the chart reads Binance directly (all timeframes M1–W1), like the Trade page
+        ? <LiveTradeChart symbol={symbol} tz={tz} t={{ id: t.id, strategy: 'snr', side: t.side === 'long' ? 'BUY' : 'SELL', openedAt: t.entry, closedAt: t.exit ?? null, entry: t.entryPrice, sl: t.stopLoss, tp: t.takeProfit, lot: 0, exit: t.exitPrice ?? null, result: 'manual', pnl: t.pnl, note: '' } as any} />
+        : <>
       {opts.length > 1 ? <Seg scroll label="Timeframe" options={opts} value={iv as any} onChange={(v) => setIv(v)} /> : null}
       <div className="chartbox trade-review-chart">
         {!candles ? <div className="empty"><Spinner /></div>
           : candles.length ? <CandleChart candles={candles} timezone={tz} fitKey={`${t.id}-${iv}`} position={{ side: t.side, entry: t.entry, exit: t.exit, entryPrice: t.entryPrice, stopLoss: t.stopLoss, takeProfit: t.takeProfit, exitPrice: t.exitPrice }} />
           : <div className="empty">Candle untuk trade ini tidak ditemukan.</div>}
       </div>
+      </>}
       <div className="dt-grid">
         <span><span className="k">Entry</span><strong>{px(t.entryPrice)}</strong></span>
         <span><span className="k">Keluar</span><strong>{px(t.exitPrice)}</strong></span>
