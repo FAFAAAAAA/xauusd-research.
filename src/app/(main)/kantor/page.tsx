@@ -28,16 +28,22 @@ export default function KantorPage() {
   const hh = Math.floor(left / 3_600_000), mm = Math.floor((left % 3_600_000) / 60_000), ss = Math.floor((left % 60_000) / 1000);
   const today = new Date(now); today.setHours(0, 0, 0, 0);
   const pnlToday = j.trades.filter((t) => t.result !== 'open' && t.closedAt && t.closedAt >= today.getTime()).reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+  // open positions with their floating P&L (bot / EA reports)
+  const open = j.trades.filter((t) => t.result === 'open');
+  const coin = (t: any) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
+  const flo = (t: any) => (t.strategy === 'v2' ? j.mt5?.pos?.xau : t.strategy === 'nas' ? j.mt5?.pos?.nas : j.binance?.pos?.[`${coin(t)}USDT`]) ?? null;
+  const openSum = open.reduce((a, t) => a + (flo(t) ?? 0), 0);
+  const openTxt = open.length ? `${open.length}× ${usd(openSum, true)}` : '';
   return (
     <div className="stack">
       <PageHead title="Kantor" />
-      <div className="office-board">
-        <span><span className="k">Binance</span><strong>{j.binance ? usd(j.binance.wallet) : '—'}</strong></span>
-        <span><span className="k">MT5</span><strong>{j.mt5 ? usd(j.mt5.wallet) : '—'}</strong></span>
-        <span><span className="k">Hari ini</span><strong className={pnlToday > 0 ? 'pos' : pnlToday < 0 ? 'neg' : ''}>{usd(pnlToday, true)}</strong></span>
-        <span><span className="k">Sinyal H4</span><strong>{hh}:{String(mm).padStart(2, '0')}:{String(ss).padStart(2, '0')}</strong></span>
-      </div>
-      <Office data={j} now={now} />
+      <Office data={j} now={now} screen={[
+        { k: 'BINANCE', v: j.binance ? usd(j.binance.wallet) : '—' },
+        { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet) : '—' },
+        { k: 'HARI INI', v: usd(pnlToday, true), color: pnlToday > 0 ? '#2ee59d' : pnlToday < 0 ? '#ff6b6b' : undefined },
+        { k: 'POSISI', v: openTxt || 'tidak ada', color: openSum > 0 ? '#2ee59d' : openSum < 0 ? '#ff6b6b' : undefined },
+        { k: 'SINYAL H4', v: `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` },
+      ]} />
       <p className="mute small" style={{ margin: '0 4px' }}>{OFFICE_LEGEND}</p>
       <p className="mute small" style={{ margin: '0 4px' }}>Semua gerakan mengikuti data asli: posisi terbuka, laporan bot/EA, dan trade yang baru selesai (15 menit terakhir).</p>
     </div>

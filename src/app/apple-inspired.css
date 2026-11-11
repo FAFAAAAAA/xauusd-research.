@@ -925,3 +925,10 @@ body::before { display: none; }
 .office-tag .ot-card strong { font-size: 8.5px; }
 .office-tag .ot-st { font-size: 6.5px; }
 .office-tag .ot-role { font-size: 6.5px; }
+
+/* wall screen in the office (text skewed onto the right wall) */
+.office-tv { position: absolute; transform-origin: 0 0; transform: skewY(26.565deg); display: flex; flex-direction: column; justify-content: center; gap: 1px; padding: 0 4px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace; color: #cfe8ff; pointer-events: none; text-shadow: 0 0 4px rgba(90,209,255,.45); }
+.tv-row { display: flex; justify-content: space-between; gap: 4px; font-size: 6.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; }
+.tv-row span { color: #7fa6c9; letter-spacing: .04em; }
+.tv-row b { font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; }

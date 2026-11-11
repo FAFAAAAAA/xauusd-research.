@@ -18,6 +18,7 @@ const NX = 10, NY = 8;                              // room size in tiles
 const OX = 4 + NY * TW, OY = 72;                    // screen position of tile (0,0)
 const iso = (x: number, y: number, z = 0) => [OX + (x - y) * TW, OY + (x + y) * TH - z] as const;
 const SILENT = 35 * 60_000;
+const TV_X0 = 0.5, TV_X1 = 5.3, TV_Z0 = 28, TV_Z1 = 66;   // wall screen on the right wall (tiles along x, height in px)
 
 type Spot = { x: number; y: number };
 interface Person {
@@ -188,6 +189,9 @@ function drawRoom(c: CanvasRenderingContext2D, glow: string) {
   poly(c, [iso(8.4, 0, 54), iso(9.8, 0, 54), iso(9.8, 0), iso(8.4, 0)], '#8a5a3b');
   poly(c, [iso(8.55, 0, 50), iso(9.65, 0, 50), iso(9.65, 0, 2), iso(8.55, 0, 2)], '#9c6a47');
   { const k = iso(8.75, 0, 26); c.fillStyle = '#e8c35a'; c.fillRect(Math.round(k[0]), Math.round(k[1]), 2, 2); }
+  // big wall screen (the live numbers are drawn on it as HTML, see TV_*)
+  poly(c, [iso(TV_X0 - 0.12, 0, TV_Z1 + 3), iso(TV_X1 + 0.12, 0, TV_Z1 + 3), iso(TV_X1 + 0.12, 0, TV_Z0 - 3), iso(TV_X0 - 0.12, 0, TV_Z0 - 3)], '#1b1d24');
+  poly(c, [iso(TV_X0, 0, TV_Z1), iso(TV_X1, 0, TV_Z1), iso(TV_X1, 0, TV_Z0), iso(TV_X0, 0, TV_Z0)], '#0d1b2a');
   // kanban board on the right wall
   poly(c, [iso(5.6, 0, 60), iso(8.0, 0, 60), iso(8.0, 0, 34), iso(5.6, 0, 34)], '#fbfbfb');
   const notes = ['#ffd23f', '#5ad1ff', '#ff7aa2', '#7ee081', '#ffd23f', '#ff7aa2'];
@@ -255,7 +259,8 @@ function plan(p: Person, s: Status, t: number): { spot: Spot; pose: Pose } {
 
 export const OFFICE_LEGEND = 'Na = ALT (SELL altcoin) · Ni = BTC / BIG (BUY koin besar) · Nu = XAU (EA emas) · Noel = NASDAQ (EA) · Pentoel = security (watchdog) · Marcel = owner';
 
-export default function Office({ data, now }: { data: OfficeData; now: number }) {
+export type ScreenLine = { k: string; v: string; color?: string };
+export default function Office({ data, now, screen = [] }: { data: OfficeData; now: number; screen?: ScreenLine[] }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState(0);
   const st = useMemo(() => statuses(data, now, false), [data, now]);
@@ -332,6 +337,15 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
   return (
     <div className="office">
       <canvas ref={ref} width={W} height={H} className="office-canvas" aria-label="Kantor virtual: status bot dan EA" />
+      {screen.length ? (() => {
+        // HTML text on the wall screen, skewed like the right wall (iso slope 1:2 = 26.565°)
+        const [x0, y0] = iso(TV_X0, 0, TV_Z1), w = (TV_X1 - TV_X0) * TW, h = TV_Z1 - TV_Z0;
+        return (
+          <div className="office-tv" style={{ left: `${(x0 / W) * 100}%`, top: `${(y0 / H) * 100}%`, width: `${(w / W) * 100}%`, height: `${(h / H) * 100}%` }}>
+            {screen.map((l, i) => <div key={i} className="tv-row"><span>{l.k}</span><b style={l.color ? { color: l.color } : undefined}>{l.v}</b></div>)}
+          </div>
+        );
+      })() : null}
       {tags.map(({ p, s, left, top }) => (
         <div key={p.id} className="office-tag" style={{ left: `${left}%`, top: `${top}%` }}>
           <span className="ot-card">
