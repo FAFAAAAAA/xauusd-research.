@@ -13,9 +13,14 @@ const LS = 'api:', LS_MAX = 400_000;
 function lsGet(url: string): unknown {
   try { const v = localStorage.getItem(LS + url); return v ? JSON.parse(v) : undefined; } catch { return undefined; }
 }
+// only page data is kept in the browser; trade charts / candles are large and would fill the storage (5 MB) and slow every save
+const KEEP = /^\/api\/(journal|live|settings|analytics|dashboard|markets)(\?|$)/;
 function lsSet(url: string, data: unknown) {
+  if (!KEEP.test(url)) return;
   try { const v = JSON.stringify(data); if (v.length <= LS_MAX) localStorage.setItem(LS + url, v); } catch { /* full / blocked */ }
 }
+// one-time cleanup of chart answers saved by older versions
+try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k?.startsWith(LS) && !KEEP.test(k.slice(LS.length))) localStorage.removeItem(k); } } catch { /* ignore */ }
 function lsClear() {
   try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k?.startsWith(LS)) localStorage.removeItem(k); } } catch { /* ignore */ }
 }
