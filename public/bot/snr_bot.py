@@ -275,8 +275,9 @@ class Bot:
         if self.cfg['dry_run']: return
         try:
             a = self.api.get('/fapi/v2/account', signed=True)
+            pos = {x['symbol']: round(float(x.get('unrealizedProfit') or 0), 4) for x in a.get('positions', []) if float(x.get('positionAmt') or 0) != 0}
             report(self.cfg, {'event': 'balance', 'wallet': round(float(a.get('totalWalletBalance') or 0), 4),
-                              'upnl': round(float(a.get('totalUnrealizedProfit') or 0), 4), 'time': int(time.time())})
+                              'upnl': round(float(a.get('totalUnrealizedProfit') or 0), 4), 'pos': pos, 'time': int(time.time())})
         except Exception as e: log.warning('saldo tidak terkirim ke website: %s', e)
         self.bal_pushed = time.time()
         self.push_cashflow()

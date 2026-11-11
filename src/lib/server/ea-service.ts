@@ -43,7 +43,13 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     const wallet = num(b.wallet), upnl = num(b.upnl);
     if (!Number.isFinite(wallet)) return { status: 422, body: { ok: false, error: 'wallet wajib' } };
     // source "mt5" = the MetaTrader EA (Forex); otherwise the Binance bot (Crypto)
-    await repo.setAppSetting(db, b.source === 'mt5' ? 'mt5_balance' : 'binance_balance', { wallet, upnl: Number.isFinite(upnl) ? upnl : 0, at: now });
+    // per position floating P&L: Binance {SYMBOL: upnl}, MT5 {xau, nas}
+    const pos: Record<string, number> = {};
+    if (b.pos && typeof b.pos === 'object') for (const [k, v] of Object.entries(b.pos as Record<string, unknown>).slice(0, 40)) {
+      const key = String(k).replace(/[^0-9A-Za-z_]/g, '').slice(0, 30), x = num(v);
+      if (key && Number.isFinite(x)) pos[key] = x;
+    }
+    await repo.setAppSetting(db, b.source === 'mt5' ? 'mt5_balance' : 'binance_balance', { wallet, upnl: Number.isFinite(upnl) ? upnl : 0, pos, at: now });
     return { status: 200, body: { ok: true } };
   }
   // deposits / withdrawals / transfers (Binance: Spot <-> Futures transfers from /fapi/v1/income; MT5: balance deals).

@@ -838,3 +838,11 @@ body::before { display: none; }
 .cf-b0 { font-size: 13px; color: var(--mute); font-weight: 500; }
 .cf-arr { color: var(--mute); flex: none; }
 .cfcard .hc-mid .cf-b1 { font-size: 15px; font-weight: 700; color: var(--ink); }
+
+/* open positions: only the floating +/- */
+.opencard { display: flex; flex-direction: column; gap: 10px; }
+.op-pnl { font-size: 30px; font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.op-pnl.pos { color: var(--up); } .op-pnl.neg { color: var(--down); }
+.live-dot { margin-left: auto; width: 9px; height: 9px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 0 rgba(14,203,129,.5); animation: livepulse 1.6s ease-out infinite; }
+@keyframes livepulse { 0% { box-shadow: 0 0 0 0 rgba(14,203,129,.45); } 100% { box-shadow: 0 0 0 9px rgba(14,203,129,0); } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }

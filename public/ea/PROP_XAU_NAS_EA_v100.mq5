@@ -648,7 +648,16 @@ void PushBalance()
    if(TimeLocal() - gBalAt < (PositionsTotal() > 0 ? 60 : 900)) return;   // every minute while positions are open, else every 15 min
    gBalAt = TimeLocal();
    double bal = AccountInfoDouble(ACCOUNT_BALANCE), eq = AccountInfoDouble(ACCOUNT_EQUITY);
-   Report(StringFormat("{\"key\":\"%s\",\"event\":\"balance\",\"source\":\"mt5\",\"wallet\":%.2f,\"upnl\":%.2f}", InpEaKey, bal, eq - bal));
+   double px = 0, pn = 0;   // floating P&L of our open positions per method (profit + swap)
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong tk = PositionGetTicket(i);
+      if(tk == 0) continue;
+      long mg = PositionGetInteger(POSITION_MAGIC);
+      double v = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+      if(mg == InpXauMagic) px += v; else if(mg == InpNasMagic) pn += v;
+   }
+   Report(StringFormat("{\"key\":\"%s\",\"event\":\"balance\",\"source\":\"mt5\",\"wallet\":%.2f,\"upnl\":%.2f,\"pos\":{\"xau\":%.2f,\"nas\":%.2f}}", InpEaKey, bal, eq - bal, px, pn));
    PushCashflow();
 }
 

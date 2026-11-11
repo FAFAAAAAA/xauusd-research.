@@ -31,7 +31,7 @@ const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual
 
 export default function TradePage() {
   const [d, setD] = useState<any>(() => peek('/api/live'));
-  const [j, setJRaw] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats>; binance?: { wallet: number; upnl: number; at: number } | null; mt5?: { wallet: number; upnl: number; at: number } | null; cashflow?: { crypto: CashFlow[]; forex: CashFlow[] } } | null>(() => peek('/api/journal'));
+  const [j, setJRaw] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats>; binance?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; mt5?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; cashflow?: { crypto: CashFlow[]; forex: CashFlow[] } } | null>(() => peek('/api/journal'));
   // edits return the journal without the Binance balance: keep the last one
   const setJ = (v: any) => setJRaw((old) => (v && v.binance === undefined && old ? { ...v, binance: old.binance, mt5: old.mt5, cashflow: old.cashflow } : v));
   const [err, setErr] = useState<string | null>(null);
@@ -231,27 +231,26 @@ export default function TradePage() {
       {openT.length ? (
         <section className="group">
           <SecHead title="Posisi terbuka" meta={openT.length} />
-          <div className="list">
-            {openT.map((t) => (
-              <div key={t.id} className={`trow${busyId === t.id ? ' refreshing' : ''}`}>
-                <div className="top">
-                  <span><span className={`tag ${t.side === 'BUY' ? 'buy' : 'sell'}`}>{t.side}</span><span className="t">{NAME[t.strategy] ?? t.strategy} · {['btc', 'alt', 'snr'].includes(t.strategy) ? `${t.note.replace(/^Bot Binance ?/, '') || 'koin'} · ${t.lot}` : `${t.lot.toFixed(2)} lot`}</span></span>
-                  <span className="mute small">{fmt(t.openedAt, tz)}</span>
-                </div>
-                <div className="levels" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-                  <span><span className="k">Entry</span><strong>{px(t.entry)}</strong></span>
-                  <span><span className="k">SL</span><strong>{px(t.sl)}</strong></span>
-                  <span><span className="k">TP</span><strong>{px(t.tp)}</strong></span>
-                </div>
-                <div className="actions">
-                  <button className="btn sm" onClick={() => close(t, 'tp')} disabled={busyId === t.id}>Kena TP</button>
-                  <button className="btn sm" onClick={() => close(t, 'sl')} disabled={busyId === t.id}>Kena SL</button>
-                  <button className="btn sm" onClick={() => close(t, 'be')} disabled={busyId === t.id}>Impas</button>
-                  <button className="btn sm" onClick={() => close(t, 'manual')} disabled={busyId === t.id}>Tutup manual</button>
-                  <button className="btn sm ghost" onClick={() => remove(t)} disabled={busyId === t.id}>Hapus</button>
-                </div>
-              </div>
-            ))}
+          <div className="hcards">
+            {openT.map((t) => {
+              // floating P&L sent by the bot (per coin) / EA (per method); null until the new bot / EA reports it
+              const pos = market === 'crypto' ? j.binance?.pos : j.mt5?.pos;
+              const key = market === 'crypto' ? `${coinOf(t)}USDT` : t.strategy === 'nas' ? 'nas' : 'xau';
+              const live = market === 'crypto' ? j.binance : j.mt5;
+              // older bot / EA without per-position values: with a single open position the account total is that position
+              const fl = pos && key in pos ? pos[key] : openT.length === 1 && live && Number.isFinite(live.upnl) ? live.upnl : null;
+              return (
+                <button key={t.id} className="hcard opencard" onClick={() => setDetail(t)}>
+                  <span className="hc-top">
+                    <span className={`hc-side ${t.side === 'BUY' ? 'b' : 's'}`}>{t.side === 'BUY' ? 'B' : 'S'}</span>
+                    <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
+                    <span className="hc-tag">{coinOf(t) ? NAME[t.strategy] ?? t.strategy : t.side}</span>
+                    <span className="live-dot" aria-label="terbuka" />
+                  </span>
+                  <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
       ) : null}
