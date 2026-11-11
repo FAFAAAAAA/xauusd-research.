@@ -19,8 +19,8 @@ const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v2: { win: 0.342, perMonth: 5.0, label: 'v1 XAU' },   // + ±15% impas (BE)
   nas: { win: 0.431, perMonth: 5.6, label: 'v1 NAS' },  // website engine M30 2013–2026
   btc: { win: 0.41, perMonth: 5.7, label: 'BIG' },  // bot BUY part: 6 largest coins, max 2 open (research 9 Nov 2026), Binance costs
-  alt: { win: 0.467, perMonth: 17.8, label: 'v2 ALT' },  // research portfolio (max 3 positions) 2020–2026
-  snr: { win: 0.42, perMonth: 52.5, label: 'ALT' },  // research portfolio (max 3 positions) 2020–2026
+  alt: { win: 0.386, perMonth: 15.2, label: 'v2 ALT (lama)' },  // research portfolio max 3, corrected slot bug 11 Nov 2026
+  snr: { win: 0.41, perMonth: 27, label: 'ALT' },  // 26 bot coins, portfolio max 3, H4 close (corrected 11 Nov 2026)
 };
 const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
