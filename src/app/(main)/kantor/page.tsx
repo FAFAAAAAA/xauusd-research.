@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic';
 import { call, peek } from '@/components/client';
 import { ErrorBox, Loading, PageHead } from '@/components/Status';
 import type { OfficeData } from '@/components/Office';
-import { OFFICE_LEGEND } from '@/components/Office';
 
 const Office = dynamic(() => import('@/components/Office'), { ssr: false });
 const usd = (n: number, sign = false) => `${n < 0 ? '−' : sign && n > 0 ? '+' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -44,7 +43,6 @@ export default function KantorPage() {
         { k: 'POSISI', v: openTxt || 'tidak ada', color: openSum > 0 ? '#2ee59d' : openSum < 0 ? '#ff6b6b' : undefined },
         { k: 'SINYAL H4', v: `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` },
       ]} />
-      <p className="mute small" style={{ margin: '0 4px' }}>{OFFICE_LEGEND}</p>
       <p className="mute small" style={{ margin: '0 4px' }}>Semua gerakan mengikuti data asli: posisi terbuka, laporan bot/EA, dan trade yang baru selesai (15 menit terakhir).</p>
     </div>
   );

@@ -18,6 +18,7 @@ const NX = 10, NY = 8;                              // room size in tiles
 const OX = 4 + NY * TW, OY = 72;                    // screen position of tile (0,0)
 const iso = (x: number, y: number, z = 0) => [OX + (x - y) * TW, OY + (x + y) * TH - z] as const;
 const SILENT = 35 * 60_000;
+const ROSTER_X0 = 5.6, ROSTER_X1 = 8.1, ROSTER_Z0 = 20, ROSTER_Z1 = 66;   // names + jobs board
 const TV_X0 = 0.5, TV_X1 = 5.3, TV_Z0 = 28, TV_Z1 = 66;   // wall screen on the right wall (tiles along x, height in px)
 
 type Spot = { x: number; y: number };
@@ -192,11 +193,9 @@ function drawRoom(c: CanvasRenderingContext2D, glow: string) {
   // big wall screen (the live numbers are drawn on it as HTML, see TV_*)
   poly(c, [iso(TV_X0 - 0.12, 0, TV_Z1 + 3), iso(TV_X1 + 0.12, 0, TV_Z1 + 3), iso(TV_X1 + 0.12, 0, TV_Z0 - 3), iso(TV_X0 - 0.12, 0, TV_Z0 - 3)], '#1b1d24');
   poly(c, [iso(TV_X0, 0, TV_Z1), iso(TV_X1, 0, TV_Z1), iso(TV_X1, 0, TV_Z0), iso(TV_X0, 0, TV_Z0)], '#0d1b2a');
-  // kanban board on the right wall
-  poly(c, [iso(5.6, 0, 60), iso(8.0, 0, 60), iso(8.0, 0, 34), iso(5.6, 0, 34)], '#fbfbfb');
-  const notes = ['#ffd23f', '#5ad1ff', '#ff7aa2', '#7ee081', '#ffd23f', '#ff7aa2'];
-  notes.forEach((col, i) => { const p = iso(5.9 + (i % 3) * 0.75, 0, 56 - Math.floor(i / 3) * 10); c.fillStyle = col; c.fillRect(Math.round(p[0]), Math.round(p[1]), 5, 5); });
-  // water dispenser + coffee bar near the right wall
+  // roster board on the right wall (names and jobs drawn as HTML, see ROSTER_*)
+  poly(c, [iso(ROSTER_X0 - 0.1, 0, ROSTER_Z1 + 2), iso(ROSTER_X1 + 0.1, 0, ROSTER_Z1 + 2), iso(ROSTER_X1 + 0.1, 0, ROSTER_Z0 - 2), iso(ROSTER_X0 - 0.1, 0, ROSTER_Z0 - 2)], '#8a6a4a');
+  poly(c, [iso(ROSTER_X0, 0, ROSTER_Z1), iso(ROSTER_X1, 0, ROSTER_Z1), iso(ROSTER_X1, 0, ROSTER_Z0), iso(ROSTER_X0, 0, ROSTER_Z0)], '#fbfaf6');
   // a framed poster and a clock on the left wall
   poly(c, [iso(0, 3.05, 58), iso(0, 3.85, 58), iso(0, 3.85, 36), iso(0, 3.05, 36)], '#2b2f38');
   poly(c, [iso(0, 3.12, 55), iso(0, 3.78, 55), iso(0, 3.78, 39), iso(0, 3.12, 39)], '#f0b429');
@@ -337,6 +336,15 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
   return (
     <div className="office">
       <canvas ref={ref} width={W} height={H} className="office-canvas" aria-label="Kantor virtual: status bot dan EA" />
+      {(() => {
+        const [x0, y0] = iso(ROSTER_X0, 0, ROSTER_Z1), w = (ROSTER_X1 - ROSTER_X0) * TW, h = ROSTER_Z1 - ROSTER_Z0;
+        return (
+          <div className="office-roster" style={{ left: `${(x0 / W) * 100}%`, top: `${(y0 / H) * 100}%`, width: `${(w / W) * 100}%`, height: `${(h / H) * 100}%` }}>
+            <div className="ro-title">TIM</div>
+            {PEOPLE.map((p) => <div key={p.id} className="ro-row"><b>{p.name}</b><span>{p.role}</span></div>)}
+          </div>
+        );
+      })()}
       {screen.length ? (() => {
         // HTML text on the wall screen, skewed like the right wall (iso slope 1:2 = 26.565°)
         const [x0, y0] = iso(TV_X0, 0, TV_Z1), w = (TV_X1 - TV_X0) * TW, h = TV_Z1 - TV_Z0;
@@ -349,8 +357,8 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
       {tags.map(({ p, s, left, top }) => (
         <div key={p.id} className="office-tag" style={{ left: `${left}%`, top: `${top}%` }}>
           <span className="ot-card">
-            <span className="ot-line"><strong>{p.name}</strong><span className="ot-st"><i style={{ background: s.color }} />{s.label}</span></span>
-            <span className="ot-role">{p.role}{s.tag ? <b style={{ color: s.tag.color }}> · {s.tag.text}</b> : null}</span>
+            <strong>{p.name}</strong>
+            <span className="ot-st"><i style={{ background: s.color }} />{s.label}{s.tag ? <b style={{ color: s.tag.color }}>&nbsp;{s.tag.text}</b> : null}</span>
           </span>
         </div>
       ))}
