@@ -25,7 +25,7 @@ const SILENT = 35 * 60_000;
 const TV = { x0: 6.85, x1: 11.0, z0: 34, z1: 79 };
 const ROSTER = { x0: 2.7, x1: 5.75, z0: 37, z1: 77 };
 const PS = 1.14;                                     // character scale
-const RH = 290, ROOMS = 3, TOTAL = RH * ROOMS;         // three rooms stacked (one scene height each)
+const RH = 290, ROOMS = 3, TOPM = 26, TOTAL = RH * ROOMS + TOPM;         // three rooms stacked (one scene height each)
 const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the three rooms)
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
@@ -209,6 +209,8 @@ function drawBackdrop(c: C, night: boolean) {
   }
 }
 function drawStatic(c: C, night: boolean, room: number) {
+  // one building: the walls of a lower floor go all the way up to the floor slab of the room above (glass facade)
+  const wh = room === 0 ? WALL + 26 : RH - 8;
   box(c, 0, 0, NX, NY, -8, 8, night ? '#b9b6b0' : '#dcd9d3', '#3a3b41', '#4a4b52', false);
   const [fcx, fcy] = iso(4, 5);
   const fg = c.createRadialGradient(fcx, fcy, 10, fcx, fcy, 240);
@@ -236,17 +238,17 @@ function drawStatic(c: C, night: boolean, room: number) {
   }
   if (room === 1) poly(c, [iso(6.0, 3.8, 0.3), iso(9.0, 3.8, 0.3), iso(9.0, 6.4, 0.3), iso(6.0, 6.4, 0.3)], '#3a3b42');
   const cap = '#26272c';
-  box(c, -0.28, -0.28, NX + 0.28, 0.28, -8, WALL + 8, cap, night ? '#c9c7c2' : '#f5f4f1', cap, false);
-  box(c, -0.28, -0.28, 0.28, NY + 0.28, -8, WALL + 8, cap, cap, night ? '#bdbbb6' : '#eceae6', false);
+  box(c, -0.28, -0.28, NX + 0.28, 0.28, -8, wh + 8, cap, night ? '#c9c7c2' : '#f5f4f1', cap, false);
+  box(c, -0.28, -0.28, 0.28, NY + 0.28, -8, wh + 8, cap, cap, night ? '#bdbbb6' : '#eceae6', false);
   const [w0] = iso(0, 0), [w1] = iso(2, 0);
   const wg = c.createLinearGradient(w0, 0, w1, 0); wg.addColorStop(0, 'rgba(0,0,0,.1)'); wg.addColorStop(1, 'rgba(0,0,0,0)');
-  poly(c, wallB(0, 2, 0, WALL), wg);
+  poly(c, wallB(0, 2, 0, wh), wg);
   poly(c, wallB(0, NX, 0, 4), '#2b2c31'); poly(c, wallL(0, NY, 0, 4), '#2b2c31');
   for (const [y0, y1] of [[0.55, 3.05], [3.15, 5.65], [5.75, 8.25], [8.35, 10.75]]) {
-    poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, WALL - 4), '#1c1d21');
-    const sky = c.createLinearGradient(0, iso(0, y0, WALL - 8)[1], 0, iso(0, y0, 14)[1]);
+    poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, wh - 4), '#1c1d21');
+    const sky = c.createLinearGradient(0, iso(0, y0, wh - 8)[1], 0, iso(0, y0, 14)[1]);
     if (night) { sky.addColorStop(0, '#0b1430'); sky.addColorStop(1, '#1a2550'); } else { sky.addColorStop(0, '#8cc6ec'); sky.addColorStop(1, '#e7f4fb'); }
-    c.save(); c.beginPath(); const p = wallL(y0, y1, 13, WALL - 7); c.moveTo(p[0][0], p[0][1]); for (const q of p.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
+    c.save(); c.beginPath(); const p = wallL(y0, y1, 13, wh - 7); c.moveTo(p[0][0], p[0][1]); for (const q of p.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
     c.fillStyle = sky; c.fill();
     for (const b of CITY) {
       if (b.y + b.w < y0 || b.y > y1) continue;
@@ -258,11 +260,12 @@ function drawStatic(c: C, night: boolean, room: number) {
       }
     }
     if (!night) for (let k = 0; k < 10; k++) { const yy = y0 + (k / 10) * (y1 - y0); const [sx, sy] = iso(0, yy, 16); c.fillStyle = k % 2 ? '#6fa86a' : '#5c9558'; c.beginPath(); c.ellipse(sx, sy, 4.5, 4, 0, 0, 7); c.fill(); }
-    poly(c, [iso(0, y0 + 0.2, WALL - 7), iso(0, y0 + 0.55, WALL - 7), iso(0, y0 + 1.3, 13), iso(0, y0 + 0.95, 13)], 'rgba(255,255,255,.08)');
+    poly(c, [iso(0, y0 + 0.2, wh - 7), iso(0, y0 + 0.55, wh - 7), iso(0, y0 + 1.3, 13), iso(0, y0 + 0.95, 13)], 'rgba(255,255,255,.08)');
     c.restore();
-    for (let k = 1; k < 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); poly(c, wallL(yy - 0.03, yy + 0.03, 13, WALL - 7), '#1c1d21'); }
+    for (let k = 1; k < 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); poly(c, wallL(yy - 0.03, yy + 0.03, 13, wh - 7), '#1c1d21'); }
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), '#2f3036');
   }
+  if (room > 0) { poly(c, wallL(0, NY, wh - 6, wh), '#2b2c31'); poly(c, wallB(0, NX, wh - 6, wh), '#2b2c31'); }
   // lift on every floor (the way between the rooms)
   poly(c, wallB(11.1, 12.2, 0, 54), '#1e1f23');
   poly(c, wallB(11.2, 11.64, 0, 50), night ? '#8d939c' : '#b9bfc8'); poly(c, wallB(11.66, 12.1, 0, 50), night ? '#868c95' : '#aeb4bd');
@@ -1020,13 +1023,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         if (!bg || bg.width !== bw || bg.height !== bh) { bg = document.createElement('canvas'); bg.width = bw; bg.height = bh; }
         const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, bw, bh);
         b.setTransform(k * V.z, 0, 0, k * V.z, mx * k * V.z, my * k * V.z); drawBackdrop(b, nightNow);
-        for (let r = 0; r < ROOMS; r++) { b.save(); b.translate(0, r * RH); drawStatic(b, nightNow, r); b.restore(); }
+        for (let r = ROOMS - 1; r >= 0; r--) { b.save(); b.translate(0, r * RH + TOPM); drawStatic(b, nightNow, r); b.restore(); }
         bgKey = key;
       }
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0a0f1e' : '#2b2c31'; c.fillRect(0, 0, cv.width, cv.height);
       if (bg) c.drawImage(bg, Math.round(k * (V.tx - mx * V.z)), Math.round(k * (V.ty - my * V.z)));
-      for (let r = 0; r < ROOMS; r++) {
-        c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + r * RH * V.z));
+      for (let r = ROOMS - 1; r >= 0; r--) {
+        c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
         if (r === 1) drawWallText(c, scrRef.current, wall, t);
         const list: Item[] = items[r].slice();
         for (const p of PEOPLE) {
@@ -1053,7 +1056,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         c.globalCompositeOperation = 'lighter';
         const glow = (x: number, y: number, z: number, r: number, col: string) => { const [gx, gy] = iso(x, y, z); const g = c.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(gx - r, gy - r, 2 * r, 2 * r); };
         for (let r = 0; r < ROOMS; r++) {
-          c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + r * RH * V.z));
+          c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
           glow(6, 5, 70, 120, 'rgba(255,220,150,.07)');
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
           if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
@@ -1063,7 +1066,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       }
       /* ---- name tags (screen space, never overlapping) ---- */
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawTags(c, agents, S, wall, (x, y, r) => [(x * V.z + V.tx) * css, ((y + r * RH) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
+      drawTags(c, agents, S, wall, (x, y, r) => [(x * V.z + V.tx) * css, ((y + r * RH + TOPM) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
     };
     const io = new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was) { last = performance.now(); raf = requestAnimationFrame(frame); } }, { threshold: 0 });
     io.observe(box0);
