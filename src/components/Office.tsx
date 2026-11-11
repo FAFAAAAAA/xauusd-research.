@@ -13,8 +13,8 @@ import type { JournalTrade } from '@/lib/core/journal';
 type Live = { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null | undefined;
 export interface OfficeData { trades: JournalTrade[]; binance?: Live; mt5?: Live }
 
-const W = 252, H = 196, TW = 16, TH = 8;           // logical canvas (shown ~1.4x on a phone), half tile sizes
-const NX = 8, NY = 7;                               // room size in tiles
+const W = 296, H = 222, TW = 16, TH = 8;           // logical canvas (shown ~1.2x on a phone), half tile sizes
+const NX = 10, NY = 8;                              // room size in tiles
 const OX = 4 + NY * TW, OY = 72;                    // screen position of tile (0,0)
 const iso = (x: number, y: number, z = 0) => [OX + (x - y) * TW, OY + (x + y) * TH - z] as const;
 const SILENT = 35 * 60_000;
@@ -25,12 +25,12 @@ interface Person {
   hair: string; skin: string; shirt: string; pants: string; hairStyle: 'short' | 'long' | 'cap' | 'bun';
 }
 const PEOPLE: Person[] = [
-  { id: 'alt', name: 'Na', role: 'ALT · SELL ALTCOIN', desk: { x: 0.9, y: 1.0 }, rest: { x: 5.7, y: 3.3 }, hair: '#3b2a1f', skin: '#f1c7a0', shirt: '#e5484d', pants: '#2c3e66', hairStyle: 'short' },
-  { id: 'big', name: 'Ni', role: 'BIG · BUY KOIN BESAR', desk: { x: 4.1, y: 0.9 }, rest: { x: 5.9, y: 3.9 }, hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#3d3d3d', hairStyle: 'cap' },
-  { id: 'xau', name: 'Nu', role: 'XAU · EA EMAS', desk: { x: 0.9, y: 4.0 }, rest: { x: 5.6, y: 5.4 }, hair: '#c9772f', skin: '#f3cfae', shirt: '#f0b429', pants: '#5b4a3a', hairStyle: 'long' },
-  { id: 'nas', name: 'Noel', role: 'NAS · EA NASDAQ', desk: { x: 4.1, y: 3.9 }, rest: { x: 6.1, y: 5.8 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
-  { id: 'jaga', name: 'Penjaga', role: 'WATCHDOG', desk: { x: 6.6, y: 1.3 }, rest: { x: 6.6, y: 1.3 }, hair: '#222', skin: '#c99064', shirt: '#33415c', pants: '#1f2a3a', hairStyle: 'cap' },
-  { id: 'bos', name: 'Marcel', role: 'OWNER', desk: { x: 1.0, y: 6.3 }, rest: { x: 1.0, y: 6.3 }, hair: '#111', skin: '#e2b088', shirt: '#f5f5f5', pants: '#30343b', hairStyle: 'short' },
+  { id: 'alt', name: 'Na', role: 'ALT · SELL ALTCOIN', desk: { x: 1.0, y: 1.0 }, rest: { x: 8.6, y: 3.9 }, hair: '#3b2a1f', skin: '#f1c7a0', shirt: '#e5484d', pants: '#2c3e66', hairStyle: 'short' },
+  { id: 'big', name: 'Ni', role: 'BIG · BUY KOIN BESAR', desk: { x: 4.6, y: 1.0 }, rest: { x: 8.3, y: 5.6 }, hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#3d3d3d', hairStyle: 'cap' },
+  { id: 'xau', name: 'Nu', role: 'XAU · EA EMAS', desk: { x: 1.0, y: 4.0 }, rest: { x: 1.9, y: 7.1 }, hair: '#c9772f', skin: '#f3cfae', shirt: '#f0b429', pants: '#5b4a3a', hairStyle: 'long' },
+  { id: 'nas', name: 'Noel', role: 'NAS · EA NASDAQ', desk: { x: 4.6, y: 4.0 }, rest: { x: 2.9, y: 7.1 }, hair: '#4a3426', skin: '#e8b98f', shirt: '#4c7dff', pants: '#2a2a2a', hairStyle: 'bun' },
+  { id: 'jaga', name: 'Penjaga', role: 'WATCHDOG', desk: { x: 7.6, y: 1.8 }, rest: { x: 7.6, y: 1.8 }, hair: '#222', skin: '#c99064', shirt: '#33415c', pants: '#1f2a3a', hairStyle: 'cap' },
+  { id: 'bos', name: 'Marcel', role: 'OWNER', desk: { x: 3.9, y: 3.2 }, rest: { x: 3.9, y: 3.2 }, hair: '#111', skin: '#e2b088', shirt: '#f5f5f5', pants: '#30343b', hairStyle: 'short' },
 ];
 
 type Status = { label: string; color: string; atDesk: boolean; sleep: boolean; tag?: { text: string; color: string } | null };
@@ -53,7 +53,8 @@ function statuses(data: OfficeData, now: number, breakPhase: boolean): Record<st
       return { label: `POSISI ×${mine.length}`, color: '#2ee59d', atDesk: true, sleep: false, tag: flash ?? { text: `${mine.map((t) => coin(t) || (t.side === 'BUY' ? 'BUY' : 'SELL')).join(' · ')}  ${money(sum)}`, color: sum >= 0 ? '#2ee59d' : '#ff6b6b' } };
     }
     if (closed) return { label: 'LIBUR', color: '#a78bfa', atDesk: false, sleep: false, tag: flash };
-    return breakPhase ? { label: 'ISTIRAHAT', color: '#f5b83d', atDesk: false, sleep: false, tag: flash } : { label: 'MEMANTAU', color: '#58a6ff', atDesk: true, sleep: false, tag: flash };
+    void breakPhase;
+    return { label: 'MEMANTAU', color: '#58a6ff', atDesk: true, sleep: false, tag: flash };
   };
   const altS = one('snr', bOn, data.binance, false, (t) => `${coin(t)}USDT`);
   const bigS = one('btc', bOn, data.binance, false, (t) => `${coin(t)}USDT`);
@@ -108,7 +109,7 @@ function sprite(c: CanvasRenderingContext2D, X: number, Y: number, map: string[]
     }
   }
 }
-function person(c: CanvasRenderingContext2D, p: Person, x: number, y: number, frame: number, walking: boolean, sleep: boolean, back: boolean) {
+function person(c: CanvasRenderingContext2D, p: Person, x: number, y: number, frame: number, walking: boolean, sleep: boolean, back: boolean, sofa = false) {
   const [sx, sy] = iso(x, y, 0); const X = Math.round(sx) - 6, Y = Math.round(sy) - 23;
   c.fillStyle = 'rgba(0,0,0,.22)'; c.fillRect(X + 1, Y + 22, 10, 2); c.fillRect(X + 3, Y + 24, 6, 1);   // shadow
   const pal: Record<string, string> = {
@@ -123,6 +124,7 @@ function person(c: CanvasRenderingContext2D, p: Person, x: number, y: number, fr
   const legs = walking ? (frame % 2 ? 1 : -1) : 0;
   const typing = back && !walking && !sleep;
   // when seated at the desk the chair hides the legs (drawn after), head bobs a little while typing, sleeping head drops
+  if (sofa) { sprite(c, X, Y + 5, map, pal, 0, 18); return; }                      // sitting on the sofa: legs hidden by the seat
   sprite(c, X, Y + (sleep ? 2 : typing && frame % 4 === 0 ? 1 : 0), map, pal, legs);
 }
 function chair(c: CanvasRenderingContext2D, x: number, y: number) {
@@ -177,35 +179,89 @@ function drawRoom(c: CanvasRenderingContext2D, glow: string) {
   poly(c, [iso(0, 0, 4), iso(0, NY, 4), iso(0, NY), iso(0, 0)], '#b9a588');
   poly(c, [iso(0, 0, 4), iso(NX, 0, 4), iso(NX, 0), iso(0, 0)], '#c8b495');
   // windows on the left wall (city outside)
-  for (const y0 of [0.6, 3.8]) {
+  for (const y0 of [0.6, 4.2]) {
     poly(c, [iso(0, y0, 62), iso(0, y0 + 2.4, 62), iso(0, y0 + 2.4, 14), iso(0, y0, 14)], '#8fc7ef');
     for (let k = 0; k < 4; k++) { const t = iso(0, y0 + 0.3 + k * 0.55, 18 + (k % 2) * 8); c.fillStyle = '#6b8fb3'; c.fillRect(Math.round(t[0]) - 3, Math.round(t[1]) - 14, 5, 22 - (k % 2) * 6); }
     poly(c, [iso(0, y0 + 1.15, 62), iso(0, y0 + 1.25, 62), iso(0, y0 + 1.25, 14), iso(0, y0 + 1.15, 14)], '#f4f6f8');
   }
   // door on the right wall
-  poly(c, [iso(6.0, 0, 54), iso(7.4, 0, 54), iso(7.4, 0), iso(6.0, 0)], '#8a5a3b');
-  poly(c, [iso(6.15, 0, 50), iso(7.25, 0, 50), iso(7.25, 0, 2), iso(6.15, 0, 2)], '#9c6a47');
+  poly(c, [iso(8.4, 0, 54), iso(9.8, 0, 54), iso(9.8, 0), iso(8.4, 0)], '#8a5a3b');
+  poly(c, [iso(8.55, 0, 50), iso(9.65, 0, 50), iso(9.65, 0, 2), iso(8.55, 0, 2)], '#9c6a47');
+  { const k = iso(8.75, 0, 26); c.fillStyle = '#e8c35a'; c.fillRect(Math.round(k[0]), Math.round(k[1]), 2, 2); }
   // kanban board on the right wall
-  poly(c, [iso(2.6, 0, 60), iso(5.2, 0, 60), iso(5.2, 0, 34), iso(2.6, 0, 34)], '#fbfbfb');
+  poly(c, [iso(5.6, 0, 60), iso(8.0, 0, 60), iso(8.0, 0, 34), iso(5.6, 0, 34)], '#fbfbfb');
   const notes = ['#ffd23f', '#5ad1ff', '#ff7aa2', '#7ee081', '#ffd23f', '#ff7aa2'];
-  notes.forEach((col, i) => { const p = iso(2.9 + (i % 3) * 0.8, 0, 56 - Math.floor(i / 3) * 10); c.fillStyle = col; c.fillRect(Math.round(p[0]), Math.round(p[1]), 5, 5); });
+  notes.forEach((col, i) => { const p = iso(5.9 + (i % 3) * 0.75, 0, 56 - Math.floor(i / 3) * 10); c.fillStyle = col; c.fillRect(Math.round(p[0]), Math.round(p[1]), 5, 5); });
   // water dispenser + coffee bar near the right wall
-  box(c, 7.2, 3.1, 0.6, 0.6, 0, 16, '#f0f0f0', '#cfcfcf', '#e0e0e0');
-  box(c, 7.3, 3.2, 0.4, 0.4, 16, 12, '#7cc5f5', '#5aa9dd', '#6bb7ea');
-  box(c, 7.0, 5.0, 0.9, 1.2, 0, 14, '#c79a6b', '#a77b51', '#b88a5d');
-  box(c, 7.2, 5.2, 0.45, 0.4, 14, 10, '#3a3f47', '#2b2f35', '#33373e');
-  plant(c, 0.25, 0.25); plant(c, 7.4, 0.3); plant(c, 3.0, 6.4);
+  // a framed poster and a clock on the left wall
+  poly(c, [iso(0, 3.05, 58), iso(0, 3.85, 58), iso(0, 3.85, 36), iso(0, 3.05, 36)], '#2b2f38');
+  poly(c, [iso(0, 3.12, 55), iso(0, 3.78, 55), iso(0, 3.78, 39), iso(0, 3.12, 39)], '#f0b429');
+  { const k = iso(0, 6.9, 52); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(k[0], k[1], 5, 0, 7); c.fill(); c.fillStyle = '#2b2f38'; c.fillRect(Math.round(k[0]), Math.round(k[1]) - 3, 1, 3); c.fillRect(Math.round(k[0]), Math.round(k[1]), 2, 1); }
+  // water dispenser, coffee bar with machine, printer
+  shadowTile(c, 9.0, 3.0, 0.6, 0.6);
+  box(c, 9.0, 3.0, 0.6, 0.6, 0, 16, '#f0f0f0', '#cfcfcf', '#e0e0e0');
+  box(c, 9.1, 3.1, 0.4, 0.4, 16, 12, '#7cc5f5', '#5aa9dd', '#6bb7ea');
+  shadowTile(c, 8.9, 4.9, 0.9, 1.3);
+  box(c, 8.9, 4.9, 0.9, 1.3, 0, 14, '#c79a6b', '#a77b51', '#b88a5d');
+  box(c, 9.05, 5.05, 0.45, 0.4, 14, 11, '#3a3f47', '#2b2f35', '#33373e');
+  box(c, 9.1, 5.6, 0.2, 0.2, 14, 4, '#ffffff', '#dddddd', '#eeeeee');
+  shadowTile(c, 9.1, 6.9, 0.7, 0.6);
+  box(c, 9.1, 6.9, 0.7, 0.6, 0, 11, '#e9ecef', '#c3c8cf', '#d6dae0');
+  box(c, 9.2, 7.0, 0.5, 0.4, 11, 3, '#4a4f5a', '#3a3e47', '#3a3e47');
+  // lounge: sofa and a low table at the front
+  shadowTile(c, 1.4, 6.6, 2.3, 0.8);
+  box(c, 1.4, 6.6, 2.3, 0.75, 0, 6, '#5b6cff', '#4555d6', '#4e5fe8');            // seat
+  box(c, 1.4, 6.6, 2.3, 0.18, 6, 7, '#6f7dff', '#4555d6', '#5868f0');            // backrest
+  box(c, 1.2, 6.6, 0.2, 0.75, 0, 10, '#6f7dff', '#4555d6', '#5868f0');           // arms
+  box(c, 3.7, 6.6, 0.2, 0.75, 0, 10, '#6f7dff', '#4555d6', '#5868f0');
+  plant(c, 0.25, 0.25); plant(c, 9.4, 0.3); plant(c, 5.3, 7.3); plant(c, 0.3, 7.4);
   void glow;
 }
+
+type Pose = 'sit' | 'sleep' | 'stand' | 'look' | 'sofa';
+const SEAT = (p: Person) => ({ x: p.desk.x + 0.9, y: p.desk.y + 1.25 });
+const SPOTS = {
+  water: { x: 8.6, y: 3.9 }, coffee: { x: 8.3, y: 5.6 }, board: { x: 6.8, y: 0.8 }, window1: { x: 0.55, y: 2.9 }, window2: { x: 0.55, y: 5.7 },
+  sofa1: { x: 1.95, y: 7.05 }, sofa2: { x: 2.95, y: 7.05 }, printer: { x: 8.7, y: 7.3 }, poster: { x: 0.6, y: 3.4 },
+};
+const PATROL: Spot[] = [{ x: 7.6, y: 1.8 }, { x: 7.6, y: 6.3 }, { x: 4.0, y: 6.3 }, { x: 4.0, y: 3.2 }, { x: 0.6, y: 3.2 }, { x: 4.0, y: 3.2 }, { x: 4.0, y: 0.6 }, { x: 7.6, y: 0.6 }];
+const hash = (str: string) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 10_000) / 10_000; };
+const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', xau: 'nas', nas: 'xau' };
+
+/** Where each person goes right now, from the real status plus a little "office life" (changes every ~12 s). */
+function plan(p: Person, s: Status, t: number): { spot: Spot; pose: Pose } {
+  const sec = t / 1000, slot = Math.floor((sec + hash(p.id) * 97) / 12), r = hash(`${p.id}:${slot}`);
+  if (p.id === 'jaga') {          // walks a round through the office all the time, stops at the door when there is an alarm
+    if (s.label === 'ALARM') return { spot: { x: 9.0, y: 0.7 }, pose: 'stand' };
+    return { spot: PATROL[Math.floor(sec / 5) % PATROL.length], pose: 'stand' };
+  }
+  if (p.id === 'bos') {           // visits every desk, the board and the coffee bar
+    const seq = [...PEOPLE.filter((x) => PARTNER[x.id]).map((x) => ({ x: x.desk.x + 2.0, y: x.desk.y + 1.05 })), SPOTS.board, SPOTS.coffee, SPOTS.window2];
+    return { spot: seq[Math.floor(sec / 9) % seq.length], pose: 'stand' };
+  }
+  const seat = SEAT(p);
+  if (s.sleep) return { spot: seat, pose: 'sleep' };
+  if (s.label.startsWith('POSISI')) return r < 0.82 ? { spot: seat, pose: 'sit' } : { spot: { x: seat.x + 0.9, y: seat.y - 0.1 }, pose: 'stand' };   // short stretch next to the desk
+  const chat = PARTNER[p.id] ? (() => { const q = PEOPLE.find((x) => x.id === PARTNER[p.id])!; return { x: q.desk.x + 1.9, y: q.desk.y + 1.6 }; })() : seat;
+  const roam: Array<{ spot: Spot; pose: Pose }> = [
+    { spot: SPOTS.water, pose: 'look' }, { spot: SPOTS.coffee, pose: 'look' }, { spot: SPOTS.board, pose: 'look' },
+    { spot: SPOTS.window1, pose: 'look' }, { spot: hash(p.id) > 0.5 ? SPOTS.sofa1 : SPOTS.sofa2, pose: 'sofa' }, { spot: chat, pose: 'stand' },
+    { spot: SPOTS.printer, pose: 'look' }, { spot: SPOTS.poster, pose: 'look' },
+  ];
+  const pick = roam[Math.floor(hash(`${p.id}:r:${slot}`) * roam.length)];
+  if (s.label === 'LIBUR') return r < 0.5 ? { spot: hash(p.id) > 0.5 ? SPOTS.sofa1 : SPOTS.sofa2, pose: 'sofa' } : pick;
+  return r < 0.45 ? { spot: seat, pose: 'sit' } : pick;                         // monitoring: half at the desk, half around the office
+}
+
+export const OFFICE_LEGEND = PEOPLE.map((p) => `${p.name} = ${p.role}`).join(' · ');
 
 export default function Office({ data, now }: { data: OfficeData; now: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [frame, setFrame] = useState(0);
-  // coffee breaks: 45 s at the desk, 15 s away (only when nothing is open and the bot is online)
-  const breakPhase = Math.floor(now / 1000) % 60 >= 45;
-  const st = useMemo(() => statuses(data, now, breakPhase), [data, now, breakPhase]);
+  const st = useMemo(() => statuses(data, now, false), [data, now]);
   // positions move smoothly towards their target (desk or rest spot)
   const pos = useRef<Record<string, Spot>>({});
+  const face = useRef<Record<string, 'front' | 'back'>>({});
   const [, force] = useState(0);
   useEffect(() => {
     let raf = 0, last = 0;
@@ -214,9 +270,11 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
       if (t - last < 110) return;                       // ~9 fps, pixel-art pace
       last = t;
       for (const p of PEOPLE) {
-        const s = st[p.id], goal = s?.atDesk || s?.sleep ? { x: p.desk.x + 0.9, y: p.desk.y + 1.25 } : p.rest;
+        const s = st[p.id]; if (!s) continue;
+        const goal = plan(p, s, Date.now()).spot;
         const cur = pos.current[p.id] ?? { ...goal };
-        const dx = goal.x - cur.x, dy = goal.y - cur.y, dist = Math.hypot(dx, dy), v = 0.12;
+        const dx = goal.x - cur.x, dy = goal.y - cur.y, dist = Math.hypot(dx, dy), v = p.id === 'jaga' ? 0.07 : 0.09;
+        if (dist > 0.01) face.current[p.id] = dx + dy > 0 ? 'front' : 'back';
         pos.current[p.id] = dist <= v ? goal : { x: cur.x + (dx / dist) * v, y: cur.y + (dy / dist) * v };
       }
       setFrame((f) => f + 1); force((n) => n + 1);
@@ -239,10 +297,13 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
     for (const p of PEOPLE) {
       const s = st[p.id]; if (!s || s.label === 'BELUM AKTIF') continue;
       const q = pos.current[p.id]; if (!q) continue;
-      const goal = s.atDesk || s.sleep ? { x: p.desk.x + 0.9, y: p.desk.y + 1.25 } : p.rest;
-      const walking = Math.hypot(goal.x - q.x, goal.y - q.y) > 0.01;
-      const seated = (s.atDesk || s.sleep) && !walking && p.id !== 'bos' && p.id !== 'jaga';
-      items.push({ depth: q.x + q.y, draw: () => person(c, p, q.x, q.y, frame, walking, s.sleep, seated) });
+      const pl = plan(p, s, Date.now());
+      const walking = Math.hypot(pl.spot.x - q.x, pl.spot.y - q.y) > 0.01;
+      const seated = !walking && (pl.pose === 'sit' || pl.pose === 'sleep');
+      // facing: walking → direction of travel; seated / looking at something → back; sofa / chatting → front
+      const back = walking ? face.current[p.id] === 'back' : seated || pl.pose === 'look';
+      const sofa = !walking && pl.pose === 'sofa';
+      items.push({ depth: q.x + q.y, draw: () => person(c, p, q.x, q.y, frame, walking, pl.pose === 'sleep' && !walking, back, sofa) });
       if (seated) items.push({ depth: q.x + q.y + 0.01, draw: () => chair(c, q.x, q.y) });
     }
     items.sort((a, b) => a.depth - b.depth).forEach((i) => i.draw());
@@ -255,9 +316,17 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
 
   // name tags in HTML (crisp text) over the canvas
   const tags = PEOPLE.map((p) => {
-    const s = st[p.id], q = pos.current[p.id]; if (!s || !q || s.label === 'BELUM AKTIF') return null;
+    const s0 = st[p.id], q = pos.current[p.id]; if (!s0 || !q || s0.label === 'BELUM AKTIF') return null;
+    // while monitoring / off, the status says what they are doing at this moment
+    let s = s0;
+    if (s0.label === 'MEMANTAU' || s0.label === 'LIBUR') {
+      const pl = plan(p, s0, Date.now()), away = Math.hypot(pl.spot.x - q.x, pl.spot.y - q.y) > 0.01;
+      const what = away ? 'JALAN' : pl.pose === 'sit' ? null : pl.pose === 'sofa' ? 'SANTAI' : pl.spot === SPOTS.coffee || pl.spot === SPOTS.water ? 'NGOPI'
+        : pl.spot === SPOTS.board ? 'CEK BOARD' : pl.spot === SPOTS.printer ? 'PRINT' : pl.pose === 'stand' ? 'NGOBROL' : 'LIHAT LUAR';
+      if (what) s = { ...s0, label: s0.label === 'LIBUR' ? `LIBUR · ${what}` : what, color: s0.label === 'LIBUR' ? '#a78bfa' : '#f5b83d' };
+    }
     const [sx, sy] = iso(q.x, q.y);
-    return { p, s, left: (sx / W) * 100, top: ((sy - 25) / H) * 100 };
+    return { p, s, left: (sx / W) * 100, top: ((sy - 24) / H) * 100 };
   }).filter(Boolean) as Array<{ p: Person; s: Status; left: number; top: number }>;
 
   return (
@@ -266,9 +335,8 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
       {tags.map(({ p, s, left, top }) => (
         <div key={p.id} className="office-tag" style={{ left: `${left}%`, top: `${top}%` }}>
           <span className="ot-card">
-            <strong>{p.name}</strong>
-            {s.tag ? <span className="ot-role" style={{ color: s.tag.color, fontWeight: 700 }}>{s.tag.text}</span> : <span className="ot-role">{p.role}</span>}
-            <span className="ot-st"><i style={{ background: s.color }} />{s.label}</span>
+            <span className="ot-line"><strong>{p.name}</strong><span className="ot-st"><i style={{ background: s.color }} />{s.label}</span></span>
+            {s.tag ? <span className="ot-role" style={{ color: s.tag.color, fontWeight: 700 }}>{s.tag.text}</span> : null}
           </span>
         </div>
       ))}

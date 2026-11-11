@@ -919,3 +919,9 @@ body::before { display: none; }
 .office-board .k { font-size: 10.5px; color: var(--mute); }
 .office-board strong { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .office-board strong.pos { color: var(--up); } .office-board strong.neg { color: var(--down); }
+
+.ot-line { display: inline-flex; align-items: center; gap: 4px; }
+.office-tag .ot-card { padding: 1px 4px; }
+.office-tag .ot-card strong { font-size: 8.5px; }
+.office-tag .ot-st { font-size: 6.5px; }
+.office-tag .ot-role { font-size: 6.5px; }
