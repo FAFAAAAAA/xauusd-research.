@@ -347,7 +347,7 @@ export default function Office({ data, now, screen = [] }: { data: OfficeData; n
         return (
           <div className="office-roster" style={{ left: `${(x0 / W) * 100}%`, top: `${(y0 / H) * 100}%`, width: `${(w / W) * 100}%`, height: `${(h / H) * 100}%` }}>
             <div className="ro-title">TIM</div>
-            {PEOPLE.map((p) => <div key={p.id} className="ro-row"><b>{p.name}</b><span>{p.role}</span></div>)}
+            {[...PEOPLE].sort((a, b) => (a.id === 'bos' ? -1 : b.id === 'bos' ? 1 : 0)).map((p) => <div key={p.id} className="ro-row"><b>{p.name}</b><span>{p.role}</span></div>)}
           </div>
         );
       })()}
