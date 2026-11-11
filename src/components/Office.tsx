@@ -25,61 +25,90 @@ const SILENT = 35 * 60_000;
 const TV = { x0: 6.85, x1: 11.0, z0: 34, z1: 79 };
 const ROSTER = { x0: 2.7, x1: 5.75, z0: 37, z1: 77 };
 const PS = 1.14;                                     // character scale
-const HOME = { z: 1.18, tx: (W - W * 1.18) / 2, ty: (H - H * 1.18) / 2 + 6 };   // default view: a bit closer than the whole room
+const RH = 290, ROOMS = 3, TOTAL = RH * ROOMS;         // three rooms stacked (one scene height each)
+const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the three rooms)
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
-type Pose = 'stand' | 'sit' | 'sleep' | 'bean' | 'stretch' | 'squat' | 'jump' | 'nap';
-type Prop = 'cup' | 'phone' | 'hp' | 'book' | 'paper' | 'laptop' | 'food' | 'vanish' | 'trash' | 'can';
-interface Spot { id: string; x: number; y: number; face: Face; pose: Pose; label: string; prop?: Prop; zone?: 'break' | 'meet' | 'lounge'; alt?: Array<{ label: string; pose?: Pose; prop?: Prop }>; whip?: string }
+type Pose = 'stand' | 'sit' | 'sleep' | 'bean' | 'stretch' | 'squat' | 'jump' | 'nap' | 'run';
+type Prop = 'cup' | 'phone' | 'hp' | 'book' | 'paper' | 'laptop' | 'food' | 'vanish' | 'trash' | 'can' | 'club' | 'dumbbell';
+interface Spot { id: string; room: number; x: number; y: number; face: Face; pose: Pose; label: string; prop?: Prop; zone?: 'break' | 'meet' | 'lounge' | 'eat' | 'gym' | 'boss'; alt?: Array<{ label: string; pose?: Pose; prop?: Prop }>; whip?: string }
 interface Person {
   id: string; name: string; role: string; seat: Spot;
   hair: string; skin: string; shirt: string; pants: string; style: 'short' | 'long' | 'bun' | 'cap' | 'slick' | 'curly';
   cap?: string; glasses?: boolean; headset?: boolean; tie?: boolean;
 }
-const seat = (id: string, x: number, y: number, face: Face, label = 'MEMANTAU'): Spot => ({ id: `seat-${id}`, x, y, face, pose: 'sit', label });
+const seat = (id: string, room: number, x: number, y: number, face: Face, label = 'MEMANTAU'): Spot => ({ id: `seat-${id}`, room, x, y, face, pose: 'sit', label });
 const PEOPLE: Person[] = [
-  { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 10.5, 5.3, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
-  { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 2.3, 1.9, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
-  { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 2.3, 4.3, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
-  { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 2.3, 6.9, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
-  { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 2.3, 9.3, 'nx'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
-  { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 4.5, 1.85, 'ny', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
-  { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 11.75, 2.0, 'py', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
+  { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
+  { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.3, 1.9, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
+  { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.3, 4.3, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
+  { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.3, 6.9, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
+  { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.3, 9.3, 'nx'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
+  { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 4.5, 1.85, 'ny', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
+  { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 11.75, 2.0, 'py', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
+const LIFT = { x: 11.65, y: 0.6 };
 
-const SPOTS: Spot[] = [
-  { id: 'coffee', x: 7.55, y: 1.3, face: 'ny', pose: 'stand', label: 'BIKIN KOPI', prop: 'cup', zone: 'break' },
-  { id: 'sink', x: 8.5, y: 1.3, face: 'ny', pose: 'stand', label: 'CUCI GELAS', zone: 'break' },
-  { id: 'fridge', x: 12.62, y: 1.45, face: 'ny', pose: 'stand', label: 'AMBIL SNACK', prop: 'food', zone: 'break', alt: [{ label: 'AMBIL MINUMAN', prop: 'can' }] },
-  { id: 'water', x: 2.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
+const S0: Array<Omit<Spot, 'room'>> = [
+  { id: 'safe', x: 8.37, y: 1.45, face: 'ny', pose: 'stand', label: 'BUKA BRANKAS', zone: 'boss' },
+  { id: 'trophy', x: 9.7, y: 1.2, face: 'ny', pose: 'stand', label: 'LIHAT PIALA', zone: 'boss' },
+  { id: 'golf', x: 8.7, y: 5.3, face: 'px', pose: 'stand', label: 'MAIN GOLF', prop: 'club', zone: 'boss' },
+  { id: 'meet1', x: 2.1, y: 7.6, face: 'px', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'BIKIN LAPORAN', prop: 'laptop' }] },
+  { id: 'meet2', x: 3.9, y: 7.6, face: 'nx', pose: 'sit', label: 'RAPAT', zone: 'meet' },
+  { id: 'meet3', x: 3.0, y: 8.5, face: 'ny', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'PRESENTASI', prop: 'laptop' }] },
+  { id: 'meet4', x: 3.0, y: 6.7, face: 'py', pose: 'sit', label: 'RAPAT', zone: 'meet' },
+  { id: 'bsofa1', x: 9.75, y: 9.55, face: 'ny', pose: 'sit', label: 'NUNGGU BOS', zone: 'lounge' },
+  { id: 'bsofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'NUNGGU BOS', zone: 'lounge' },
+  { id: 'bshelf', x: 5.55, y: 1.1, face: 'ny', pose: 'stand', label: 'BACA BUKU', prop: 'book' },
+  { id: 'bwin', x: 0.95, y: 4.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
+  { id: 'bplant', x: 11.95, y: 10.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
+];
+const S1: Array<Omit<Spot, 'room'>> = [
+  { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
   { id: 'trash', x: 3.3, y: 1.35, face: 'ny', pose: 'stand', label: 'BUANG SAMPAH', prop: 'trash' },
   { id: 'shelf', x: 6.35, y: 1.1, face: 'ny', pose: 'stand', label: 'BACA BUKU', prop: 'book' },
   { id: 'printer', x: 10.35, y: 1.35, face: 'ny', pose: 'stand', label: 'AMBIL PRINT', prop: 'paper', alt: [{ label: 'FOTOKOPI' }] },
-  { id: 'toilet', x: 11.65, y: 0.5, face: 'ny', pose: 'stand', label: 'KE TOILET', prop: 'vanish' },
-  { id: 'tv', x: 8.9, y: 2.6, face: 'ny', pose: 'stand', label: 'LIHAT CHART', zone: 'meet' },
+  { id: 'tv', x: 9.0, y: 2.6, face: 'ny', pose: 'stand', label: 'LIHAT CHART', zone: 'meet' },
   { id: 'win1', x: 0.95, y: 3.1, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'win2', x: 0.95, y: 5.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'TELEPON', prop: 'phone' }] },
   { id: 'win3', x: 0.95, y: 8.1, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'hot1', x: 6.95, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet' },
+  { id: 'hot2', x: 8.15, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet' },
+  { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
+  { id: 'hot4', x: 8.15, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
+  { id: 'board', x: 11.3, y: 7.2, face: 'ny', pose: 'stand', label: 'CORAT-CORET', prop: 'paper', alt: [{ label: 'ANALISA CHART' }] },
+  { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone' },
+  { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
+];
+const S2: Array<Omit<Spot, 'room'>> = [
+  { id: 'coffee', x: 7.55, y: 1.3, face: 'ny', pose: 'stand', label: 'BIKIN KOPI', prop: 'cup', zone: 'break' },
+  { id: 'sink', x: 8.5, y: 1.3, face: 'ny', pose: 'stand', label: 'CUCI GELAS', zone: 'break' },
+  { id: 'fridge', x: 12.62, y: 1.45, face: 'ny', pose: 'stand', label: 'AMBIL SNACK', prop: 'food', zone: 'break', alt: [{ label: 'AMBIL MINUMAN', prop: 'can' }] },
+  { id: 'water2', x: 2.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
+  { id: 'toilet', x: 4.7, y: 0.5, face: 'ny', pose: 'stand', label: 'KE TOILET', prop: 'vanish' },
+  { id: 'tread', x: 1.0, y: 1.9, face: 'nx', pose: 'run', label: 'LARI TREADMILL', zone: 'gym' },
+  { id: 'gym', x: 1.7, y: 4.2, face: 'px', pose: 'squat', label: 'OLAHRAGA', zone: 'gym' },
+  { id: 'barbel', x: 1.55, y: 5.9, face: 'nx', pose: 'stand', label: 'ANGKAT BARBEL', prop: 'dumbbell', zone: 'gym' },
+  { id: 'eat1', x: 6.7, y: 5.4, face: 'px', pose: 'sit', label: 'NGEMIL', prop: 'food', zone: 'eat' },
+  { id: 'eat2', x: 8.5, y: 5.4, face: 'nx', pose: 'sit', label: 'NGEMIL', prop: 'food', zone: 'eat' },
+  { id: 'eat3', x: 7.6, y: 6.3, face: 'ny', pose: 'sit', label: 'NGOPI', zone: 'eat' },
+  { id: 'eat4', x: 7.6, y: 4.5, face: 'py', pose: 'sit', label: 'NGOPI', zone: 'eat' },
   { id: 'bean1', x: 3.75, y: 8.15, face: 'px', pose: 'bean', label: 'SANTAI', prop: 'laptop', zone: 'lounge', alt: [{ label: 'MAIN GAME', prop: 'hp' }] },
   { id: 'bean2', x: 5.75, y: 9.65, face: 'ny', pose: 'bean', label: 'SANTAI', prop: 'laptop', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa1', x: 9.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }] },
-  { id: 'meet1', x: 6.7, y: 5.4, face: 'px', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'BIKIN LAPORAN', prop: 'laptop' }] },
-  { id: 'meet2', x: 8.5, y: 5.4, face: 'nx', pose: 'sit', label: 'RAPAT', zone: 'meet' },
-  { id: 'meet3', x: 7.6, y: 6.3, face: 'ny', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'BIKIN LAPORAN', prop: 'laptop' }] },
-  { id: 'meet4', x: 7.6, y: 4.5, face: 'py', pose: 'sit', label: 'RAPAT', zone: 'meet' },
   { id: 'plant', x: 11.95, y: 10.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
-  { id: 'phone', x: 8.4, y: 8.4, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone' },
-  { id: 'stretch', x: 6.2, y: 7.6, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
-  { id: 'gym', x: 3.3, y: 10.1, face: 'px', pose: 'squat', label: 'OLAHRAGA' },
   { id: 'hp', x: 6.9, y: 9.4, face: 'py', pose: 'stand', label: 'MAIN HP', prop: 'hp' },
+  { id: 'win4', x: 0.95, y: 7.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
 ];
-const PATROL: Spot[] = [
-  [11.6, 4.2, 'nx'], [9.0, 3.6, 'nx'], [5.0, 3.4, 'nx'], [3.2, 3.1, 'nx'], [3.2, 5.6, 'nx'], [3.2, 8.0, 'nx'],
-  [3.0, 10.4, 'px'], [7.0, 10.4, 'px'], [8.6, 7.6, 'ny'], [11.9, 8.2, 'ny'], [12.2, 4.6, 'ny'],
-].map(([x, y, f], i) => ({ id: `patrol${i}`, x: x as number, y: y as number, face: f as Face, pose: 'stand', label: 'PATROLI' }));
-const PACE: Array<[number, number]> = [[6.0, 3.6], [9.3, 3.8], [8.8, 7.6], [5.5, 6.6], [10.4, 8.4], [4.5, 4.6]];
+const SPOTS: Spot[] = [...S0.map((q) => ({ ...q, room: 0 })), ...S1.map((q) => ({ ...q, room: 1 })), ...S2.map((q) => ({ ...q, room: 2 }))];
+const PATROL: Spot[] = ([
+  [2, 11.6, 4.2, 'nx'], [2, 8.6, 7.6, 'ny'], [2, 4.5, 6.4, 'nx'], [2, 3.0, 10.4, 'px'],
+  [1, 11.6, 4.6, 'nx'], [1, 9.0, 3.6, 'nx'], [1, 3.2, 3.1, 'nx'], [1, 3.2, 8.0, 'nx'], [1, 7.0, 10.4, 'px'],
+  [0, 9.6, 3.2, 'nx'], [0, 5.0, 7.4, 'px'], [0, 11.0, 8.0, 'ny'],
+] as const).map(([r, x, y, f], i) => ({ id: `patrol${i}`, room: r, x, y, face: f, pose: 'stand', label: 'PATROLI' }));
+const PACE: Array<[number, number, number]> = [[0, 4.0, 3.2], [0, 9.0, 3.6], [0, 8.0, 7.6], [1, 9.6, 3.6], [1, 5.6, 6.8], [1, 10.0, 8.6]];
 const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', xau: 'nas', nas: 'xau', tg: 'alt' };
 const YELL = ['KERJA!!', 'PROFIT MANA?!', 'JANGAN SANTAI!', 'CEPAT!!', 'GAJI POTONG!', 'BALIK KE MEJA!', 'LEMBUR KAMU!'];
 const SL_YELL = ['KENA SL LAGI?!', 'RUGI TERUS!', 'MAU DIPECAT?!'];
@@ -168,16 +197,18 @@ const wallB = (x0: number, x1: number, z0: number, z1: number): Array<[number, n
 
 /* ---------- the static room ---------- */
 const CITY = Array.from({ length: 26 }, (_, i) => ({ y: 0.5 + i * 0.4 + hash(`b${i}`) * 0.15, w: 0.25 + hash(`w${i}`) * 0.3, h: 22 + hash(`h${i}`) * 42 }));
-function drawStatic(c: C, night: boolean) {
-  c.fillStyle = night ? '#0a0f1e' : '#2b2c31'; c.fillRect(-W, -H, 3 * W, 3 * H);
+function drawBackdrop(c: C, night: boolean) {
+  c.fillStyle = night ? '#0a0f1e' : '#2b2c31'; c.fillRect(-W, -H, 3 * W, TOTAL + 2 * H);
   if (night) {
+    for (let i = 0; i < 90; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.4})`; c.fillRect(hash(`st${i}`) * W, hash(`sy${i}`) * TOTAL, 0.8, 0.8); }
     for (let i = 0; i < 46; i++) {
-      const x = hash(`sx${i}`) * W * 1.2 - 20, w = 8 + hash(`sw${i}`) * 18, h = 20 + hash(`sh${i}`) * 90, y = H - h;
+      const x = hash(`sx${i}`) * W * 1.2 - 20, w = 8 + hash(`sw${i}`) * 18, h = 20 + hash(`sh${i}`) * 90, y = TOTAL - h;
       c.fillStyle = '#121a2e'; c.fillRect(x, y, w, h + 40);
       for (let k = 0; k < 8; k++) if (hash(`l${i}${k}`) > 0.55) { c.fillStyle = 'rgba(255,214,120,.75)'; c.fillRect(x + 2 + (k % 2) * (w / 2), y + 4 + Math.floor(k / 2) * 9, 2, 2.5); }
     }
-    for (let i = 0; i < 30; i++) { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(hash(`st${i}`) * W, hash(`sy${i}`) * 80, 0.8, 0.8); }
   }
+}
+function drawStatic(c: C, night: boolean, room: number) {
   box(c, 0, 0, NX, NY, -8, 8, night ? '#b9b6b0' : '#dcd9d3', '#3a3b41', '#4a4b52', false);
   const [fcx, fcy] = iso(4, 5);
   const fg = c.createRadialGradient(fcx, fcy, 10, fcx, fcy, 240);
@@ -189,11 +220,21 @@ function drawStatic(c: C, night: boolean) {
   if (!night) for (const [y0, y1] of [[0.6, 3.1], [3.2, 5.7], [5.8, 8.3], [8.4, 10.6]]) poly(c, [iso(0, y0), iso(0, y1), iso(3.4, Math.min(NY, y1 + 1.2)), iso(3.4, Math.min(NY, y0 + 1.2))], 'rgba(255,250,235,.24)');
   poly(c, [iso(0, 0), iso(NX, 0), iso(NX, 0.4), iso(0.4, 0.4)], 'rgba(0,0,0,.07)');
   poly(c, [iso(0, 0), iso(0.4, 0.4), iso(0.4, NY), iso(0, NY)], 'rgba(0,0,0,.07)');
-  ell(c, 4.75, 8.85, 0.3, 1.75, '#2c2d33');
-  for (let k = 0; k < 4; k++) ell(c, 4.75, 8.85, 0.4 + k * 0.05, 1.55 - k * 0.38, k % 2 ? '#3d3e46' : '#36373e');
-  ell(c, 7.6, 5.4, 0.3, 1.35, night ? '#cfcac0' : '#ebe6dc');
-  poly(c, [iso(9.2, 4.6, 0.3), iso(11.9, 4.6, 0.3), iso(11.9, 7.3, 0.3), iso(9.2, 7.3, 0.3)], '#3a3b42');
-  poly(c, [iso(9.35, 4.75, 0.4), iso(11.75, 4.75, 0.4), iso(11.75, 7.15, 0.4), iso(9.35, 7.15, 0.4)], '#43444c');
+  if (room === 2) {
+    ell(c, 4.75, 8.85, 0.3, 1.75, '#2c2d33');
+    for (let k = 0; k < 4; k++) ell(c, 4.75, 8.85, 0.4 + k * 0.05, 1.55 - k * 0.38, k % 2 ? '#3d3e46' : '#36373e');
+    ell(c, 7.6, 5.4, 0.3, 1.35, night ? '#cfcac0' : '#ebe6dc');
+    poly(c, [iso(0.45, 3.4, 0.3), iso(2.6, 3.4, 0.3), iso(2.6, 6.6, 0.3), iso(0.45, 6.6, 0.3)], '#2f3036');
+  }
+  if (room === 0) {
+    poly(c, [iso(4.6, 3.3, 0.3), iso(8.2, 3.3, 0.3), iso(8.2, 6.3, 0.3), iso(4.6, 6.3, 0.3)], '#3a3b42');
+    poly(c, [iso(4.75, 3.45, 0.4), iso(8.05, 3.45, 0.4), iso(8.05, 6.15, 0.4), iso(4.75, 6.15, 0.4)], '#43444c');
+    ell(c, 3.0, 7.6, 0.3, 1.35, night ? '#cfcac0' : '#ebe6dc');
+    poly(c, [iso(9.0, 4.95, 0.3), iso(12.3, 4.95, 0.3), iso(12.3, 5.65, 0.3), iso(9.0, 5.65, 0.3)], '#3f9a4f');
+    poly(c, [iso(9.0, 5.55, 0.35), iso(12.3, 5.55, 0.35), iso(12.3, 5.65, 0.35), iso(9.0, 5.65, 0.35)], '#2f7a3d');
+    ell(c, 11.9, 5.3, 0.4, 0.07, '#141518');
+  }
+  if (room === 1) poly(c, [iso(6.0, 3.8, 0.3), iso(9.0, 3.8, 0.3), iso(9.0, 6.4, 0.3), iso(6.0, 6.4, 0.3)], '#3a3b42');
   const cap = '#26272c';
   box(c, -0.28, -0.28, NX + 0.28, 0.28, -8, WALL + 8, cap, night ? '#c9c7c2' : '#f5f4f1', cap, false);
   box(c, -0.28, -0.28, 0.28, NY + 0.28, -8, WALL + 8, cap, cap, night ? '#bdbbb6' : '#eceae6', false);
@@ -222,15 +263,34 @@ function drawStatic(c: C, night: boolean) {
     for (let k = 1; k < 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); poly(c, wallL(yy - 0.03, yy + 0.03, 13, WALL - 7), '#1c1d21'); }
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), '#2f3036');
   }
-  poly(c, wallB(0.7, 2.1, 40, 64), '#1e1f23'); poly(c, wallB(0.8, 2.0, 42, 62), '#f7f4ec');
-  poly(c, wallB(1.05, 1.75, 46, 58), '#f2c230'); poly(c, wallB(1.25, 1.55, 49, 55), '#26272c');
-  poly(c, wallB(ROSTER.x0 - 0.08, ROSTER.x1 + 0.08, ROSTER.z0 - 3, ROSTER.z1 + 3), '#1e1f23');
-  poly(c, wallB(ROSTER.x0, ROSTER.x1, ROSTER.z0, ROSTER.z1), '#fbfaf6');
-  poly(c, wallB(TV.x0 - 0.1, TV.x1 + 0.1, TV.z0 - 3, TV.z1 + 2.5), '#111214');
-  poly(c, wallB(11.15, 12.15, 0, 52), '#1e1f23'); poly(c, wallB(11.25, 12.05, 0, 49), night ? '#5a4634' : '#7a5a3f');
-  poly(c, wallB(11.3, 12.0, 30, 46), night ? '#4d3b2c' : '#6b4e36'); poly(c, wallB(11.3, 12.0, 5, 27), night ? '#4d3b2c' : '#6b4e36');
-  poly(c, wallB(11.88, 11.96, 22, 26), '#f2c230');
-  poly(c, wallB(11.3, 12.0, 55, 63), '#1e1f23');
+  // lift on every floor (the way between the rooms)
+  poly(c, wallB(11.1, 12.2, 0, 54), '#1e1f23');
+  poly(c, wallB(11.2, 11.64, 0, 50), night ? '#8d939c' : '#b9bfc8'); poly(c, wallB(11.66, 12.1, 0, 50), night ? '#868c95' : '#aeb4bd');
+  poly(c, wallB(11.5, 11.8, 57, 61), '#141518'); poly(c, wallB(11.6, 11.7, 58, 60), '#f2c230');
+  poly(c, wallB(12.3, 12.42, 24, 30), '#2a2b30'); poly(c, wallB(12.33, 12.39, 25.5, 28.5), '#f2c230');
+  if (room === 1) {
+    poly(c, wallB(0.7, 2.1, 40, 64), '#1e1f23'); poly(c, wallB(0.8, 2.0, 42, 62), '#f7f4ec');
+    poly(c, wallB(1.05, 1.75, 46, 58), '#f2c230'); poly(c, wallB(1.25, 1.55, 49, 55), '#26272c');
+    poly(c, wallB(ROSTER.x0 - 0.08, ROSTER.x1 + 0.08, ROSTER.z0 - 3, ROSTER.z1 + 3), '#1e1f23');
+    poly(c, wallB(ROSTER.x0, ROSTER.x1, ROSTER.z0, ROSTER.z1), '#fbfaf6');
+    poly(c, wallB(TV.x0 - 0.1, TV.x1 + 0.1, TV.z0 - 3, TV.z1 + 2.5), '#111214');
+  }
+  if (room === 0) {     // the boss's gold painting, a clock, a small framed photo
+    poly(c, wallB(0.9, 3.6, 30, 70), '#b8901a'); poly(c, wallB(1.0, 3.5, 32, 68), '#1a1b1f');
+    const pts = [0.1, 0.25, 0.18, 0.42, 0.35, 0.6, 0.52, 0.78, 0.9];
+    c.strokeStyle = '#f2c230'; c.lineWidth = 1.3; c.beginPath();
+    pts.forEach((v, i) => { const [x, y] = iso(1.15 + i * 0.27, 0, 36 + v * 28); if (i) c.lineTo(x, y); else c.moveTo(x, y); }); c.stroke();
+    const [cx, cy] = iso(10.6, 0, 64); c.save(); c.translate(cx, cy); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 5.5, 0, 7); c.fillStyle = '#1e1f23'; c.fill(); c.beginPath(); c.arc(0, 0, 4.6, 0, 7); c.fillStyle = '#fff'; c.fill();
+    c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -3.2); c.moveTo(0, 0); c.lineTo(2.4, 0.6); c.stroke(); c.restore();
+  }
+  if (room === 2) {     // toilet door with a sign, menu board above the kitchen
+    poly(c, wallB(4.15, 5.25, 0, 52), '#1e1f23'); poly(c, wallB(4.25, 5.15, 0, 49), night ? '#5a4634' : '#7a5a3f');
+    poly(c, wallB(4.45, 4.95, 38, 45), '#ffffff');
+    for (const [x0, col] of [[4.55, '#3a7bd5'], [4.75, '#e5484d']] as const) { poly(c, wallB(x0, x0 + 0.1, 39, 42.5), col); poly(c, wallB(x0 + 0.02, x0 + 0.08, 43, 44.3), col); }
+    poly(c, wallB(5.0, 5.06, 22, 26), '#f2c230');
+    poly(c, wallB(7.05, 9.0, 38, 64), '#1e1f23'); poly(c, wallB(7.15, 8.9, 40, 62), '#26272c');
+    for (let k = 0; k < 4; k++) { poly(c, wallB(7.3, 8.1 + (k % 2) * 0.3, 54 - k * 4, 55 - k * 4), '#e9e9e7'); poly(c, wallB(8.5, 8.75, 54 - k * 4, 55 - k * 4), '#f2c230'); }
+  }
 }
 
 /* ---------- furniture ---------- */
@@ -307,12 +367,12 @@ function chair(x: number, y: number, face: Face, color = '#f2c230'): Item[] {
     : face === 'ny' ? [{ x0: x - 0.22, y0: y + 0.21, x1: x + 0.22, y1: y + 0.3, draw: (c) => box(c, x - 0.22, y + 0.21, 0.44, 0.08, 9, 10, color) }] : [];
   return [seatItem, ...back];
 }
-function furniture(): Item[] {
+function baseItems(): Item[] {
   const it: Item[] = [];
   it.push(traderDesk(1.0, 'alt'), traderDesk(3.4, 'big'), traderDesk(6.0, 'xau'), traderDesk(8.4, 'nas'));
   for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(11.75, 2.0, 'py', '#1e1f23'));
-  for (const id of ['meet1', 'meet2', 'meet3', 'meet4']) { const s = SPOTS.find((q) => q.id === id)!; it.push(...chair(s.x, s.y, s.face, '#1e1f23')); }
+  for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
     shadow(c, 3.6, 0.2, 1.8, 0.95);
     box(c, 3.62, 0.25, 0.6, 0.85, 0, 15, '#24252a', '#1b1c20', '#2d2e34'); box(c, 5.25, 0.25, 0.08, 0.85, 0, 15, '#1e1f23');
@@ -425,6 +485,89 @@ function furniture(): Item[] {
   return it;
 }
 
+const moved = (it: Item, dx: number, dy: number): Item => ({
+  x0: it.x0 + dx, y0: it.y0 + dy, x1: it.x1 + dx, y1: it.y1 + dy,
+  draw: (c, t) => { c.save(); c.translate((dx - dy) * TW, (dx + dy) * TH); it.draw(c, t); c.restore(); },
+});
+const near = (it: Item, x: number, y: number) => Math.abs(it.x0 - x) < 0.06 && Math.abs(it.y0 - y) < 0.06;
+/** the three rooms: 0 = boss office (top), 1 = trading floor (middle), 2 = lobby / pantry / gym / lounge (bottom) */
+function furniture(): Item[][] {
+  const all = baseItems(), R: Item[][] = [[], [], []];
+  const take = (x: number, y: number) => all.filter((it) => near(it, x, y));
+  // trading floor: trader desks + chairs, Noel's desk, rack, bin, bookshelf, printer, water
+  for (const it of all) if (it.x0 >= 0.5 && it.x0 <= 2.6 && it.y0 >= 0.9 && it.y0 <= 10.2 && !(it.x0 > 2.25 && it.y0 < 0.8)) R[1].push(it);
+  for (const [x, y] of [[3.6, 0.2], [3.0, 0.15], [3.15, 0.75], [5.8, 0.1], [9.95, 0.15]]) R[1].push(...take(x, y));
+  R[1].push(...all.filter((it) => it.x0 > 4.2 && it.x0 < 4.35 && it.y0 > 1.45 && it.y0 < 2.15));                                // Noel's chair
+  R[1].push(...take(2.3, 0.15).map((it) => moved(it, 5.0, 0)));
+  // lobby: security, kitchen, fridge, water, dining table + chairs, lounge, sofa
+  for (const [x, y] of [[11.0, 2.45], [7.1, 0.1], [12.3, 0.1], [2.3, 0.15], [6.95, 4.8], [4.35, 8.4], [3.33, 7.73], [5.33, 9.23], [5.6, 7.55], [9.2, 9.4]]) R[2].push(...take(x, y));
+  R[2].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7));       // its chairs
+  R[2].push(...all.filter((it) => it.x0 > 11.4 && it.x0 < 11.6 && it.y0 > 1.6 && it.y0 < 1.9));                             // Pentoel's chair
+  // boss office: boss desk + chair, bookshelves, meeting table + chairs, sofa
+  R[0].push(...take(9.6, 5.9).map((it) => moved(it, -4.1, -1.3)));
+  R[0].push(...all.filter((it) => it.x0 > 10.1 && it.x0 < 10.4 && it.y0 > 4.9 && it.y0 < 5.2).map((it) => moved(it, -4.1, -1.3)));
+  R[0].push(...take(5.8, 0.1).map((it) => moved(it, -0.8, 0)), ...take(5.8, 0.1).map((it) => moved(it, 0.5, 0)));
+  R[0].push(...take(6.95, 4.8).map((it) => moved(it, -4.6, 2.2)));
+  R[0].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7).map((it) => moved(it, -4.6, 2.2)));
+  R[0].push(...take(9.2, 9.4));
+  const pl = (r: number, list: Array<[number, number, number]>) => { for (const [px, py, sc] of list) R[r].push({ x0: px - 0.25, y0: py - 0.25, x1: px + 0.25, y1: py + 0.25, draw: (c, t) => plant(c, px, py, sc, t) }); };
+  pl(0, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [4.3, 0.5, 1.0]]);
+  pl(1, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [8.75, 8.9, 0.7]]);
+  pl(2, [[0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [6.2, 0.45, 0.9]]);
+  /* --- new pieces --- */
+  // boss office: safe with gold, trophy cabinet, putting green flag
+  R[0].push({ x0: 8.0, y0: 0.15, x1: 8.75, y1: 0.85, draw: (c, t) => {
+    shadow(c, 8.0, 0.15, 0.75, 0.7); box(c, 8.0, 0.15, 0.75, 0.7, 0, 24, '#2a2b30', '#1e1f23', '#33343a');
+    const [hx, hy] = iso(8.4, 0.85, 13); c.strokeStyle = '#f2c230'; c.lineWidth = 1.2; c.beginPath(); c.arc(hx, hy, 2.6, 0, 7); c.stroke();
+    if (BUSY.safe) { poly(c, [iso(8.0, 0.85, 22), iso(8.0, 1.45, 22), iso(8.0, 1.45, 2), iso(8.0, 0.85, 2)], '#3a3b42'); for (let k = 0; k < 3; k++) box(c, 8.1, 0.3 + k * 0.15, 0.5, 0.12, 3 + (k % 2) * 2.2, 2, '#f2c230'); }
+    void t;
+  } });
+  R[0].push({ x0: 9.1, y0: 0.15, x1: 10.3, y1: 0.6, draw: (c) => {
+    shadow(c, 9.1, 0.15, 1.2, 0.45); box(c, 9.1, 0.15, 1.2, 0.45, 0, 38, '#26272c', '#1e1f23', '#2d2e34');
+    poly(c, [iso(9.16, 0.6, 35), iso(10.24, 0.6, 35), iso(10.24, 0.6, 4), iso(9.16, 0.6, 4)], 'rgba(170,210,240,.35)');
+    for (const [x, z] of [[9.4, 22], [9.8, 22], [9.6, 8], [10.0, 8]]) { cyl(c, x, 0.38, z, 0.07, 6, '#f2c230', '#d9a91c'); ell(c, x, 0.38, z + 6, 0.11, '#f2c230'); }
+  } });
+  R[0].push({ x0: 11.85, y0: 5.25, x1: 11.95, y1: 5.35, draw: (c, t) => {
+    const [a0, a1] = iso(11.9, 5.3, 0), [b0, b1] = iso(11.9, 5.3, 20); c.strokeStyle = '#e9e9e7'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
+    const wv = Math.sin(t * 3) * 1; c.fillStyle = '#e5484d'; c.beginPath(); c.moveTo(b0, b1); c.lineTo(b0 + 7, b1 + 2 + wv); c.lineTo(b0, b1 + 4.5); c.closePath(); c.fill();
+  } });
+  // trading floor: shared hot desk with laptops, whiteboard
+  R[1].push({ x0: 6.45, y0: 4.65, x1: 8.55, y1: 5.55, draw: (c) => {
+    shadow(c, 6.45, 4.65, 2.1, 0.9);
+    for (const [x, y] of [[6.5, 4.7], [8.4, 4.7], [6.5, 5.4], [8.4, 5.4]]) box(c, x, y, 0.1, 0.1, 0, 14, '#1e1f23');
+    box(c, 6.45, 4.65, 2.1, 0.9, 14, 2, '#f7f7f5', '#d6d5d1', '#e7e6e2');
+    for (const [x, y, f] of [[6.75, 4.75, 0], [7.95, 4.75, 0], [6.75, 5.2, 1], [7.95, 5.2, 1]] as const) {
+      box(c, x, y, 0.45, 0.3, 16, 0.6, '#c9cbd1');
+      if (f) box(c, x, y, 0.45, 0.04, 16.6, 6, '#2a2b30', '#9fd3f2', '#2a2b30'); else box(c, x, y + 0.26, 0.45, 0.04, 16.6, 6, '#2a2b30', '#3a3b42', '#2a2b30');
+    }
+    cyl(c, 7.5, 5.1, 16, 0.06, 2.5, '#ffffff', '#eeeeee');
+  } });
+  R[1].push({ x0: 10.4, y0: 6.45, x1: 12.2, y1: 6.62, draw: (c, t) => {
+    for (const x of [10.5, 12.1]) box(c, x, 6.5, 0.06, 0.06, 0, 16, '#8b8f99');
+    box(c, 10.4, 6.5, 1.8, 0.06, 16, 22, '#ffffff', '#f4f4f2', '#d6d5d1');
+    const pts = [0.1, 0.3, 0.2, 0.55, 0.45, 0.7, 0.62, 0.9];
+    c.strokeStyle = '#2e9e5b'; c.lineWidth = 0.9; c.beginPath();
+    pts.forEach((v, i) => { const [x, y] = iso(10.55 + i * 0.2, 6.56, 19 + v * 15); if (i) c.lineTo(x, y); else c.moveTo(x, y); }); c.stroke();
+    c.strokeStyle = '#e5484d'; c.beginPath(); const [l0, l1] = iso(10.55, 6.56, 33), [l2, l3] = iso(11.3, 6.56, 33); c.moveTo(l0, l1); c.lineTo(l2, l3); c.stroke();
+    void t;
+  } });
+  // lobby gym: treadmill + dumbbell rack
+  R[2].push({ x0: 0.55, y0: 1.0, x1: 1.45, y1: 2.8, draw: (c, t) => {
+    shadow(c, 0.55, 1.0, 0.9, 1.8);
+    box(c, 0.6, 1.05, 0.8, 1.7, 0, 4, '#2a2b30', '#1e1f23', '#33343a');
+    poly(c, [iso(0.68, 1.15, 4.1), iso(1.32, 1.15, 4.1), iso(1.32, 2.65, 4.1), iso(0.68, 2.65, 4.1)], '#141518');
+    if (BUSY.tread) for (let k = 0; k < 6; k++) { const yy = 1.2 + ((k / 6 + t * 0.9) % 1) * 1.4; poly(c, [iso(0.7, yy, 4.2), iso(1.3, yy, 4.2), iso(1.3, yy + 0.03, 4.2), iso(0.7, yy + 0.03, 4.2)], '#3a3b42'); }
+    for (const y of [1.08, 2.62]) box(c, 0.6, y, 0.06, 0.06, 4, 18, '#3a3b42');
+    box(c, 0.56, 1.0, 0.18, 1.8, 22, 3, '#2a2b30', '#1e1f23', '#33343a');
+    const [dx, dy] = iso(0.66, 1.9, 25.5); c.fillStyle = BUSY.tread ? '#2ee59d' : '#1d4d3a'; c.fillRect(dx - 2, dy - 1, 4, 1.6);
+  } });
+  R[2].push({ x0: 0.55, y0: 5.4, x1: 1.0, y1: 6.4, draw: (c) => {
+    shadow(c, 0.55, 5.4, 0.45, 1.0); box(c, 0.6, 5.45, 0.35, 0.9, 0, 12, '#26272c', '#1e1f23', '#2d2e34');
+    for (let k = 0; k < 4; k++) for (const z of [12.2, 6]) { const y = 5.55 + k * 0.2; cyl(c, 0.78, y, z, 0.07, 2, '#3a3b42', '#2b2c31'); }
+  } });
+  return R;
+}
+
 /* ---------- walking grid (half tiles) and paths ---------- */
 const GS = 0.5, GX = NX / GS, GY = NY / GS;
 function buildGrid(items: Item[]) {
@@ -480,6 +623,7 @@ function findPath(free: boolean[][], fx: number, fy: number, tx: number, ty: num
 
 /* ---------- people ---------- */
 interface Agent {
+  room: number; pending: Spot | null; hiddenUntil: number;
   x: number; y: number; vx: number; vy: number; face: Face; path: Array<[number, number]>; act: Spot; until: number; dist: number; speed: number;
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
   scoldUntil: number; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
@@ -491,10 +635,13 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const shaking = Date.now() < a.scoldUntil;
   const face: Face = walking || shaking || whipT != null ? a.face : a.act.face;
   let pose: Pose = walking ? 'stand' : st.sleep && a.act.id.startsWith('seat-') ? 'sleep' : a.act.pose;
+  if (pose === 'run') pose = 'stand';
   if (shaking && (pose === 'bean' || pose === 'nap' || pose === 'squat' || pose === 'stretch' || pose === 'jump')) pose = 'stand';
   const front = face === 'px' || face === 'py', flip = face === 'py' || face === 'nx';
   const spd = Math.hypot(a.vx, a.vy), amp = Math.min(1, spd / 1.3);
-  const ph = a.dist * 5.2, swing = walking ? Math.sin(ph) * amp : 0, bob = walking ? Math.abs(Math.cos(ph)) * 1.2 * amp : 0;
+  const running = !walking && a.act.pose === 'run';
+  const anim = walking || running, ph = running ? t * 13 : a.dist * 5.2, am = running ? 1.3 : amp;
+  const swing = anim ? Math.sin(ph) * am : 0, bob = anim ? Math.abs(Math.cos(ph)) * 1.2 * am : 0;
   const breathe = Math.sin(t * 2 + hash(p.id) * 6) * 0.35;
   const typing = !walking && pose === 'sit' && a.act.id.startsWith('seat-') && !st.sleep && !shaking;
   const sitting = pose === 'sit' || pose === 'sleep' || pose === 'nap', bean = pose === 'bean';
@@ -514,14 +661,14 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     c.fillStyle = shoe; for (const o of [-1.4, 1.4]) { c.beginPath(); c.ellipse(fx + 1.8 + o * 0.4, bean ? hip + 3 : -0.5, 1.9, 1.1, 0, 0, 7); c.fill(); }
   } else {
     for (const [o, k] of [[-1.5, 1], [1.5, -1]] as const) {
-      const lift = walking ? Math.max(0, Math.sin(ph) * k) * 1.8 * amp : 0, fwd = swing * k * 1.8;
+      const lift = anim ? Math.max(0, Math.sin(ph) * k) * 1.8 * am : 0, fwd = swing * k * 1.8;
       const knee = squat ? 2.2 + squat : lift * 0.8;
       c.strokeStyle = o < 0 ? pantsD : p.pants; c.lineWidth = 2.8;
       c.beginPath(); c.moveTo(o, hip); c.lineTo(o + fwd * 0.6 + knee * 0.9, (hip - 1.3 - lift) / 2); c.lineTo(o + fwd, -1.3 - lift); c.stroke();
       c.fillStyle = shoe; c.beginPath(); c.ellipse(o + fwd + (front ? 0.8 : -0.3), -0.8 - lift, 1.9, 1.15, 0, 0, 7); c.fill();
     }
   }
-  const lean = walking ? 0.6 * amp : 0;
+  const lean = anim ? 0.6 * am : 0;
   const hy = hip - torso - 5.6 + breathe * 0.5 + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean + (!walking && pose === 'stand' && !shaking ? Math.sin(t * 0.6 + hash(p.id) * 9) * 0.5 : 0);
   const R = 6.2;
@@ -548,13 +695,17 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (!walking && prop === 'hp' && !bean && !shaking) { ex = 3.2 - side * 0.4; ey = syh + 3.2; }
     if (!walking && (prop === 'book' || prop === 'paper') && !shaking) { ex = 3.8 - side * 0.3; ey = syh + 3.5; }
     if (!walking && prop === 'can' && a.act.id === 'plant' && side > 0) { ex = 7; ey = syh + 3; }
+    if (!walking && prop === 'club' && !shaking) { const w = Math.sin(t * 2.2); ex = 2.5 + w * 2.5 - side * 0.5; ey = syh + 6 - Math.abs(w) * 1.5; }
+    if (!walking && prop === 'dumbbell' && !shaking) { ex = sxh + 1; ey = syh + 5 - Math.max(0, Math.sin(t * 3 + (side > 0 ? 0 : 3.14))) * 8; }
     if (whipT != null && side > 0) { const w = (whipT % 0.9) / 0.9; ex = sxh + 2 + Math.cos(w * 6.28) * 1.5; ey = syh - 7 + (w < 0.25 ? 6 * (w / 0.25) : 6 - 6 * ((w - 0.25) / 0.75)); }
     c.beginPath(); c.moveTo(sxh, syh); c.lineTo((sxh + ex) / 2 + (side > 0 ? 0.4 : -0.4), (syh + ey) / 2 + 0.3); c.lineTo(ex, ey); c.stroke();
     c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill();
+    if (!walking && prop === 'dumbbell' && !shaking) { c.fillStyle = '#26272c'; c.fillRect(ex - 2.4, ey - 0.4, 4.8, 1.4); c.fillRect(ex - 3, ey - 1.2, 1.4, 3); c.fillRect(ex + 1.6, ey - 1.2, 1.4, 3); }
     if (side > 0) {
       if ((prop === 'cup' || prop === 'can') && pose === 'stand' && a.act.id !== 'plant') { c.fillStyle = prop === 'can' ? '#e5484d' : '#ffffff'; c.fillRect(ex - 0.5, ey - 2.2, 2.6, 3.4); if (prop === 'cup') { c.fillStyle = '#6b4a2b'; c.fillRect(ex - 0.5, ey - 2.2, 2.6, 0.8); } }
       if (prop === 'food' && pose === 'stand') { c.fillStyle = '#f2a33a'; c.beginPath(); c.arc(ex + 0.8, ey - 0.8, 1.8, 0, 7); c.fill(); }
       if (prop === 'trash' && pose === 'stand') { c.fillStyle = '#1e1f23'; c.beginPath(); c.ellipse(ex + 0.5, ey + 2.5, 2.2, 2.8, 0, 0, 7); c.fill(); }
+      if (prop === 'club' && !walking) { const w = Math.sin(t * 2.2); c.strokeStyle = '#d8d8d8'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + 1 + w * 4, -1.2); c.stroke(); c.fillStyle = '#9aa0a8'; c.fillRect(ex + w * 4, -2, 3, 1.4); if (w > 0.85) { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex + 9 + (t * 20) % 12, -1.2, 0.9, 0, 7); c.fill(); } }
       if (prop === 'phone' && !walking) { c.fillStyle = '#1e1f23'; c.fillRect(ex + 0.3, ey - 2.5, 1.4, 3.6); }
       if (prop === 'hp' && !walking) { c.fillStyle = '#1e1f23'; c.fillRect(ex - 1.8, ey - 2.4, 3.4, 2.4); c.fillStyle = '#7cc8f0'; c.fillRect(ex - 1.4, ey - 2.1, 2.6, 1.6); }
       if ((prop === 'book' || prop === 'paper') && !walking) { c.fillStyle = prop === 'book' ? '#f2c230' : '#ffffff'; c.fillRect(ex - 2.5, ey - 3, 4.6, 3.4); }
@@ -625,56 +776,58 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
 /* ---------- planning ---------- */
 const lunch = (now: number) => { const h = new Date(now).getHours(); return h >= 12 && h < 13; };
 function variant(s: Spot, now: number): Spot {
-  if (s.zone === 'meet' && s.id.startsWith('meet') && lunch(now)) return { ...s, label: 'MAKAN SIANG', prop: 'food' };
+  if (s.zone === 'eat' && lunch(now)) return { ...s, label: 'MAKAN SIANG', prop: 'food' };
   if (!s.alt || Math.random() < 0.45) return s;
   const v = s.alt[Math.floor(Math.random() * s.alt.length)];
   return { ...s, label: v.label, pose: v.pose ?? s.pose, prop: v.prop ?? s.prop };
 }
+const ROAM = SPOTS.filter((q) => q.zone !== 'boss' && !q.id.startsWith('bsofa'));
 function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<string>, now: number, all: Record<string, Agent>): { act: Spot; dwell: number } {
   const s = S[p.id], r = Math.random(), rnd = (lo: number, hi: number) => (lo + Math.random() * (hi - lo)) * 1000;
   const pick = (list: Spot[]) => { const f = list.filter((q) => !taken.has(q.id)); return f.length ? variant(f[Math.floor(Math.random() * f.length)], now) : p.seat; };
   const near = (id: string, label: string): Spot => {
     const q = PEOPLE.find((x) => x.id === id)!.seat;
-    return q.face === 'ny' ? { id: `near-${id}-${p.id}`, x: q.x + 0.75, y: q.y + 0.6, face: 'ny', pose: 'stand', label } : { id: `near-${id}-${p.id}`, x: q.x + 0.8, y: q.y + 0.65, face: 'nx', pose: 'stand', label };
+    return q.face === 'ny' ? { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.75, y: q.y + 0.6, face: 'ny', pose: 'stand', label } : { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.8, y: q.y + 0.65, face: 'nx', pose: 'stand', label };
   };
   if (p.id === 'jaga') {
     if (s.label === 'ALARM') return { act: { ...p.seat, label: 'ALARM' }, dwell: 4000 };
     if (a.patrol > 0 && a.patrol <= PATROL.length) { const w = PATROL[a.patrol - 1]; a.patrol++; return { act: w, dwell: rnd(1.2, 3) }; }
     if (a.act.id === p.seat.id) {
-      if (r < 0.2) return { act: { ...SPOTS.find((q) => q.id === 'toilet')!, label: 'CEK PINTU', prop: undefined }, dwell: rnd(3, 6) };
+      if (r < 0.2) return { act: { ...SPOTS.find((q) => q.id === 'toilet')!, id: 'cekpintu', label: 'CEK PINTU', prop: undefined }, dwell: rnd(3, 6) };
       a.patrol = 2; return { act: PATROL[0], dwell: rnd(1.5, 3) };
     }
     a.patrol = 0; return { act: { ...p.seat, label: Math.random() < 0.5 ? 'CEK CCTV' : 'JAGA' }, dwell: rnd(18, 35) };
   }
   if (p.id === 'bos') {
-    const victims = WORKERS.filter((id) => all[id] && !S[id]?.sleep && S[id]?.label !== 'LIBUR' && !(all[id].act.prop === 'vanish' && !all[id].path.length));
+    const victims = WORKERS.filter((id) => all[id] && !S[id]?.sleep && S[id]?.label !== 'LIBUR' && !(all[id].act.prop === 'vanish' && !all[id].path.length) && !all[id].pending);
     const sl = victims.filter((id) => S[id]?.sl);
     const slack = victims.filter((id) => { const v = all[id]; return !v.act.id.startsWith('seat-') && !v.path.length; });
-    const mad = sl.length ? sl : r < 0.5 && slack.length ? slack : r < 0.62 ? victims : [];
-    if (mad.length && now - a.angryAt > 12_000) {
+    const mad = sl.length ? sl : r < 0.45 && slack.length ? slack : r < 0.55 ? victims : [];
+    if (mad.length && now - a.angryAt > 15_000) {
       const id = mad[Math.floor(Math.random() * mad.length)];
       a.angryAt = now; a.chase = 0;
-      return { act: { id: `whip-${id}`, x: all[id].x, y: all[id].y, face: 'px', pose: 'stand', label: sl.includes(id) ? 'MARAH (SL!)' : 'MARAH', whip: id }, dwell: rnd(9, 12) };
+      return { act: { id: `whip-${id}`, room: all[id].room, x: all[id].x, y: all[id].y, face: 'px', pose: 'stand', label: sl.includes(id) ? 'MARAH (SL!)' : 'MARAH', whip: id }, dwell: rnd(9, 12) };
     }
-    if (a.act.id !== p.seat.id && r < 0.75) return { act: { ...p.seat, label: ['NGITUNG CUAN', 'CEK LAPORAN', 'BACA KORAN', 'NGOPI SANTAI'][Math.floor(Math.random() * 4)] }, dwell: rnd(12, 25) };
-    if (r < 0.85) { const [x, y] = PACE[Math.floor(Math.random() * PACE.length)]; return { act: { id: `pace-${x}`, x, y, face: 'py', pose: 'stand', label: 'MONDAR-MANDIR' }, dwell: rnd(2, 4) }; }
-    return { act: pick(SPOTS.filter((q) => ['coffee', 'tv', 'win2', 'phone'].includes(q.id))), dwell: rnd(6, 10) };
+    if (a.act.id !== p.seat.id && r < 0.72) return { act: { ...p.seat, label: ['NGITUNG CUAN', 'CEK LAPORAN', 'BACA KORAN', 'NGOPI SANTAI'][Math.floor(Math.random() * 4)] }, dwell: rnd(12, 25) };
+    if (r < 0.82) { const [rm, x, y] = PACE[Math.floor(Math.random() * PACE.length)]; return { act: { id: `pace-${rm}-${x}`, room: rm, x, y, face: 'py', pose: 'stand', label: rm === 1 ? 'INSPEKSI' : 'MONDAR-MANDIR' }, dwell: rnd(2, 4) }; }
+    return { act: pick(SPOTS.filter((q) => ['golf', 'safe', 'trophy', 'tv', 'coffee', 'bwin'].includes(q.id))), dwell: rnd(6, 11) };
   }
   if (s.sleep || s.label === 'KIRIM PESAN') return { act: p.seat, dwell: 4000 };
   if (s.tp && a.celebrated !== (s.tag?.text ?? '')) { a.celebrated = s.tag?.text ?? ''; return { act: { ...p.seat, pose: 'jump', label: 'SELEBRASI TP' }, dwell: 7000 }; }
   if (a.run) { a.run = false; return { act: p.seat, dwell: rnd(25, 45) }; }
   if (s.label.startsWith('POSISI')) {
     if (!a.act.id.startsWith('seat-') && r < 0.9) return { act: p.seat, dwell: rnd(25, 50) };
-    return r < 0.8 ? { act: p.seat, dwell: rnd(25, 50) } : { act: pick(SPOTS.filter((q) => ['coffee', 'water', 'win1', 'win2', 'win3', 'tv', 'stretch', 'trash'].includes(q.id))), dwell: rnd(5, 9) };
+    return r < 0.8 ? { act: p.seat, dwell: rnd(25, 50) } : { act: pick(SPOTS.filter((q) => ['water', 'win1', 'win2', 'win3', 'tv', 'stretch', 'trash', 'board', 'printer'].includes(q.id))), dwell: rnd(5, 9) };
   }
-  if (s.label === 'LIBUR') return { act: pick(SPOTS.filter((q) => q.zone === 'lounge' || q.zone === 'break' || q.zone === 'meet' || q.id === 'gym' || q.id === 'hp')), dwell: rnd(10, 22) };
-  if (!a.act.id.startsWith('seat-') && r < 0.42) {
+  if (s.label === 'LIBUR') return { act: pick(ROAM.filter((q) => q.zone === 'lounge' || q.zone === 'break' || q.zone === 'eat' || q.zone === 'gym' || q.id === 'hp')), dwell: rnd(10, 22) };
+  if (!a.act.id.startsWith('seat-') && r < 0.4) {
     const h = new Date(now).getHours(), late = h >= 22 || h < 6;
     return { act: { ...p.seat, label: p.id === 'tg' ? 'BALAS CHAT' : late && Math.random() < 0.4 ? 'NGANTUK' : 'MEMANTAU' }, dwell: rnd(15, 35) };
   }
-  if (r < 0.52 && PARTNER[p.id]) return { act: near(PARTNER[p.id], Math.random() < 0.5 ? 'NGOBROL' : 'LIHAT CHART TEMAN'), dwell: rnd(6, 12) };
-  return { act: pick(SPOTS), dwell: rnd(7, 16) };
+  if (r < 0.5 && PARTNER[p.id]) return { act: near(PARTNER[p.id], Math.random() < 0.5 ? 'NGOBROL' : 'LIHAT CHART TEMAN'), dwell: rnd(6, 12) };
+  return { act: pick(ROAM), dwell: rnd(7, 16) };
 }
+const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
 
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void }) {
@@ -686,11 +839,12 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
   const stRef = useRef(st); stRef.current = st;
   const scrRef = useRef(screen); scrRef.current = screen;
   const items = useMemo(() => furniture(), []);
-  const grid = useMemo(() => buildGrid(items), [items]);
+  const grids = useMemo(() => items.map((list) => buildGrid(list)), [items]);
   const night = (() => { const h = new Date(now).getHours(); return h >= 18 || h < 6; })();
   const nightRef = useRef(night); nightRef.current = night;
   const view = useRef({ ...HOME });
   const fullRef = useRef(full); fullRef.current = full;
+  const driftRef = useRef(false);
   const [zoomed, setZoomed] = useState(false);
 
   // pinch / pan / double tap / wheel zoom (page scroll keeps working while not zoomed)
@@ -698,7 +852,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
     const cv = ref.current; if (!cv) return;
     const V = view.current;
     const HOMEz = () => homeRef.current.z;
-    const clamp = () => { const LH = lhRef.current; V.z = Math.max(HOMEz(), Math.min(4, V.z)); V.tx = Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = H * V.z <= LH ? (LH - H * V.z) / 2 : Math.min(0, Math.max(LH - H * V.z, V.ty)); setZoomed(V.z > HOMEz() + 0.01); cv.style.touchAction = fullRef.current || V.z > HOMEz() + 0.01 ? 'none' : 'pan-y'; };
+    const clamp = () => { const LH = lhRef.current; V.z = Math.max(HOMEz(), Math.min(4, V.z)); V.tx = W * V.z <= W ? (W - W * V.z) / 2 : Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = TOTAL * V.z <= LH ? (LH - TOTAL * V.z) / 2 : Math.min(0, Math.max(LH - TOTAL * V.z, V.ty)); setZoomed(V.z > HOMEz() + 0.01); cv.style.touchAction = fullRef.current || V.z > HOMEz() + 0.01 ? 'none' : 'pan-y'; };
     const pt = (cx: number, cy: number) => { const r = cv.getBoundingClientRect(); return [(cx - r.left) * W / r.width, (cy - r.top) * W / r.width] as const; };
     const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(HOMEz(), Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
     let pinch: { d: number; z: number; wx: number; wy: number } | null = null, pan: { x: number; y: number } | null = null, lastTap = 0, sw: { x: number; y: number } | null = null;
@@ -757,11 +911,11 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
     const agents: Record<string, Agent> = {};
     const resize = () => {
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
-      const h = fullRef.current ? box0.clientHeight || w * H / W : w * H / W;
+      const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = fullRef.current ? Math.min(1.25, Math.max(1, (LH * 0.62) / H)) : HOME.z;
+      const LH = W * h / w, z = Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
-      lhRef.current = LH; homeRef.current = { z, tx: (W - W * z) / 2, ty: fullRef.current ? (LH - H * z) / 2 - LH * 0.03 : HOME.ty };
+      lhRef.current = LH; homeRef.current = { z, tx: (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
       if (atHome) Object.assign(view.current, homeRef.current);
     };
     resize();
@@ -781,29 +935,40 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         const s = S[p.id];
         if (!s || s.label === 'BELUM AKTIF') { delete agents[p.id]; continue; }
         let a = agents[p.id];
-        if (!a) a = agents[p.id] = { x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
+        if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
+        if (wall < a.hiddenUntil) continue;                                          // riding the lift
         if (wall < a.scoldUntil) { a.path = []; a.vx = a.vy = 0; continue; }          // frozen while being yelled at
+        // arrived at the lift with somewhere to go: ride to the other floor, step out, walk on
+        if (a.pending && !a.path.length && a.act.id.startsWith('lift-')) {
+          const nx = a.pending; a.pending = null;
+          a.room = nx.room; a.x = LIFT.x; a.y = LIFT.y + 0.15; a.vx = a.vy = 0; a.hiddenUntil = wall + 1400; a.face = 'py';
+          a.act = nx; a.until = Math.max(a.until, wall + 1400); a.path = findPath(grids[a.room], a.x, a.y, nx.x, nx.y);
+          continue;
+        }
         const forced = (s.sleep || s.label === 'KIRIM PESAN' || s.label === 'ALARM') && a.act.id !== p.seat.id;
         const changed = a.last !== s.label; a.last = s.label;
         if ((!a.path.length && wall > a.until) || forced || (changed && s.label.startsWith('POSISI'))) {
           taken.delete(a.act.id);
           if (a.act.prop && ['cup', 'food', 'can', 'paper', 'book'].includes(a.act.prop) && a.act.id !== 'plant') { a.carry = a.act.prop; a.carryUntil = wall + 20_000; }
           const nx = choose(p, S, a, taken, wall, agents);
-          a.act = nx.act; a.until = wall + nx.dwell; taken.add(a.act.id);
+          a.act = nx.act; a.until = wall + nx.dwell; taken.add(a.act.id); a.pending = null;
+          if (a.act.room !== a.room) { a.pending = a.act; a.act = liftSpot(a.room, p.id, a.pending.room < a.room); }
           a.speed = a.run ? 2.7 : p.id === 'jaga' && s.label === 'ALARM' ? 2.6 : p.id === 'bos' && a.act.whip ? 2.1 : 1.35 + hash(p.id) * 0.25;
-          a.path = Math.hypot(a.act.x - a.x, a.act.y - a.y) > 0.02 ? findPath(grid, a.x, a.y, a.act.x, a.act.y) : [];
+          a.path = Math.hypot(a.act.x - a.x, a.act.y - a.y) > 0.02 ? findPath(grids[a.room], a.x, a.y, a.act.x, a.act.y) : [];
         }
         if (wall > a.carryUntil) a.carry = null;
         // the boss chases his victim, then yells and cracks the whip
         if (p.id === 'bos' && a.act.whip) {
           const v = agents[a.act.whip];
           if (!v) a.until = 0;
-          else {
+          else if (v.room !== a.room || wall < v.hiddenUntil) {
+            if (wall - a.chase > 800) { a.chase = wall; const target = { ...a.act, room: v.room, x: v.x, y: v.y }; a.pending = target; a.act = liftSpot(a.room, p.id, v.room < a.room); a.path = findPath(grids[a.room], a.x, a.y, LIFT.x, LIFT.y); a.until = Math.max(a.until, wall + 4000); }
+          } else {
             const d = Math.hypot(v.x - a.x, v.y - a.y);
             if (d > 0.95 && wall - a.chase > 600 && wall >= v.scoldUntil) {
               a.chase = wall;
               const ang = Math.atan2(a.y - v.y, a.x - v.x), tx = v.x + Math.cos(ang) * 0.7, ty = v.y + Math.sin(ang) * 0.7;
-              a.path = findPath(grid, a.x, a.y, tx, ty); a.act = { ...a.act, label: 'NGEJAR' }; a.until = Math.max(a.until, wall + 3000);
+              a.path = findPath(grids[a.room], a.x, a.y, tx, ty); a.act = { ...a.act, label: 'NGEJAR' }; a.until = Math.max(a.until, wall + 3000);
             } else if (d <= 0.95) {
               a.path = []; a.vx = a.vy = 0; a.face = faceTo(v.x - a.x, v.y - a.y);
               if (wall >= v.scoldUntil && !(a.bubble && wall < a.bubble.until)) {
@@ -826,7 +991,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
           const want = lastPt ? Math.min(a.speed, d * 3.2 + 0.15) : a.speed;
           let ax = d > 1e-4 ? (dx / d) * want : 0, ay = d > 1e-4 ? (dy / d) * want : 0;
           if (!(lastPt && d < 0.7)) for (const q of Object.values(agents)) {
-            if (q === a) continue; const ox = a.x - q.x, oy = a.y - q.y, od = Math.hypot(ox, oy);
+            if (q === a || q.room !== a.room) continue; const ox = a.x - q.x, oy = a.y - q.y, od = Math.hypot(ox, oy);
             if (od > 0.001 && od < 0.42) { ax += (ox / od) * (0.42 - od) * 3; ay += (oy / od) * (0.42 - od) * 3; }
           }
           const kk = Math.min(1, dt * 7); a.vx += (ax - a.vx) * kk; a.vy += (ay - a.vy) * kk;
@@ -843,53 +1008,68 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       BUSY.sink = Object.values(agents).some((a) => a.act.id === 'sink' && !a.path.length);
       BUSY.printer = Object.values(agents).some((a) => a.act.id === 'printer' && !a.path.length);
       BUSY.fridge = Object.values(agents).some((a) => a.act.id === 'fridge' && !a.path.length);
-      /* ---- draw world ---- */
+      BUSY.safe = Object.values(agents).some((a) => a.act.id === 'safe' && !a.path.length);
+      BUSY.tread = Object.values(agents).some((a) => a.act.id === 'tread' && !a.path.length);
+      /* ---- draw world: three rooms stacked ---- */
       const V = view.current, nightNow = nightRef.current;
-      const key = `${cv.width}x${cv.height}:${nightNow}:${V.z.toFixed(3)}:${V.tx.toFixed(2)}:${V.ty.toFixed(2)}`;
+      // the static rooms are rendered once per zoom level into one picture and only moved while panning
+      const mx = 30, my = 30;
+      const key = `${cv.width}x${cv.height}:${nightNow}:${V.z.toFixed(3)}`;
       if (key !== bgKey) {
-        if (!bg || bg.width !== cv.width || bg.height !== cv.height) { bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height; }
-        const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, bg.width, bg.height);
-        b.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * V.ty); drawStatic(b, nightNow); bgKey = key;
+        const bw = Math.ceil((W + 2 * mx) * k * V.z), bh = Math.ceil((TOTAL + 2 * my) * k * V.z);
+        if (!bg || bg.width !== bw || bg.height !== bh) { bg = document.createElement('canvas'); bg.width = bw; bg.height = bh; }
+        const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, bw, bh);
+        b.setTransform(k * V.z, 0, 0, k * V.z, mx * k * V.z, my * k * V.z); drawBackdrop(b, nightNow);
+        for (let r = 0; r < ROOMS; r++) { b.save(); b.translate(0, r * RH); drawStatic(b, nightNow, r); b.restore(); }
+        bgKey = key;
       }
-      c.setTransform(1, 0, 0, 1, 0, 0); if (bg) c.drawImage(bg, 0, 0);
-      c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * V.ty);
-      drawWallText(c, scrRef.current, wall, t);
-      const list: Item[] = items.slice();
-      for (const p of PEOPLE) {
-        const a = agents[p.id]; if (!a) continue;
-        if (!a.path.length && a.act.prop === 'vanish') continue;          // in the toilet
-        const s = S[p.id];
-        const whipT = p.id === 'bos' && a.act.whip && !a.path.length && a.bubble && wall < a.bubble.until ? t : null;
-        list.push({ x0: a.x - 0.2, y0: a.y - 0.2, x1: a.x + 0.2, y1: a.y + 0.2, draw: (cc, tt) => drawPerson(cc, p, a, tt, s, whipT) });
-      }
-      for (const it of isoSort(list)) it.draw(c, t);
-      for (const p of PEOPLE) {
-        const a = agents[p.id], s = S[p.id]; if (!a) continue;
-        const [sx, sy] = iso(a.x, a.y);
-        const zz = (s?.sleep && !a.path.length) || (a.act.pose === 'nap' && !a.path.length);
-        if (zz) { const ph = (t * 0.5) % 1; c.fillStyle = `rgba(150,170,215,${1 - ph})`; c.font = 'bold 6px sans-serif'; c.fillText('z', sx + 5 + ph * 4, sy - 28 - ph * 8); c.font = 'bold 4.5px sans-serif'; c.fillText('z', sx + 9 + ph * 3, sy - 33 - ph * 6); }
-        if (p.id === 'bos' && a.act.whip && !a.path.length && a.bubble && wall < a.bubble.until) {
-          const w = (t % 0.9) / 0.9;
-          if (w > 0.2 && w < 0.42) { const dir = a.face === 'py' || a.face === 'nx' ? -1 : 1; c.fillStyle = '#ffd23f'; c.strokeStyle = '#1e1f23'; c.lineWidth = 1.2; c.font = '900 7px system-ui, sans-serif'; c.textAlign = 'center'; c.strokeText('CTAR!', sx + dir * 24, sy - 12); c.fillText('CTAR!', sx + dir * 24, sy - 12); c.textAlign = 'start'; }
+      c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0a0f1e' : '#2b2c31'; c.fillRect(0, 0, cv.width, cv.height);
+      if (bg) c.drawImage(bg, Math.round(k * (V.tx - mx * V.z)), Math.round(k * (V.ty - my * V.z)));
+      for (let r = 0; r < ROOMS; r++) {
+        c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + r * RH * V.z));
+        if (r === 1) drawWallText(c, scrRef.current, wall, t);
+        const list: Item[] = items[r].slice();
+        for (const p of PEOPLE) {
+          const a = agents[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
+          if (!a.path.length && a.act.prop === 'vanish') continue;          // in the toilet
+          const s = S[p.id];
+          const whipT = p.id === 'bos' && a.act.whip && !a.path.length && a.bubble && wall < a.bubble.until ? t : null;
+          list.push({ x0: a.x - 0.2, y0: a.y - 0.2, x1: a.x + 0.2, y1: a.y + 0.2, draw: (cc, tt) => drawPerson(cc, p, a, tt, s, whipT) });
+        }
+        for (const it of isoSort(list)) it.draw(c, t);
+        for (const p of PEOPLE) {
+          const a = agents[p.id], s = S[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
+          const [sx, sy] = iso(a.x, a.y);
+          const zz = (s?.sleep && !a.path.length) || (a.act.pose === 'nap' && !a.path.length);
+          if (zz) { const ph = (t * 0.5) % 1; c.fillStyle = `rgba(150,170,215,${1 - ph})`; c.font = 'bold 6px sans-serif'; c.fillText('z', sx + 5 + ph * 4, sy - 28 - ph * 8); c.font = 'bold 4.5px sans-serif'; c.fillText('z', sx + 9 + ph * 3, sy - 33 - ph * 6); }
+          if (p.id === 'bos' && a.act.whip && !a.path.length && a.bubble && wall < a.bubble.until) {
+            const w = (t % 0.9) / 0.9;
+            if (w > 0.2 && w < 0.42) { const dir = a.face === 'py' || a.face === 'nx' ? -1 : 1; c.fillStyle = '#ffd23f'; c.strokeStyle = '#1e1f23'; c.lineWidth = 1.2; c.font = '900 7px system-ui, sans-serif'; c.textAlign = 'center'; c.strokeText('CTAR!', sx + dir * 24, sy - 12); c.fillText('CTAR!', sx + dir * 24, sy - 12); c.textAlign = 'start'; }
+          }
         }
       }
       if (nightNow) {
-        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(6,10,28,.28)'; c.fillRect(0, 0, cv.width, cv.height); c.restore();
+        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(6,10,28,.26)'; c.fillRect(0, 0, cv.width, cv.height); c.restore();
         c.globalCompositeOperation = 'lighter';
         const glow = (x: number, y: number, z: number, r: number, col: string) => { const [gx, gy] = iso(x, y, z); const g = c.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(gx - r, gy - r, 2 * r, 2 * r); };
-        for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); }
-        glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(11.2, 6.55, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)');
+        for (let r = 0; r < ROOMS; r++) {
+          c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + r * RH * V.z));
+          glow(6, 5, 70, 120, 'rgba(255,220,150,.07)');
+          if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
+          if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
+          if (r === 2) { glow(8.0, 0.4, 30, 30, 'rgba(255,200,90,.18)'); glow(4.8, 8.8, 20, 34, 'rgba(255,200,90,.12)'); }
+        }
         c.globalCompositeOperation = 'source-over';
       }
       /* ---- name tags (screen space, never overlapping) ---- */
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawTags(c, agents, S, wall, (x, y) => [(x * V.z + V.tx) * css, (y * V.z + V.ty) * css], css * W, css * V.z);
+      drawTags(c, agents, S, wall, (x, y, r) => [(x * V.z + V.tx) * css, ((y + r * RH) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
     };
     const io = new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was) { last = performance.now(); raf = requestAnimationFrame(frame); } }, { threshold: 0 });
     io.observe(box0);
     raf = requestAnimationFrame(frame);
     return () => { cancelAnimationFrame(raf); visible = false; ro.disconnect(); io.disconnect(); };
-  }, [items, grid]);
+  }, [items, grids]);
 
   const d = new Date(now);
   const clock = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -897,10 +1077,10 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
   const active = PEOPLE.filter((p) => st[p.id] && st[p.id].label !== 'BELUM AKTIF' && !st[p.id].sleep).length;
   return (
     <div className={'office' + (full ? ' office-full' : '')} ref={wrap}>
-      <canvas ref={ref} className="office-canvas" style={full ? { width: '100%', height: '100%', touchAction: 'none' } : { aspectRatio: `${W} / ${H}`, touchAction: 'pan-y' }} aria-label="Kantor virtual: status bot dan EA" />
+      <canvas ref={ref} className="office-canvas" style={full ? { width: '100%', height: '100%', touchAction: 'none' } : { aspectRatio: `${W} / ${TOTAL}`, touchAction: 'pan-y' }} aria-label="Kantor virtual: status bot dan EA" />
       {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div></>}
-      {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, homeRef.current); setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
+      {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, homeRef.current); driftRef.current = fullRef.current; setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
         : null}
     </div>
   );
@@ -947,10 +1127,10 @@ function drawWallText(c: C, lines: ScreenLine[], wall: number, t: number) {
   });
 }
 
-function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>, wall: number, toScreen: (x: number, y: number) => [number, number], cw: number, unit: number) {
+function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>, wall: number, toScreen: (x: number, y: number, room: number) => [number, number], cw: number, unit: number, ts = 1) {
   type Tag = { x: number; y: number; w: number; h: number; ax: number; ay: number; name: string; label: string; color: string; extra?: { text: string; color: string } | null; bubble?: Agent['bubble'] };
   const tags: Tag[] = [];
-  const nameF = '700 7.2px -apple-system, system-ui, sans-serif', stF = '700 5.6px ui-monospace, Menlo, monospace';
+  const nameF = `700 ${7.2 * ts}px -apple-system, system-ui, sans-serif`, stF = `700 ${5.6 * ts}px ui-monospace, Menlo, monospace`;
   for (const p of PEOPLE) {
     const a = agents[p.id], s = S[p.id]; if (!a || !s) continue;
     const walking = a.path.length > 0, hidden = !walking && a.act.prop === 'vanish';
@@ -964,12 +1144,13 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     } else if (s.label === 'LIBUR') label = `LIBUR · ${what}`;
     else if (s.label.startsWith('POSISI') && what === 'SELEBRASI TP') label = what;
     else if (s.label.startsWith('POSISI') && !a.act.id.startsWith('seat-')) label = `${s.label} · ${what}`;
-    const [ax, ay0] = toScreen(...iso(a.x, a.y));
+    if (wall < a.hiddenUntil) continue;                     // inside the lift
+    const [ix, iy] = iso(a.x, a.y), [ax, ay0] = toScreen(ix, iy, a.room);
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
     const ay = hidden ? ay0 - 4 : ay0 - (seated ? 27 : 32) * PS * unit;
     c.font = nameF; const nw = c.measureText(p.name).width;
-    c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = c.measureText(label + extraTxt).width + 6;
-    const w = Math.max(nw, lw) + 7, h = 17;
+    c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = c.measureText(label + extraTxt).width + 6 * ts;
+    const w = Math.max(nw, lw) + 7 * ts, h = 17 * ts;
     tags.push({ x: ax - w / 2, y: ay - h - 2, w, h, ax, ay, name: p.name, label, color, extra: busy ? null : s.tag, bubble: a.bubble && wall < a.bubble.until ? a.bubble : null });
   }
   // place from the bottom up, pushing tags upward / sideways until nothing overlaps
@@ -990,19 +1171,19 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     c.fillStyle = 'rgba(18,19,23,.86)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, 4.5); c.fill();
     c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 0.6; c.stroke();
     c.textBaseline = 'middle'; c.textAlign = 'center';
-    c.font = nameF; c.fillStyle = '#ffffff'; c.fillText(tg.name, tg.x + tg.w / 2, tg.y + 5.2);
+    c.font = nameF; c.fillStyle = '#ffffff'; c.fillText(tg.name, tg.x + tg.w / 2, tg.y + 5.2 * ts);
     c.font = stF; c.textAlign = 'left';
-    const extra = tg.extra ? ` ${tg.extra.text}` : '', full = c.measureText(tg.label + extra).width + 6;
+    const extra = tg.extra ? ` ${tg.extra.text}` : '', full = c.measureText(tg.label + extra).width + 6 * ts;
     let x = tg.x + (tg.w - full) / 2;
-    c.fillStyle = tg.color; c.beginPath(); c.roundRect(x, tg.y + 11, 3.6, 3.6, 1); c.fill(); x += 6;
-    c.fillStyle = '#f1f3f6'; c.fillText(tg.label, x, tg.y + 12.9); x += c.measureText(tg.label).width;
-    if (tg.extra) { c.fillStyle = tg.extra.color; c.fillText(extra, x, tg.y + 12.9); }
+    c.fillStyle = tg.color; c.beginPath(); c.roundRect(x, tg.y + 11 * ts, 3.6 * ts, 3.6 * ts, 1); c.fill(); x += 6 * ts;
+    c.fillStyle = '#f1f3f6'; c.fillText(tg.label, x, tg.y + 12.9 * ts); x += c.measureText(tg.label).width;
+    if (tg.extra) { c.fillStyle = tg.extra.color; c.fillText(extra, x, tg.y + 12.9 * ts); }
     if (tg.bubble) {
-      c.font = '800 7.5px -apple-system, system-ui, sans-serif';
-      const bw = c.measureText(tg.bubble.text).width + 10, right = tg.x + tg.w + 3 + bw <= cw, bx = right ? tg.x + tg.w + 3 : tg.x - bw - 3, by = tg.y + 1;
-      c.fillStyle = '#ffffff'; c.beginPath(); c.roundRect(bx, by, bw, 14, 7); c.fill();
-      c.beginPath(); const tx = right ? bx + 6 : bx + bw - 6; c.moveTo(tx - 3, by + 13); c.lineTo(tx + 3, by + 13); c.lineTo(tx + (right ? -5 : 5), by + 18); c.fill();
-      c.fillStyle = tg.bubble.color; c.textAlign = 'center'; c.fillText(tg.bubble.text, bx + bw / 2, by + 7.3); c.textAlign = 'left';
+      c.font = `800 ${7.5 * ts}px -apple-system, system-ui, sans-serif`;
+      const bw = c.measureText(tg.bubble.text).width + 10 * ts, right = tg.x + tg.w + 3 + bw <= cw, bx = right ? tg.x + tg.w + 3 : tg.x - bw - 3, by = tg.y + 1;
+      c.fillStyle = '#ffffff'; c.beginPath(); c.roundRect(bx, by, bw, 14 * ts, 7 * ts); c.fill();
+      c.beginPath(); const tx = right ? bx + 6 : bx + bw - 6; c.moveTo(tx - 3, by + 13 * ts); c.lineTo(tx + 3, by + 13 * ts); c.lineTo(tx + (right ? -5 : 5), by + 18 * ts); c.fill();
+      c.fillStyle = tg.bubble.color; c.textAlign = 'center'; c.fillText(tg.bubble.text, bx + bw / 2, by + 7.3 * ts); c.textAlign = 'left';
     }
     c.textBaseline = 'alphabetic';
   }
