@@ -37,11 +37,11 @@ export default function KantorPage() {
     <div className="stack">
       <PageHead title="Kantor" />
       <Office data={j} now={now} screen={[
-        { k: 'BINANCE', v: j.binance ? usd(j.binance.wallet) : '—' },
+        { k: 'BNC', v: j.binance ? usd(j.binance.wallet) : '—' },
         { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet) : '—' },
-        { k: 'HARI INI', v: usd(pnlToday, true), color: pnlToday > 0 ? '#2ee59d' : pnlToday < 0 ? '#ff6b6b' : undefined },
-        { k: 'POSISI', v: openTxt || 'tidak ada', color: openSum > 0 ? '#2ee59d' : openSum < 0 ? '#ff6b6b' : undefined },
-        { k: 'SINYAL H4', v: `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` },
+        { k: 'HARI', v: usd(pnlToday, true), color: pnlToday > 0 ? '#2ee59d' : pnlToday < 0 ? '#ff6b6b' : undefined },
+        { k: 'POS', v: openTxt || 'tidak ada', color: openSum > 0 ? '#2ee59d' : openSum < 0 ? '#ff6b6b' : undefined },
+        { k: 'H4', v: `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` },
       ]} />
       <p className="mute small" style={{ margin: '0 4px' }}>Semua gerakan mengikuti data asli: posisi terbuka, laporan bot/EA, dan trade yang baru selesai (15 menit terakhir).</p>
     </div>

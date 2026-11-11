@@ -905,8 +905,8 @@ body::before { display: none; }
 .dt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 /* Kantor: pixel-art office */
-.office { position: relative; border-radius: 18px; overflow: hidden; background: #20232b; }
-.office-canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+.office { position: relative; border-radius: 18px; overflow: hidden; background: #2b2c31; }
+.office-canvas { display: block; width: 100%; height: auto; }
 .office-tag { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; }
 .ot-card { display: flex; flex-direction: column; align-items: center; background: rgba(20, 22, 28, .86); border: 1px solid rgba(255,255,255,.16); border-radius: 4px; padding: 1px 5px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; line-height: 1.15; white-space: nowrap; }
 .ot-card strong { color: #fff; font-size: 9.5px; }
@@ -926,17 +926,25 @@ body::before { display: none; }
 .office-tag .ot-st { font-size: 6.5px; }
 .office-tag .ot-role { font-size: 6.5px; }
 
-/* wall screen in the office (text skewed onto the right wall) */
-.office-tv { position: absolute; transform-origin: 0 0; transform: skewY(26.565deg); display: flex; flex-direction: column; justify-content: center; gap: 1px; padding: 0 4px;
+/* wall screen + roster board in the office (text skewed onto the back wall, iso slope 1:2) */
+.office-tv { position: absolute; transform-origin: 0 0; transform: skewY(26.565deg); display: flex; flex-direction: column; justify-content: center; gap: 0; padding: 0 3px;
   font-family: ui-monospace, 'SF Mono', Menlo, monospace; color: #cfe8ff; pointer-events: none; text-shadow: 0 0 4px rgba(90,209,255,.45); }
-.tv-row { display: flex; justify-content: space-between; gap: 4px; font-size: 6.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; }
-.tv-row span { color: #7fa6c9; letter-spacing: .04em; }
+.tv-row { display: flex; justify-content: space-between; gap: 3px; font-size: 5.4px; line-height: 1.22; white-space: nowrap; overflow: hidden; }
+.tv-row span { color: #7fa6c9; letter-spacing: .02em; }
 .tv-row b { font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; }
-
 .office-roster { position: absolute; transform-origin: 0 0; transform: skewY(26.565deg); display: flex; flex-direction: column; justify-content: center; padding: 0 3px;
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace; color: #2b2f38; pointer-events: none; }
-.ro-title { font-size: 6px; font-weight: 800; letter-spacing: .12em; color: #8a6a4a; text-align: center; }
-.ro-row { display: flex; justify-content: space-between; gap: 2px; font-size: 5px; overflow: hidden; line-height: 1.3; white-space: nowrap; }
-.ro-row span { color: #5b6270; }
-.office-tag .ot-card strong { font-size: 9px; }
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace; color: #1e1f23; pointer-events: none; }
+.ro-title { font-size: 5.4px; font-weight: 800; letter-spacing: .14em; color: #b8901a; text-align: center; }
+.ro-row { display: flex; justify-content: space-between; gap: 2px; font-size: 4.5px; overflow: hidden; line-height: 1.25; white-space: nowrap; }
+.ro-row span { color: #6b6f78; }
+.office-tag { left: 0; top: 0; will-change: transform; }
+.office-tag .ot-card { background: rgba(18, 19, 23, .8); border-color: rgba(255,255,255,.1); border-radius: 4px; padding: 0 3px 1px; }
+.office-tag .ot-card strong { font-size: 6.6px; }
+.office-tag .ot-st { font-size: 5px; gap: 2px; }
+.office-tag .ot-st i { width: 4px; height: 4px; }
 .office-tag .ot-st b { font-weight: 700; }
+.office-clock { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; align-items: flex-end; padding: 4px 8px; border-radius: 9px; background: rgba(18,19,23,.78); color: #fff; pointer-events: none; line-height: 1.1; }
+.office-clock b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.office-clock span { font-size: 8px; color: #c8ccd4; letter-spacing: .08em; }
+.office-count { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 8px; background: rgba(18,19,23,.78); color: #e8eaee; font-size: 8.5px; pointer-events: none; }
+.office-count i { width: 5px; height: 5px; border-radius: 50%; background: #2ee59d; display: inline-block; }
