@@ -82,38 +82,79 @@ function box(c: CanvasRenderingContext2D, x: number, y: number, w: number, d: nu
   poly(c, [b, cc, c0, b0], right);
   poly(c, [a, b, cc, dd], top);
 }
+/* ---------- sprites: 12 x 24 pixel maps with a dark outline and 2-tone shading ---------- */
+const FRONT = [
+  '...oooooo...', '..ohhhhhhho.', '.ohhhhhhhhho', '.ohhsssssho.', '.ohsessesho.', '.ohsssssssho', '..ossSSssso.', '...ossssso..',
+  '..ootttttoo.', '.ottttttttto', 'ottTttttTtto', 'otTttttttTto', 'osTttttttTso', 'osottttttoso', '.ooTTTTTTTo.',
+  '..opppPpppo.', '..oppPoPppo.', '..oppo.oppo.', '..oppo.oppo.', '..oppo.oppo.', '..oPPo.oPPo.', '.obbbo.obbbo', '.ooooo.ooooo', '............',
+];
+const BACK = [
+  '...oooooo...', '..ohhhhhhho.', '.ohhhhhhhhho', '.ohhhhhhhhho', '.ohhHhhhHhho', '.ohhhhhhhhho', '..ohhhhhhho.', '...oSSSSSo..',
+  '..ootttttoo.', '.ottttttttto', 'ottTttttTtto', 'otTttttttTto', 'osTttttttTso', 'osottttttoso', '.oTTTTTTTTo.',
+  '..opppPpppo.', '..oppPoPppo.', '..oppo.oppo.', '..oppo.oppo.', '..oppo.oppo.', '..oPPo.oPPo.', '.obbbo.obbbo', '.ooooo.ooooo', '............',
+];
+const shade = (hex: string, k: number) => {
+  const n = parseInt(hex.slice(1), 16), f = (v: number) => Math.max(0, Math.min(255, Math.round(v * k)));
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+};
+function sprite(c: CanvasRenderingContext2D, X: number, Y: number, map: string[], pal: Record<string, string>, legShift = 0, cut = 99) {
+  for (let r = 0; r < map.length && r < cut; r++) {
+    const row = map[r];
+    for (let k = 0; k < row.length; k++) {
+      const ch = row[k]; if (ch === '.') continue;
+      // walking: left leg (cols 2-5) and right leg (cols 7-10) move up/down on the lower rows
+      const dy = r >= 17 ? (k < 6 ? legShift : -legShift) : 0;
+      c.fillStyle = pal[ch] ?? '#ff00ff'; c.fillRect(X + k, Y + r + dy, 1, 1);
+    }
+  }
+}
+function person(c: CanvasRenderingContext2D, p: Person, x: number, y: number, frame: number, walking: boolean, sleep: boolean, back: boolean) {
+  const [sx, sy] = iso(x, y, 0); const X = Math.round(sx) - 6, Y = Math.round(sy) - 23;
+  c.fillStyle = 'rgba(0,0,0,.22)'; c.fillRect(X + 1, Y + 22, 10, 2); c.fillRect(X + 3, Y + 24, 6, 1);   // shadow
+  const pal: Record<string, string> = {
+    o: '#1b1d24', h: p.hair, H: shade(p.hair, 0.75), s: p.skin, S: shade(p.skin, 0.85), e: '#1b1d24',
+    t: p.shirt, T: shade(p.shirt, 0.78), p: p.pants, P: shade(p.pants, 0.75), b: '#2a2a2a',
+  };
+  const map = (back ? BACK : FRONT).slice();
+  if (p.hairStyle === 'cap') { map[0] = '..oooooooo..'; map[1] = '.ohhhhhhhhho'; map[2] = 'oHHHHHHHHHHo'; }
+  if (p.hairStyle === 'long') for (const r of [7, 8, 9]) map[r] = 'h' + map[r].slice(1, 11) + 'h';
+  if (p.hairStyle === 'bun') map[0] = '....ohho....';
+  if (sleep) map[4] = back ? map[4] : '.ohsSSsSSsho';
+  const legs = walking ? (frame % 2 ? 1 : -1) : 0;
+  const typing = back && !walking && !sleep;
+  // when seated at the desk the chair hides the legs (drawn after), head bobs a little while typing, sleeping head drops
+  sprite(c, X, Y + (sleep ? 2 : typing && frame % 4 === 0 ? 1 : 0), map, pal, legs);
+}
+function chair(c: CanvasRenderingContext2D, x: number, y: number) {
+  box(c, x - 0.22, y + 0.05, 0.44, 0.38, 6, 2, '#3b3f48', '#2b2e35', '#33363e');       // seat
+  box(c, x - 0.24, y + 0.38, 0.48, 0.07, 8, 11, '#4a4f5a', '#2b2e35', '#3a3e47');      // backrest (in front of the person)
+  const f = iso(x, y + 0.25, 0); c.fillStyle = '#23252b'; c.fillRect(Math.round(f[0]) - 1, Math.round(f[1]) - 6, 2, 6); c.fillRect(Math.round(f[0]) - 5, Math.round(f[1]) - 1, 10, 1);
+}
+function shadowTile(c: CanvasRenderingContext2D, x: number, y: number, w: number, d: number) {
+  poly(c, [iso(x + 0.15, y + 0.15), iso(x + w + 0.25, y + 0.15), iso(x + w + 0.25, y + d + 0.25), iso(x + 0.15, y + d + 0.25)], 'rgba(60,40,20,.16)');
+}
 function desk(c: CanvasRenderingContext2D, x: number, y: number, glow: string) {
-  box(c, x, y, 1.8, 0.9, 0, 14, '#eef1f4', '#c9ced6', '#dde1e7');                   // desk
-  box(c, x + 0.25, y + 0.15, 0.55, 0.1, 14, 10, '#2a2f38', '#1f232a', '#2a2f38');     // monitor 1
-  box(c, x + 0.95, y + 0.15, 0.55, 0.1, 14, 10, '#2a2f38', '#1f232a', '#2a2f38');     // monitor 2
-  const s1 = iso(x + 0.3, y + 0.25, 22), s2 = iso(x + 1.0, y + 0.25, 22);
-  c.fillStyle = glow; c.fillRect(Math.round(s1[0]) - 1, Math.round(s1[1]), 7, 5); c.fillRect(Math.round(s2[0]) - 1, Math.round(s2[1]), 7, 5);
-  box(c, x + 0.5, y + 0.55, 0.7, 0.2, 14, 1, '#3a404a', '#30353e', '#30353e');        // keyboard
+  shadowTile(c, x, y, 1.8, 0.9);
+  // legs / side panels
+  box(c, x + 0.05, y + 0.1, 0.08, 0.7, 0, 13, '#b8bec8', '#9aa1ac', '#aab0ba');
+  box(c, x + 1.67, y + 0.1, 0.08, 0.7, 0, 13, '#b8bec8', '#9aa1ac', '#aab0ba');
+  box(c, x + 1.2, y + 0.1, 0.45, 0.65, 0, 11, '#d5d9e0', '#b3b9c3', '#c4c9d1');      // drawer
+  box(c, x, y, 1.8, 0.9, 13, 2, '#f4f6f8', '#c9ced6', '#dde1e7');                     // top
+  for (const mx of [0.2, 0.95]) {
+    box(c, x + mx + 0.22, y + 0.2, 0.1, 0.08, 15, 4, '#30343c', '#202329', '#2a2e35');   // stand
+    box(c, x + mx, y + 0.12, 0.6, 0.07, 19, 11, '#3a3f48', '#1d2026', '#2b2f36');       // monitor (back side towards the viewer)
+    const g = iso(x + mx + 0.05, y + 0.12, 29); c.fillStyle = glow; c.globalAlpha = 0.35; c.fillRect(Math.round(g[0]) - 1, Math.round(g[1]) - 2, 9, 2); c.globalAlpha = 1;
+  }
+  box(c, x + 0.45, y + 0.5, 0.65, 0.18, 15, 1, '#2f343c', '#262a30', '#262a30');      // keyboard
+  box(c, x + 1.2, y + 0.55, 0.12, 0.1, 15, 1, '#2f343c', '#262a30', '#262a30');       // mouse
+  const mug = iso(x + 1.5, y + 0.45, 15); c.fillStyle = '#ffffff'; c.fillRect(Math.round(mug[0]), Math.round(mug[1]) - 4, 3, 4); c.fillStyle = '#6b4a2b'; c.fillRect(Math.round(mug[0]), Math.round(mug[1]) - 4, 3, 1);
 }
 function plant(c: CanvasRenderingContext2D, x: number, y: number) {
-  box(c, x, y, 0.45, 0.45, 0, 7, '#d8d8d8', '#b5b5b5', '#c7c7c7');
-  const p = iso(x + 0.22, y + 0.22, 8);
-  c.fillStyle = '#2f8f46'; c.fillRect(p[0] - 5, p[1] - 12, 10, 12); c.fillStyle = '#3fb35b'; c.fillRect(p[0] - 3, p[1] - 16, 6, 6); c.fillRect(p[0] - 7, p[1] - 8, 3, 4); c.fillRect(p[0] + 4, p[1] - 9, 3, 4);
-}
-function person(c: CanvasRenderingContext2D, p: Person, x: number, y: number, frame: number, walking: boolean, sleep: boolean, typing: boolean) {
-  const [sx, sy] = iso(x, y, 0); const X = Math.round(sx), Y = Math.round(sy);
-  const R = (dx: number, dy: number, w: number, h: number, col: string) => { c.fillStyle = col; c.fillRect(X + dx, Y + dy, w, h); };
-  R(-4, -1, 9, 2, 'rgba(0,0,0,.18)');                                   // shadow
-  const step = walking ? (frame % 2 ? 1 : -1) : 0;
-  R(-3, -7 + (step > 0 ? -1 : 0), 3, 7, p.pants); R(1, -7 + (step < 0 ? -1 : 0), 3, 7, p.pants);   // legs
-  R(-3, -1, 3, 1, '#222'); R(1, -1, 3, 1, '#222');                       // shoes
-  const bob = sleep ? 2 : 0;
-  R(-4, -15 + bob, 9, 9, p.shirt);                                       // body
-  R(-5, -14 + bob, 1, 6, p.shirt); R(5, -14 + bob, 1, 6, p.shirt);       // arms
-  const arm = typing ? (frame % 2 ? -1 : 0) : 0;
-  R(-5, -8 + bob + arm, 1, 1, p.skin); R(5, -8 + bob - arm, 1, 1, p.skin);
-  const hy = -22 + bob * 2;
-  R(-3, hy, 7, 7, p.skin);                                               // head
-  if (!sleep) { R(-2, hy + 3, 1, 1, '#1b1b1b'); R(2, hy + 3, 1, 1, '#1b1b1b'); } else { R(-2, hy + 4, 2, 1, '#1b1b1b'); R(1, hy + 4, 2, 1, '#1b1b1b'); }
-  if (p.hairStyle === 'cap') { R(-4, hy - 1, 9, 3, p.hair); R(4, hy + 1, 2, 1, p.hair); }
-  else if (p.hairStyle === 'long') { R(-4, hy - 1, 9, 3, p.hair); R(-4, hy + 1, 2, 7, p.hair); R(3, hy + 1, 2, 7, p.hair); }
-  else if (p.hairStyle === 'bun') { R(-3, hy - 1, 7, 2, p.hair); R(-1, hy - 4, 3, 3, p.hair); }
-  else { R(-3, hy - 1, 7, 3, p.hair); R(-4, hy, 1, 3, p.hair); }
+  shadowTile(c, x, y, 0.45, 0.45);
+  box(c, x, y, 0.45, 0.45, 0, 8, '#eaeaea', '#bdbdbd', '#d0d0d0');
+  const p = iso(x + 0.22, y + 0.22, 9), X = Math.round(p[0]), Y = Math.round(p[1]);
+  const leaf = (dx: number, dy: number, w: number, h: number, col: string) => { c.fillStyle = col; c.fillRect(X + dx, Y + dy, w, h); };
+  leaf(-6, -12, 12, 10, '#1f6b36'); leaf(-4, -18, 8, 8, '#2f8f46'); leaf(-8, -9, 4, 5, '#2f8f46'); leaf(5, -10, 4, 5, '#2f8f46'); leaf(-2, -21, 4, 4, '#3fb35b'); leaf(1, -14, 3, 3, '#56c96f'); leaf(-5, -15, 3, 3, '#56c96f');
 }
 
 function drawRoom(c: CanvasRenderingContext2D, glow: string) {
@@ -121,12 +162,20 @@ function drawRoom(c: CanvasRenderingContext2D, glow: string) {
   // floor 10 x 9 tiles, wood planks
   for (let x = 0; x < NX; x++) for (let y = 0; y < NY; y++) {
     const a = iso(x, y), b = iso(x + 1, y), cc = iso(x + 1, y + 1), d = iso(x, y + 1);
-    poly(c, [a, b, cc, d], (x + y) % 2 ? '#e8d6b5' : '#e2cfac');
+    poly(c, [a, b, cc, d], (x + y) % 2 ? '#ead8b8' : '#e4d1ae');
+    c.fillStyle = 'rgba(120,90,50,.18)'; c.fillRect(Math.round(a[0]), Math.round(a[1]), 1, 1);
   }
+  for (let k = 0; k <= NX; k++) { c.strokeStyle = 'rgba(140,105,60,.18)'; c.beginPath(); const p0 = iso(k, 0), p1 = iso(k, NY); c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); c.stroke(); }
+  for (let k = 0; k <= NY; k++) { c.strokeStyle = 'rgba(140,105,60,.18)'; c.beginPath(); const p0 = iso(0, k), p1 = iso(NX, k); c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); c.stroke(); }
   // back walls (left: along y at x=0, right: along x at y=0)
   const WALL = 70;
   poly(c, [iso(0, 0, WALL), iso(0, NY, WALL), iso(0, NY), iso(0, 0)], '#d7dde6');
   poly(c, [iso(0, 0, WALL), iso(NX, 0, WALL), iso(NX, 0), iso(0, 0)], '#e9edf2');
+  // wall top edge and baseboards
+  poly(c, [iso(0, 0, WALL + 3), iso(0, NY, WALL + 3), iso(0, NY, WALL), iso(0, 0, WALL)], '#f7f9fb');
+  poly(c, [iso(0, 0, WALL + 3), iso(NX, 0, WALL + 3), iso(NX, 0, WALL), iso(0, 0, WALL)], '#ffffff');
+  poly(c, [iso(0, 0, 4), iso(0, NY, 4), iso(0, NY), iso(0, 0)], '#b9a588');
+  poly(c, [iso(0, 0, 4), iso(NX, 0, 4), iso(NX, 0), iso(0, 0)], '#c8b495');
   // windows on the left wall (city outside)
   for (const y0 of [0.6, 3.8]) {
     poly(c, [iso(0, y0, 62), iso(0, y0 + 2.4, 62), iso(0, y0 + 2.4, 14), iso(0, y0, 14)], '#8fc7ef');
@@ -192,7 +241,9 @@ export default function Office({ data, now }: { data: OfficeData; now: number })
       const q = pos.current[p.id]; if (!q) continue;
       const goal = s.atDesk || s.sleep ? { x: p.desk.x + 0.9, y: p.desk.y + 1.25 } : p.rest;
       const walking = Math.hypot(goal.x - q.x, goal.y - q.y) > 0.01;
-      items.push({ depth: q.x + q.y, draw: () => person(c, p, q.x, q.y, frame, walking, s.sleep, s.atDesk && !walking && !s.sleep) });
+      const seated = (s.atDesk || s.sleep) && !walking && p.id !== 'bos' && p.id !== 'jaga';
+      items.push({ depth: q.x + q.y, draw: () => person(c, p, q.x, q.y, frame, walking, s.sleep, seated) });
+      if (seated) items.push({ depth: q.x + q.y + 0.01, draw: () => chair(c, q.x, q.y) });
     }
     items.sort((a, b) => a.depth - b.depth).forEach((i) => i.draw());
     // zZ for sleepers
