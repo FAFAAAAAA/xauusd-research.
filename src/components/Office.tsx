@@ -484,14 +484,38 @@ type Item = { x0: number; y0: number; x1: number; y1: number; draw: (c: C, t: nu
 type ScreenMode = 'off' | 'idle' | 'pos';
 const MODES: Record<string, ScreenMode> = {};
 const BUSY: Record<string, boolean> = {};
+/** what an employee's monitor shows: everyday stuff (web page, video, spreadsheet, chat, code, music), changing now and then */
 function screenPlane(c: C, ax: (u: number, z: number) => [number, number], mode: ScreenMode, t: number, seed: number) {
-  poly(c, [ax(0, 1), ax(1, 1), ax(1, 0), ax(0, 0)], mode === 'off' ? '#0d1117' : mode === 'pos' ? '#0e2f25' : '#0f2338');
-  if (mode === 'off') return;
-  for (let i = 0; i < 7; i++) {
-    const u = (i + 0.5) / 7, v = hash(`${seed}:${Math.floor(t * 1.3) + i}`);
-    const up = mode === 'pos' ? v > 0.3 : v > 0.5, mid = 0.35 + 0.3 * hash(`${seed}m${i}`), len = 0.12 + v * 0.35;
-    const [a0, a1] = ax(u, mid - len / 2), [b0, b1] = ax(u, mid + len / 2);
-    c.strokeStyle = up ? '#2ee59d' : '#ff6b6b'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
+  const r = (u0: number, u1: number, z0: number, z1: number, col: string) => poly(c, [ax(u0, z1), ax(u1, z1), ax(u1, z0), ax(u0, z0)], col);
+  if (mode === 'off') { r(0, 1, 0, 1, '#0d1117'); return; }
+  const kind = Math.floor(hash(`${seed}:${Math.floor(t / 25 + hash(`o${seed}`) * 7)}`) * 6);
+  if (kind === 0) {            // web page
+    r(0, 1, 0, 1, '#f4f5f7'); r(0, 1, 0.84, 1, '#4c7dff');
+    r(0.08, 0.5, 0.42, 0.76, '#f2c230'); r(0.58, 0.92, 0.68, 0.74, '#9aa3b0'); r(0.58, 0.85, 0.56, 0.62, '#c3c9d2'); r(0.58, 0.9, 0.46, 0.52, '#c3c9d2');
+    for (let k = 0; k < 3; k++) r(0.08, 0.92 - k * 0.15, 0.1 + k * 0.1, 0.15 + k * 0.1, '#c3c9d2');
+  } else if (kind === 1) {     // a video: landscape + progress bar
+    r(0, 1, 0, 1, '#111214'); r(0.04, 0.96, 0.18, 0.96, '#7cc0ef');
+    poly(c, [ax(0.04, 0.18), ax(0.35, 0.7), ax(0.6, 0.18)], '#3d9a4f'); poly(c, [ax(0.4, 0.18), ax(0.7, 0.6), ax(0.96, 0.18)], '#2f7a3d');
+    r(0.74, 0.86, 0.74, 0.88, '#ffd66b');
+    const pr = (t * 0.02 + hash(`v${seed}`)) % 1; r(0.04, 0.96, 0.07, 0.1, '#3a3b42'); r(0.04, 0.04 + 0.92 * pr, 0.07, 0.1, '#e5484d');
+  } else if (kind === 2) {     // spreadsheet
+    r(0, 1, 0, 1, '#ffffff'); r(0, 1, 0.86, 1, '#2e9e5b');
+    for (let k = 1; k < 6; k++) r(0, 1, k * 0.14, k * 0.14 + 0.02, '#d6dbe0');
+    for (const u of [0.3, 0.55, 0.8]) r(u, u + 0.02, 0, 0.86, '#d6dbe0');
+    r(0.32, 0.53, 0.44, 0.56, '#bfe6cc');
+  } else if (kind === 3) {     // chat
+    r(0, 1, 0, 1, '#e9eef3'); r(0, 1, 0.86, 1, '#229ed9');
+    r(0.06, 0.55, 0.62, 0.76, '#ffffff'); r(0.42, 0.94, 0.42, 0.56, '#bfe7ff'); r(0.06, 0.45, 0.22, 0.36, '#ffffff');
+    if (Math.floor(t * 2) % 2) r(0.5, 0.94, 0.06, 0.16, '#bfe7ff');
+  } else if (kind === 4) {     // code editor
+    r(0, 1, 0, 1, '#1e1f26'); r(0, 0.12, 0, 1, '#2a2b33');
+    const cols = ['#c792ea', '#82aaff', '#c3e88d', '#f78c6c', '#89ddff'];
+    for (let k = 0; k < 6; k++) { const ind = (k % 3) * 0.08, len = 0.25 + hash(`c${seed}${k}`) * 0.45; r(0.18 + ind, Math.min(0.95, 0.18 + ind + len), 0.82 - k * 0.14, 0.88 - k * 0.14, cols[k % 5]); }
+    if (Math.floor(t * 2) % 2) r(0.6, 0.62, 0.1, 0.18, '#ffffff');
+  } else {                     // music player
+    r(0, 1, 0, 1, '#191414'); r(0.08, 0.45, 0.3, 0.9, '#e5484d'); r(0.18, 0.35, 0.48, 0.72, '#f2c230');
+    for (let k = 0; k < 6; k++) { const hgt = 0.15 + 0.6 * Math.abs(Math.sin(t * 3 + k * 1.3 + seed)); r(0.55 + k * 0.07, 0.6 + k * 0.07, 0.3, 0.3 + hgt * 0.6, '#1db954'); }
+    r(0.08, 0.92, 0.1, 0.14, '#3a3b42'); r(0.08, 0.08 + 0.84 * ((t * 0.03) % 1), 0.1, 0.14, '#1db954');
   }
 }
 function lamp(c: C, x: number, y: number) {
@@ -1388,6 +1412,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       if (!bg || base !== bgKey || ((outside || (settled && (bgV!.z !== V.z || bgV!.tx !== V.tx || bgV!.ty !== V.ty))))) {
         bgM = Math.round(Math.max(cv.width, cv.height) * 0.25); bgW = cv.width + 2 * bgM; bgH = cv.height + 2 * bgM;
         if (!bg || bg.width !== bgW || bg.height !== bgH) { bg = document.createElement('canvas'); bg.width = bgW; bg.height = bgH; }
+        document.documentElement.style.setProperty('--office-sky', nightNow ? '#0b1430' : '#a9d5f2');
         const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; b.fillRect(0, 0, bgW, bgH);
         b.setTransform(k * V.z, 0, 0, k * V.z, bgM + k * V.tx, bgM + k * V.ty); drawBackdrop(b, nightNow);
         if (SHAPE === 'zigzag') drawLiftTube(b, nightNow);
