@@ -65,10 +65,8 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   const fl = floatB + floatM;
   const tone = (n: number) => (n > 0 ? '#2ee59d' : n < 0 ? '#ff6b6b' : undefined);
   const screen: ScreenLine[] = [
-    { k: 'BINANCE', v: j.binance ? usd(j.binance.wallet + floatB) : '—' },
-    { k: '· HARI INI', v: usd(todayB, true), color: tone(todayB) },
-    { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet + floatM) : '—' },
-    { k: '· HARI INI', v: usd(todayM, true), color: tone(todayM) },
+    { k: 'BINANCE', v: j.binance ? usd(j.binance.wallet + floatB) : '—', sub: usd(todayB, true), subColor: tone(todayB) },
+    { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet + floatM) : '—', sub: usd(todayM, true), subColor: tone(todayM) },
     { k: 'FLOATING', v: open.length ? `${open.length}× ${usd(fl, true)}` : 'tidak ada', color: open.length ? tone(fl) : undefined },
   ];
   return <div className={cls}><Office data={data} now={now} screen={screen} full={full} onSwipe={onSwipe} /></div>;

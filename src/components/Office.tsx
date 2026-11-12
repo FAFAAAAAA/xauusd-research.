@@ -14,7 +14,7 @@ import type { JournalTrade } from '@/lib/core/journal';
 
 type Live = { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null | undefined;
 export interface OfficeData { trades: JournalTrade[]; binance?: Live; mt5?: Live }
-export type ScreenLine = { k: string; v: string; color?: string };
+export type ScreenLine = { k: string; v: string; color?: string; sub?: string; subColor?: string };
 
 /* ---------- geometry ---------- */
 const W = 380, H = 292;
@@ -22,7 +22,7 @@ const NX = 13, NY = 11, TW = 15, TH = 7.5, WALL = 82;
 const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
-const TV = { x0: 6.85, x1: 11.0, z0: 34, z1: 79 };
+const TV = { x0: 6.85, x1: 11.0, z0: 30, z1: 84 };
 const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3, TOPM = 50, TOTAL = RH * ROOMS + TOPM;         // three rooms stacked (one scene height each)
@@ -337,8 +337,7 @@ function drawStatic(c: C, night: boolean, room: number) {
     }
   }
   // everyday wall hardware: air conditioner, exit sign, camera, fire extinguisher, sockets
-  poly(c, wallB(8.6, 10.2, 86, 95), '#f3f3f1'); poly(c, wallB(8.6, 10.2, 84, 86), '#d0cfcb'); poly(c, wallB(8.7, 10.1, 87, 88), '#c2c1bd');
-  poly(c, wallB(10.05, 10.12, 90, 91.2), '#2ee59d');
+  if (room !== 1) { poly(c, wallB(8.6, 10.2, 86, 95), '#f3f3f1'); poly(c, wallB(8.6, 10.2, 84, 86), '#d0cfcb'); poly(c, wallB(8.7, 10.1, 87, 88), '#c2c1bd'); poly(c, wallB(10.05, 10.12, 90, 91.2), '#2ee59d'); }
   poly(c, wallB(11.35, 11.95, 62, 68), '#1f9d57'); poly(c, wallB(11.45, 11.6, 63.5, 66.5), '#ffffff'); poly(c, wallB(11.7, 11.85, 64.4, 65.6), '#ffffff');
   { const [cx, cy] = iso(0.5, 0, wh - 14); c.fillStyle = '#26272c'; c.beginPath(); c.arc(cx, cy, 2.6, 0, Math.PI); c.fill(); c.fillStyle = night ? '#ff4d4f' : '#7a2a2a'; c.fillRect(cx - 0.5, cy + 0.6, 1, 1); }
   poly(c, wallB(10.85, 11.0, 6, 18), '#d7262c'); poly(c, wallB(10.88, 10.97, 18, 20.5), '#2a2b30'); poly(c, wallB(10.82, 11.03, 22, 30), '#f3f3f1');
@@ -1106,6 +1105,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
   useEffect(() => {
     const cv = ref.current, box0 = wrap.current; if (!cv || !box0) return;
     const c = cv.getContext('2d'); if (!c) return;
+    let bgV: { z: number; tx: number; ty: number } | null = null, bgM = 0, bgW = 0, bgH = 0, lastView = '', viewMoved = 0;
     let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true;
     const agents: Record<string, Agent> = {};
     const resize = () => {
@@ -1221,19 +1221,25 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       BUSY.tread = Object.values(agents).some((a) => a.act.id === 'tread' && !a.path.length);
       /* ---- draw world: three rooms stacked ---- */
       const V = view.current, nightNow = nightRef.current;
-      // the static rooms are rendered once per zoom level into one picture and only moved while panning
-      const mx = 140, my = 80;
-      const key = `${cv.width}x${cv.height}:${nightNow}:${V.z.toFixed(3)}`;
-      if (key !== bgKey) {
-        const bw = Math.ceil((W + 2 * mx) * k * V.z), bh = Math.ceil((TOTAL + 2 * my) * k * V.z);
-        if (!bg || bg.width !== bw || bg.height !== bh) { bg = document.createElement('canvas'); bg.width = bw; bg.height = bh; }
-        const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.clearRect(0, 0, bw, bh);
-        b.setTransform(k * V.z, 0, 0, k * V.z, mx * k * V.z, my * k * V.z); drawBackdrop(b, nightNow);
+      // the static rooms are painted into a picture the size of the screen (+ a margin). While you pinch or pan the
+      // picture is only moved / scaled (cheap); once the view rests (or runs out of margin) it is painted sharp again.
+      const viewKey = `${V.z.toFixed(4)}:${V.tx.toFixed(2)}:${V.ty.toFixed(2)}`;
+      if (viewKey !== lastView) { lastView = viewKey; viewMoved = tm; }
+      const base = `${cv.width}x${cv.height}:${nightNow}`;
+      const sNow = bgV ? V.z / bgV.z : 1;
+      const offX = bgV ? k * V.tx - sNow * (bgM + k * bgV.tx) : 0, offY = bgV ? k * V.ty - sNow * (bgM + k * bgV.ty) : 0;
+      const outside = !bgV || offX > 0 || offY > 0 || offX + bgW * sNow < cv.width || offY + bgH * sNow < cv.height;
+      const settled = tm - viewMoved > 160;
+      if (!bg || base !== bgKey || ((outside || (settled && (bgV!.z !== V.z || bgV!.tx !== V.tx || bgV!.ty !== V.ty))))) {
+        bgM = Math.round(Math.max(cv.width, cv.height) * 0.25); bgW = cv.width + 2 * bgM; bgH = cv.height + 2 * bgM;
+        if (!bg || bg.width !== bgW || bg.height !== bgH) { bg = document.createElement('canvas'); bg.width = bgW; bg.height = bgH; }
+        const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; b.fillRect(0, 0, bgW, bgH);
+        b.setTransform(k * V.z, 0, 0, k * V.z, bgM + k * V.tx, bgM + k * V.ty); drawBackdrop(b, nightNow);
         for (let r = ROOMS - 1; r >= 0; r--) { b.save(); b.translate(0, r * RH + TOPM); drawStatic(b, nightNow, r); b.restore(); }
-        bgKey = key;
+        bgKey = base; bgV = { z: V.z, tx: V.tx, ty: V.ty };
       }
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; c.fillRect(0, 0, cv.width, cv.height);
-      if (bg) c.drawImage(bg, Math.round(k * (V.tx - mx * V.z)), Math.round(k * (V.ty - my * V.z)));
+      if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
       for (let r = ROOMS - 1; r >= 0; r--) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
         if (r === 2) drawCars(c, t, nightNow);
@@ -1311,15 +1317,18 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
     c.fillStyle = live ? '#ff4d4f' : '#7a2a2a'; c.beginPath(); c.arc(4, 3.9, 1.4, 0, 7); c.fill();
     c.textBaseline = 'middle';
     c.font = '800 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('LIVE', 7, 4);
-    const rows = lines.slice(0, 5), rh = (th - 8) / Math.max(1, rows.length);
+    c.font = '600 3.8px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.textAlign = 'right'; c.fillText('PNL HARI INI', tw - 3, 4); c.textAlign = 'left';
+    const rows = lines.slice(0, 4), rh = (th - 9) / Math.max(1, rows.length);
     rows.forEach((l, i) => {
-      const y = 8 + rh * (i + 0.5);
-      c.font = '600 5.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(l.k, 2.5, y);
-      const kw = c.measureText(l.k).width;
-      let fs = rows.length > 4 ? 6.6 : 7.6; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
-      while (fs > 4.5 && c.measureText(l.v).width > tw - 7 - kw) { fs -= 0.3; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; }
-      c.fillStyle = l.color ?? '#ffffff'; c.textAlign = 'right'; c.fillText(l.v, tw - 2.5, y); c.textAlign = 'left';
-      if (i < rows.length - 1) { c.fillStyle = 'rgba(255,255,255,.07)'; c.fillRect(2, y + rh / 2, tw - 4, 0.4); }
+      // line 1: account name (left) and today's P&L (right, coloured); line 2: the balance, big
+      const top = 9 + rh * i;
+      c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(l.k, 3, top + rh * 0.24);
+      if (l.sub) { c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = l.subColor ?? '#9ec3e6'; c.textAlign = 'right'; c.fillText(l.sub, tw - 3, top + rh * 0.24); c.textAlign = 'left'; }
+      let fs = 6.6; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
+      while (fs > 4.5 && c.measureText(l.v).width > tw - 6) { fs -= 0.3; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; }
+      c.fillStyle = l.color ?? '#ffffff'; c.fillText(l.v, 3, top + rh * 0.7);
+      c.textAlign = 'left';
+      if (i < rows.length - 1) { c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(3, top + rh, tw - 6, 0.4); }
     });
     c.textBaseline = 'alphabetic';
   });
@@ -1353,7 +1362,7 @@ function openPositions(data: OfficeData): Pos[] {
 }
 function drawPositions(c: C, list: Pos[], t: number) {
   const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-  const x0 = 6.6, x1 = 12.3, z0 = 96, z1 = 176;
+  const x0 = TV.x0, x1 = TV.x1, z0 = TV.z1 + 8, z1 = TV.z1 + 66;
   const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
   c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
   c.fillStyle = '#111214'; c.fillRect(-2.5, -2.5, w + 5, h + 5);
@@ -1390,7 +1399,7 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
   if (room === 1) {
     const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
     const txt = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
-    board(2.75, 5.7, 38, 74, (w, h) => {
+    board(2.75, 5.95, TV.z1 - 34, TV.z1, (w, h) => {
       c.font = '700 4.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('CANDLE H4 BARU', w / 2, 8);
       c.font = '800 10.5px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 ? (Math.floor(t * 4) % 2 ? '#f2c230' : '#ffffff') : '#f2c230'; c.fillText(txt, w / 2, h / 2 + 4);
     });
