@@ -1474,7 +1474,6 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
     c.fillStyle = live ? '#ff4d4f' : '#7a2a2a'; c.beginPath(); c.arc(4, 3.9, 1.4, 0, 7); c.fill();
     c.textBaseline = 'middle';
     c.font = '800 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('LIVE', 7, 4);
-    c.font = '600 3.8px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.textAlign = 'right'; c.fillText('PNL HARI INI', tw - 3, 4); c.textAlign = 'left';
     const rows = lines.slice(0, 4), rh = (th - 9) / Math.max(1, rows.length);
     rows.forEach((l, i) => {
       // line 1: account name (left) and today's P&L (right, coloured); line 2: the balance, big
