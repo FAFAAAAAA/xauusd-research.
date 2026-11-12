@@ -39,6 +39,7 @@ interface Person {
 }
 const seat = (id: string, room: number, x: number, y: number, face: Face, label = 'MEMANTAU'): Spot => ({ id: `seat-${id}`, room, x, y, face, pose: 'sit', label });
 const PEOPLE: Person[] = [
+  { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'SANTAI'), hair: '#4a1422', skin: '#f3cfb0', shirt: '#8e2c48', pants: '#7a2440', style: 'long', glasses: true },
   { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
   { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.3, 1.9, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
   { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.3, 4.3, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
@@ -109,6 +110,9 @@ const PATROL: Spot[] = ([
   [0, 9.6, 3.2, 'nx'], [0, 5.0, 7.4, 'px'], [0, 11.0, 8.0, 'ny'],
 ] as const).map(([r, x, y, f], i) => ({ id: `patrol${i}`, room: r, x, y, face: f, pose: 'stand', label: 'PATROLI' }));
 const PACE: Array<[number, number, number]> = [[0, 4.0, 3.2], [0, 9.0, 3.6], [0, 8.0, 7.6], [1, 9.6, 3.6], [1, 5.6, 6.8], [1, 10.0, 8.6]];
+const SIDAK: Array<[number, number, number]> = [[1, 9.6, 3.6], [1, 5.6, 6.8], [1, 4.0, 3.4], [2, 6.0, 3.0], [2, 9.5, 7.5], [2, 3.2, 6.8]];
+const VET_YELL = ['MARCEL!!', 'LAPORAN MANA?!', 'PROFIT KURANG!', 'KERJA YANG BENAR!', 'GAJIMU SAYA POTONG!'];
+const VET_SORRY = ['Ampun bu!', 'Siap bu!', 'Maaf bu…', 'Iya bu bos!'];
 const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', xau: 'nas', nas: 'xau', tg: 'alt' };
 const YELL = ['KERJA!!', 'PROFIT MANA?!', 'JANGAN SANTAI!', 'CEPAT!!', 'GAJI POTONG!', 'BALIK KE MEJA!', 'LEMBUR KAMU!'];
 const SL_YELL = ['KENA SL LAGI?!', 'RUGI TERUS!', 'MAU DIPECAT?!'];
@@ -150,6 +154,7 @@ function statuses(data: OfficeData, now: number): Record<string, Status> {
       : { label: 'MEMANTAU', color: '#58a6ff', sleep: false, tag: null },
     jaga: silent ? { label: 'ALARM', color: '#ff5a5f', sleep: false, tag: { text: '⚠ ada yang diam', color: '#ff6b6b' } } : { label: 'AMAN', color: '#2ee59d', sleep: false, tag: null },
     bos: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
+    vet: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
   };
 }
 
@@ -414,7 +419,7 @@ function chair(x: number, y: number, face: Face, color = '#f2c230'): Item[] {
 function baseItems(): Item[] {
   const it: Item[] = [];
   it.push(traderDesk(1.0, 'alt'), traderDesk(3.4, 'big'), traderDesk(6.0, 'xau'), traderDesk(8.4, 'nas'));
-  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
+  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(11.75, 2.0, 'py', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
@@ -559,6 +564,8 @@ function furniture(): Item[][] {
   pl(1, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [8.75, 8.9, 0.7]]);
   pl(2, [[0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [6.2, 0.45, 0.9]]);
   /* --- new pieces --- */
+  R[0].push(...chair(2.2, 3.4, 'px', '#c9a227'));
+  R[0].push({ x0: 2.0, y0: 2.45, x1: 2.45, y1: 2.9, draw: (c) => { ell(c, 2.22, 2.68, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 2.22, 2.68, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 2.22, 2.68, 10, 0.24, 1.5, '#f2c230', '#c9a227'); cyl(c, 2.15, 2.62, 11.5, 0.05, 2.5, '#ffffff', '#eeeeee'); } });
   // boss office: safe with gold, trophy cabinet, putting green flag
   R[0].push({ x0: 8.0, y0: 0.15, x1: 8.75, y1: 0.85, draw: (c, t) => {
     shadow(c, 8.0, 0.15, 0.75, 0.7); box(c, 8.0, 0.15, 0.75, 0.7, 0, 24, '#2a2b30', '#1e1f23', '#33343a');
@@ -670,7 +677,7 @@ interface Agent {
   room: number; pending: Spot | null; hiddenUntil: number;
   x: number; y: number; vx: number; vy: number; face: Face; path: Array<[number, number]>; act: Spot; until: number; dist: number; speed: number;
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
-  scoldUntil: number; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
+  scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
 }
 const faceTo = (dx: number, dy: number): Face => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'px' : 'nx') : (dy > 0 ? 'py' : 'ny'));
 function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: number | null) {
@@ -773,7 +780,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx - 1.4, hy + R - 2.2, 2.8, 3);
   const hg = c.createRadialGradient(hx + 1.5, hy - 2, 1, hx, hy, R + 1); hg.addColorStop(0, sh(p.skin, 1.08)); hg.addColorStop(1, sh(p.skin, 0.9));
   c.fillStyle = hg; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill();
-  const angry = p.id === 'bos' && whipT != null;
+  const angry = (p.id === 'bos' && whipT != null) || (p.id === 'vet' && !!a.act.whip && !walking && !!a.bubble && Date.now() < a.bubble.until);
   if (angry) { c.fillStyle = 'rgba(255,60,40,.28)'; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill(); }
   c.save(); c.beginPath(); c.arc(hx, hy, R + 0.7, 0, 7); c.clip();
   c.fillStyle = p.hair;
@@ -841,6 +848,13 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
       a.patrol = 2; return { act: PATROL[0], dwell: rnd(1.5, 3) };
     }
     a.patrol = 0; return { act: { ...p.seat, label: Math.random() < 0.5 ? 'CEK CCTV' : 'JAGA' }, dwell: rnd(18, 35) };
+  }
+  if (p.id === 'vet') {      // the big boss: relaxes in her gold armchair, inspects the floors, and tells Marcel off
+    const m = all.bos, one = <T,>(l: T[]) => l[Math.floor(Math.random() * l.length)];
+    if (m && !m.pending && now - a.angryAt > 25_000 && r < 0.35) { a.angryAt = now; a.chase = 0; return { act: { id: 'scold-bos', room: m.room, x: m.x, y: m.y, face: 'px', pose: 'stand', label: 'NGOMELIN MARCEL', whip: 'bos' }, dwell: rnd(9, 12) }; }
+    if (a.act.id !== p.seat.id && r < 0.7) { const l = one(['SANTAI', 'MINUM TEH', 'CEK SALDO', 'BELANJA ONLINE']); return { act: { ...p.seat, label: l, prop: l === 'BELANJA ONLINE' ? 'hp' : l === 'MINUM TEH' ? 'cup' : undefined }, dwell: rnd(15, 30) }; }
+    if (r < 0.85) { const [rm, x, y] = one(SIDAK); return { act: { id: `sidak-${rm}-${x}`, room: rm, x, y, face: 'py', pose: 'stand', label: 'SIDAK' }, dwell: rnd(3, 6) }; }
+    return { act: pick(SPOTS.filter((q) => ['trophy', 'bsofa1', 'bwin', 'coffee', 'safe'].includes(q.id))), dwell: rnd(6, 11) };
   }
   if (p.id === 'bos') {
     const victims = WORKERS.filter((id) => all[id] && !S[id]?.sleep && S[id]?.label !== 'LIBUR' && !(all[id].act.prop === 'vanish' && !all[id].path.length) && !all[id].pending);
@@ -984,7 +998,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         const s = S[p.id];
         if (!s || s.label === 'BELUM AKTIF') { delete agents[p.id]; continue; }
         let a = agents[p.id];
-        if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
+        if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
         if (wall < a.hiddenUntil) continue;                                          // riding the lift
         if (wall < a.scoldUntil) { a.path = []; a.vx = a.vy = 0; continue; }          // frozen while being yelled at
         // arrived at the lift with somewhere to go: ride to the other floor, step out, walk on
@@ -1002,12 +1016,12 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
           const nx = choose(p, S, a, taken, wall, agents);
           a.act = nx.act; a.until = wall + nx.dwell; taken.add(a.act.id); a.pending = null;
           if (a.act.room !== a.room) { a.pending = a.act; a.act = liftSpot(a.room, p.id, a.pending.room < a.room); }
-          a.speed = a.run ? 2.7 : p.id === 'jaga' && s.label === 'ALARM' ? 2.6 : p.id === 'bos' && a.act.whip ? 2.1 : 1.35 + hash(p.id) * 0.25;
+          a.speed = a.run ? 2.7 : p.id === 'jaga' && s.label === 'ALARM' ? 2.6 : (p.id === 'bos' || p.id === 'vet') && a.act.whip ? 2.1 : 1.35 + hash(p.id) * 0.25;
           a.path = Math.hypot(a.act.x - a.x, a.act.y - a.y) > 0.02 ? findPath(grids[a.room], a.x, a.y, a.act.x, a.act.y) : [];
         }
         if (wall > a.carryUntil) a.carry = null;
         // the boss chases his victim, then yells and cracks the whip
-        if (p.id === 'bos' && a.act.whip) {
+        if ((p.id === 'bos' || p.id === 'vet') && a.act.whip) {
           const v = agents[a.act.whip];
           if (!v) a.until = 0;
           else if (v.room !== a.room || wall < v.hiddenUntil) {
@@ -1017,18 +1031,18 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
             if (d > 0.95 && wall - a.chase > 600 && wall >= v.scoldUntil) {
               a.chase = wall;
               const ang = Math.atan2(a.y - v.y, a.x - v.x), tx = v.x + Math.cos(ang) * 0.7, ty = v.y + Math.sin(ang) * 0.7;
-              a.path = findPath(grids[a.room], a.x, a.y, tx, ty); a.act = { ...a.act, label: 'NGEJAR' }; a.until = Math.max(a.until, wall + 3000);
+              a.path = findPath(grids[a.room], a.x, a.y, tx, ty); a.act = { ...a.act, label: p.id === 'vet' ? 'NYARI MARCEL' : 'NGEJAR' }; a.until = Math.max(a.until, wall + 3000);
             } else if (d <= 0.95) {
               a.path = []; a.vx = a.vy = 0; a.face = faceTo(v.x - a.x, v.y - a.y);
               if (wall >= v.scoldUntil && !(a.bubble && wall < a.bubble.until)) {
                 const dur = 5500;
                 a.until = wall + dur + 600;
                 const sl = !!S[a.act.whip]?.sl;
-                a.act = { ...a.act, label: sl ? 'MARAH (SL!)' : 'MARAH' };
-                v.scoldUntil = wall + dur; v.path = []; v.face = faceTo(a.x - v.x, a.y - v.y);
-                const yell = sl ? SL_YELL : YELL;
+                a.act = { ...a.act, label: p.id === 'vet' ? 'NGOMELIN MARCEL' : sl ? 'MARAH (SL!)' : 'MARAH' };
+                v.scoldUntil = wall + dur; v.scoldBy = p.id; v.path = []; v.face = faceTo(a.x - v.x, a.y - v.y);
+                const yell = p.id === 'vet' ? VET_YELL : sl ? SL_YELL : YELL;
                 a.bubble = { text: yell[Math.floor(Math.random() * yell.length)], until: wall + dur, color: '#e5242b' };
-                v.bubble = { text: SORRY[Math.floor(Math.random() * SORRY.length)], until: wall + dur, color: '#1e1f23' };
+                v.bubble = { text: (p.id === 'vet' ? VET_SORRY : SORRY)[Math.floor(Math.random() * 4)], until: wall + dur, color: '#1e1f23' };
                 if (!v.act.id.startsWith('seat-')) { v.run = true; v.until = 0; }
               }
             }
@@ -1169,8 +1183,10 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
     const lh = (rh2 - 10) / PEOPLE.length;
     PEOPLE.forEach((p, i) => {
       const y = 10 + lh * (i + 0.5);
-      c.font = '800 5px system-ui, sans-serif'; c.fillStyle = '#1e1f23'; c.fillText(p.name, 3, y);
-      c.font = '600 4px ui-monospace, Menlo, monospace'; c.fillStyle = p.id === 'bos' ? '#c0392b' : '#6b6f78'; c.textAlign = 'right'; c.fillText(p.role, rw - 3, y); c.textAlign = 'left';
+      c.font = '600 4px ui-monospace, Menlo, monospace'; const roleW = c.measureText(p.role).width;
+      let fs = 5; c.font = `800 ${fs}px system-ui, sans-serif`; while (fs > 3 && c.measureText(p.name).width + roleW + 9 > rw) { fs -= 0.25; c.font = `800 ${fs}px system-ui, sans-serif`; }
+      c.fillStyle = '#1e1f23'; c.fillText(p.name, 3, y);
+      c.font = '600 4px ui-monospace, Menlo, monospace'; c.fillStyle = p.id === 'bos' || p.id === 'vet' ? '#c0392b' : '#6b6f78'; c.textAlign = 'right'; c.fillText(p.role, rw - 3, y); c.textAlign = 'left';
     });
     c.textBaseline = 'alphabetic';
   });
@@ -1252,12 +1268,12 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     const a = agents[p.id], s = S[p.id]; if (!a || !s) continue;
     const walking = a.path.length > 0, hidden = !walking && a.act.prop === 'vanish';
     const busy = wall < a.scoldUntil;
-    let what = walking ? (a.run ? 'LARI KE MEJA' : p.id === 'bos' && a.act.whip ? 'NGEJAR' : 'JALAN') : a.act.label;
-    if (busy) what = 'DIMARAHI BOS';
+    let what = walking ? (a.run ? 'LARI KE MEJA' : (p.id === 'bos' || p.id === 'vet') && a.act.whip ? (p.id === 'vet' ? 'NYARI MARCEL' : 'NGEJAR') : 'JALAN') : a.act.label;
+    if (busy) what = a.scoldBy === 'vet' ? 'DIMARAHI BIG BOS' : 'DIMARAHI BOS';
     let label = s.label, color = s.color;
     if (busy) { label = what; color = '#ff6b6b'; }
-    else if (s.label === 'MEMANTAU' || p.id === 'bos' || (p.id === 'jaga' && s.label === 'AMAN')) {
-      label = what; color = what === 'MEMANTAU' || what === 'BALAS CHAT' ? s.color : what.startsWith('MARAH') || what === 'NGEJAR' ? '#ff6b6b' : ['JAGA', 'PATROLI', 'CEK CCTV', 'CEK PINTU'].includes(what) ? '#2ee59d' : '#f5b83d';
+    else if (s.label === 'MEMANTAU' || p.id === 'bos' || p.id === 'vet' || (p.id === 'jaga' && s.label === 'AMAN')) {
+      label = what; color = what === 'MEMANTAU' || what === 'BALAS CHAT' ? s.color : what.startsWith('MARAH') || what === 'NGEJAR' || what.startsWith('NGOMEL') ? '#ff6b6b' : ['JAGA', 'PATROLI', 'CEK CCTV', 'CEK PINTU'].includes(what) ? '#2ee59d' : '#f5b83d';
     } else if (s.label === 'LIBUR') label = `LIBUR · ${what}`;
     else if (s.label.startsWith('POSISI') && what === 'SELEBRASI TP') label = what;
     else if (s.label.startsWith('POSISI') && !a.act.id.startsWith('seat-')) label = `${s.label} · ${what}`;
