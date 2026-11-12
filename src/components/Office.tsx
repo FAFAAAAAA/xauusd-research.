@@ -30,7 +30,7 @@ const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the 
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
 type Pose = 'stand' | 'sit' | 'sleep' | 'bean' | 'stretch' | 'squat' | 'jump' | 'nap' | 'run';
-type Prop = 'cup' | 'phone' | 'hp' | 'book' | 'paper' | 'laptop' | 'food' | 'vanish' | 'trash' | 'can' | 'club' | 'dumbbell';
+type Prop = 'tablet' | 'cup' | 'phone' | 'hp' | 'book' | 'paper' | 'laptop' | 'food' | 'vanish' | 'trash' | 'can' | 'club' | 'dumbbell';
 interface Spot { id: string; room: number; x: number; y: number; face: Face; pose: Pose; label: string; prop?: Prop; zone?: 'break' | 'meet' | 'lounge' | 'eat' | 'gym' | 'boss'; alt?: Array<{ label: string; pose?: Pose; prop?: Prop }>; whip?: string }
 interface Person {
   id: string; name: string; role: string; seat: Spot;
@@ -39,7 +39,7 @@ interface Person {
 }
 const seat = (id: string, room: number, x: number, y: number, face: Face, label = 'MEMANTAU'): Spot => ({ id: `seat-${id}`, room, x, y, face, pose: 'sit', label });
 const PEOPLE: Person[] = [
-  { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'SANTAI'), hair: '#4a1422', skin: '#f3cfb0', shirt: '#8e2c48', pants: '#7a2440', style: 'long', glasses: true },
+  { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'NONTON DRAKOR'), hair: '#4a1422', skin: '#f3cfb0', shirt: '#8e2c48', pants: '#7a2440', style: 'long', glasses: true },
   { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
   { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.3, 1.9, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
   { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.3, 4.3, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
@@ -110,8 +110,8 @@ const PATROL: Spot[] = ([
   [0, 9.6, 3.2, 'nx'], [0, 5.0, 7.4, 'px'], [0, 11.0, 8.0, 'ny'],
 ] as const).map(([r, x, y, f], i) => ({ id: `patrol${i}`, room: r, x, y, face: f, pose: 'stand', label: 'PATROLI' }));
 const PACE: Array<[number, number, number]> = [[0, 4.0, 3.2], [0, 9.0, 3.6], [0, 8.0, 7.6], [1, 9.6, 3.6], [1, 5.6, 6.8], [1, 10.0, 8.6]];
-const SIDAK: Array<[number, number, number]> = [[1, 9.6, 3.6], [1, 5.6, 6.8], [1, 4.0, 3.4], [2, 6.0, 3.0], [2, 9.5, 7.5], [2, 3.2, 6.8]];
-const VET_YELL = ['MARCEL!!', 'LAPORAN MANA?!', 'PROFIT KURANG!', 'KERJA YANG BENAR!', 'GAJIMU SAYA POTONG!'];
+/** Ny. Vetrycia's face while she watches a drama: changes every few seconds */
+const vetMood = (t: number) => (['SEDIH', 'MAKAN POPCORN', 'NANGIS', 'KETAWA'] as const)[Math.floor(t / 4.5) % 4];
 const VET_SORRY = ['Ampun bu!', 'Siap bu!', 'Maaf bu…', 'Iya bu bos!'];
 const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', xau: 'nas', nas: 'xau', tg: 'alt' };
 const YELL = ['KERJA!!', 'PROFIT MANA?!', 'JANGAN SANTAI!', 'CEPAT!!', 'GAJI POTONG!', 'BALIK KE MEJA!', 'LEMBUR KAMU!'];
@@ -699,7 +699,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const jump = pose === 'jump' ? Math.abs(Math.sin(t * 6)) * 5 : 0;
   const squat = pose === 'squat' ? (1 + Math.sin(t * 3.2)) * 1.6 : 0;
   const prop = !walking ? a.act.prop : a.carry;
-  c.save(); c.translate(sx + (shaking ? Math.sin(t * 60) * 0.5 : 0), sy); c.scale(PS, PS); if (flip) c.scale(-1, 1);
+  const drama = p.id === 'vet' && !walking && prop === 'tablet', mood = vetMood(t), eatSit = !walking && prop === 'food' && (a.act.pose === 'sit');
+  c.save(); c.translate(sx + (shaking ? Math.sin(t * 60) * 0.5 : 0) + (drama && mood === 'KETAWA' ? Math.sin(t * 30) * 0.35 : 0), sy); c.scale(PS, PS); if (flip) c.scale(-1, 1);
   if (!sitting && !bean) { c.fillStyle = 'rgba(0,0,0,.2)'; c.beginPath(); c.ellipse(0, 0, 5.5 - jump * 0.3, 2.4 - jump * 0.15, 0, 0, 7); c.fill(); }
   c.translate(0, -jump);
   const hip = sitting ? -7.2 : bean ? -4 : -6.6 - bob + squat, torso = 8.4;
@@ -744,6 +745,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (shaking) { ex = sxh + side * 1.5; ey = syh - 4.5 + Math.sin(t * 30) * 0.6; }
     if (!walking && prop === 'phone' && side > 0 && !shaking) { ex = 3.6; ey = hy + 1.5; }
     if (!walking && prop === 'hp' && !bean && !shaking) { ex = 3.2 - side * 0.4; ey = syh + 3.2; }
+    if (drama) { ex = 5.2 - side * 0.8; ey = syh + 2.6; if (mood === 'MAKAN POPCORN' && side > 0) { const k = (Math.sin(t * 5) + 1) / 2; ex = 4.2 + k * 1.5; ey = hy + 3.5 + (1 - k) * 6; } }
+    if (eatSit && side > 0) { const k = (Math.sin(t * 4) + 1) / 2; ex = 3.6 + k * 1.2; ey = hy + 3.5 + (1 - k) * 6; }
     if (!walking && (prop === 'book' || prop === 'paper') && !shaking) { ex = 3.8 - side * 0.3; ey = syh + 3.5; }
     if (!walking && prop === 'can' && a.act.id === 'plant' && side > 0) { ex = 7; ey = syh + 3; }
     if (!walking && prop === 'club' && !shaking) { const w = Math.sin(t * 2.2); ex = 2.5 + w * 2.5 - side * 0.5; ey = syh + 6 - Math.abs(w) * 1.5; }
@@ -758,6 +761,18 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       if (prop === 'trash' && pose === 'stand') { c.fillStyle = '#1e1f23'; c.beginPath(); c.ellipse(ex + 0.5, ey + 2.5, 2.2, 2.8, 0, 0, 7); c.fill(); }
       if (prop === 'club' && !walking) { const w = Math.sin(t * 2.2); c.strokeStyle = '#d8d8d8'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + 1 + w * 4, -1.2); c.stroke(); c.fillStyle = '#9aa0a8'; c.fillRect(ex + w * 4, -2, 3, 1.4); if (w > 0.85) { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex + 9 + (t * 20) % 12, -1.2, 0.9, 0, 7); c.fill(); } }
       if (prop === 'phone' && !walking) { c.fillStyle = '#1e1f23'; c.fillRect(ex + 0.3, ey - 2.5, 1.4, 3.6); }
+      if (drama) {        // tablet with a drama playing + a bowl of popcorn
+        const sc = ['#f3a6c8', '#a6d8f3', '#f7d89a', '#c5b3f0'][Math.floor(t * 0.7) % 4];
+        c.fillStyle = '#1e1f23'; c.fillRect(3.4, syh - 2.2, 6.2, 4.4); c.fillStyle = sc; c.fillRect(3.9, syh - 1.8, 5.2, 3.6);
+        c.fillStyle = 'rgba(255,255,255,.6)'; c.beginPath(); c.arc(5.4, syh - 0.6, 0.7, 0, 7); c.arc(7.4, syh - 0.4, 0.7, 0, 7); c.fill();
+      }
+      if (drama || eatSit) {
+        const bx = 4.6, by = hip - 1.5;
+        c.fillStyle = '#e5242b'; c.beginPath(); c.moveTo(bx - 3, by - 2.2); c.lineTo(bx + 3, by - 2.2); c.lineTo(bx + 2.2, by + 1.6); c.lineTo(bx - 2.2, by + 1.6); c.closePath(); c.fill();
+        c.fillStyle = '#ffffff'; c.fillRect(bx - 1.2, by - 2.2, 0.9, 3.8); c.fillRect(bx + 0.6, by - 2.2, 0.9, 3.8);
+        c.fillStyle = '#fff6d8'; for (const [dx, dy] of [[-2, -2.6], [-0.8, -3.2], [0.6, -2.8], [1.8, -3.1], [0, -3.8], [2.4, -2.4], [-1.6, -3.6]]) { c.beginPath(); c.arc(bx + dx, by + dy, 0.75, 0, 7); c.fill(); }
+        if ((mood === 'MAKAN POPCORN' || eatSit) && Math.sin(t * 5) > 0.6) { c.fillStyle = '#fff6d8'; c.beginPath(); c.arc(ex, ey - 0.6, 0.7, 0, 7); c.fill(); }
+      }
       if (prop === 'hp' && !walking) { c.fillStyle = '#1e1f23'; c.fillRect(ex - 1.8, ey - 2.4, 3.4, 2.4); c.fillStyle = '#7cc8f0'; c.fillRect(ex - 1.4, ey - 2.1, 2.6, 1.6); }
       if ((prop === 'book' || prop === 'paper') && !walking) { c.fillStyle = prop === 'book' ? '#f2c230' : '#ffffff'; c.fillRect(ex - 2.5, ey - 3, 4.6, 3.4); }
       if (prop === 'can' && a.act.id === 'plant' && !walking) {
@@ -777,6 +792,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   arm(-1, true);
   if (bean && !walking && prop === 'laptop') { c.fillStyle = '#c9cbd1'; c.beginPath(); c.moveTo(1, hip - 1.5); c.lineTo(8, hip - 0.5); c.lineTo(8, hip + 1); c.lineTo(1, hip); c.fill(); c.fillStyle = '#9fd3f2'; c.fillRect(2.5, hip - 6, 5, 4.5); }
   if (sitting && !walking && prop === 'laptop') { c.fillStyle = '#c9cbd1'; c.fillRect(3, hip - 5.5, 5.5, 4); }
+  const big = p.id === 'vet';
+  if (big) { c.save(); c.translate(hx, hy + 5); c.scale(1.45, 1.45); c.translate(-hx, -(hy + 5)); }
   c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx - 1.4, hy + R - 2.2, 2.8, 3);
   const hg = c.createRadialGradient(hx + 1.5, hy - 2, 1, hx, hy, R + 1); hg.addColorStop(0, sh(p.skin, 1.08)); hg.addColorStop(1, sh(p.skin, 0.9));
   c.fillStyle = hg; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill();
@@ -801,9 +818,25 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     const blink = (t * 1000 + hash(p.id) * 4000) % 4000 < 120;
     const look = prop === 'hp' && !walking ? 0.8 : 0;
     c.fillStyle = '#1e1f23';
-    for (const ex of [hx - 0.6, hx + 3.2]) { if (blink) c.fillRect(ex - 0.9, hy + 0.6 + look, 1.8, 0.5); else { c.beginPath(); c.ellipse(ex, hy + 0.6 + look, 0.85, shaking ? 1.5 : 1.15, 0, 0, 7); c.fill(); } }
+    const closed = drama && (mood === 'KETAWA' || mood === 'NANGIS');
+    for (const ex of [hx - 0.6, hx + 3.2]) {
+      if (closed) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); if (mood === 'KETAWA') c.arc(ex, hy + 1.2, 0.9, Math.PI * 1.1, Math.PI * 1.9); else c.arc(ex, hy + 0.2, 0.9, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); }
+      else if (blink) c.fillRect(ex - 0.9, hy + 0.6 + look, 1.8, 0.5); else { c.beginPath(); c.ellipse(ex, hy + 0.6 + look + (drama && mood === 'SEDIH' ? 0.3 : 0), 0.85, shaking ? 1.5 : 1.15, 0, 0, 7); c.fill(); }
+    }
     c.fillStyle = 'rgba(255,120,120,.35)'; c.beginPath(); c.arc(hx - 1.6, hy + 2.8, 1.1, 0, 7); c.arc(hx + 4.3, hy + 2.8, 1.1, 0, 7); c.fill();
-    if (angry) {
+    if (drama) {
+      if (mood === 'KETAWA') { c.fillStyle = '#7a1f1f'; c.beginPath(); c.moveTo(hx - 0.6, hy + 2.6); c.lineTo(hx + 3.4, hy + 2.6); c.quadraticCurveTo(hx + 1.4, hy + 6.2 + Math.abs(Math.sin(t * 14)) * 0.6, hx - 0.6, hy + 2.6); c.fill(); c.fillStyle = '#ff8a8a'; c.beginPath(); c.arc(hx + 1.4, hy + 4.4, 0.8, 0, 7); c.fill(); }
+      else if (mood === 'MAKAN POPCORN') { c.fillStyle = '#7a3b2e'; c.beginPath(); c.ellipse(hx + 1.4, hy + 3.2, 0.9, Math.sin(t * 10) > 0 ? 0.7 : 0.3, 0, 0, 7); c.fill(); }
+      else {
+        c.strokeStyle = '#1e1f23'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx - 2, hy - 1.2); c.lineTo(hx + 0.4, hy - 2); c.moveTo(hx + 4.6, hy - 1.2); c.lineTo(hx + 2.2, hy - 2); c.stroke();
+        c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.7; c.beginPath(); c.arc(hx + 1.4, hy + 4.6, 1.1, Math.PI * 1.15, Math.PI * 1.85); c.stroke();
+        const tears = mood === 'NANGIS' ? 2 : 1;
+        for (let k = 0; k < tears; k++) for (const ex of mood === 'NANGIS' ? [hx - 0.6, hx + 3.2] : [hx + 3.2]) {
+          const w = (t * 1.3 + k * 0.5 + ex) % 1; c.fillStyle = `rgba(110,180,255,${0.9 - w * 0.6})`;
+          if (mood === 'NANGIS') c.fillRect(ex - 0.45, hy + 1.2, 0.9, 1.5 + w * 4.5); else { c.beginPath(); c.ellipse(ex, hy + 1.8 + w * 4, 0.6, 0.9, 0, 0, 7); c.fill(); }
+        }
+      }
+    } else if (angry) {
       c.strokeStyle = '#1e1f23'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(hx - 2, hy - 1.6); c.lineTo(hx + 0.6, hy - 0.6); c.moveTo(hx + 4.6, hy - 1.6); c.lineTo(hx + 2.1, hy - 0.6); c.stroke();
       c.fillStyle = '#5a1a1a'; c.beginPath(); c.ellipse(hx + 1.4, hy + 3.4, 1.4, 1.1 + Math.abs(Math.sin(t * 9)) * 0.7, 0, 0, 7); c.fill();
     } else if (shaking) { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx, hy + 3.6); for (let k = 1; k <= 4; k++) c.lineTo(hx + k * 0.7, hy + 3.6 + (k % 2 ? -0.5 : 0)); c.stroke(); }
@@ -820,6 +853,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     const w = (t * 1.6 + k * 0.5) % 1; c.fillStyle = `rgba(110,180,255,${1 - w})`;
     c.beginPath(); c.ellipse(hx - 6 - k * 1.5, hy - 3 + w * 6, 0.8, 1.3, 0, 0, 7); c.fill();
   }
+  if (big) c.restore();
   arm(1, false);
   c.restore();
 }
@@ -849,12 +883,14 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
     }
     a.patrol = 0; return { act: { ...p.seat, label: Math.random() < 0.5 ? 'CEK CCTV' : 'JAGA' }, dwell: rnd(18, 35) };
   }
-  if (p.id === 'vet') {      // the big boss: relaxes in her gold armchair, inspects the floors, and tells Marcel off
-    const m = all.bos, one = <T,>(l: T[]) => l[Math.floor(Math.random() * l.length)];
-    if (m && !m.pending && now - a.angryAt > 25_000 && r < 0.35) { a.angryAt = now; a.chase = 0; return { act: { id: 'scold-bos', room: m.room, x: m.x, y: m.y, face: 'px', pose: 'stand', label: 'NGOMELIN MARCEL', whip: 'bos' }, dwell: rnd(9, 12) }; }
-    if (a.act.id !== p.seat.id && r < 0.7) { const l = one(['SANTAI', 'MINUM TEH', 'CEK SALDO', 'BELANJA ONLINE']); return { act: { ...p.seat, label: l, prop: l === 'BELANJA ONLINE' ? 'hp' : l === 'MINUM TEH' ? 'cup' : undefined }, dwell: rnd(15, 30) }; }
-    if (r < 0.85) { const [rm, x, y] = one(SIDAK); return { act: { id: `sidak-${rm}-${x}`, room: rm, x, y, face: 'py', pose: 'stand', label: 'SIDAK' }, dwell: rnd(3, 6) }; }
-    return { act: pick(SPOTS.filter((q) => ['trophy', 'bsofa1', 'bwin', 'coffee', 'safe'].includes(q.id))), dwell: rnd(6, 11) };
+  if (p.id === 'vet') {      // the big boss only eats, sleeps and watches Korean dramas, and breaks it up when Marcel yells at someone
+    const m = all.bos;
+    if (m && m.act.whip && m.room >= 0) return { act: { id: 'melerai', room: m.room, x: m.x, y: m.y, face: 'px', pose: 'stand', label: 'MAU MELERAI', whip: 'bos' }, dwell: 9000 };
+    if (r < 0.55) return { act: { ...p.seat, label: 'NONTON DRAKOR', prop: 'tablet' }, dwell: rnd(25, 45) };
+    if (r < 0.72) return { act: { ...p.seat, label: 'MAKAN', prop: 'food' }, dwell: rnd(10, 18) };
+    if (r < 0.88) return { act: { ...p.seat, label: 'TIDUR', pose: 'nap' }, dwell: rnd(15, 30) };
+    if (r < 0.95 && !taken.has('bsofa1')) return { act: { ...SPOTS.find((q) => q.id === 'bsofa1')!, label: 'TIDUR', pose: 'nap' }, dwell: rnd(15, 30) };
+    return { act: { ...SPOTS.find((q) => q.id === 'fridge')!, id: 'vet-snack', label: 'AMBIL CEMILAN' }, dwell: rnd(4, 7) };
   }
   if (p.id === 'bos') {
     const victims = WORKERS.filter((id) => all[id] && !S[id]?.sleep && S[id]?.label !== 'LIBUR' && !(all[id].act.prop === 'vanish' && !all[id].path.length) && !all[id].pending);
@@ -998,7 +1034,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         const s = S[p.id];
         if (!s || s.label === 'BELUM AKTIF') { delete agents[p.id]; continue; }
         let a = agents[p.id];
-        if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
+        if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.id === 'vet' ? { ...p.seat, prop: 'tablet' } : p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
         if (wall < a.hiddenUntil) continue;                                          // riding the lift
         if (wall < a.scoldUntil) { a.path = []; a.vx = a.vy = 0; continue; }          // frozen while being yelled at
         // arrived at the lift with somewhere to go: ride to the other floor, step out, walk on
@@ -1008,7 +1044,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
           a.act = nx; a.until = Math.max(a.until, wall + 1400); a.path = findPath(grids[a.room], a.x, a.y, nx.x, nx.y);
           continue;
         }
-        const forced = (s.sleep || s.label === 'KIRIM PESAN' || s.label === 'ALARM') && a.act.id !== p.seat.id;
+        const bosYelling = p.id === 'vet' && !!agents.bos?.act.whip && a.act.id !== 'melerai';
+        const forced = ((s.sleep || s.label === 'KIRIM PESAN' || s.label === 'ALARM') && a.act.id !== p.seat.id) || bosYelling;
         const changed = a.last !== s.label; a.last = s.label;
         if ((!a.path.length && wall > a.until) || forced || (changed && s.label.startsWith('POSISI'))) {
           taken.delete(a.act.id);
@@ -1016,7 +1053,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
           const nx = choose(p, S, a, taken, wall, agents);
           a.act = nx.act; a.until = wall + nx.dwell; taken.add(a.act.id); a.pending = null;
           if (a.act.room !== a.room) { a.pending = a.act; a.act = liftSpot(a.room, p.id, a.pending.room < a.room); }
-          a.speed = a.run ? 2.7 : p.id === 'jaga' && s.label === 'ALARM' ? 2.6 : (p.id === 'bos' || p.id === 'vet') && a.act.whip ? 2.1 : 1.35 + hash(p.id) * 0.25;
+          a.speed = a.run ? 2.7 : p.id === 'jaga' && s.label === 'ALARM' ? 2.6 : p.id === 'vet' && a.act.whip ? 2.5 : p.id === 'bos' && a.act.whip ? 2.1 : 1.35 + hash(p.id) * 0.25;
           a.path = Math.hypot(a.act.x - a.x, a.act.y - a.y) > 0.02 ? findPath(grids[a.room], a.x, a.y, a.act.x, a.act.y) : [];
         }
         if (wall > a.carryUntil) a.carry = null;
@@ -1031,18 +1068,27 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
             if (d > 0.95 && wall - a.chase > 600 && wall >= v.scoldUntil) {
               a.chase = wall;
               const ang = Math.atan2(a.y - v.y, a.x - v.x), tx = v.x + Math.cos(ang) * 0.7, ty = v.y + Math.sin(ang) * 0.7;
-              a.path = findPath(grids[a.room], a.x, a.y, tx, ty); a.act = { ...a.act, label: p.id === 'vet' ? 'NYARI MARCEL' : 'NGEJAR' }; a.until = Math.max(a.until, wall + 3000);
+              a.path = findPath(grids[a.room], a.x, a.y, tx, ty); a.act = { ...a.act, label: p.id === 'vet' ? 'MAU MELERAI' : 'NGEJAR' }; a.until = Math.max(a.until, wall + 3000);
             } else if (d <= 0.95) {
               a.path = []; a.vx = a.vy = 0; a.face = faceTo(v.x - a.x, v.y - a.y);
-              if (wall >= v.scoldUntil && !(a.bubble && wall < a.bubble.until)) {
+              if (p.id === 'vet') {
+                if (!(a.bubble && wall < a.bubble.until)) {
+                  const victim = v.act.whip ? agents[v.act.whip] : undefined;
+                  a.bubble = { text: ['SUDAH, SUDAH!', 'JANGAN MARAH-MARAH!', 'MARCEL, STOP!', 'KASIHAN DIA…'][Math.floor(Math.random() * 4)], until: wall + 3500, color: '#2e9e5b' };
+                  a.act = { ...a.act, label: 'MELERAI' }; a.until = wall + 3800;
+                  v.bubble = { text: VET_SORRY[Math.floor(Math.random() * 4)], until: wall + 3500, color: '#1e1f23' };
+                  v.act = { ...v.act, whip: undefined, label: 'DIMARAHI BIG BOS' }; v.until = wall + 3600; v.angryAt = wall; v.path = [];
+                  if (victim) { victim.scoldUntil = wall; victim.bubble = { text: 'Makasih bu!', until: wall + 2500, color: '#1e1f23' }; }
+                }
+              } else if (wall >= v.scoldUntil && !(a.bubble && wall < a.bubble.until)) {
                 const dur = 5500;
                 a.until = wall + dur + 600;
                 const sl = !!S[a.act.whip]?.sl;
-                a.act = { ...a.act, label: p.id === 'vet' ? 'NGOMELIN MARCEL' : sl ? 'MARAH (SL!)' : 'MARAH' };
+                a.act = { ...a.act, label: sl ? 'MARAH (SL!)' : 'MARAH' };
                 v.scoldUntil = wall + dur; v.scoldBy = p.id; v.path = []; v.face = faceTo(a.x - v.x, a.y - v.y);
-                const yell = p.id === 'vet' ? VET_YELL : sl ? SL_YELL : YELL;
+                const yell = sl ? SL_YELL : YELL;
                 a.bubble = { text: yell[Math.floor(Math.random() * yell.length)], until: wall + dur, color: '#e5242b' };
-                v.bubble = { text: (p.id === 'vet' ? VET_SORRY : SORRY)[Math.floor(Math.random() * 4)], until: wall + dur, color: '#1e1f23' };
+                v.bubble = { text: SORRY[Math.floor(Math.random() * 4)], until: wall + dur, color: '#1e1f23' };
                 if (!v.act.id.startsWith('seat-')) { v.run = true; v.until = 0; }
               }
             }
@@ -1269,18 +1315,19 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     const walking = a.path.length > 0, hidden = !walking && a.act.prop === 'vanish';
     const busy = wall < a.scoldUntil;
     let what = walking ? (a.run ? 'LARI KE MEJA' : (p.id === 'bos' || p.id === 'vet') && a.act.whip ? (p.id === 'vet' ? 'NYARI MARCEL' : 'NGEJAR') : 'JALAN') : a.act.label;
-    if (busy) what = a.scoldBy === 'vet' ? 'DIMARAHI BIG BOS' : 'DIMARAHI BOS';
+    if (busy) what = 'DIMARAHI BOS';
+    if (p.id === 'vet' && !walking && a.act.label === 'NONTON DRAKOR') what = `DRAKOR · ${vetMood(wall / 1000)}`;
     let label = s.label, color = s.color;
     if (busy) { label = what; color = '#ff6b6b'; }
     else if (s.label === 'MEMANTAU' || p.id === 'bos' || p.id === 'vet' || (p.id === 'jaga' && s.label === 'AMAN')) {
-      label = what; color = what === 'MEMANTAU' || what === 'BALAS CHAT' ? s.color : what.startsWith('MARAH') || what === 'NGEJAR' || what.startsWith('NGOMEL') ? '#ff6b6b' : ['JAGA', 'PATROLI', 'CEK CCTV', 'CEK PINTU'].includes(what) ? '#2ee59d' : '#f5b83d';
+      label = what; color = what === 'MEMANTAU' || what === 'BALAS CHAT' ? s.color : what.startsWith('MARAH') || what === 'NGEJAR' ? '#ff6b6b' : what.startsWith('MELERAI') || what === 'MAU MELERAI' ? '#2ee59d' : what.startsWith('NGOMEL') ? '#ff6b6b' : ['JAGA', 'PATROLI', 'CEK CCTV', 'CEK PINTU'].includes(what) ? '#2ee59d' : '#f5b83d';
     } else if (s.label === 'LIBUR') label = `LIBUR · ${what}`;
     else if (s.label.startsWith('POSISI') && what === 'SELEBRASI TP') label = what;
     else if (s.label.startsWith('POSISI') && !a.act.id.startsWith('seat-')) label = `${s.label} · ${what}`;
     if (wall < a.hiddenUntil) continue;                     // inside the lift
     const [ix, iy] = iso(a.x, a.y), [ax, ay0] = toScreen(ix, iy, a.room);
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
-    const ay = hidden ? ay0 - 4 : ay0 - (seated ? 27 : 32) * PS * unit;
+    const ay = hidden ? ay0 - 4 : ay0 - ((seated ? 27 : 32) + (p.id === 'vet' ? 7 : 0)) * PS * unit;
     c.font = nameF; const nw = c.measureText(p.name).width;
     c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = c.measureText(label + extraTxt).width + 6 * ts;
     const w = Math.max(nw, lw) + 7 * ts, h = 17 * ts;
