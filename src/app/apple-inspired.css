@@ -957,6 +957,6 @@ body::before { display: none; }
 /* home: the office alone, full screen */
 .office-home { position: fixed; inset: 0; background: var(--office-sky, #0b1430); overflow: hidden; }
 html:has(.office-home), html:has(.office-home) body { background: var(--office-sky, #0b1430); }
-body:has(.office-home)::after { background: var(--office-sky, #0b1430); }
+body:has(.office-home)::after { display: none; }
 .office.office-full { width: 100%; height: 100%; border-radius: 0; background: transparent; }
 .office.office-full .office-canvas { display: block; }
