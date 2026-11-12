@@ -1287,6 +1287,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true;
     loadPhoto(() => { bgKey = ''; });
     const agents: Record<string, Agent> = {};
+    const cat: Cat = { room: 1, x: 7.5, y: 5.1, z: 0, vx: 0, vy: 0, dx: 1, dy: 0, path: [], spot: CAT_SPOTS[6], mode: 'sleep', until: Date.now() + 8000, hidden: 0, pending: null, hop: null, meow: 0 };
     const resize = () => {
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
@@ -1392,6 +1393,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           }
         } else { a.vx *= 0.8; a.vy *= 0.8; }
       }
+      stepCat(cat, grids, dt, wall);
       BUSY.coffee = Object.values(agents).some((a) => a.act.id === 'coffee' && !a.path.length);
       BUSY.sink = Object.values(agents).some((a) => a.act.id === 'sink' && !a.path.length);
       BUSY.printer = Object.values(agents).some((a) => a.act.id === 'printer' && !a.path.length);
@@ -1435,6 +1437,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           const s = S[p.id];
           const whipT = p.id === 'bos' && a.act.whip && !a.path.length && a.bubble && wall < a.bubble.until ? t : null;
           list.push({ x0: a.x - 0.2, y0: a.y - 0.2, x1: a.x + 0.2, y1: a.y + 0.2, draw: (cc, tt) => drawPerson(cc, p, a, tt, s, whipT) });
+        }
+        if (cat.room === r && wall >= cat.hidden) {
+          const up = cat.z > 3;      // on a desk / sofa: draw after the furniture it sits on
+          list.push({ x0: cat.x - 0.15 + (up ? 0.5 : 0), y0: cat.y - 0.15 + (up ? 0.5 : 0), x1: cat.x + 0.15 + (up ? 0.5 : 0), y1: cat.y + 0.15 + (up ? 0.5 : 0), draw: (cc, tt) => {
+            drawCat(cc, cat, tt);
+            if (wall < cat.meow) { const [mx, my] = iso(cat.x, cat.y, cat.z); cc.font = '800 5px system-ui, sans-serif'; cc.textAlign = 'center'; cc.fillStyle = '#ffffff'; cc.strokeStyle = 'rgba(30,31,35,.8)'; cc.lineWidth = 1.6; cc.strokeText('meong~', mx, my - 14); cc.fillText('meong~', mx, my - 14); cc.textAlign = 'start'; }
+          } });
         }
         for (const it of isoSort(list)) it.draw(c, t);
         for (const p of PEOPLE) {
@@ -1665,6 +1674,119 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
 }
 
 /** draw order for an isometric scene: a box is in front of another when it is fully past it on x or on y */
+/* ---------- the office cat ---------- */
+type CatMode = 'walk' | 'sit' | 'sleep' | 'groom' | 'loaf';
+type CatSpot = { room: number; x: number; y: number; z: number; mode: CatMode; dwell: [number, number] };
+type Cat = { room: number; x: number; y: number; z: number; vx: number; vy: number; dx: number; dy: number; path: Array<[number, number]>; spot: CatSpot | null; mode: CatMode;
+  until: number; hidden: number; pending: CatSpot | null; hop: { x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; t0: number } | null; meow: number };
+const CAT_SPOTS: CatSpot[] = [
+  { room: 2, x: 10.2, y: 9.8, z: 7, mode: 'sleep', dwell: [25, 50] },        // lobby sofa
+  { room: 2, x: 4.75, y: 8.85, z: 0.5, mode: 'loaf', dwell: [12, 25] },      // lounge rug
+  { room: 2, x: 7.6, y: 1.35, z: 0, mode: 'sit', dwell: [8, 15] },           // begging at the kitchen
+  { room: 2, x: 12.3, y: 1.4, z: 0, mode: 'sit', dwell: [6, 12] },           // by the fridge
+  { room: 1, x: 1.75, y: 3.2, z: 17.2, mode: 'loaf', dwell: [15, 30] },      // on Na / Ni's desk
+  { room: 1, x: 2.75, y: 7.7, z: 17.2, mode: 'groom', dwell: [10, 20] },     // on Nu / Ne's desk
+  { room: 1, x: 7.5, y: 5.1, z: 0, mode: 'sleep', dwell: [20, 40] },         // under the hot desk
+  { room: 1, x: 0.7, y: 5.4, z: 0, mode: 'sit', dwell: [8, 16] },            // watching birds at the window
+  { room: 0, x: 10.2, y: 9.8, z: 7, mode: 'sleep', dwell: [25, 50] },        // boss sofa
+  { room: 0, x: 3.0, y: 4.2, z: 0, mode: 'sit', dwell: [8, 15] },            // next to Ny. Vetrycia
+  { room: 0, x: 6.4, y: 4.75, z: 0, mode: 'groom', dwell: [8, 15] },         // at Marcel's feet
+];
+function catPick(c: Cat, wall: number) {
+  if (Math.random() < 0.35) { c.spot = null; c.mode = 'walk'; c.until = wall + 4000 + Math.random() * 5000; return { room: c.room, x: 1 + Math.random() * 10.5, y: 1.2 + Math.random() * 9, z: 0, mode: 'sit' as CatMode, dwell: [3, 7] as [number, number] }; }
+  return CAT_SPOTS[Math.floor(Math.random() * CAT_SPOTS.length)];
+}
+function stepCat(c: Cat, grids: boolean[][][], dt: number, wall: number) {
+  if (wall < c.hidden) return;
+  if (c.hop) {                                       // jumping up onto / down from furniture
+    const k = Math.min(1, (wall - c.hop.t0) / 450), h = c.hop;
+    c.x = h.x0 + (h.x1 - h.x0) * k; c.y = h.y0 + (h.y1 - h.y0) * k; c.z = h.z0 + (h.z1 - h.z0) * k + Math.sin(k * Math.PI) * (h.z0 !== h.z1 ? 9 : 1.5);
+    if (k >= 1) { c.hop = null; c.z = h.z1; }
+    return;
+  }
+  if (c.path.length) {
+    const [gx, gy] = c.path[0], dx = gx - c.x, dy = gy - c.y, d = Math.hypot(dx, dy), sp = 1.1;
+    if (d > 1e-4) { c.vx = (dx / d) * sp; c.vy = (dy / d) * sp; c.dx = dx / d; c.dy = dy / d; }
+    c.x += c.vx * dt; c.y += c.vy * dt; c.mode = 'walk';
+    if (d < 0.08) { c.path.shift(); if (!c.path.length) { c.vx = c.vy = 0; } }
+    return;
+  }
+  c.vx = c.vy = 0;
+  // arrived at the lift: ride to the other floor
+  if (c.pending && Math.hypot(c.x - LIFT.x, c.y - LIFT.y - 0.15) < 0.6) {
+    const nx = c.pending; c.pending = null; c.room = nx.room; c.x = LIFT.x; c.y = LIFT.y + 0.4; c.hidden = wall + 1500;
+    c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); return;
+  }
+  if (c.spot && Math.hypot(c.spot.x - c.x, c.spot.y - c.y) > 0.05) { c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: c.spot.x, y1: c.spot.y, z1: c.spot.z, t0: wall }; return; }
+  if (c.spot && c.mode === 'walk') { c.mode = c.spot.mode; c.until = wall + (c.spot.dwell[0] + Math.random() * (c.spot.dwell[1] - c.spot.dwell[0])) * 1000; if (Math.random() < 0.4) c.meow = wall + 1800; return; }
+  if (wall < c.until) return;
+  // time to move on: first hop down if we are up on something
+  if (c.z > 0.6) { const [fx, fy] = findPath(grids[c.room], c.x, c.y, c.x + 0.8, c.y + 0.8).slice(-1)[0] ?? [c.x + 0.8, c.y]; c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: fx, y1: fy, z1: 0, t0: wall }; c.spot = null; c.mode = 'walk'; return; }
+  const nx = catPick(c, wall); c.mode = 'walk';
+  if (nx.room !== c.room) { c.pending = nx; c.spot = null; c.path = findPath(grids[c.room], c.x, c.y, LIFT.x, LIFT.y + 0.15); }
+  else { c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); }
+}
+function drawCat(c: C, k: Cat, t: number) {
+  const [px, py] = iso(k.x, k.y, k.z);
+  c.save(); c.translate(px, py); c.scale(1.35, 1.35); c.translate(-px, -py); drawCatBody(c, k, t); c.restore();
+}
+function drawCatBody(c: C, k: Cat, t: number) {
+  const fur = '#e8913a', dark = '#b8641f', light = '#fbe3c4';
+  ell(c, k.x, k.y, k.z, 0.22, 'rgba(0,0,0,.18)');
+  const [sx, sy0] = iso(k.x, k.y, k.z), sy = sy0;
+  // screen direction of the cat's heading
+  let ux = (k.dx - k.dy) * TW, uy = (k.dx + k.dy) * TH; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+  const blob = (x: number, y: number, rx: number, ry: number, rot: number, col: string) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, 7); c.fill(); };
+  const ears = (hx: number, hy: number, r: number) => {
+    c.fillStyle = fur;
+    for (const s of [-1, 1]) { c.beginPath(); c.moveTo(hx + s * r * 0.95, hy - r * 0.3); c.lineTo(hx + s * r * 0.75, hy - r * 1.55); c.lineTo(hx + s * r * 0.1, hy - r * 0.85); c.closePath(); c.fill(); }
+    c.fillStyle = '#f2a7a7'; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(hx + s * r * 0.75, hy - r * 0.55); c.lineTo(hx + s * r * 0.7, hy - r * 1.2); c.lineTo(hx + s * r * 0.35, hy - r * 0.8); c.closePath(); c.fill(); }
+  };
+  const eyes = (hx: number, hy: number, r: number, closed: boolean) => {
+    c.strokeStyle = '#1e1f23'; c.fillStyle = '#1e1f23'; c.lineWidth = 0.45;
+    for (const s of [-1, 1]) { if (closed) { c.beginPath(); c.arc(hx + s * r * 0.4, hy - r * 0.05, r * 0.2, 0.2, Math.PI - 0.2); c.stroke(); } else { c.beginPath(); c.arc(hx + s * r * 0.4, hy - r * 0.1, r * 0.17, 0, 7); c.fill(); } }
+    c.fillStyle = '#e5848c'; c.beginPath(); c.arc(hx, hy + r * 0.25, r * 0.12, 0, 7); c.fill();
+  };
+  const tail = (bx: number, by: number, dirx: number, len: number, curl: number) => {
+    c.strokeStyle = fur; c.lineWidth = 1.3; c.lineCap = 'round'; c.beginPath(); c.moveTo(bx, by);
+    c.quadraticCurveTo(bx + dirx * len * 0.6, by + curl * 0.3, bx + dirx * len, by - len * 0.5 + curl); c.stroke();
+    c.strokeStyle = dark; c.lineWidth = 1.3; c.beginPath(); const tx = bx + dirx * len, ty = by - len * 0.5 + curl; c.moveTo(tx - dirx * 0.8, ty + 0.4); c.lineTo(tx, ty); c.stroke(); c.lineCap = 'butt';
+  };
+  if (k.mode === 'sleep') {                                  // curled up donut
+    blob(sx, sy - 2.4, 4.4, 2.8, 0, fur); blob(sx + 0.8, sy - 3.2, 2.2, 1.1, 0, dark);
+    tail(sx + 3.6, sy - 1.2, -1, 4.5, 2.2);
+    blob(sx - 2.6, sy - 2.6, 2.1, 1.8, 0, fur); ears(sx - 2.6, sy - 3, 1.7); eyes(sx - 2.6, sy - 2.4, 1.7, true);
+    const ph = (t * 0.45) % 1; c.fillStyle = `rgba(150,170,215,${1 - ph})`; c.font = 'bold 4px sans-serif'; c.fillText('z', sx + 3 + ph * 3, sy - 8 - ph * 6);
+    return;
+  }
+  const walking = k.mode === 'walk' && (Math.abs(k.vx) + Math.abs(k.vy) > 0.05);
+  const back = uy < -0.2;                                    // walking away from us
+  const side = ux >= 0 ? 1 : -1;
+  if (walking) {
+    const ph = t * 11, bob = Math.abs(Math.sin(ph)) * 0.5;
+    c.strokeStyle = dark; c.lineWidth = 0.9;
+    for (const [o, f] of [[-2.2, 0], [2.2, Math.PI]] as const) for (const q of [0, Math.PI / 2]) { const sw = Math.sin(ph + f + q) * 1.1; c.beginPath(); c.moveTo(sx + ux * o + side * q * 0.3, sy - 2.5); c.lineTo(sx + ux * o + sw * ux, sy - 0.2); c.stroke(); }
+    blob(sx, sy - 3.3 - bob, 4.2, 2.1, Math.atan(uy / (Math.abs(ux) < 0.05 ? 0.05 * side : ux)) * 0.35, fur);
+    blob(sx - ux * 0.5, sy - 4.2 - bob, 2.6, 0.9, Math.atan(uy / (Math.abs(ux) < 0.05 ? 0.05 * side : ux)) * 0.35, dark);
+    tail(sx - ux * 3.8, sy - 3.8 - bob, -side, 4.2, Math.sin(t * 5) * 1.2);
+    const hx = sx + ux * 4.2, hy = sy - 5 - bob;
+    blob(hx, hy, 2.1, 1.85, 0, fur); ears(hx, hy - 0.2, 1.75);
+    if (!back) { blob(hx, hy + 0.5, 1.2, 0.8, 0, light); eyes(hx, hy, 1.75, false); }
+    return;
+  }
+  // sitting / grooming / loaf: upright (or loaf = tucked in)
+  const loaf = k.mode === 'loaf';
+  tail(sx + side * 2.4, sy - 1, side, 4, Math.sin(t * 1.6) * 1.4);
+  if (loaf) { blob(sx, sy - 2.6, 4, 2.4, 0, fur); blob(sx + side * 0.8, sy - 3.6, 2.4, 1, 0, dark); }
+  else { blob(sx, sy - 3.8, 2.8, 3.6, 0, fur); blob(sx - side * 0.3, sy - 3.2, 1.4, 2.3, 0, light); blob(sx + side * 1.2, sy - 5.6, 1.4, 0.7, 0.4, dark); }
+  const groom = k.mode === 'groom' && Math.floor(t * 1.2) % 3 !== 0;
+  const hx = sx - side * (loaf ? 3 : 0.4), hy = sy - (loaf ? 4.4 : 8.2) + (groom ? 1 : 0) + Math.sin(t * 0.9) * 0.2;
+  blob(hx, hy, 2.3, 2, 0, fur); ears(hx, hy - 0.2, 1.9); blob(hx, hy + 0.6, 1.3, 0.85, 0, light);
+  const blink = Math.floor(t * 0.7 + k.x) % 6 === 0;
+  eyes(hx, hy, 1.9, groom || blink || loaf && Math.floor(t / 4) % 2 === 1);
+  if (groom) { c.fillStyle = light; c.beginPath(); c.ellipse(hx + side * 1.6, hy + 1.2 + Math.sin(t * 9) * 0.6, 0.9, 0.7, 0, 0, 7); c.fill(); }
+}
+
 function isoSort(list: Item[]): Item[] {
   const n = list.length, behind: number[][] = list.map(() => []);
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
