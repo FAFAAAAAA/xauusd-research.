@@ -25,7 +25,11 @@ const SILENT = 35 * 60_000;
 const TV = { x0: 6.85, x1: 11.0, z0: 30, z1: 84 };
 const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
-const RH = 290, ROOMS = 3, TOPM = 50, TOTAL = RH * ROOMS + TOPM;         // three rooms stacked (one scene height each)
+const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
+/* building shape: 'tower' (3 floors in one glass tower), 'zigzag' (cantilevered floors around a glass lift tube), 'rooftop' (tower + roof deck) */
+let SHAPE = 'tower', TOPM = 50, TOTAL = RH * ROOMS + TOPM;
+const roomX = (r: number) => (SHAPE === 'zigzag' ? (r % 2 ? 34 : -34) : 0);
+function setShape(sh: string) { SHAPE = sh; TOPM = sh === 'rooftop' ? 50 + RH : 50; TOTAL = RH * ROOMS + TOPM; }
 const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the three rooms)
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
@@ -202,13 +206,85 @@ const hash = (str: string) => { let h = 2166136261; for (let i = 0; i < str.leng
 const wallL = (y0: number, y1: number, z0: number, z1: number): Array<[number, number]> => [iso(0, y0, z1), iso(0, y1, z1), iso(0, y1, z0), iso(0, y0, z0)];
 const wallB = (x0: number, x1: number, z0: number, z1: number): Array<[number, number]> => [iso(x0, 0, z1), iso(x1, 0, z1), iso(x1, 0, z0), iso(x0, 0, z0)];
 
+/* ---------- looks (themes) ---------- */
+type Theme = { floor: string; floorN: string; line: string; back: string; backN: string; left: string; leftN: string; cap: string; base: string; sky?: [string, string, string]; extra?: (c: C, night: boolean, room: number, wh: number) => void };
+const THEMES: Record<string, Theme> = {
+  modern: { floor: '#dcd9d3', floorN: '#b9b6b0', line: 'rgba(120,110,95,.13)', back: '#f5f4f1', backN: '#c9c7c2', left: '#eceae6', leftN: '#bdbbb6', cap: '#26272c', base: '#2b2c31' },
+  kayu: {
+    floor: '#c99a68', floorN: '#8f6a48', line: 'rgba(70,40,15,.28)', back: '#f1e6d6', backN: '#bfae98', left: '#eadbc6', leftN: '#b5a28a', cap: '#3b2a20', base: '#5a3a26',
+    extra: (c, night, room, wh) => {          // exposed brick on the back wall
+      const bh = 5.2;
+      for (let z = 0, row = 0; z < wh - 2; z += bh, row++) for (let x = row % 2 ? -0.35 : 0; x < NX; x += 0.7) {
+        const x0 = Math.max(0, x), x1 = Math.min(NX, x + 0.66); if (x1 <= x0) continue;
+        const v = hash(`br${room}:${row}:${Math.round(x * 10)}`);
+        poly(c, wallB(x0, x1, z + 0.5, z + bh - 0.4), night ? `rgb(${110 + v * 20},${55 + v * 10},${40 + v * 8})` : `rgb(${172 + v * 30},${84 + v * 18},${60 + v * 14})`);
+      }
+    },
+  },
+  neon: {
+    floor: '#23252f', floorN: '#1b1d25', line: 'rgba(41,227,255,.10)', back: '#2c2f3c', backN: '#23252f', left: '#272a36', leftN: '#1f2129', cap: '#0e0f14', base: '#29e3ff',
+    sky: ['#0c0520', '#2a0e4a', '#5a1a6e'],
+    extra: (c, _n, _room, wh) => {             // neon strips along the floor and the ceiling line
+      for (const [z, col] of [[2.2, '#29e3ff'], [wh - 6, '#ff3dbb']] as const) {
+        c.save(); c.shadowColor = col; c.shadowBlur = 8; c.strokeStyle = col; c.lineWidth = 1.2;
+        const a = iso(0, NY, z), b = iso(0, 0, z), d = iso(NX, 0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.stroke(); c.restore();
+      }
+    },
+  },
+  taman: {
+    floor: '#e9e5da', floorN: '#bcb8ad', line: 'rgba(90,110,80,.14)', back: '#eef3ea', backN: '#c3cbbf', left: '#e6ede1', leftN: '#b9c1b4', cap: '#2f5d3a', base: '#3c6b46',
+    sky: ['#79c0e8', '#bfe3f5', '#eef8ec'],
+    extra: (c, night, room, wh) => {           // a living green wall + hanging vines
+      poly(c, wallB(0.3, 2.4, 6, wh - 10), night ? '#1f3a26' : '#2f6b3c');
+      for (let i = 0; i < 70; i++) { const x = 0.35 + hash(`gw${room}${i}`) * 2.0, z = 8 + hash(`gz${room}${i}`) * (wh - 20); const [px, py] = iso(x, 0, z); c.fillStyle = ['#3d9a4f', '#58b765', '#2f7a3d', '#7fcf7a'][i % 4]; c.beginPath(); c.ellipse(px, py, 2.2, 1.4, i, 0, 7); c.fill(); }
+      for (let k = 0; k < 9; k++) { const x = 3 + k * 1.1, len = 10 + hash(`vn${room}${k}`) * 26; const a = iso(x, 0, wh - 2), b = iso(x, 0, wh - 2 - len); c.strokeStyle = night ? '#2a5a35' : '#3d9a4f'; c.lineWidth = 1; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); for (let j = 0; j < len; j += 4) { const q = iso(x, 0, wh - 2 - j); c.fillStyle = j % 8 ? '#58b765' : '#3d9a4f'; c.beginPath(); c.ellipse(q[0] + (j % 8 ? 1.5 : -1.5), q[1], 1.6, 1, 0, 0, 7); c.fill(); } }
+    },
+  },
+};
+let THEME: Theme = THEMES.modern;
+
+/* zigzag: a round glass lift tube that ties the shifted floors together */
+function drawLiftTube(c: C, night: boolean) {
+  const cx = OX + (NX - NY) * TW * 0.5 + 6, top = TOPM - 30, bot = TOPM + RH * ROOMS - 10, r = 15;
+  const g = c.createLinearGradient(cx - r, 0, cx + r, 0);
+  g.addColorStop(0, night ? 'rgba(90,140,200,.35)' : 'rgba(160,210,240,.55)'); g.addColorStop(0.5, night ? 'rgba(160,200,255,.18)' : 'rgba(235,248,255,.7)'); g.addColorStop(1, night ? 'rgba(60,100,160,.4)' : 'rgba(120,170,210,.6)');
+  c.fillStyle = g; c.fillRect(cx - r, top, 2 * r, bot - top);
+  c.strokeStyle = '#26272c'; c.lineWidth = 1.2; c.strokeRect(cx - r, top, 2 * r, bot - top);
+  for (let y = top + 20; y < bot; y += 34) { c.fillStyle = '#26272c'; c.fillRect(cx - r, y, 2 * r, 1.4); }
+  c.fillStyle = '#f2c230'; c.fillRect(cx - 9, top + 120, 18, 22); c.fillStyle = '#26272c'; c.fillRect(cx - 7, top + 124, 14, 14);
+}
+/* rooftop: a deck with a pool, sun loungers, umbrellas and a helipad */
+function drawRoofDeck(c: C, night: boolean) {
+  box(c, 0, 0, NX, NY, -8, 8, night ? '#6b5440' : '#b88a5c', '#3a3b41', '#4a4b52', false);
+  c.strokeStyle = 'rgba(70,40,15,.25)'; c.lineWidth = 0.4;
+  for (let k = 0.5; k < NX; k += 0.5) { const a = iso(k, 0), b = iso(k, NY); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  ell(c, 3.4, 3.4, 0.2, 2.4, night ? '#3a3b42' : '#4a4c53'); ell(c, 3.4, 3.4, 0.3, 2.0, night ? '#2a2b30' : '#3a3b42');
+  c.save(); const [hx, hy] = iso(3.4, 3.4, 0.4); c.translate(hx, hy); c.scale(1, 0.5); c.rotate(Math.PI / 4); c.fillStyle = '#f2c230'; c.font = '900 26px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('H', 0, 0); c.restore();
+  // pool
+  box(c, 6.6, 4.8, 5.4, 4.2, -8, 8.3, night ? '#1d4f7a' : '#3fb3e6', '#cfd8de', '#e2e8ec', false);
+  poly(c, [iso(6.6, 4.8, 0.3), iso(12, 4.8, 0.3), iso(12, 9, 0.3), iso(6.6, 9, 0.3)], night ? '#2a6aa0' : '#5cc6f0');
+  for (let k = 0; k < 7; k++) { const [wx, wy] = iso(7.2 + hash(`w${k}`) * 4.4, 5.2 + hash(`v${k}`) * 3.4, 0.4); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(wx - 4, wy); c.quadraticCurveTo(wx, wy - 1.5, wx + 4, wy); c.stroke(); }
+  // loungers + umbrellas
+  for (const y of [5.0, 6.6, 8.2]) { box(c, 4.4, y, 1.4, 0.55, 0, 3, '#f4f4f2'); box(c, 4.4, y, 0.35, 0.55, 3, 4, '#f4f4f2'); }
+  for (const [ux, uy, col] of [[3.7, 6.2, '#e5484d'], [3.7, 8.6, '#f2c230']] as const) {
+    const [a0, a1] = iso(ux, uy, 0), [b0, b1] = iso(ux, uy, 26); c.strokeStyle = '#8b8f99'; c.lineWidth = 1; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
+    c.fillStyle = col; c.beginPath(); c.ellipse(b0, b1 + 2, 16, 7, 0, Math.PI, 0); c.fill(); c.fillStyle = 'rgba(0,0,0,.12)'; c.beginPath(); c.ellipse(b0, b1 + 2, 16, 2.5, 0, 0, Math.PI); c.fill();
+  }
+  // glass railing on the open edges + plants
+  poly(c, [iso(0, NY, 0), iso(NX, NY, 0), iso(NX, NY, 12), iso(0, NY, 12)], 'rgba(190,225,245,.35)');
+  poly(c, [iso(NX, 0, 0), iso(NX, NY, 0), iso(NX, NY, 12), iso(NX, 0, 12)], 'rgba(190,225,245,.3)');
+  c.strokeStyle = '#26272c'; c.lineWidth = 0.9; for (const [a, b] of [[iso(0, NY, 12), iso(NX, NY, 12)], [iso(NX, 0, 12), iso(NX, NY, 12)]]) { c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  for (const [px, py] of [[0.6, 0.6], [12.4, 0.6], [0.6, 10.4], [9.0, 0.7], [6.0, 0.7]]) plant(c, px, py, 1.2);
+  for (const [x, y] of [[1.4, -1.1], [2.6, -1.1]]) box(c, x, y, 0.9, 0.8, 0, 9, '#d9dade', '#b5b7bd', '#c7c9ce');
+}
+
 /* ---------- the static room ---------- */
 const CITY = Array.from({ length: 26 }, (_, i) => ({ y: 0.5 + i * 0.4 + hash(`b${i}`) * 0.15, w: 0.25 + hash(`w${i}`) * 0.3, h: 22 + hash(`h${i}`) * 42 }));
 function drawBackdrop(c: C, night: boolean) {
   const y0 = -H, y1 = TOTAL + H;
   const sky = c.createLinearGradient(0, y0, 0, TOTAL);
   if (night) { sky.addColorStop(0, '#03060f'); sky.addColorStop(0.6, '#0b1430'); sky.addColorStop(1, '#1a2550'); }
-  else { sky.addColorStop(0, '#5aa8e0'); sky.addColorStop(0.55, '#a9d5f2'); sky.addColorStop(1, '#e6f3fb'); }
+  else { const sk = THEME.sky ?? ['#5aa8e0', '#a9d5f2', '#e6f3fb']; sky.addColorStop(0, sk[0]); sky.addColorStop(0.55, sk[1]); sky.addColorStop(1, sk[2]); }
   c.fillStyle = sky; c.fillRect(-W, y0, 3 * W, y1 - y0);
   if (night) {
     for (let i = 0; i < 140; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.5})`; const r = hash(`r${i}`) > 0.9 ? 1.1 : 0.7; c.fillRect(-20 + hash(`st${i}`) * (W + 40), -40 + hash(`sy${i}`) * TOTAL * 0.8, r, r); }
@@ -237,7 +313,7 @@ function drawBackdrop(c: C, night: boolean) {
 }
 function drawStatic(c: C, night: boolean, room: number) {
   // one building: the walls of a lower floor go all the way up to the floor slab of the room above (glass facade)
-  const wh = room === 0 ? WALL + 26 : RH - 8;
+  const wh = SHAPE === 'zigzag' ? WALL + 26 : room === 0 && SHAPE !== 'rooftop' ? WALL + 26 : RH - 8;
   if (room === 2) {    // the street level: lawn, pavement and a road around the tower
     poly(c, [iso(-9, -9, -8), iso(NX + 9, -9, -8), iso(NX + 9, NY + 9, -8), iso(-9, NY + 9, -8)], night ? '#16231b' : '#86b96f');
     poly(c, [iso(-1.4, -1.4, -8), iso(NX + 1.4, -1.4, -8), iso(NX + 1.4, NY + 1.4, -8), iso(-1.4, NY + 1.4, -8)], night ? '#3a3b40' : '#d6d3cc');
@@ -253,23 +329,23 @@ function drawStatic(c: C, night: boolean, room: number) {
       if (night) { const g = c.createRadialGradient(b0 + 5, b1 + 20, 2, b0 + 5, b1 + 20, 26); g.addColorStop(0, 'rgba(255,225,150,.3)'); g.addColorStop(1, 'rgba(255,225,150,0)'); c.fillStyle = g; c.fillRect(b0 - 25, b1 - 8, 60, 60); }
     }
   }
-  if (room === 0) {    // roof: parapet, AC units, antenna and the black / yellow logo sign
+  if (room === 0 && SHAPE !== 'rooftop') {    // roof: parapet, AC units, antenna and the black / yellow logo sign
     for (const [x, y] of [[1.4, -1.25], [2.6, -1.25], [8.8, -1.25]]) { box(c, x, y, 0.9, 0.8, wh + 8, 9, '#d9dade', '#b5b7bd', '#c7c9ce'); ell(c, x + 0.45, y + 0.4, wh + 17.2, 0.25, '#8b8f99'); }
     const [a0, a1] = iso(-0.15, -0.15, wh + 8), [b0, b1] = iso(-0.15, -0.15, wh + 48); c.strokeStyle = '#3a3b42'; c.lineWidth = 1; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
     c.fillStyle = night ? '#ff4d4f' : '#c0392b'; c.beginPath(); c.arc(b0, b1, 1.5, 0, 7); c.fill();
     box(c, 5.6, -0.5, 1.6, 0.22, wh + 8, 22, '#141518', '#1e1f23', '#2a2b30');
     const [lx, ly] = iso(6.0, -0.28, wh + 13); c.fillStyle = '#f2c230'; c.beginPath(); c.ellipse(lx, ly + 0.5, 3.2, 3.2, 0, 0, 7); c.fill();
   }
-  box(c, 0, 0, NX, NY, -8, 8, night ? '#b9b6b0' : '#dcd9d3', '#3a3b41', '#4a4b52', false);
+  box(c, 0, 0, NX, NY, -8, 8, night ? THEME.floorN : THEME.floor, '#3a3b41', '#4a4b52', false);
   const [fcx, fcy] = iso(4, 5);
   const fg = c.createRadialGradient(fcx, fcy, 10, fcx, fcy, 240);
   fg.addColorStop(0, night ? 'rgba(255,240,210,.06)' : 'rgba(255,255,255,.25)'); fg.addColorStop(1, 'rgba(0,0,0,.08)');
   poly(c, [iso(0, 0), iso(NX, 0), iso(NX, NY), iso(0, NY)], fg);
-  c.strokeStyle = night ? 'rgba(0,0,0,.07)' : 'rgba(120,110,95,.13)'; c.lineWidth = 0.45;
+  c.strokeStyle = night ? 'rgba(0,0,0,.08)' : THEME.line; c.lineWidth = 0.45;
   for (let k = 1; k < NX; k++) { const a = iso(k, 0), b = iso(k, NY); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   for (let k = 1; k < NY; k++) { const a = iso(0, k), b = iso(NX, k); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   // plank joints (staggered) so the floor reads as real flooring, plus a soft sheen
-  c.strokeStyle = night ? 'rgba(0,0,0,.05)' : 'rgba(110,100,85,.1)'; c.lineWidth = 0.35;
+  c.strokeStyle = night ? 'rgba(0,0,0,.06)' : THEME.line; c.lineWidth = 0.35;
   for (let yy = 0; yy < NY; yy += 0.5) for (let xx = (yy * 2) % 2 ? 0.9 : 0.2; xx < NX; xx += 1.8) { const a = iso(xx, yy), b = iso(xx, yy + 0.5); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   for (let yy = 0.5; yy < NY; yy += 0.5) { const a = iso(0, yy), b = iso(NX, yy); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   const [gx0, gy0] = iso(0, NY * 0.5), [gx1, gy1] = iso(NX, NY * 0.5);
@@ -296,13 +372,14 @@ function drawStatic(c: C, night: boolean, room: number) {
     ell(c, 11.9, 5.3, 0.4, 0.07, '#141518');
   }
   if (room === 1) poly(c, [iso(6.0, 3.8, 0.3), iso(9.0, 3.8, 0.3), iso(9.0, 6.4, 0.3), iso(6.0, 6.4, 0.3)], '#3a3b42');
-  const cap = '#26272c';
-  box(c, -0.28, -0.28, NX + 0.28, 0.28, -8, wh + 8, cap, night ? '#c9c7c2' : '#f5f4f1', cap, false);
-  box(c, -0.28, -0.28, 0.28, NY + 0.28, -8, wh + 8, cap, cap, night ? '#bdbbb6' : '#eceae6', false);
+  const cap = THEME.cap;
+  box(c, -0.28, -0.28, NX + 0.28, 0.28, -8, wh + 8, cap, night ? THEME.backN : THEME.back, cap, false);
+  box(c, -0.28, -0.28, 0.28, NY + 0.28, -8, wh + 8, cap, cap, night ? THEME.leftN : THEME.left, false);
+  THEME.extra?.(c, night, room, wh);
   const [w0] = iso(0, 0), [w1] = iso(2, 0);
   const wg = c.createLinearGradient(w0, 0, w1, 0); wg.addColorStop(0, 'rgba(0,0,0,.1)'); wg.addColorStop(1, 'rgba(0,0,0,0)');
   poly(c, wallB(0, 2, 0, wh), wg);
-  poly(c, wallB(0, NX, 0, 4), '#2b2c31'); poly(c, wallL(0, NY, 0, 4), '#2b2c31');
+  poly(c, wallB(0, NX, 0, 4), THEME.base); poly(c, wallL(0, NY, 0, 4), THEME.base);
   for (const [y0, y1] of [[0.55, 3.05], [3.15, 5.65], [5.75, 8.25], [8.35, 10.75]]) {
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, wh - 4), '#1c1d21');
     const sky = c.createLinearGradient(0, iso(0, y0, wh - 8)[1], 0, iso(0, y0, 14)[1]);
@@ -1023,7 +1100,9 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
 const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
 
 /* ---------- component ---------- */
-export default function Office({ data, now, screen = [], full = false, onSwipe }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void }) {
+export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'modern', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
+  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape);
+  const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
   const wrap = useRef<HTMLDivElement>(null);
@@ -1112,7 +1191,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.16) : Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.16) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       lhRef.current = LH; homeRef.current = { z, tx: (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
       if (atHome) Object.assign(view.current, homeRef.current);
@@ -1225,7 +1304,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       // picture is only moved / scaled (cheap); once the view rests (or runs out of margin) it is painted sharp again.
       const viewKey = `${V.z.toFixed(4)}:${V.tx.toFixed(2)}:${V.ty.toFixed(2)}`;
       if (viewKey !== lastView) { lastView = viewKey; viewMoved = tm; }
-      const base = `${cv.width}x${cv.height}:${nightNow}`;
+      const base = `${cv.width}x${cv.height}:${nightNow}:${themeRef.current}:${SHAPE}`;
       const sNow = bgV ? V.z / bgV.z : 1;
       const offX = bgV ? k * V.tx - sNow * (bgM + k * bgV.tx) : 0, offY = bgV ? k * V.ty - sNow * (bgM + k * bgV.ty) : 0;
       const outside = !bgV || offX > 0 || offY > 0 || offX + bgW * sNow < cv.width || offY + bgH * sNow < cv.height;
@@ -1235,13 +1314,15 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         if (!bg || bg.width !== bgW || bg.height !== bgH) { bg = document.createElement('canvas'); bg.width = bgW; bg.height = bgH; }
         const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; b.fillRect(0, 0, bgW, bgH);
         b.setTransform(k * V.z, 0, 0, k * V.z, bgM + k * V.tx, bgM + k * V.ty); drawBackdrop(b, nightNow);
-        for (let r = ROOMS - 1; r >= 0; r--) { b.save(); b.translate(0, r * RH + TOPM); drawStatic(b, nightNow, r); b.restore(); }
+        if (SHAPE === 'zigzag') drawLiftTube(b, nightNow);
+        for (let r = ROOMS - 1; r >= 0; r--) { b.save(); b.translate(roomX(r), r * RH + TOPM); drawStatic(b, nightNow, r); b.restore(); }
+        if (SHAPE === 'rooftop') { b.save(); b.translate(0, TOPM - RH); drawRoofDeck(b, nightNow); b.restore(); }
         bgKey = base; bgV = { z: V.z, tx: V.tx, ty: V.ty };
       }
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; c.fillRect(0, 0, cv.width, cv.height);
       if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
       for (let r = ROOMS - 1; r >= 0; r--) {
-        c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
+        c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + (r * RH + TOPM) * V.z));
         if (r === 2) drawCars(c, t, nightNow);
         if (r <= 1) drawWallText(c, scrRef.current, r, t);
         if (r === 1) drawPositions(c, posRef.current, t);
@@ -1271,7 +1352,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
         c.globalCompositeOperation = 'lighter';
         const glow = (x: number, y: number, z: number, r: number, col: string) => { const [gx, gy] = iso(x, y, z); const g = c.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(gx - r, gy - r, 2 * r, 2 * r); };
         for (let r = 0; r < ROOMS; r++) {
-          c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
+          c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + (r * RH + TOPM) * V.z));
           glow(6, 5, 70, 120, 'rgba(255,220,150,.07)');
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
           if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
@@ -1282,7 +1363,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       }
       /* ---- name tags (screen space, never overlapping) ---- */
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawTags(c, agents, S, wall, (x, y, r) => [(x * V.z + V.tx) * css, ((y + r * RH + TOPM) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
+      drawTags(c, agents, S, wall, (x, y, r) => [((x + roomX(r)) * V.z + V.tx) * css, ((y + r * RH + TOPM) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
     };
     const io = new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was) { last = performance.now(); raf = requestAnimationFrame(frame); } }, { threshold: 0 });
     io.observe(box0);
