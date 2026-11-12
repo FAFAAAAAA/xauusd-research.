@@ -745,7 +745,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (shaking) { ex = sxh + side * 1.5; ey = syh - 4.5 + Math.sin(t * 30) * 0.6; }
     if (!walking && prop === 'phone' && side > 0 && !shaking) { ex = 3.6; ey = hy + 1.5; }
     if (!walking && prop === 'hp' && !bean && !shaking) { ex = 3.2 - side * 0.4; ey = syh + 3.2; }
-    if (drama) { ex = 5.2 - side * 0.8; ey = syh + 2.6; if (mood === 'MAKAN POPCORN' && side > 0) { const k = (Math.sin(t * 5) + 1) / 2; ex = 4.2 + k * 1.5; ey = hy + 3.5 + (1 - k) * 6; } }
+    if (drama) { ex = 5.6 - side * 1.3; ey = hip - 2.2; if (mood === 'MAKAN POPCORN' && side > 0) { const k = (Math.sin(t * 5) + 1) / 2; ex = 4.2 + k * 1.5; ey = hy + 3.5 + (1 - k) * 6; } }
     if (eatSit && side > 0) { const k = (Math.sin(t * 4) + 1) / 2; ex = 3.6 + k * 1.2; ey = hy + 3.5 + (1 - k) * 6; }
     if (!walking && (prop === 'book' || prop === 'paper') && !shaking) { ex = 3.8 - side * 0.3; ey = syh + 3.5; }
     if (!walking && prop === 'can' && a.act.id === 'plant' && side > 0) { ex = 7; ey = syh + 3; }
@@ -761,13 +761,17 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       if (prop === 'trash' && pose === 'stand') { c.fillStyle = '#1e1f23'; c.beginPath(); c.ellipse(ex + 0.5, ey + 2.5, 2.2, 2.8, 0, 0, 7); c.fill(); }
       if (prop === 'club' && !walking) { const w = Math.sin(t * 2.2); c.strokeStyle = '#d8d8d8'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + 1 + w * 4, -1.2); c.stroke(); c.fillStyle = '#9aa0a8'; c.fillRect(ex + w * 4, -2, 3, 1.4); if (w > 0.85) { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex + 9 + (t * 20) % 12, -1.2, 0.9, 0, 7); c.fill(); } }
       if (prop === 'phone' && !walking) { c.fillStyle = '#1e1f23'; c.fillRect(ex + 0.3, ey - 2.5, 1.4, 3.6); }
-      if (drama) {        // tablet with a drama playing + a bowl of popcorn
+      if (drama) {        // laptop on her lap with a Korean drama playing
         const sc = ['#f3a6c8', '#a6d8f3', '#f7d89a', '#c5b3f0'][Math.floor(t * 0.7) % 4];
-        c.fillStyle = '#1e1f23'; c.fillRect(3.4, syh - 2.2, 6.2, 4.4); c.fillStyle = sc; c.fillRect(3.9, syh - 1.8, 5.2, 3.6);
-        c.fillStyle = 'rgba(255,255,255,.6)'; c.beginPath(); c.arc(5.4, syh - 0.6, 0.7, 0, 7); c.arc(7.4, syh - 0.4, 0.7, 0, 7); c.fill();
+        c.fillStyle = '#b9bcc4'; c.beginPath(); c.moveTo(4.2, hip - 2.6); c.lineTo(10.2, hip - 2.6); c.lineTo(9.4, hip - 0.9); c.lineTo(3.6, hip - 0.9); c.closePath(); c.fill();
+        c.fillStyle = '#9a9ea8'; c.fillRect(3.6, hip - 0.9, 5.8, 0.6);
+        c.fillStyle = '#2a2b30'; c.beginPath(); c.moveTo(4.6, hip - 2.6); c.lineTo(10.4, hip - 2.6); c.lineTo(11.4, hip - 9.8); c.lineTo(5.6, hip - 9.8); c.closePath(); c.fill();
+        c.fillStyle = sc; c.beginPath(); c.moveTo(5.2, hip - 3.1); c.lineTo(9.9, hip - 3.1); c.lineTo(10.75, hip - 9.2); c.lineTo(6.05, hip - 9.2); c.closePath(); c.fill();
+        c.fillStyle = 'rgba(255,255,255,.65)'; c.beginPath(); c.arc(7.2, hip - 6.6, 0.8, 0, 7); c.arc(9.0, hip - 6.3, 0.8, 0, 7); c.fill();
+        c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(6.6, hip - 4.3, 3.0, 0.5);
       }
       if (drama || eatSit) {
-        const bx = 4.6, by = hip - 1.5;
+        const bx = drama ? 1.2 : 4.6, by = hip - 1.5;
         c.fillStyle = '#e5242b'; c.beginPath(); c.moveTo(bx - 3, by - 2.2); c.lineTo(bx + 3, by - 2.2); c.lineTo(bx + 2.2, by + 1.6); c.lineTo(bx - 2.2, by + 1.6); c.closePath(); c.fill();
         c.fillStyle = '#ffffff'; c.fillRect(bx - 1.2, by - 2.2, 0.9, 3.8); c.fillRect(bx + 0.6, by - 2.2, 0.9, 3.8);
         c.fillStyle = '#fff6d8'; for (const [dx, dy] of [[-2, -2.6], [-0.8, -3.2], [0.6, -2.8], [1.8, -3.1], [0, -3.8], [2.4, -2.4], [-1.6, -3.6]]) { c.beginPath(); c.arc(bx + dx, by + dy, 0.75, 0, 7); c.fill(); }
