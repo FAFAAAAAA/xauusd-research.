@@ -1311,12 +1311,12 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
     c.fillStyle = live ? '#ff4d4f' : '#7a2a2a'; c.beginPath(); c.arc(4, 3.9, 1.4, 0, 7); c.fill();
     c.textBaseline = 'middle';
     c.font = '800 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('LIVE', 7, 4);
-    const rows = lines.slice(0, 4), rh = (th - 8) / Math.max(1, rows.length);
+    const rows = lines.slice(0, 5), rh = (th - 8) / Math.max(1, rows.length);
     rows.forEach((l, i) => {
       const y = 8 + rh * (i + 0.5);
       c.font = '600 5.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(l.k, 2.5, y);
       const kw = c.measureText(l.k).width;
-      let fs = 7.6; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
+      let fs = rows.length > 4 ? 6.6 : 7.6; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
       while (fs > 4.5 && c.measureText(l.v).width > tw - 7 - kw) { fs -= 0.3; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; }
       c.fillStyle = l.color ?? '#ffffff'; c.textAlign = 'right'; c.fillText(l.v, tw - 2.5, y); c.textAlign = 'left';
       if (i < rows.length - 1) { c.fillStyle = 'rgba(255,255,255,.07)'; c.fillRect(2, y + rh / 2, tw - 4, 0.4); }

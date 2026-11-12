@@ -58,14 +58,18 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   const floatM = j.mt5?.upnl ?? 0;
   const data: OfficeData = { ...j, binance: j.binance ? { ...j.binance, pos: posB } : j.binance };
   const today = new Date(now); today.setHours(0, 0, 0, 0);
-  const pnlToday = j.trades.filter((t) => t.result !== 'open' && t.closedAt && t.closedAt >= today.getTime()).reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+  const closedToday = j.trades.filter((t) => t.result !== 'open' && t.closedAt && t.closedAt >= today.getTime());
+  const isMt5 = (t: { strategy: string }) => t.strategy === 'v2' || t.strategy === 'nas';
+  const todayB = closedToday.filter((t) => !isMt5(t)).reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+  const todayM = closedToday.filter(isMt5).reduce((a, t) => a + Number(t.pnl ?? 0), 0);
   const fl = floatB + floatM;
   const tone = (n: number) => (n > 0 ? '#2ee59d' : n < 0 ? '#ff6b6b' : undefined);
   const screen: ScreenLine[] = [
     { k: 'BINANCE', v: j.binance ? usd(j.binance.wallet + floatB) : '—' },
-    { k: 'FLOATING', v: open.length ? `${open.length}× ${usd(fl, true)}` : 'tidak ada', color: open.length ? tone(fl) : undefined },
-    { k: 'HARI INI', v: usd(pnlToday, true), color: tone(pnlToday) },
+    { k: '· HARI INI', v: usd(todayB, true), color: tone(todayB) },
     { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet + floatM) : '—' },
+    { k: '· HARI INI', v: usd(todayM, true), color: tone(todayM) },
+    { k: 'FLOATING', v: open.length ? `${open.length}× ${usd(fl, true)}` : 'tidak ada', color: open.length ? tone(fl) : undefined },
   ];
   return <div className={cls}><Office data={data} now={now} screen={screen} full={full} onSwipe={onSwipe} /></div>;
 }
