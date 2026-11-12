@@ -194,7 +194,9 @@ function cyl(c: C, cx: number, cy: number, z: number, r: number, h: number, top:
   c.beginPath(); c.ellipse(sx, sy - h, rx, ry, 0, 0, Math.PI * 2); c.fillStyle = top; c.fill();
 }
 function shadow(c: C, x: number, y: number, w: number, d: number, a = 0.14) {
-  poly(c, [iso(x - 0.05, y - 0.05), iso(x + w + 0.16, y - 0.05), iso(x + w + 0.16, y + d + 0.16), iso(x - 0.05, y + d + 0.16)], `rgba(0,0,0,${a})`);
+  // three layers that grow and fade = a soft contact shadow falling towards the room
+  for (const [g, k] of [[0.34, 0.3], [0.2, 0.36], [0.06, 0.5]] as const)
+    poly(c, [iso(x - g * 0.3, y - g * 0.3), iso(x + w + g, y - g * 0.3), iso(x + w + g, y + d + g), iso(x - g * 0.3, y + d + g)], `rgba(0,0,0,${a * k})`);
 }
 const hash = (str: string) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 10_000) / 10_000; };
 const wallL = (y0: number, y1: number, z0: number, z1: number): Array<[number, number]> => [iso(0, y0, z1), iso(0, y1, z1), iso(0, y1, z0), iso(0, y0, z0)];
@@ -243,7 +245,13 @@ function drawStatic(c: C, night: boolean, room: number) {
     poly(c, [iso(-9, NY + 3, -8), iso(NX + 9, NY + 3, -8), iso(NX + 9, NY + 5.5, -8), iso(-9, NY + 5.5, -8)], night ? '#1c1d22' : '#4a4c53');
     for (let k = -8; k < NY + 8; k += 1.6) poly(c, [iso(NX + 4.2, k, -7.9), iso(NX + 4.3, k, -7.9), iso(NX + 4.3, k + 0.8, -7.9), iso(NX + 4.2, k + 0.8, -7.9)], '#f2c230');
     for (let k = -8; k < NX + 8; k += 1.6) poly(c, [iso(k, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.3, -7.9), iso(k, NY + 4.3, -7.9)], '#f2c230');
-    for (const [tx, ty] of [[-2.6, 2], [-2.6, 6], [-2.6, 10], [3, -2.6], [8, -2.6], [NX + 2.2, 13.5], [-4, NY + 2.2]]) { c.save(); c.translate(0, 8); plant(c, tx, ty, 2.1); c.restore(); }
+    for (const [tx, ty, sc] of [[-2.6, 2, 1], [-2.6, 6, 1.15], [-2.6, 10, 0.95], [3, -2.6, 1], [8, -2.6, 1.1], [NX + 2.0, 13.3, 1.05], [-4, NY + 2.0, 1.1], [NX + 2.0, 1.5, 0.9], [NX + 2.0, 6.5, 1]]) tree(c, tx, ty, sc, night);
+    for (const [lx, ly] of [[NX + 2.7, 3.5], [NX + 2.7, 10], [4, NY + 2.7], [10, NY + 2.7]]) {      // street lamps
+      const [a0, a1] = iso(lx, ly, -8), [b0, b1] = iso(lx, ly, 34);
+      c.strokeStyle = '#3a3b42'; c.lineWidth = 1; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.lineTo(b0 + 5, b1 + 2); c.stroke();
+      c.fillStyle = night ? '#ffe9a8' : '#d9dade'; c.beginPath(); c.ellipse(b0 + 5, b1 + 3, 2.4, 1.2, 0, 0, 7); c.fill();
+      if (night) { const g = c.createRadialGradient(b0 + 5, b1 + 20, 2, b0 + 5, b1 + 20, 26); g.addColorStop(0, 'rgba(255,225,150,.3)'); g.addColorStop(1, 'rgba(255,225,150,0)'); c.fillStyle = g; c.fillRect(b0 - 25, b1 - 8, 60, 60); }
+    }
   }
   if (room === 0) {    // roof: parapet, AC units, antenna and the black / yellow logo sign
     for (const [x, y] of [[1.4, -1.25], [2.6, -1.25], [8.8, -1.25]]) { box(c, x, y, 0.9, 0.8, wh + 8, 9, '#d9dade', '#b5b7bd', '#c7c9ce'); ell(c, x + 0.45, y + 0.4, wh + 17.2, 0.25, '#8b8f99'); }
@@ -260,7 +268,17 @@ function drawStatic(c: C, night: boolean, room: number) {
   c.strokeStyle = night ? 'rgba(0,0,0,.07)' : 'rgba(120,110,95,.13)'; c.lineWidth = 0.45;
   for (let k = 1; k < NX; k++) { const a = iso(k, 0), b = iso(k, NY); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   for (let k = 1; k < NY; k++) { const a = iso(0, k), b = iso(NX, k); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
-  if (!night) for (const [y0, y1] of [[0.6, 3.1], [3.2, 5.7], [5.8, 8.3], [8.4, 10.6]]) poly(c, [iso(0, y0), iso(0, y1), iso(3.4, Math.min(NY, y1 + 1.2)), iso(3.4, Math.min(NY, y0 + 1.2))], 'rgba(255,250,235,.24)');
+  // plank joints (staggered) so the floor reads as real flooring, plus a soft sheen
+  c.strokeStyle = night ? 'rgba(0,0,0,.05)' : 'rgba(110,100,85,.1)'; c.lineWidth = 0.35;
+  for (let yy = 0; yy < NY; yy += 0.5) for (let xx = (yy * 2) % 2 ? 0.9 : 0.2; xx < NX; xx += 1.8) { const a = iso(xx, yy), b = iso(xx, yy + 0.5); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  for (let yy = 0.5; yy < NY; yy += 0.5) { const a = iso(0, yy), b = iso(NX, yy); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  const [gx0, gy0] = iso(0, NY * 0.5), [gx1, gy1] = iso(NX, NY * 0.5);
+  const gl = c.createLinearGradient(gx0, gy0, gx1, gy1); gl.addColorStop(0, 'rgba(255,255,255,.16)'); gl.addColorStop(0.35, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(0,0,0,.05)');
+  poly(c, [iso(0, 0), iso(NX, 0), iso(NX, NY), iso(0, NY)], gl);
+  if (!night) for (const [y0, y1] of [[0.6, 3.1], [3.2, 5.7], [5.8, 8.3], [8.4, 10.6]]) {
+    const lg = c.createLinearGradient(iso(0, y0)[0], iso(0, y0)[1], iso(4.2, y0 + 1.4)[0], iso(4.2, y0 + 1.4)[1]); lg.addColorStop(0, 'rgba(255,250,235,.36)'); lg.addColorStop(1, 'rgba(255,250,235,0)');
+    poly(c, [iso(0, y0), iso(0, y1), iso(4.2, Math.min(NY, y1 + 1.4)), iso(4.2, Math.min(NY, y0 + 1.4))], lg);
+  }
   poly(c, [iso(0, 0), iso(NX, 0), iso(NX, 0.4), iso(0.4, 0.4)], 'rgba(0,0,0,.07)');
   poly(c, [iso(0, 0), iso(0.4, 0.4), iso(0.4, NY), iso(0, NY)], 'rgba(0,0,0,.07)');
   if (room === 2) {
@@ -304,6 +322,8 @@ function drawStatic(c: C, night: boolean, room: number) {
     poly(c, [iso(0, y0 + 0.2, wh - 7), iso(0, y0 + 0.55, wh - 7), iso(0, y0 + 1.3, 13), iso(0, y0 + 0.95, 13)], 'rgba(255,255,255,.08)');
     c.restore();
     for (let k = 1; k < 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); poly(c, wallL(yy - 0.03, yy + 0.03, 13, wh - 7), '#1c1d21'); }
+    for (let zz = 78; zz < wh - 20; zz += 64) poly(c, wallL(y0, y1, zz, zz + 1.6), '#1c1d21');      // transoms of the curtain wall
+    poly(c, wallL(y0, y1, 13, 15), 'rgba(255,255,255,.18)');
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), '#2f3036');
   }
   if (room > 0) { poly(c, wallL(0, NY, wh - 6, wh), '#2b2c31'); poly(c, wallB(0, NX, wh - 6, wh), '#2b2c31'); }
@@ -316,6 +336,13 @@ function drawStatic(c: C, night: boolean, room: number) {
       c.fillStyle = '#ffe9a8'; c.beginPath(); c.ellipse(b0, b1 + 7, 7, 2, 0, 0, 7); c.fill();
     }
   }
+  // everyday wall hardware: air conditioner, exit sign, camera, fire extinguisher, sockets
+  poly(c, wallB(8.6, 10.2, 86, 95), '#f3f3f1'); poly(c, wallB(8.6, 10.2, 84, 86), '#d0cfcb'); poly(c, wallB(8.7, 10.1, 87, 88), '#c2c1bd');
+  poly(c, wallB(10.05, 10.12, 90, 91.2), '#2ee59d');
+  poly(c, wallB(11.35, 11.95, 62, 68), '#1f9d57'); poly(c, wallB(11.45, 11.6, 63.5, 66.5), '#ffffff'); poly(c, wallB(11.7, 11.85, 64.4, 65.6), '#ffffff');
+  { const [cx, cy] = iso(0.5, 0, wh - 14); c.fillStyle = '#26272c'; c.beginPath(); c.arc(cx, cy, 2.6, 0, Math.PI); c.fill(); c.fillStyle = night ? '#ff4d4f' : '#7a2a2a'; c.fillRect(cx - 0.5, cy + 0.6, 1, 1); }
+  poly(c, wallB(10.85, 11.0, 6, 18), '#d7262c'); poly(c, wallB(10.88, 10.97, 18, 20.5), '#2a2b30'); poly(c, wallB(10.82, 11.03, 22, 30), '#f3f3f1');
+  for (const x of [2.4, 6.2, 9.4]) { poly(c, wallB(x, x + 0.16, 9, 12), '#e9e8e4'); poly(c, wallB(x + 0.05, x + 0.11, 10, 11), '#b9b8b4'); }
   // lift on every floor (the way between the rooms)
   poly(c, wallB(11.1, 12.2, 0, 54), '#1e1f23');
   poly(c, wallB(11.2, 11.64, 0, 50), night ? '#8d939c' : '#b9bfc8'); poly(c, wallB(11.66, 12.1, 0, 50), night ? '#868c95' : '#aeb4bd');
@@ -373,6 +400,41 @@ function plant(c: C, x: number, y: number, s = 1, t = 0) {
     [0, -17, 4, 2.4, '#4fb15f'], [-6, -14, 3.6, 2, '#4fb15f'], [6, -18, 3.4, 2, '#62c06e'], [-1, -9, 4, 2.2, '#2a6d37'],
   ];
   for (const [dx, dy, rx, ry, col] of leaves) { c.save(); c.translate(sx + dx * s, sy + dy * s); c.rotate(dx * 0.08 + sway * (-dy / 6)); c.beginPath(); c.ellipse(0, 0, rx * s, ry * s, 0, 0, 7); c.fillStyle = col; c.fill(); c.restore(); }
+}
+/** a street tree: trunk, layered round canopy, soft ground shadow */
+function tree(c: C, x: number, y: number, sc: number, night: boolean) {
+  const [sx, sy] = iso(x, y, -8);
+  c.fillStyle = 'rgba(0,0,0,.18)'; c.beginPath(); c.ellipse(sx + 3 * sc, sy + 1, 13 * sc, 5.5 * sc, 0, 0, 7); c.fill();
+  c.fillStyle = night ? '#3a2c22' : '#6b4a33'; c.fillRect(sx - 1.6 * sc, sy - 16 * sc, 3.2 * sc, 16 * sc);
+  const cols = night ? ['#16382a', '#1c4633', '#22553d'] : ['#2f7a3d', '#3d9a4f', '#58b765'];
+  const blobs: Array<[number, number, number, number]> = [[0, -24, 11, 0], [-7, -19, 8, 0], [7, -20, 8, 0], [-3, -30, 8, 1], [5, -29, 7, 1], [0, -35, 6.5, 2], [-6, -26, 5, 2], [4, -23, 5, 1]];
+  for (const [dx, dy, r, k] of blobs) { c.fillStyle = cols[k]; c.beginPath(); c.arc(sx + dx * sc, sy + dy * sc, r * sc, 0, 7); c.fill(); }
+  c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.arc(sx - 3 * sc, sy - 33 * sc, 4 * sc, 0, 7); c.fill();
+}
+/** traffic on the two streets in front of the tower */
+const CARS = [
+  { road: 'x', lane: NY + 3.55, speed: 2.6, off: 0, col: '#e5484d' }, { road: 'x', lane: NY + 3.55, speed: 2.6, off: 14, col: '#f4f4f2' },
+  { road: 'x', lane: NY + 4.85, speed: -2.1, off: 5, col: '#f2c230' }, { road: 'y', lane: NX + 3.55, speed: -2.3, off: 3, col: '#4c7dff' },
+  { road: 'y', lane: NX + 4.85, speed: 2.8, off: 11, col: '#2a2b30' }, { road: 'y', lane: NX + 4.85, speed: 2.8, off: 22, col: '#2fb67c' },
+] as const;
+function drawCars(c: C, t: number, night: boolean) {
+  const span = 34;                                       // tiles before a car loops around
+  const list = CARS.map((car) => { const along = (((t * car.speed + car.off) % span) + span) % span - 10; return { car, along }; })
+    .sort((a, b) => (a.along + a.car.lane) - (b.along + b.car.lane));
+  for (const { car, along } of list) {
+    const isX = car.road === 'x', L = 1.5, Wd = 0.72;
+    const x = isX ? along : car.lane, y = isX ? car.lane : along, w = isX ? L : Wd, d = isX ? Wd : L;
+    poly(c, [iso(x - 0.1, y - 0.1, -8), iso(x + w + 0.25, y - 0.1, -8), iso(x + w + 0.25, y + d + 0.25, -8), iso(x - 0.1, y + d + 0.25, -8)], 'rgba(0,0,0,.22)');
+    for (const [wx, wy] of isX ? [[x + 0.25, y + d], [x + w - 0.25, y + d]] : [[x + w, y + 0.25], [x + w, y + d - 0.25]]) { const [a0, a1] = iso(wx, wy, -6.5); c.fillStyle = '#141518'; c.beginPath(); c.ellipse(a0, a1, 1.9, 2.3, 0, 0, 7); c.fill(); }
+    box(c, x, y, w, d, -6, 5.5, car.col);
+    const cx = isX ? x + 0.3 : x + 0.06, cy = isX ? y + 0.06 : y + 0.3, cw = isX ? w - 0.62 : w - 0.12, cd = isX ? d - 0.12 : d - 0.62;
+    box(c, cx, cy, cw, cd, -0.5, 4.5, '#9cc6e6', '#5d86a8', '#7aa5c7');
+    box(c, cx, cy, cw, cd, 4, 0.8, sh(car.col, 0.92));
+    const fwd = car.speed > 0;
+    const front = isX ? iso(fwd ? x + w : x, y + d / 2, -3) : iso(x + w / 2, fwd ? y + d : y, -3);
+    c.fillStyle = night ? '#fff3c4' : '#f4f4f2'; c.beginPath(); c.arc(front[0], front[1], 1.1, 0, 7); c.fill();
+    if (night) { const g = c.createRadialGradient(front[0], front[1], 0, front[0], front[1], 14); g.addColorStop(0, 'rgba(255,240,180,.45)'); g.addColorStop(1, 'rgba(255,240,180,0)'); c.fillStyle = g; c.fillRect(front[0] - 14, front[1] - 14, 28, 28); }
+  }
 }
 function traderDesk(y0: number, owner: string): Item {
   const x0 = 0.55, w = 0.95, d = 1.8;
@@ -674,10 +736,23 @@ function findPath(free: boolean[][], fx: number, fy: number, tx: number, ty: num
 
 /* ---------- people ---------- */
 interface Agent {
-  room: number; pending: Spot | null; hiddenUntil: number;
+  room: number; pending: Spot | null; hiddenUntil: number; fx?: number; sit?: number; lt?: number; fidget?: number;
   x: number; y: number; vx: number; vy: number; face: Face; path: Array<[number, number]>; act: Spot; until: number; dist: number; speed: number;
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
   scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
+}
+/** two-bone limb (thigh + shin, upper arm + forearm): finds the joint so both bones keep their length */
+function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, l2: number, bend: number, w: number, col: string, col2?: string) {
+  let dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
+  const max = l1 + l2 - 0.02;
+  if (d > max) { dx *= max / d; dy *= max / d; x1 = x0 + dx; y1 = y0 + dy; d = max; }
+  if (d < 0.01) d = 0.01;
+  const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  const jx = x0 + (dx * a) / d - (dy * h * bend) / d, jy = y0 + (dy * a) / d + (dx * h * bend) / d;
+  c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.strokeStyle = col; c.beginPath(); c.moveTo(x0, y0); c.lineTo(jx, jy); c.stroke();
+  c.strokeStyle = col2 ?? col; c.beginPath(); c.moveTo(jx, jy); c.lineTo(x1, y1); c.stroke();
+  return [x1, y1] as const;
 }
 const faceTo = (dx: number, dy: number): Face => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'px' : 'nx') : (dy > 0 ? 'py' : 'ny'));
 function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: number | null) {
@@ -691,7 +766,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const front = face === 'px' || face === 'py', flip = face === 'py' || face === 'nx';
   const spd = Math.hypot(a.vx, a.vy), amp = Math.min(1, spd / 1.3);
   const running = !walking && a.act.pose === 'run';
-  const anim = walking || running, ph = running ? t * 13 : a.dist * 5.2, am = running ? 1.3 : amp;
+  const anim = walking || running, ph = running ? t * 13 : a.dist * 8, am = running ? 1.3 : amp;
   const swing = anim ? Math.sin(ph) * am : 0, bob = anim ? Math.abs(Math.cos(ph)) * 1.2 * am : 0;
   const breathe = Math.sin(t * 2 + hash(p.id) * 6) * 0.35;
   const typing = !walking && pose === 'sit' && a.act.id.startsWith('seat-') && !st.sleep && !shaking;
@@ -700,10 +775,24 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const squat = pose === 'squat' ? (1 + Math.sin(t * 3.2)) * 1.6 : 0;
   const prop = !walking ? a.act.prop : a.carry;
   const drama = p.id === 'vet' && !walking && prop === 'tablet', mood = vetMood(t), eatSit = !walking && prop === 'food' && (a.act.pose === 'sit');
-  c.save(); c.translate(sx + (shaking ? Math.sin(t * 60) * 0.5 : 0) + (drama && mood === 'KETAWA' ? Math.sin(t * 30) * 0.35 : 0), sy); c.scale(PS, PS); if (flip) c.scale(-1, 1);
-  if (!sitting && !bean) { c.fillStyle = 'rgba(0,0,0,.2)'; c.beginPath(); c.ellipse(0, 0, 5.5 - jump * 0.3, 2.4 - jump * 0.15, 0, 0, 7); c.fill(); }
+  // smoothing: turning (the body squashes through the turn instead of flipping), sitting down / standing up
+  const dtp = Math.min(0.05, Math.max(0, t - (a.lt ?? t))); a.lt = t;
+  a.fx = (a.fx ?? (flip ? -1 : 1)) + ((flip ? -1 : 1) - (a.fx ?? (flip ? -1 : 1))) * Math.min(1, dtp * 13);
+  const seatedNow = pose === 'sit' || pose === 'sleep' || pose === 'nap' || pose === 'bean';
+  a.sit = (a.sit ?? (seatedNow ? 1 : 0)) + ((seatedNow ? 1 : 0) - (a.sit ?? (seatedNow ? 1 : 0))) * Math.min(1, dtp * 6);
+  const fxs = Math.abs(a.fx) < 0.18 ? (a.fx < 0 ? -0.18 : 0.18) : a.fx;
+  // idle life: shifting weight, a look around every few seconds
+  const idle = !anim && pose === 'stand' && !shaking && whipT == null;
+  const sway = idle ? Math.sin(t * 0.9 + hash(p.id) * 7) * 0.45 : 0;
+  const lookT = (t * 0.22 + hash(p.id + 'l')) % 1, look2 = idle && lookT < 0.18 ? Math.sin((lookT / 0.18) * Math.PI) * 1.3 * (hash(p.id + Math.floor(t * 0.22)) > 0.5 ? 1 : -1) : 0;
+  c.save(); c.translate(sx + (shaking ? Math.sin(t * 60) * 0.5 : 0) + (drama && mood === 'KETAWA' ? Math.sin(t * 30) * 0.35 : 0), sy); c.scale(PS, PS); c.scale(fxs, 1);
+  if (!sitting && !bean) {
+    const sg = c.createRadialGradient(0, 0, 0.5, 0, 0, 7); sg.addColorStop(0, 'rgba(0,0,0,.3)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.save(); c.scale(1, 0.42); c.fillStyle = sg; c.beginPath(); c.arc(0, 0, 7 - jump * 0.4, 0, 7); c.fill(); c.restore();
+  }
   c.translate(0, -jump);
-  const hip = sitting ? -7.2 : bean ? -4 : -6.6 - bob + squat, torso = 8.4;
+  const standHip = -6.9 - bob * 0.8 + squat, seatHip = bean ? -4 : -7.2;
+  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = 8.4;
   const shoe = '#26272c', pantsD = sh(p.pants, 0.8), shirtD = sh(p.shirt, 0.82);
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (sitting || bean) {
@@ -712,17 +801,21 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); }
     c.fillStyle = shoe; for (const o of [-1.4, 1.4]) { c.beginPath(); c.ellipse(fx + 1.8 + o * 0.4, bean ? hip + 3 : -0.5, 1.9, 1.1, 0, 0, 7); c.fill(); }
   } else {
-    for (const [o, k] of [[-1.5, 1], [1.5, -1]] as const) {
-      const lift = anim ? Math.max(0, Math.sin(ph) * k) * 1.8 * am : 0, fwd = swing * k * 1.8;
-      const knee = squat ? 2.2 + squat : lift * 0.8;
-      c.strokeStyle = o < 0 ? pantsD : p.pants; c.lineWidth = 2.8;
-      c.beginPath(); c.moveTo(o, hip); c.lineTo(o + fwd * 0.6 + knee * 0.9, (hip - 1.3 - lift) / 2); c.lineTo(o + fwd, -1.3 - lift); c.stroke();
-      c.fillStyle = shoe; c.beginPath(); c.ellipse(o + fwd + (front ? 0.8 : -0.3), -0.8 - lift, 1.9, 1.15, 0, 0, 7); c.fill();
+    for (const [o, k] of [[-1.5, 0], [1.5, Math.PI]] as const) {
+      const f = ph + k, stride = 2.7 * am;
+      const footX = o * 0.9 + (anim ? -Math.cos(f) * stride : 0) + sway * 0.3;
+      const lift = anim ? Math.max(0, Math.sin(f)) * 2.4 * am : 0;
+      const footY = -1.1 - lift;
+      const hx0 = o + sway * 0.6, col = o < 0 ? pantsD : p.pants;
+      limb(c, hx0, hip, footX, footY, 3.3, 3.3, squat ? 1 : 0.9, 2.8, col);
+      // shoe: toes point down while the foot swings forward, heel strikes first
+      const pitch = anim ? (Math.sin(f) > 0 ? -0.35 * Math.cos(f) : 0) : 0;
+      c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); c.restore();
     }
   }
-  const lean = anim ? 0.6 * am : 0;
+  const lean = (anim ? 0.7 * am : 0) + sway * 0.5, twist = anim ? Math.sin(ph) * 0.5 * am : 0;
   const hy = hip - torso - 5.6 + breathe * 0.5 + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
-  const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean + (!walking && pose === 'stand' && !shaking ? Math.sin(t * 0.6 + hash(p.id) * 9) * 0.5 : 0);
+  const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
   if (p.style === 'long') { c.fillStyle = sh(p.hair, 0.9); c.beginPath(); c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); }
   const ty = hip - torso + breathe * 0.3;
@@ -752,7 +845,10 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (!walking && prop === 'club' && !shaking) { const w = Math.sin(t * 2.2); ex = 2.5 + w * 2.5 - side * 0.5; ey = syh + 6 - Math.abs(w) * 1.5; }
     if (!walking && prop === 'dumbbell' && !shaking) { ex = sxh + 1; ey = syh + 5 - Math.max(0, Math.sin(t * 3 + (side > 0 ? 0 : 3.14))) * 8; }
     if (whipT != null && side > 0) { const w = (whipT % 0.9) / 0.9; ex = sxh + 2 + Math.cos(w * 6.28) * 1.5; ey = syh - 7 + (w < 0.25 ? 6 * (w / 0.25) : 6 - 6 * ((w - 0.25) / 0.75)); }
-    c.beginPath(); c.moveTo(sxh, syh); c.lineTo((sxh + ex) / 2 + (side > 0 ? 0.4 : -0.4), (syh + ey) / 2 + 0.3); c.lineTo(ex, ey); c.stroke();
+    if (anim && !shaking && whipT == null && !a.carry) { const f = ph + (side > 0 ? 0 : Math.PI); ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
+    else if (anim && a.carry && side < 0) { const f = ph + Math.PI; ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
+    else if (anim && a.carry && side > 0) { ex = sxh + 2.2; ey = syh + 3.6; }
+    limb(c, sxh + twist * side * 0.3, syh, ex, ey, 3.4, 3.4, ey < syh ? -0.6 : -0.8, 2.4, back ? shirtD : p.shirt);
     c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill();
     if (!walking && prop === 'dumbbell' && !shaking) { c.fillStyle = '#26272c'; c.fillRect(ex - 2.4, ey - 0.4, 4.8, 1.4); c.fillRect(ex - 3, ey - 1.2, 1.4, 3); c.fillRect(ex + 1.6, ey - 1.2, 1.4, 3); }
     if (side > 0) {
@@ -1140,6 +1236,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe }
       if (bg) c.drawImage(bg, Math.round(k * (V.tx - mx * V.z)), Math.round(k * (V.ty - my * V.z)));
       for (let r = ROOMS - 1; r >= 0; r--) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * (V.ty + (r * RH + TOPM) * V.z));
+        if (r === 2) drawCars(c, t, nightNow);
         if (r <= 1) drawWallText(c, scrRef.current, r, t);
         if (r === 1) drawPositions(c, posRef.current, t);
         drawBoards(c, r, wall, t);
