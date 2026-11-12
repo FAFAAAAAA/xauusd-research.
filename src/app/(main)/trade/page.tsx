@@ -333,6 +333,16 @@ export default function TradePage() {
                 <span><span className="k">Keluar</span><strong>{detail.exit != null ? px(detail.exit) : '—'}</strong></span>
                 <span><span className="k">Stop loss</span><strong className="neg">{px(detail.sl)}</strong></span>
                 <span><span className="k">Take profit</span><strong className="pos">{px(detail.tp)}</strong></span>
+                {detail.result === 'open' ? (() => {
+                  // what this position makes or loses when it hits its stop or its target (fees not included)
+                  const cs = detail.strategy === 'v2' ? 100 : 1, dir = detail.side === 'BUY' ? 1 : -1;
+                  const at = (p: number) => (p - detail.entry) * dir * detail.lot * cs;
+                  const ok = Number.isFinite(detail.sl) && Number.isFinite(detail.tp) && detail.lot > 0;
+                  return <>
+                    <span><span className="k">Kalau kena SL</span><strong className="neg">{ok ? money(at(detail.sl)) : '—'}</strong></span>
+                    <span><span className="k">Kalau kena TP</span><strong className="pos">{ok ? money(at(detail.tp)) : '—'}</strong></span>
+                  </>;
+                })() : null}
                 <span><span className="k">Dibuka</span><strong>{fmt(detail.openedAt, tz)}</strong></span>
                 <span><span className="k">Ditutup</span><strong>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</strong></span>
                 <span><span className="k">Durasi</span><strong>{detail.closedAt ? hm(detail.closedAt - detail.openedAt) : hm(Date.now() - detail.openedAt)}</strong></span>
