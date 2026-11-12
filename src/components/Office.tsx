@@ -45,10 +45,10 @@ const seat = (id: string, room: number, x: number, y: number, face: Face, label 
 const PEOPLE: Person[] = [
   { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'NONTON DRAKOR'), hair: '#4a1422', skin: '#f3cfb0', shirt: '#8e2c48', pants: '#7a2440', style: 'long', glasses: true },
   { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
-  { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.3, 1.9, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
-  { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.3, 4.3, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
-  { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.3, 6.9, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
-  { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.3, 9.3, 'nx'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
+  { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.2, 1.7, 'py'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
+  { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.2, 4.7, 'ny'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
+  { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.2, 6.2, 'py'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
+  { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.2, 9.2, 'ny'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
   { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 4.5, 1.85, 'ny', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
   { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 11.75, 2.0, 'py', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
 ];
@@ -75,9 +75,9 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'shelf', x: 6.35, y: 1.1, face: 'ny', pose: 'stand', label: 'BACA BUKU', prop: 'book' },
   { id: 'printer', x: 10.35, y: 1.35, face: 'ny', pose: 'stand', label: 'AMBIL PRINT', prop: 'paper', alt: [{ label: 'FOTOKOPI' }] },
   { id: 'tv', x: 9.0, y: 2.6, face: 'ny', pose: 'stand', label: 'LIHAT CHART', zone: 'meet' },
-  { id: 'win1', x: 0.95, y: 3.1, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
-  { id: 'win2', x: 0.95, y: 5.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'TELEPON', prop: 'phone' }] },
-  { id: 'win3', x: 0.95, y: 8.1, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'win1', x: 0.75, y: 3.2, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'win2', x: 0.75, y: 5.45, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'TELEPON', prop: 'phone' }] },
+  { id: 'win3', x: 0.75, y: 7.7, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'hot1', x: 6.95, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet' },
   { id: 'hot2', x: 8.15, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet' },
   { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
@@ -110,7 +110,7 @@ const S2: Array<Omit<Spot, 'room'>> = [
 const SPOTS: Spot[] = [...S0.map((q) => ({ ...q, room: 0 })), ...S1.map((q) => ({ ...q, room: 1 })), ...S2.map((q) => ({ ...q, room: 2 }))];
 const PATROL: Spot[] = ([
   [2, 11.6, 4.2, 'nx'], [2, 8.6, 7.6, 'ny'], [2, 4.5, 6.4, 'nx'], [2, 3.0, 10.4, 'px'],
-  [1, 11.6, 4.6, 'nx'], [1, 9.0, 3.6, 'nx'], [1, 3.2, 3.1, 'nx'], [1, 3.2, 8.0, 'nx'], [1, 7.0, 10.4, 'px'],
+  [1, 11.6, 4.6, 'nx'], [1, 9.0, 3.6, 'nx'], [1, 3.7, 3.2, 'nx'], [1, 3.7, 7.7, 'nx'], [1, 7.0, 10.4, 'px'],
   [0, 9.6, 3.2, 'nx'], [0, 5.0, 7.4, 'px'], [0, 11.0, 8.0, 'ny'],
 ] as const).map(([r, x, y, f], i) => ({ id: `patrol${i}`, room: r, x, y, face: f, pose: 'stand', label: 'PATROLI' }));
 const PACE: Array<[number, number, number]> = [[0, 4.0, 3.2], [0, 9.0, 3.6], [0, 8.0, 7.6], [1, 9.6, 3.6], [1, 5.6, 6.8], [1, 10.0, 8.6]];
@@ -245,10 +245,6 @@ const THEMES: Record<string, Theme> = {
       };
       if (room === 2) {
         green(5.45, 6.95, 4, 120, 'l');
-        poly(c, wallB(0.9, 3.9, 62, 92), '#141518');
-        const [sx, sy] = iso(1.55, 0, 77); c.fillStyle = '#f2c230'; c.save(); c.translate(sx, sy); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 8, 0, 7); c.fill();
-        c.fillStyle = '#141518'; c.font = '900 13px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('q', 0, -1); c.restore();
-        c.save(); const [tx, ty] = iso(2.25, 0, 81); c.translate(tx, ty); c.transform(1, 0.5, 0, 1, 0, 0); c.fillStyle = '#ffffff'; c.font = '800 9px system-ui, sans-serif'; c.textBaseline = 'top'; c.fillText('OFFICE', 0, 0); c.restore();
       }
       if (room === 0) green(8.0, 8.75, 26, wh - 6, 'b');
     },
@@ -332,6 +328,14 @@ function drawBackdrop(c: C, night: boolean) {
       c.fillStyle = col; x += w + 2 + hash(`g${layer}${i}`) * 6;
     }
   }
+}
+/** the framed photo on the owner's floor (loaded once; the background is re-rendered when it arrives) */
+const PHOTO: { img: HTMLImageElement | null; ok: boolean } = { img: null, ok: false };
+function loadPhoto(done: () => void) {
+  if (PHOTO.img || typeof Image === 'undefined') return;
+  const im = new Image(); PHOTO.img = im;
+  im.onload = () => { PHOTO.ok = true; done(); };
+  im.src = '/office/foto.jpg';
 }
 function drawStatic(c: C, night: boolean, room: number) {
   // one building: the walls of a lower floor go all the way up to the floor slab of the room above (glass facade)
@@ -436,22 +440,30 @@ function drawStatic(c: C, night: boolean, room: number) {
     }
   }
   // everyday wall hardware: air conditioner, exit sign, camera, fire extinguisher, sockets
-  if (room !== 1) { poly(c, wallB(8.6, 10.2, 86, 95), '#f3f3f1'); poly(c, wallB(8.6, 10.2, 84, 86), '#d0cfcb'); poly(c, wallB(8.7, 10.1, 87, 88), '#c2c1bd'); poly(c, wallB(10.05, 10.12, 90, 91.2), '#2ee59d'); }
   poly(c, wallB(11.35, 11.95, 62, 68), '#1f9d57'); poly(c, wallB(11.45, 11.6, 63.5, 66.5), '#ffffff'); poly(c, wallB(11.7, 11.85, 64.4, 65.6), '#ffffff');
   { const [cx, cy] = iso(0.5, 0, wh - 14); c.fillStyle = '#26272c'; c.beginPath(); c.arc(cx, cy, 2.6, 0, Math.PI); c.fill(); c.fillStyle = night ? '#ff4d4f' : '#7a2a2a'; c.fillRect(cx - 0.5, cy + 0.6, 1, 1); }
-  poly(c, wallB(10.85, 11.0, 6, 18), '#d7262c'); poly(c, wallB(10.88, 10.97, 18, 20.5), '#2a2b30'); poly(c, wallB(10.82, 11.03, 22, 30), '#f3f3f1');
-  for (const x of [2.4, 6.2, 9.4]) { poly(c, wallB(x, x + 0.16, 9, 12), '#e9e8e4'); poly(c, wallB(x + 0.05, x + 0.11, 10, 11), '#b9b8b4'); }
   // lift on every floor (the way between the rooms)
   poly(c, wallB(11.1, 12.2, 0, 54), '#1e1f23');
   poly(c, wallB(11.2, 11.64, 0, 50), night ? '#8d939c' : '#b9bfc8'); poly(c, wallB(11.66, 12.1, 0, 50), night ? '#868c95' : '#aeb4bd');
   poly(c, wallB(11.5, 11.8, 57, 61), '#141518'); poly(c, wallB(11.6, 11.7, 58, 60), '#f2c230');
   poly(c, wallB(12.3, 12.42, 24, 30), '#2a2b30'); poly(c, wallB(12.33, 12.39, 25.5, 28.5), '#f2c230');
   if (room === 1) {
-    poly(c, wallB(0.7, 2.1, 40, 64), '#1e1f23'); poly(c, wallB(0.8, 2.0, 42, 62), '#f7f4ec');
-    poly(c, wallB(1.05, 1.75, 46, 58), '#f2c230'); poly(c, wallB(1.25, 1.55, 49, 55), '#26272c');
     poly(c, wallB(TV.x0 - 0.1, TV.x1 + 0.1, TV.z0 - 3, TV.z1 + 2.5), '#111214');
   }
-  if (room === 0) {     // the team board (names + roles), a clock
+  if (room === 0) {     // the team board (names + roles), a clock, the framed photo
+    const fx0 = 4.95, fx1 = 7.35, fz0 = 57, fz1 = 100;
+    poly(c, wallB(fx0 + 0.05, fx1 + 0.18, fz0 - 5, fz1 + 1), 'rgba(0,0,0,.12)');
+    poly(c, wallB(fx0 - 0.1, fx1 + 0.1, fz0 - 3, fz1 + 3), '#8a5a34');
+    poly(c, wallB(fx0 - 0.04, fx1 + 0.04, fz0 - 1.2, fz1 + 1.2), '#c99a68');
+    poly(c, wallB(fx0, fx1, fz0, fz1), '#fbf6ee');
+    const img = PHOTO.img;
+    if (img && PHOTO.ok) {
+      const [ox, oy] = iso(fx0 + 0.08, 0, fz1 - 2.5), pw = (fx1 - fx0 - 0.16) * TW, ph = fz1 - fz0 - 5;
+      c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
+      const sz = Math.min(img.width, img.height * pw / ph), szh = sz * ph / pw;
+      c.drawImage(img, (img.width - sz) / 2, (img.height - szh) / 2, sz, szh, 0, 0, pw, ph);
+      c.restore();
+    }
     poly(c, wallB(ROSTER.x0 - 0.08, ROSTER.x1 + 0.08, ROSTER.z0 - 3, ROSTER.z1 + 3), '#b8901a');
     poly(c, wallB(ROSTER.x0, ROSTER.x1, ROSTER.z0, ROSTER.z1), '#fbfaf6');
     const [cx, cy] = iso(10.6, 0, 64); c.save(); c.translate(cx, cy); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 5.5, 0, 7); c.fillStyle = '#1e1f23'; c.fill(); c.beginPath(); c.arc(0, 0, 4.6, 0, 7); c.fillStyle = '#fff'; c.fill();
@@ -534,27 +546,33 @@ function drawCars(c: C, t: number, night: boolean) {
     if (night) { const g = c.createRadialGradient(front[0], front[1], 0, front[0], front[1], 14); g.addColorStop(0, 'rgba(255,240,180,.45)'); g.addColorStop(1, 'rgba(255,240,180,0)'); c.fillStyle = g; c.fillRect(front[0] - 14, front[1] - 14, 28, 28); }
   }
 }
-function traderDesk(y0: number, owner: string): Item {
-  const x0 = 0.55, w = 0.95, d = 1.8;
+/** two traders facing each other across one desk: the north one's monitors show their backs, the south one's screens face us */
+function clusterDesk(y0: number, north: string, south: string): Item {
+  const x0 = 1.3, w = 1.8, d = 1.4, ym = y0 + d / 2;
   return {
     x0, y0, x1: x0 + w, y1: y0 + d, draw: (c, t) => {
       shadow(c, x0, y0, w, d);
-      box(c, x0 + 0.05, y0 + 0.05, w - 0.1, 0.08, 0, 15, '#1e1f23');
-      box(c, x0 + 0.02, y0 + d - 0.62, w - 0.04, 0.6, 0, 15, '#24252a', '#1b1c20', '#2d2e34');
-      for (const k of [0, 1, 2]) poly(c, [iso(x0 + w - 0.02, y0 + d - 0.55, 13 - k * 4.5), iso(x0 + w - 0.02, y0 + d - 0.07, 13 - k * 4.5), iso(x0 + w - 0.02, y0 + d - 0.07, 13.4 - k * 4.5), iso(x0 + w - 0.02, y0 + d - 0.55, 13.4 - k * 4.5)], '#3a3b42');
+      box(c, x0 + 0.04, y0 + 0.05, 0.08, d - 0.1, 0, 15, '#1e1f23');
+      box(c, x0 + w - 0.12, y0 + 0.05, 0.08, d - 0.1, 0, 15, '#1e1f23');
+      box(c, x0 + w - 0.66, ym + 0.08, 0.5, 0.55, 0, 15, '#24252a', '#1b1c20', '#2d2e34');
       box(c, x0, y0, w, d, 15, 2.2, '#f7f7f5', '#d6d5d1', '#e7e6e2');
-      const mode = MODES[owner] ?? 'idle';
-      for (const [ya, yb] of [[y0 + 0.18, y0 + 0.86], [y0 + 0.94, y0 + 1.62]]) {
-        box(c, x0 + 0.16, (ya + yb) / 2 - 0.05, 0.12, 0.1, 17.2, 4, '#1e1f23');
-        box(c, x0 + 0.14, ya, 0.07, yb - ya, 20, 12, '#1e1f23', '#141518', '#1e1f23');
-        const X = x0 + 0.215, A = ya + 0.04, B = yb - 0.04;
-        screenPlane(c, (u, z) => iso(X, A + u * (B - A), 21 + z * 10), mode, t, Math.floor(y0 * 10 + ya * 3));
+      box(c, x0 + 0.06, ym - 0.03, w - 0.12, 0.06, 17.2, 6, '#d8cfc2', '#bfb6a9', '#cbc2b5');
+      const pairs: Array<[number, number]> = [[x0 + 0.14, x0 + 0.86], [x0 + 0.94, x0 + 1.66]];
+      for (const [xa, xb] of pairs) {      // north trader's monitors (we see their backs)
+        box(c, (xa + xb) / 2 - 0.05, ym - 0.32, 0.1, 0.1, 17.2, 4, '#1e1f23');
+        box(c, xa, ym - 0.24, xb - xa, 0.08, 20, 12, '#2a2b30', '#33343a', '#2a2b30');
       }
-      box(c, x0 + 0.45, y0 + 0.55, 0.22, 0.7, 17.2, 0.8, '#e3e3e1');
-      box(c, x0 + 0.5, y0 + 1.42, 0.1, 0.08, 17.2, 0.8, '#e3e3e1');
-      box(c, x0 + 0.62, y0 + 0.1, 0.22, 0.28, 17.2, 0.8, '#f2c230');
-      cyl(c, x0 + 0.72, y0 + 1.62, 17.2, 0.05, 3, '#ffffff', '#eeeeee');
-      lamp(c, x0 + 0.3, y0 + 0.08);
+      for (const [xa, xb] of pairs) {      // south trader's monitors (screens towards us)
+        box(c, (xa + xb) / 2 - 0.05, ym + 0.2, 0.1, 0.1, 17.2, 4, '#1e1f23');
+        box(c, xa, ym + 0.12, xb - xa, 0.07, 20, 12, '#1e1f23', '#141518', '#1e1f23');
+        const A = xa + 0.04, B = xb - 0.04;
+        screenPlane(c, (u, z) => iso(A + u * (B - A), ym + 0.195, 21 + z * 10), MODES[south] ?? 'idle', t, Math.floor(y0 * 10 + xa * 3));
+      }
+      void north;
+      box(c, x0 + 0.6, y0 + 0.12, 0.6, 0.2, 17.2, 0.8, '#e3e3e1');
+      box(c, x0 + 0.6, y0 + d - 0.32, 0.6, 0.2, 17.2, 0.8, '#e3e3e1');
+      cyl(c, x0 + 0.25, y0 + 0.22, 17.2, 0.05, 3, '#ffffff', '#eeeeee');
+      cyl(c, x0 + w - 0.25, y0 + d - 0.22, 17.2, 0.05, 3, '#f2c230', '#d9a91c');
     },
   };
 }
@@ -578,7 +596,7 @@ function chair(x: number, y: number, face: Face, color = '#f2c230'): Item[] {
 }
 function baseItems(): Item[] {
   const it: Item[] = [];
-  it.push(traderDesk(1.0, 'alt'), traderDesk(3.4, 'big'), traderDesk(6.0, 'xau'), traderDesk(8.4, 'nas'));
+  it.push(clusterDesk(2.5, 'alt', 'big'), clusterDesk(7.0, 'xau', 'nas'));
   for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(11.75, 2.0, 'py', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
@@ -689,7 +707,7 @@ function baseItems(): Item[] {
     cyl(c, 11.15, 6.1, 17.4, 0.06, 3, '#ffffff', '#eeeeee');
     lamp(c, 11.2, 6.55);
   } });
-  for (const [px, py, s] of [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [11.85, 6.35, 0.85], [8.75, 8.9, 0.7]] as const)
+  for (const [px, py, s] of [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [11.85, 6.35, 0.85]] as const)
     it.push({ x0: px - 0.25, y0: py - 0.25, x1: px + 0.25, y1: py + 0.25, draw: (c, t) => plant(c, px, py, s, t) });
   return it;
 }
@@ -720,9 +738,9 @@ function furniture(theme = 'modern'): Item[][] {
   R[0].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7).map((it) => moved(it, -4.6, 2.2)));
   R[0].push(...take(9.2, 9.4));
   const pl = (r: number, list: Array<[number, number, number]>) => { for (const [px, py, sc] of list) R[r].push({ x0: px - 0.25, y0: py - 0.25, x1: px + 0.25, y1: py + 0.25, draw: (c, t) => plant(c, px, py, sc, t) }); };
-  pl(0, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [4.3, 0.5, 1.0]]);
-  pl(1, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [8.75, 8.9, 0.7]]);
-  pl(2, [[0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95], [6.2, 0.45, 0.9]]);
+  pl(0, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
+  pl(1, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
+  pl(2, [[0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
   /* --- new pieces --- */
   R[0].push(...chair(2.2, 3.4, 'px', '#c9a227'));
   R[0].push({ x0: 2.0, y0: 2.45, x1: 2.45, y1: 2.9, draw: (c) => { ell(c, 2.22, 2.68, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 2.22, 2.68, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 2.22, 2.68, 10, 0.24, 1.5, '#f2c230', '#c9a227'); cyl(c, 2.15, 2.62, 11.5, 0.05, 2.5, '#ffffff', '#eeeeee'); } });
@@ -790,8 +808,6 @@ function furniture(theme = 'modern'): Item[][] {
       for (let x = xa; x <= xb + 0.01; x += Math.max(0.6, (xb - xa) / Math.max(1, Math.round((xb - xa) / 1.2)))) { const a = iso(x, y + 0.03, 0), b = iso(x, y + 0.03, 36); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
       const g = iso(xa + 0.2, y + 0.03, 30), h = iso(xa + 0.9, y + 0.03, 8); c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(g[0], g[1]); c.lineTo(h[0], h[1]); c.stroke();
     } });
-    glassX(1, 3.38, 1.2, 4.95); glassX(1, 3.38, 6.05, 10.75);               // trading room
-    glassY(0, 6.0, 0.3, 4.1); glassX(0, 4.6, 6.0, 7.9); glassX(0, 4.6, 8.9, 10.75);   // meeting room in the boss floor
     // lobby: a big tree in a round wooden planter, and tribune stairs with cushions
     R[2].push({ x0: 4.65, y0: 2.65, x1: 6.15, y1: 4.15, draw: (c, t) => {
       ell(c, 5.4, 3.4, 0, 0.95, 'rgba(0,0,0,.18)'); cyl(c, 5.4, 3.4, 0, 0.75, 7, '#c99a68', '#8f6a48'); ell(c, 5.4, 3.4, 7, 0.62, '#4a3a2c');
@@ -1106,6 +1122,7 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   const pick = (list: Spot[]) => { const f = list.filter((q) => !taken.has(q.id)); return f.length ? variant(f[Math.floor(Math.random() * f.length)], now) : p.seat; };
   const near = (id: string, label: string): Spot => {
     const q = PEOPLE.find((x) => x.id === id)!.seat;
+    if (q.room === 1 && q.x < 3) return { id: `near-${id}-${p.id}`, room: 1, x: 3.45, y: q.face === 'py' ? q.y + 1.25 : q.y - 1.25, face: 'nx', pose: 'stand', label };
     return q.face === 'ny' ? { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.75, y: q.y + 0.6, face: 'ny', pose: 'stand', label } : { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.8, y: q.y + 0.65, face: 'nx', pose: 'stand', label };
   };
   if (p.id === 'jaga') {
@@ -1244,6 +1261,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const c = cv.getContext('2d'); if (!c) return;
     let bgV: { z: number; tx: number; ty: number } | null = null, bgM = 0, bgW = 0, bgH = 0, lastView = '', viewMoved = 0;
     let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true;
+    loadPhoto(() => { bgKey = ''; });
     const agents: Record<string, Agent> = {};
     const resize = () => {
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
@@ -1362,7 +1380,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       // picture is only moved / scaled (cheap); once the view rests (or runs out of margin) it is painted sharp again.
       const viewKey = `${V.z.toFixed(4)}:${V.tx.toFixed(2)}:${V.ty.toFixed(2)}`;
       if (viewKey !== lastView) { lastView = viewKey; viewMoved = tm; }
-      const base = `${cv.width}x${cv.height}:${nightNow}:${themeRef.current}:${SHAPE}`;
+      const base = `${cv.width}x${cv.height}:${nightNow}:${themeRef.current}:${SHAPE}:${PHOTO.ok}`;
       const sNow = bgV ? V.z / bgV.z : 1;
       const offX = bgV ? k * V.tx - sNow * (bgM + k * bgV.tx) : 0, offY = bgV ? k * V.ty - sNow * (bgM + k * bgV.ty) : 0;
       const outside = !bgV || offX > 0 || offY > 0 || offX + bgW * sNow < cv.width || offY + bgH * sNow < cv.height;
@@ -1503,26 +1521,30 @@ function drawPositions(c: C, list: Pos[], t: number) {
   const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
   const x0 = TV.x0, x1 = TV.x1, z0 = TV.z1 + 8, z1 = TV.z1 + 66;
   const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
+  const mono = (wt: number, px: number) => `${wt} ${px}px ui-monospace, Menlo, monospace`;
   c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
   c.fillStyle = '#111214'; c.fillRect(-2.5, -2.5, w + 5, h + 5);
   const bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#0f2640'); bg.addColorStop(1, '#07121f'); c.fillStyle = bg; c.fillRect(0, 0, w, h);
   c.textBaseline = 'middle';
-  c.fillStyle = list.length ? (Math.floor(t * 2) % 2 ? '#2ee59d' : '#1d6b4c') : '#4a5566'; c.beginPath(); c.arc(5.5, 7, 1.6, 0, 7); c.fill();
-  c.font = '800 6.4px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
+  // header: dot + title + count, then a thin rule
+  c.fillStyle = list.length ? (Math.floor(t * 2) % 2 ? '#2ee59d' : '#1d6b4c') : '#4a5566'; c.beginPath(); c.arc(6, 7, 1.5, 0, 7); c.fill();
+  c.font = mono(800, 5.2); c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
+  c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(4, 13, w - 8, 0.6);
   if (!list.length) {
-    c.font = '700 7px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, h / 2 + 4); c.textAlign = 'left';
+    c.font = mono(600, 5.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
   } else {
-    const rows = list.slice(0, 5), rh = Math.min(14, (h - 16) / rows.length);
+    const max = 4, rows = list.slice(0, max), top = 15, rh = Math.min(10, (h - top - (list.length > max ? 7 : 2)) / rows.length);
     rows.forEach((p, i) => {
-      const y = 18 + rh * (i + 0.5);
-      c.fillStyle = 'rgba(255,255,255,.05)'; c.fillRect(3, y - rh / 2 + 1, w - 6, rh - 2);
-      c.font = '800 7px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(p.name, 6, y);
-      const nw = c.measureText(p.name).width;
-      c.font = '700 5px ui-monospace, Menlo, monospace'; c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side, 9 + nw, y + 0.4);
-      c.font = '800 7.4px ui-monospace, Menlo, monospace'; c.textAlign = 'right';
+      const y = top + rh * (i + 0.5);
+      if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(3, y - rh / 2, w - 6, rh); }
+      c.font = mono(700, 4.6); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 6, y);
+      c.font = mono(800, 5.6); c.fillStyle = '#ffffff';
+      let name = p.name; while (name.length > 3 && c.measureText(name).width > w * 0.5 - 14) name = name.slice(0, -1);
+      c.fillText(name, 12, y);
+      c.textAlign = 'right'; c.font = mono(800, 5.6);
       c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 6, y); c.textAlign = 'left';
     });
-    if (list.length > 5) { c.font = '600 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#6f93b8'; c.fillText(`+${list.length - 5} lagi`, 6, h - 4); }
+    if (list.length > max) { c.font = mono(600, 4.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText(`+${list.length - max} posisi lagi`, w / 2, h - 4); c.textAlign = 'left'; }
   }
   c.textBaseline = 'alphabetic'; c.restore();
 }
@@ -1539,7 +1561,7 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
     const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
     const txt = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
     board(2.75, 5.95, TV.z1 - 34, TV.z1, (w, h) => {
-      c.font = '700 4.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('CANDLE H4 BARU', w / 2, 8);
+      c.font = '700 4.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('H4', w / 2, 8);
       c.font = '800 10.5px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 ? (Math.floor(t * 4) % 2 ? '#f2c230' : '#ffffff') : '#f2c230'; c.fillText(txt, w / 2, h / 2 + 4);
     });
   }
