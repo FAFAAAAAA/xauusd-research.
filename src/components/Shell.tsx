@@ -160,7 +160,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
         {showLogout ? <div className="mobile-only-logout"><button className="btn sm ghost" onClick={logout}>Keluar</button></div> : null}
       </main>
       <footer className="apple-site-footer">
-        <span>© XAUUSD Research</span>
+        <span>© q</span>
         {showLogout ? <button className="apple-logout" onClick={logout}>Keluar</button> : null}
       </footer>
       <Toaster />
