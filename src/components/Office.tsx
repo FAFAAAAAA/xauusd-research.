@@ -231,6 +231,28 @@ const THEMES: Record<string, Theme> = {
       }
     },
   },
+  hangat: {
+    floor: '#b98a5e', floorN: '#7d5d40', line: 'rgba(70,40,15,.3)', back: '#efe7dc', backN: '#bdb3a6', left: '#e8dfd2', leftN: '#b2a898', cap: '#2a1f18', base: '#4a3324',
+    extra: (c, night, room, wh) => {
+      // colourful rugs like a design studio
+      if (room === 0) { ell(c, 3.0, 7.6, 0.45, 1.3, '#9c3b2c'); ell(c, 3.0, 7.6, 0.5, 1.1, '#b5503d'); }
+      if (room === 1) poly(c, [iso(6.1, 3.9, 0.45), iso(8.9, 3.9, 0.45), iso(8.9, 6.3, 0.45), iso(6.1, 6.3, 0.45)], '#d9a33a');
+      if (room === 2) { ell(c, 4.75, 8.85, 0.5, 1.5, '#e0b93e'); ell(c, 4.75, 8.85, 0.55, 1.15, '#ecc95a'); ell(c, 7.6, 5.4, 0.5, 1.3, '#b5503d'); }
+      // living green wall + brand sign in the lobby, green wall behind the boss
+      const green = (x0: number, x1: number, z0: number, z1: number, seed: string) => {
+        poly(c, wallB(x0, x1, z0, z1), night ? '#1c3a24' : '#2c6a3a');
+        for (let i = 0; i < (x1 - x0) * (z1 - z0) * 0.5; i++) { const x = x0 + 0.05 + hash(`${seed}x${i}`) * (x1 - x0 - 0.1), z = z0 + 2 + hash(`${seed}z${i}`) * (z1 - z0 - 4); const [px, py] = iso(x, 0, z); c.fillStyle = (night ? ['#24502f', '#2f6a3c', '#1c4226'] : ['#3d9a4f', '#58b765', '#2f7a3d', '#7fcf7a'])[i % (night ? 3 : 4)]; c.beginPath(); c.ellipse(px, py, 2.4, 1.5, i, 0, 7); c.fill(); }
+      };
+      if (room === 2) {
+        green(5.45, 6.95, 4, 120, 'l');
+        poly(c, wallB(0.9, 3.9, 62, 92), '#141518');
+        const [sx, sy] = iso(1.55, 0, 77); c.fillStyle = '#f2c230'; c.save(); c.translate(sx, sy); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 8, 0, 7); c.fill();
+        c.fillStyle = '#141518'; c.font = '900 13px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('q', 0, -1); c.restore();
+        c.save(); const [tx, ty] = iso(2.25, 0, 81); c.translate(tx, ty); c.transform(1, 0.5, 0, 1, 0, 0); c.fillStyle = '#ffffff'; c.font = '800 9px system-ui, sans-serif'; c.textBaseline = 'top'; c.fillText('OFFICE', 0, 0); c.restore();
+      }
+      if (room === 0) green(8.0, 8.75, 26, wh - 6, 'b');
+    },
+  },
   taman: {
     floor: '#e9e5da', floorN: '#bcb8ad', line: 'rgba(90,110,80,.14)', back: '#eef3ea', backN: '#c3cbbf', left: '#e6ede1', leftN: '#b9c1b4', cap: '#2f5d3a', base: '#3c6b46',
     sky: ['#79c0e8', '#bfe3f5', '#eef8ec'],
@@ -678,7 +700,7 @@ const moved = (it: Item, dx: number, dy: number): Item => ({
 });
 const near = (it: Item, x: number, y: number) => Math.abs(it.x0 - x) < 0.06 && Math.abs(it.y0 - y) < 0.06;
 /** the three rooms: 0 = boss office (top), 1 = trading floor (middle), 2 = lobby / pantry / gym / lounge (bottom) */
-function furniture(): Item[][] {
+function furniture(theme = 'modern'): Item[][] {
   const all = baseItems(), R: Item[][] = [[], [], []];
   const take = (x: number, y: number) => all.filter((it) => near(it, x, y));
   // trading floor: trader desks + chairs, Noel's desk, rack, bin, bookshelf, printer, water
@@ -754,6 +776,42 @@ function furniture(): Item[][] {
     shadow(c, 0.55, 5.4, 0.45, 1.0); box(c, 0.6, 5.45, 0.35, 0.9, 0, 12, '#26272c', '#1e1f23', '#2d2e34');
     for (let k = 0; k < 4; k++) for (const z of [12.2, 6]) { const y = 5.55 + k * 0.2; cyl(c, 0.78, y, z, 0.07, 2, '#3a3b42', '#2b2c31'); }
   } });
+  if (theme === 'hangat') {
+    // glass partitions (blocking, with a door gap)
+    const glassX = (r: number, x: number, ya: number, yb: number) => R[r].push({ x0: x - 0.06, y0: ya, x1: x + 0.12, y1: yb, draw: (c) => {
+      poly(c, [iso(x + 0.03, ya, 0), iso(x + 0.03, yb, 0), iso(x + 0.03, yb, 36), iso(x + 0.03, ya, 36)], 'rgba(185,225,245,.28)');
+      c.strokeStyle = '#1e1f23'; c.lineWidth = 0.8; for (const z of [0.5, 36]) { const a = iso(x + 0.03, ya, z), b = iso(x + 0.03, yb, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+      for (let y = ya; y <= yb + 0.01; y += Math.max(0.6, (yb - ya) / Math.max(1, Math.round((yb - ya) / 1.2)))) { const a = iso(x + 0.03, y, 0), b = iso(x + 0.03, y, 36); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+      const g = iso(x + 0.03, ya + 0.2, 30), h = iso(x + 0.03, ya + 0.9, 8); c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(g[0], g[1]); c.lineTo(h[0], h[1]); c.stroke();
+    } });
+    const glassY = (r: number, y: number, xa: number, xb: number) => R[r].push({ x0: xa, y0: y - 0.06, x1: xb, y1: y + 0.12, draw: (c) => {
+      poly(c, [iso(xa, y + 0.03, 0), iso(xb, y + 0.03, 0), iso(xb, y + 0.03, 36), iso(xa, y + 0.03, 36)], 'rgba(185,225,245,.28)');
+      c.strokeStyle = '#1e1f23'; c.lineWidth = 0.8; for (const z of [0.5, 36]) { const a = iso(xa, y + 0.03, z), b = iso(xb, y + 0.03, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+      for (let x = xa; x <= xb + 0.01; x += Math.max(0.6, (xb - xa) / Math.max(1, Math.round((xb - xa) / 1.2)))) { const a = iso(x, y + 0.03, 0), b = iso(x, y + 0.03, 36); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+      const g = iso(xa + 0.2, y + 0.03, 30), h = iso(xa + 0.9, y + 0.03, 8); c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(g[0], g[1]); c.lineTo(h[0], h[1]); c.stroke();
+    } });
+    glassX(1, 3.38, 1.2, 4.95); glassX(1, 3.38, 6.05, 10.75);               // trading room
+    glassY(0, 6.0, 0.3, 4.1); glassX(0, 4.6, 6.0, 7.9); glassX(0, 4.6, 8.9, 10.75);   // meeting room in the boss floor
+    // lobby: a big tree in a round wooden planter, and tribune stairs with cushions
+    R[2].push({ x0: 4.65, y0: 2.65, x1: 6.15, y1: 4.15, draw: (c, t) => {
+      ell(c, 5.4, 3.4, 0, 0.95, 'rgba(0,0,0,.18)'); cyl(c, 5.4, 3.4, 0, 0.75, 7, '#c99a68', '#8f6a48'); ell(c, 5.4, 3.4, 7, 0.62, '#4a3a2c');
+      const [bx, by] = iso(5.4, 3.4, 7); c.fillStyle = '#6b4a33'; c.fillRect(bx - 2.2, by - 34, 4.4, 34);
+      const sw = Math.sin(t * 0.8) * 0.6;
+      const blobs: Array<[number, number, number, string]> = [[0, -44, 18, '#2f7a3d'], [-14, -36, 13, '#2f7a3d'], [14, -38, 13, '#3d9a4f'], [-7, -54, 13, '#3d9a4f'], [9, -52, 12, '#58b765'], [0, -62, 10, '#58b765'], [-15, -48, 9, '#58b765'], [16, -47, 8, '#7fcf7a']];
+      for (const [dx, dy, r, col] of blobs) { c.fillStyle = col; c.beginPath(); c.arc(bx + dx + sw * (-dy / 60), by + dy, r, 0, 7); c.fill(); }
+      c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.arc(bx - 6, by - 60, 6, 0, 7); c.fill();
+    } });
+    R[2].push({ x0: 9.2, y0: 3.4, x1: 10.9, y1: 5.6, draw: (c) => {
+      shadow(c, 9.2, 3.4, 1.7, 2.2);
+      const steps = 5, d = 2.2 / steps;
+      for (let k = steps - 1; k >= 0; k--) {
+        const y = 3.4 + k * d, h = (steps - k) * 6;
+        box(c, 9.2, y, 1.7, d, 0, h, '#c99a68', '#8f6a48', '#a87b52');
+        if (k % 2 === 0) box(c, 9.35 + (k % 3) * 0.3, y + 0.06, 0.5, d - 0.12, h, 1.4, ['#e5484d', '#f2c230', '#4c7dff'][k % 3]);
+      }
+      for (const x of [9.2, 10.9]) { const a = iso(x, 5.6, 8), b = iso(x, 3.4, 38); c.strokeStyle = '#1e1f23'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+    } });
+  }
   return R;
 }
 
@@ -1100,7 +1158,7 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
 const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
 
 /* ---------- component ---------- */
-export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'modern', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
+export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'hangat', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
   THEME = THEMES[theme] ?? THEMES.modern; setShape(shape);
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
@@ -1112,7 +1170,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const scrRef = useRef(screen); scrRef.current = screen;
   const positions = useMemo(() => openPositions(data), [data]);
   const posRef = useRef(positions); posRef.current = positions;
-  const items = useMemo(() => furniture(), []);
+  const items = useMemo(() => furniture(theme), [theme]);
   const grids = useMemo(() => items.map((list) => buildGrid(list)), [items]);
   const night = (() => { const h = new Date(now).getHours(); return h >= 18 || h < 6; })();
   const nightRef = useRef(night); nightRef.current = night;
