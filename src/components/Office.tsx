@@ -1291,8 +1291,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     c.save(); c.scale(1, 0.42); c.fillStyle = sg; c.beginPath(); c.arc(0, 0, 7 - jump * 0.4, 0, 7); c.fill(); c.restore();
   }
   c.translate(0, -jump);
-  const LEG = INK ? 5.0 : 3.3, standHip = (INK ? -11.0 : -6.9) - bob * 0.8 + squat, seatHip = (bean ? -4.56 : -8.2) / PSV;
-  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = INK ? 11.2 : 8.4;
+  const LEG = INK ? 3.7 : 3.3, standHip = (INK ? -8.4 : -6.9) - bob * 0.8 + squat, seatHip = (bean ? -4.56 : -8.2) / PSV;
+  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = INK ? 8.8 : 8.4;
   const shoe = '#26272c', pantsD = sh(p.pants, 0.8), shirtD = sh(p.shirt, 0.82);
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (sitting || bean) {
@@ -1321,9 +1321,9 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const hy = hip - torso - 5.6 + breathe * 0.5 + (typing ? Math.sin(t * 1.7 + hash(p.id) * 9) * 0.22 : 0) + (gesture === 'stretch' ? -0.6 : 0) + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
-  const big = p.id === 'vet', HS = INK ? (big ? 1.0 : 0.64) : big ? 1.45 : 1, NECK = INK ? 1.3 : 0;     // head scale (Ny. Vetrycia keeps her big head)
+  const big = p.id === 'vet', HS = INK ? (big ? 1.32 : 1.08) : big ? 1.45 : 1, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
   const headOn = () => { c.save(); c.translate(hx, hy + 5 - NECK); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
-  if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
+  if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); if (INK) { c.moveTo(hx - 5.9, hy - 1.2); c.bezierCurveTo(hx - 7.2, hy + 9, hx - 4.2, hy + 10.5, hx, hy + 10.5); c.bezierCurveTo(hx + 4.2, hy + 10.5, hx + 7.2, hy + 9, hx + 5.9, hy - 1.2); c.closePath(); } else c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
   const tg = c.createLinearGradient(-4.6, 0, 4.6, 0); tg.addColorStop(0, sh(p.shirt, front ? 1.08 : 0.9)); tg.addColorStop(1, shirtD);
   if (!INK) { c.fillStyle = tg; c.beginPath(); c.roundRect(-4.6 + lean * 0.5, ty, 9.2, torso + 0.6, [3.2, 3.2, 1.6, 1.6]); c.fill(); }
@@ -1366,8 +1366,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const arm = (side: number, back: boolean) => {
     c.strokeStyle = back ? shirtD : p.shirt; c.lineWidth = 2.4;
     const sxh = side * (INK ? 4.5 : 4.4) + lean * 0.5, syh = ty + 1.6;
-    const ARM = INK ? 4.9 : 3.4;
-    let ex = INK ? sxh + side * 0.15 + swing * side * -2 : sxh + side * 0.6 + swing * side * -2, ey = INK ? syh + 9.6 : syh + 6.2;
+    const ARM = INK ? 4.0 : 3.4;
+    let ex = INK ? sxh + side * 0.15 + swing * side * -2 : sxh + side * 0.6 + swing * side * -2, ey = INK ? syh + 7.7 : syh + 6.2;
     if (typing) { ex = sxh + (side > 0 ? 3.4 : 2.2); ey = syh + 4.6 + (Math.sin(t * 17 + side * 2) > 0 ? -0.8 : 0); }
     if (sitting && !typing) { ex = sxh + 2.4; ey = syh + 5.2; }
     if (gesture === 'stretch') { ex = sxh + side * 1.4; ey = syh - 8.5 - Math.sin(t * 3) * 0.6; }
@@ -1399,7 +1399,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (!walking && !shaking && prop === 'guitar') { ex = side > 0 ? 3.4 : 7.5; ey = side > 0 ? hip - 3 + Math.sin(t * 12) * 0.7 : hip - 6; }
     if (!walking && !shaking && prop === 'box' && !sitting) { ex = sxh + 2.6; ey = syh + 3.6; }
     if (whipT != null && side > 0) { const w = (whipT % 0.9) / 0.9; ex = sxh + 2 + Math.cos(w * 6.28) * 1.5; ey = syh - 7 + (w < 0.25 ? 6 * (w / 0.25) : 6 - 6 * ((w - 0.25) / 0.75)); }
-    if (anim && !shaking && whipT == null && !a.carry) { const f = ph + (side > 0 ? 0 : Math.PI); ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + (INK ? 9.4 : 6.3) - Math.abs(Math.cos(f)) * 1.1 * am; }
+    if (anim && !shaking && whipT == null && !a.carry) { const f = ph + (side > 0 ? 0 : Math.PI); ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + (INK ? 7.5 : 6.3) - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side < 0) { const f = ph + Math.PI; ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side > 0) { ex = sxh + 2.2; ey = syh + 3.6; }
     { const key = side > 0 ? 'r' : 'l'; a.arms ??= {}; const pr = a.arms[key];
@@ -1467,15 +1467,35 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   headOn();
   if (!INK) { c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx - 1.4, hy + R - 2.2, 2.8, 3); }
   const hg = c.createRadialGradient(hx + 1.5, hy - 2, 1, hx, hy, R + 1); hg.addColorStop(0, sh(p.skin, 1.08)); hg.addColorStop(1, sh(p.skin, 0.9));
-  const head = () => { c.beginPath(); if (INK) c.ellipse(hx, hy + 0.4, R * 0.88, R * 1.06, 0, 0, 7); else c.arc(hx, hy, R, 0, 7); };
+  const head = () => {
+    c.beginPath();
+    if (INK) { c.moveTo(hx - R * 0.88, hy - R * 0.2); c.bezierCurveTo(hx - R * 0.9, hy - R * 1.02, hx + R * 0.9, hy - R * 1.02, hx + R * 0.88, hy - R * 0.2); c.bezierCurveTo(hx + R * 0.84, hy + R * 0.62, hx + R * 0.3, hy + R * 0.98, hx, hy + R * 0.98); c.bezierCurveTo(hx - R * 0.3, hy + R * 0.98, hx - R * 0.84, hy + R * 0.62, hx - R * 0.88, hy - R * 0.2); c.closePath(); }
+    else c.arc(hx, hy, R, 0, 7);
+  };
   if (INK && front) { c.fillStyle = sh(p.skin, 0.93); c.beginPath(); c.ellipse(hx - R * 0.86, hy + 1, 1.1, 1.6, 0, 0, 7); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.45; c.stroke(); }
   c.fillStyle = hg; head(); c.fill();
   if (INK) { c.strokeStyle = OL; c.lineWidth = 0.55; c.stroke(); c.save(); head(); c.clip(); c.fillStyle = 'rgba(150,80,60,.12)'; c.beginPath(); c.ellipse(hx - 3.5, hy + 3, 3, 4.5, 0, 0, 7); c.fill(); c.restore(); }
   const angry = (p.id === 'bos' && whipT != null) || (p.id === 'vet' && !!a.act.whip && !walking && !!a.bubble && Date.now() < a.bubble.until);
   if (angry) { c.fillStyle = 'rgba(255,60,40,.28)'; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill(); }
-  c.save(); c.beginPath(); if (INK) c.ellipse(hx, hy + 0.4, R * 0.88 + 0.6, R * 1.06 + 0.6, 0, 0, 7); else c.arc(hx, hy, R + 0.7, 0, 7); c.clip();
+  c.save(); c.beginPath(); if (INK) c.rect(hx - 3 * R, hy - 3 * R, 6 * R, 6 * R); else c.arc(hx, hy, R + 0.7, 0, 7); c.clip();
   c.fillStyle = p.hair;
-  if (front) {
+  if (INK && p.style === 'cap') {
+    const cc = p.cap ?? '#1e1f23';
+    c.fillStyle = cc; c.beginPath(); c.moveTo(hx - R * 1.0, hy - R * 0.2); c.bezierCurveTo(hx - R * 1.05, hy - R * 1.45, hx + R * 1.05, hy - R * 1.45, hx + R * 1.0, hy - R * 0.2); c.closePath(); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke();
+    c.fillStyle = sh(cc, 0.75); c.beginPath(); c.moveTo(hx - R * 0.3, hy - R * 0.32); c.quadraticCurveTo(hx + (front ? R * 1.5 : -R * 1.5), hy - R * 0.38, hx + (front ? R * 1.4 : -R * 1.4), hy - R * 0.1); c.lineTo(hx - R * 0.1, hy - R * 0.12); c.closePath(); c.fill(); c.stroke();
+    if (front && p.id === 'jaga') { c.fillStyle = '#f2c230'; c.beginPath(); c.arc(hx + 0.4, hy - R * 0.7, R * 0.12, 0, 7); c.fill(); }
+  } else if (INK) {
+    const hg2 = c.createLinearGradient(0, hy - R * 1.2, 0, hy); hg2.addColorStop(0, sh(p.hair, 1.25)); hg2.addColorStop(1, sh(p.hair, 0.9)); c.fillStyle = hg2;
+    const side = p.style === 'long' ? R * 0.55 : R * 0.05, f = front ? 0.6 : 0;
+    c.beginPath(); c.moveTo(hx - R * 1.0, hy + side); c.bezierCurveTo(hx - R * 1.18, hy - R * 1.55, hx + R * 1.18, hy - R * 1.55, hx + R * 1.0, hy + side);
+    if (!front) c.lineTo(hx + R * 0.98, hy + R * 0.7), c.lineTo(hx - R * 0.98, hy + R * 0.7);
+    else if (p.style === 'slick') { c.bezierCurveTo(hx + R * 0.85, hy - R * 0.45, hx + f, hy - R * 0.55, hx - R * 0.2, hy - R * 0.52); c.bezierCurveTo(hx - R * 0.7, hy - R * 0.5, hx - R * 0.95, hy - R * 0.2, hx - R * 1.0, hy + side); }
+    else { c.bezierCurveTo(hx + R * 0.75, hy - R * 0.55, hx + R * 0.5, hy - R * 0.45, hx + R * 0.3 + f, hy - R * 0.28); c.bezierCurveTo(hx + R * 0.08, hy - R * 0.6, hx - R * 0.12, hy - R * 0.48, hx - R * 0.28 + f, hy - R * 0.3); c.bezierCurveTo(hx - R * 0.62, hy - R * 0.6, hx - R * 0.95, hy - R * 0.3, hx - R * 1.0, hy + side); }
+    c.closePath(); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke();
+    if (p.style === 'curly') for (let k = 0; k < 6; k++) { c.beginPath(); c.arc(hx - R * 0.85 + k * R * 0.34, hy - R * 0.62 - Math.sin(k) * 0.4, R * 0.24, 0, 7); c.fill(); }
+    c.strokeStyle = sh(p.hair, 0.68); c.lineWidth = 0.32;
+    for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(hx + k * R * 0.2, hy - R * 1.02); c.quadraticCurveTo(hx + k * R * 0.28, hy - R * 0.8, hx + k * R * 0.24, hy - R * 0.5); c.stroke(); }
+  } else if (front) {
     if (p.style === 'cap') { c.fillStyle = p.cap ?? '#1e1f23'; c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, R - 0.5); }
     else {
       c.beginPath(); c.ellipse(hx - 0.6, hy - 3.2, R + 1, R - 1.6, -0.12, 0, 7); c.fill();
@@ -1486,8 +1506,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   } else { c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, 2 * R - (p.style === 'cap' ? 2.5 : 1.3)); if (p.style === 'cap') { c.fillStyle = p.cap ?? '#1e1f23'; c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, R - 0.5); } }
   c.restore();
   if (INK && p.style !== 'cap') { c.fillStyle = 'rgba(255,255,255,.22)'; c.beginPath(); c.ellipse(hx - 1.5, hy - 4.6, 2.8, 0.8, -0.25, 0, 7); c.fill(); }      // hair shine
-  if (p.style === 'cap') { c.fillStyle = p.cap ?? '#1e1f23'; c.beginPath(); c.ellipse(hx + (front ? 4.5 : -4.5), hy - 1.4, 3.6, 1.1, 0, 0, 7); c.fill(); }
-  if (p.style === 'bun') { c.fillStyle = p.hair; c.beginPath(); c.arc(hx - 1, hy - R - 0.6, 2.6, 0, 7); c.fill(); }
+  if (p.style === 'cap' && !INK) { c.fillStyle = p.cap ?? '#1e1f23'; c.beginPath(); c.ellipse(hx + (front ? 4.5 : -4.5), hy - 1.4, 3.6, 1.1, 0, 0, 7); c.fill(); }
+  if (p.style === 'bun') { c.fillStyle = p.hair; c.beginPath(); c.arc(hx - 1, hy - R - (INK ? 2.2 : 0.6), 2.6, 0, 7); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } }
   if (p.headset) { c.strokeStyle = '#1e1f23'; c.lineWidth = 1; c.beginPath(); c.arc(hx, hy, R + 0.6, Math.PI * 1.05, Math.PI * 1.95); c.stroke(); c.fillStyle = '#1e1f23'; c.beginPath(); c.arc(hx - R + 0.4, hy + 0.5, 1.8, 0, 7); c.fill(); }
   if (front && pose !== 'sleep' && pose !== 'nap') {
     const blink = (t * 1000 + hash(p.id) * 4000) % 4000 < 120;
@@ -1497,12 +1517,20 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     for (const ex of [hx - 0.6, hx + 3.2]) {
       if (closed) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); if (mood === 'KETAWA') c.arc(ex, hy + 1.2, 0.9, Math.PI * 1.1, Math.PI * 1.9); else c.arc(ex, hy + 0.2, 0.9, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); }
       else if (blink) c.fillRect(ex - 0.9, hy + 0.6 + look, 1.8, 0.5); else {
-        c.fillStyle = INK ? '#2b1d16' : '#1e1f23'; c.beginPath(); c.ellipse(ex, hy + 0.6 + look + (drama && mood === 'SEDIH' ? 0.3 : 0), INK ? 0.95 : 0.85, shaking ? 1.6 : INK ? 1.45 : 1.15, 0, 0, 7); c.fill();
-        if (INK) { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex + 0.3, hy + 0.1 + look, 0.38, 0, 7); c.fill(); c.fillStyle = '#1e1f23'; }
+        if (INK) {
+          const ey0 = hy + 0.7 + look + (drama && mood === 'SEDIH' ? 0.3 : 0), ew = 1.05;
+          c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(ex, ey0, ew * 1.2, ew * (shaking ? 1.25 : 0.98), 0, 0, 7); c.fill();
+          c.fillStyle = '#4a2c1a'; c.beginPath(); c.ellipse(ex + 0.25, ey0 + 0.1, ew * 0.78, ew * 0.9, 0, 0, 7); c.fill();
+          c.fillStyle = '#120c08'; c.beginPath(); c.arc(ex + 0.25, ey0 + 0.2, ew * 0.42, 0, 7); c.fill();
+          c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex + 0.55, ey0 - 0.25, ew * 0.27, 0, 7); c.fill();
+          c.strokeStyle = '#2a1a12'; c.lineWidth = 0.42; c.beginPath(); c.moveTo(ex - ew * 1.25, ey0 - ew * 0.7); c.quadraticCurveTo(ex, ey0 - ew * 1.3, ex + ew * 1.25, ey0 - ew * 0.75); c.stroke();
+          c.fillStyle = '#1e1f23';
+        } else { c.fillStyle = '#1e1f23'; c.beginPath(); c.ellipse(ex, hy + 0.6 + look, 0.85, shaking ? 1.5 : 1.15, 0, 0, 7); c.fill(); }
       }
     }
     c.fillStyle = 'rgba(255,120,120,.35)'; c.beginPath(); c.arc(hx - 1.6, hy + 2.8, 1.1, 0, 7); c.arc(hx + 4.3, hy + 2.8, 1.1, 0, 7); c.fill();
-    if (INK && !angry && !drama && !closed) { c.strokeStyle = sh(p.hair, 0.8); c.lineWidth = 0.45; c.beginPath(); c.moveTo(hx - 1.6, hy - 1.4); c.lineTo(hx + 0.3, hy - 1.7); c.moveTo(hx + 2.3, hy - 1.7); c.lineTo(hx + 4.1, hy - 1.4); c.stroke(); }
+    if (INK && !angry && !drama && !closed) { c.strokeStyle = sh(p.hair, 0.8); c.lineWidth = 0.5; c.beginPath(); for (const ex of [hx - 0.6, hx + 3.2]) { c.moveTo(ex - 1.2, hy - 1.3 + (p.id === 'bos' ? (ex < hx ? -0.3 : 0.3) : 0)); c.quadraticCurveTo(ex, hy - 1.9, ex + 1.2, hy - 1.3 + (p.id === 'bos' ? (ex < hx ? 0.3 : -0.3) : 0)); } c.stroke();
+      c.strokeStyle = 'rgba(120,70,50,.5)'; c.lineWidth = 0.35; c.beginPath(); c.moveTo(hx + 1.6, hy + 1.6); c.quadraticCurveTo(hx + 1.9, hy + 2.4, hx + 1.4, hy + 2.5); c.stroke(); }
     if (drama) {
       if (mood === 'KETAWA') { c.fillStyle = '#7a1f1f'; c.beginPath(); c.moveTo(hx - 0.6, hy + 2.6); c.lineTo(hx + 3.4, hy + 2.6); c.quadraticCurveTo(hx + 1.4, hy + 6.2 + Math.abs(Math.sin(t * 14)) * 0.6, hx - 0.6, hy + 2.6); c.fill(); c.fillStyle = '#ff8a8a'; c.beginPath(); c.arc(hx + 1.4, hy + 4.4, 0.8, 0, 7); c.fill(); }
       else if (mood === 'MAKAN POPCORN') { c.fillStyle = '#7a3b2e'; c.beginPath(); c.ellipse(hx + 1.4, hy + 3.2, 0.9, Math.sin(t * 10) > 0 ? 0.7 : 0.3, 0, 0, 7); c.fill(); }
@@ -2151,7 +2179,7 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     if (wall < a.hiddenUntil) continue;                     // inside the lift
     const [ix, iy] = iso(a.x, a.y), [ax, ay0] = toScreen(ix, iy, a.room);
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
-    const ay = hidden ? ay0 - 4 : ay0 - ((seated ? (INK ? 30 : 27) : INK ? 38 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
+    const ay = hidden ? ay0 - 4 : ay0 - ((seated ? (INK ? 31 : 27) : INK ? 37 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
     c.font = nameF; const nw = c.measureText(p.name).width;
     c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = c.measureText(label + extraTxt).width + 6 * ts;
     const w = Math.max(nw, lw) + 7 * ts, h = 17 * ts;
