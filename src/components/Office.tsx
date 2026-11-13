@@ -721,9 +721,9 @@ function drawFlatGround(c: C, night: boolean) {
   const L = -2 * NX;
   poly(c, [iso(L - 3, -3, -8), iso(NX + 40, -3, -8), iso(NX + 40, NY + 40, -8), iso(L - 3, NY + 40, -8)], night ? '#16231b' : '#86b96f');
   poly(c, [iso(L - 1.4, -1.4, -8), iso(NX + 1.4, -1.4, -8), iso(NX + 1.4, NY + 1.4, -8), iso(L - 1.4, NY + 1.4, -8)], night ? '#3a3b40' : '#d6d3cc');
-  poly(c, [iso(NX + 3, -9, -8), iso(NX + 5.5, -9, -8), iso(NX + 5.5, NY + 9, -8), iso(NX + 3, NY + 9, -8)], night ? '#1c1d22' : '#4a4c53');
+  poly(c, [iso(NX + 3, -9, -8), iso(NX + 5.5, -9, -8), iso(NX + 5.5, NY + 60, -8), iso(NX + 3, NY + 60, -8)], night ? '#1c1d22' : '#4a4c53');
   poly(c, [iso(L - 9, NY + 3, -8), iso(NX + 9, NY + 3, -8), iso(NX + 9, NY + 5.5, -8), iso(L - 9, NY + 5.5, -8)], night ? '#1c1d22' : '#4a4c53');
-  for (let k = -8; k < NY + 8; k += 1.6) poly(c, [iso(NX + 4.2, k, -7.9), iso(NX + 4.3, k, -7.9), iso(NX + 4.3, k + 0.8, -7.9), iso(NX + 4.2, k + 0.8, -7.9)], '#f2c230');
+  for (let k = -8; k < NY + 60; k += 1.6) poly(c, [iso(NX + 4.2, k, -7.9), iso(NX + 4.3, k, -7.9), iso(NX + 4.3, k + 0.8, -7.9), iso(NX + 4.2, k + 0.8, -7.9)], '#f2c230');
   for (let k = L - 8; k < NX + 8; k += 1.6) poly(c, [iso(k, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.3, -7.9), iso(k, NY + 4.3, -7.9)], '#f2c230');
   for (const [tx, ty, sc] of [[L - 2.6, 2, 1], [L - 2.6, 6, 1.15], [L - 2.6, 10, 0.95], [L + 4, NY + 2.0, 1.1], [L + 14, NY + 2.0, 1], [-6, NY + 2.0, 1.05], [5, NY + 2.0, 0.95], [NX + 2.0, 1.5, 0.9], [NX + 2.0, 6.5, 1]] as const) tree(c, tx, ty, sc, night);
 }
@@ -731,12 +731,12 @@ function drawStatic(c: C, night: boolean, room: number) {
   // one building: the walls of a lower floor go all the way up to the floor slab of the room above (glass facade)
   const wh = FLAT ? FLATWH : SHAPE === 'zigzag' ? WALL + 26 : room === 0 && SHAPE !== 'rooftop' ? WALL + 26 : RH - 8;
   if (room === 2 && !FLAT) {    // the street level: lawn, pavement and a road around the tower
-    poly(c, [iso(-9, -9, -8), iso(NX + 9, -9, -8), iso(NX + 9, NY + 9, -8), iso(-9, NY + 9, -8)], night ? '#16231b' : '#86b96f');
+    poly(c, [iso(-9, -9, -8), iso(NX + 60, -9, -8), iso(NX + 60, NY + 60, -8), iso(-9, NY + 60, -8)], night ? '#16231b' : '#86b96f');      // lawn far past the screen edges, so a tall phone never sees sky under it
     poly(c, [iso(-1.4, -1.4, -8), iso(NX + 1.4, -1.4, -8), iso(NX + 1.4, NY + 1.4, -8), iso(-1.4, NY + 1.4, -8)], night ? '#3a3b40' : '#d6d3cc');
     poly(c, [iso(NX + 3, -9, -8), iso(NX + 5.5, -9, -8), iso(NX + 5.5, NY + 9, -8), iso(NX + 3, NY + 9, -8)], night ? '#1c1d22' : '#4a4c53');
-    poly(c, [iso(-9, NY + 3, -8), iso(NX + 9, NY + 3, -8), iso(NX + 9, NY + 5.5, -8), iso(-9, NY + 5.5, -8)], night ? '#1c1d22' : '#4a4c53');
+    poly(c, [iso(-9, NY + 3, -8), iso(NX + 60, NY + 3, -8), iso(NX + 60, NY + 5.5, -8), iso(-9, NY + 5.5, -8)], night ? '#1c1d22' : '#4a4c53');
     for (let k = -8; k < NY + 8; k += 1.6) poly(c, [iso(NX + 4.2, k, -7.9), iso(NX + 4.3, k, -7.9), iso(NX + 4.3, k + 0.8, -7.9), iso(NX + 4.2, k + 0.8, -7.9)], '#f2c230');
-    for (let k = -8; k < NX + 8; k += 1.6) poly(c, [iso(k, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.3, -7.9), iso(k, NY + 4.3, -7.9)], '#f2c230');
+    for (let k = -8; k < NX + 60; k += 1.6) poly(c, [iso(k, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.3, -7.9), iso(k, NY + 4.3, -7.9)], '#f2c230');
     for (const [tx, ty, sc] of [[-2.6, 2, 1], [-2.6, 6, 1.15], [-2.6, 10, 0.95], [3, -2.6, 1], [8, -2.6, 1.1], [NX + 2.0, 13.3, 1.05], [-4, NY + 2.0, 1.1], [NX + 2.0, 1.5, 0.9], [NX + 2.0, 6.5, 1]]) tree(c, tx, ty, sc, night);
     for (const [lx, ly] of [[NX + 2.7, 3.5], [NX + 2.7, 10], [4, NY + 2.7], [10, NY + 2.7]]) {      // street lamps
       const [a0, a1] = iso(lx, ly, -8), [b0, b1] = iso(lx, ly, 34);
@@ -1989,7 +1989,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const w = box0.clientWidth || W; dpr = THEME.pixel ? 1 : Math.min(3, window.devicePixelRatio || 1); cv.style.imageRendering = THEME.pixel ? 'pixelated' : '';
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 0.86) : Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 0.93) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       const cx1 = roomX(1) + OX + (NX - NY) * TW * 0.5;
       lhRef.current = LH; homeRef.current = { z, tx: FLAT ? Math.min(0, Math.max(W - CW * z, W / 2 - cx1 * z)) : (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
