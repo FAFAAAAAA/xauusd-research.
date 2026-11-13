@@ -1,8 +1,8 @@
 /* XAU app: keep the app shell on the phone so opening the installed app is instant.
    - /_next/static/* and icons: cache first (file names change on every deploy)
-   - the office page: show the cached copy right away and refresh it in the background; other pages: network first
+   - pages (the office too): network first, so a new deploy shows up at once; the cached copy only when offline / very slow
    - /api/*: never cached here (the app keeps its own last data) */
-const CACHE = 'xau-shell-v1';
+const CACHE = 'xau-shell-v2';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k);
@@ -22,8 +22,9 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(caches.open(CACHE).then(async (c) => {
       const key = url.pathname;
       const net = fetch(req).then((res) => { if (res.ok && !res.redirected && res.type === 'basic') c.put(key, res.clone()); return res; });
-      // the office (home) opens from the cache at once; other pages try the network first (always the newest build)
-      if (key === '/') { const hit = await c.match(key); if (hit) { e.waitUntil(net.catch(() => {})); return hit; } return net; }
+      // always the newest build; the saved copy only when the network fails or takes longer than 4 s
+      const slow = new Promise((r) => setTimeout(r, 4000)).then(() => c.match(key));
+      try { const first = await Promise.race([net, slow]); if (first) return first; } catch { /* offline */ }
       return net.catch(async () => (await c.match(key)) || Response.error());
     }));
   }

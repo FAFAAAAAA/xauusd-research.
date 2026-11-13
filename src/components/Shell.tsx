@@ -37,13 +37,23 @@ export default function Shell({ children, showLogout = false }: { children: Reac
   }, [router]);
   useEffect(() => {
     // the installed app keeps its shell in a service worker, so the next opening is instant
-    if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then((r) => r.update()).catch(() => {});
+    // a new deploy: reload by itself (when the app comes back to the front, and every 3 minutes), so changes show up without reinstalling
+    let build = '';
+    const check = () => fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()).then((j) => {
+      const v = String(j?.data?.build ?? ''); if (!v) return;
+      if (build && v !== build) window.location.reload(); else build = v;
+    }).catch(() => {});
+    check();
+    const vt = window.setInterval(check, 180_000);
+    const onVis = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVis);
     // prepare the other pages later on the office screen, so it gets the network first
     const id = window.setTimeout(() => {
       for (const l of LINKS) router.prefetch(l.href);
       warm(['/api/live', '/api/settings', '/api/analytics']);
     }, window.location.pathname === '/' ? 5000 : 1200);
-    return () => window.clearTimeout(id);
+    return () => { window.clearTimeout(id); window.clearInterval(vt); document.removeEventListener('visibilitychange', onVis); };
   }, [router]);
   // swipe gestures (anywhere on the screen, not only the edge):
   //  - Trade page: swipe left = Forex, swipe right = Crypto (the page follows the finger)
