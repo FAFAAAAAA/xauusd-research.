@@ -795,10 +795,19 @@ function drawStatic(c: C, night: boolean, room: number) {
     }
   }
   // everyday wall hardware: air conditioner, exit sign, camera, fire extinguisher, sockets
-  if (room === 2) {      // exit: a glass double door with a green KELUAR sign above it
-    poly(c, wallB(13.0, 14.0, 0, 58), '#1e1f23'); poly(c, wallB(13.08, 13.48, 0, 54), night ? 'rgba(140,170,200,.55)' : 'rgba(170,210,240,.75)'); poly(c, wallB(13.52, 13.92, 0, 54), night ? 'rgba(130,160,190,.55)' : 'rgba(160,200,232,.75)');
-    poly(c, wallB(13.43, 13.46, 22, 34), '#d9dade'); poly(c, wallB(13.54, 13.57, 22, 34), '#d9dade');
-    poly(c, wallB(13.05, 13.95, 61, 68), '#1f9d57'); const [ex, ey] = iso(13.5, 0, 64.5); c.save(); c.translate(ex, ey); c.transform(1, 0.5, 0, 1, 0, 0); c.fillStyle = '#ffffff'; c.font = '800 4.6px ui-monospace, Menlo, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('KELUAR', 0, 0); c.restore();
+  if (room === 2) {      // exit: a wide glass double door with a big green KELUAR sign above it
+    poly(c, wallB(13.0, 14.65, 0, 64), '#1e1f23');                                   // frame
+    for (const [a, b] of [[13.1, 13.8], [13.85, 14.55]]) {
+      poly(c, wallB(a, b, 0, 60), night ? 'rgba(120,150,185,.7)' : 'rgba(165,205,235,.9)');
+      poly(c, wallB(a + 0.06, a + 0.22, 8, 56), 'rgba(255,255,255,.35)');           // glass shine
+      poly(c, wallB(a + 0.08, b - 0.08, 27, 29.5), '#c9ccd2');                          // push bar
+    }
+    poly(c, wallB(13.8, 13.85, 0, 60), '#1e1f23');
+    poly(c, wallB(13.05, 14.6, 67, 77), '#1f9d57'); poly(c, wallB(13.1, 14.55, 68, 76), '#22b062');
+    const [ex, ey] = iso(13.825, 0, 72); c.save(); c.translate(ex, ey); c.transform(1, 0.5, 0, 1, 0, 0);
+    c.fillStyle = '#ffffff'; let ef = 6; c.font = `900 ${ef}px ui-sans-serif, system-ui, sans-serif`; while (ef > 3 && c.measureText('KELUAR').width > 18) { ef -= 0.2; c.font = `900 ${ef}px ui-sans-serif, system-ui, sans-serif`; } c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('KELUAR', 0, 0.3);
+    c.restore();
+    poly(c, wallB(13.0, 14.65, 0, 1.2), '#8b8f99');                                    // threshold
   }
   { const [cx, cy] = iso(0.5, 0, wh - 14); c.fillStyle = '#26272c'; c.beginPath(); c.arc(cx, cy, 2.6, 0, Math.PI); c.fill(); c.fillStyle = night ? '#ff4d4f' : '#7a2a2a'; c.fillRect(cx - 0.5, cy + 0.6, 1, 1); }
   // lift on every floor (the way between the rooms); on the open floor: the entrance door in the lobby
@@ -2106,7 +2115,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         fg.addColorStop(0, top); fg.addColorStop(0.35, top);
         const r = parseInt(top.slice(1, 3), 16), g = parseInt(top.slice(3, 5), 16), b = parseInt(top.slice(5, 7), 16);
         fg.addColorStop(1, `rgba(${r},${g},${b},0)`); c.fillStyle = fg; c.fillRect(0, 0, cv.width, fh);
-        if (top !== skyCol) { skyCol = top; document.documentElement.style.setProperty('--office-sky', top); document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', top)); }
+        if (top !== skyCol) { skyCol = top; document.documentElement.style.setProperty('--office-sky', top); document.documentElement.style.setProperty('--office-ground', nightNow ? '#16231b' : '#86b96f'); document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', top)); }
       }
       // the glass lift: the cabin comes, the doors open, the rider walks in, rides, walks out
       let liftPos = LIFTPOS.r, liftDoor = 0, rider: { p: Person; a: Agent; room: number; y: number; walk: number; inCab: boolean; out: boolean } | null = null;
