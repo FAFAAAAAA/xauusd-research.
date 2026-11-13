@@ -382,11 +382,13 @@ const sh = (hex: string, k: number) => {
   const f = (v: number) => Math.max(0, Math.min(255, Math.round(k <= 1 ? v * k : v + (255 - v) * (k - 1))));
   return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
 };
+/** painted look: warm brown ink outlines instead of faint grey edges */
+let INK: string | null = null;
 function poly(c: C, pts: Array<[number, number]>, fill: string | CanvasGradient, edge = false) {
   c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
   c.closePath(); c.fillStyle = fill; c.fill();
-  if (edge) { c.strokeStyle = 'rgba(0,0,0,.16)'; c.lineWidth = 0.4; c.stroke(); }
+  if (edge) { c.strokeStyle = INK ?? 'rgba(0,0,0,.16)'; c.lineWidth = INK ? 0.5 : 0.4; c.stroke(); }
 }
 /** iso box: floor rect x..x+w, y..y+d, from height z up h px. left = the +y face, right = the +x face */
 function box(c: C, x: number, y: number, w: number, d: number, z: number, h: number, top: string, left?: string, right?: string, edge = true) {
@@ -420,7 +422,7 @@ const wallL = (y0: number, y1: number, z0: number, z1: number): Array<[number, n
 const wallB = (x0: number, x1: number, z0: number, z1: number): Array<[number, number]> => [iso(x0, 0, z1), iso(x1, 0, z1), iso(x1, 0, z0), iso(x0, 0, z0)];
 
 /* ---------- looks (themes) ---------- */
-type Theme = { floor: string; floorN: string; line: string; back: string; backN: string; left: string; leftN: string; cap: string; base: string; sky?: [string, string, string]; extra?: (c: C, night: boolean, room: number, wh: number) => void };
+type Theme = { floor: string; floorN: string; line: string; back: string; backN: string; left: string; leftN: string; cap: string; base: string; sky?: [string, string, string]; paint?: boolean; extra?: (c: C, night: boolean, room: number, wh: number) => void };
 const THEMES: Record<string, Theme> = {
   modern: { floor: '#dcd9d3', floorN: '#b9b6b0', line: 'rgba(120,110,95,.13)', back: '#f5f4f1', backN: '#c9c7c2', left: '#eceae6', leftN: '#bdbbb6', cap: '#26272c', base: '#2b2c31' },
   kayu: {
@@ -460,6 +462,23 @@ const THEMES: Record<string, Theme> = {
         green(5.45, 6.95, 4, 120, 'l');
       }
       if (room === 0) green(8.0, 8.75, 26, wh - 6, 'b');
+    },
+  },
+  lukis: {     // warm, hand-painted look (like a cosy animated film): honey wood, cream plaster, ink outlines
+    floor: '#c38a57', floorN: '#6e4d34', line: 'rgba(110,65,35,.22)', back: '#f1e2c4', backN: '#8f7c63', left: '#ead6b2', leftN: '#85735a', cap: '#6b4429', base: '#8a5a36',
+    sky: ['#8fc3e8', '#cfe6ef', '#f6e3c3'], paint: true,
+    extra: (c, night, room, wh) => {
+      // plaster texture: soft watercolour blotches
+      for (let i = 0; i < 90; i++) {
+        const x = hash(`px${room}${i}`) * NX, z = 6 + hash(`pz${room}${i}`) * (wh - 12), [qx, qy] = iso(x, 0, z);
+        c.fillStyle = night ? 'rgba(40,25,15,.05)' : `rgba(${180 + hash(`pc${i}`) * 40},${140 + hash(`pd${i}`) * 30},100,.07)`;
+        c.beginPath(); c.ellipse(qx, qy, 6 + hash(`pr${i}`) * 12, 3 + hash(`ps${i}`) * 6, 0.46, 0, 7); c.fill();
+      }
+      // wooden wainscot along the back wall
+      poly(c, wallB(0, NX, 4, 30), night ? '#5a3b26' : '#a8724a');
+      for (let x = 0.5; x < NX; x += 0.5) poly(c, wallB(x - 0.015, x + 0.015, 5, 29), 'rgba(70,40,20,.35)');
+      poly(c, wallB(0, NX, 29, 32), night ? '#4a301f' : '#8a5a36');
+      THEMES.hangat.extra!(c, night, room, wh);
     },
   },
   taman: {
@@ -530,6 +549,15 @@ function drawBackdrop(c: C, night: boolean) {
       for (const [dx, dy, r] of [[0, 0, 12], [13, -5, 14], [27, 0, 11], [8, 4, 10], [20, 5, 10]]) { c.beginPath(); c.ellipse(cx + dx * sc, cy + dy * sc, r * sc * 1.2, r * sc * 0.75, 0, 0, 7); c.fill(); }
     }
   }
+  if (THEME.paint) {      // rolling hills and trees instead of a city
+    for (const [base, col, amp, sd] of [[TOTAL - 120, night ? '#14213a' : '#b9d3b0', 40, 'h1'], [TOTAL - 30, night ? '#101b2c' : '#8fbc7f', 55, 'h2']] as const) {
+      c.fillStyle = col; c.beginPath(); c.moveTo(-W, TOTAL + H);
+      for (let x = -W; x <= 2 * W; x += 20) c.lineTo(x, base - Math.sin(x / 90 + hash(sd) * 6) * amp * 0.5 - Math.sin(x / 37) * amp * 0.15);
+      c.lineTo(2 * W, TOTAL + H); c.closePath(); c.fill();
+    }
+    for (let i = 0; i < 40; i++) { const x = -40 + hash(`bt${i}`) * (W + 80), y = TOTAL - 60 + hash(`bu${i}`) * 80; c.fillStyle = night ? '#0d1626' : ['#6fa463', '#5e9a4c', '#86b874'][i % 3]; c.beginPath(); c.ellipse(x, y, 10 + hash(`bv${i}`) * 10, 7 + hash(`bw${i}`) * 6, 0, 0, 7); c.fill(); }
+    return;
+  }
   // two layers of city skyline behind the tower
   for (const [layer, base, hmax, col, win] of [[0, TOTAL - 40, 260, night ? '#0f1730' : '#bdd0e2', night ? 'rgba(255,214,120,.55)' : 'rgba(255,255,255,.55)'], [1, TOTAL + 10, 190, night ? '#141d38' : '#a3b8cd', night ? 'rgba(255,214,120,.8)' : 'rgba(255,255,255,.6)']] as const) {
     let x = -30;
@@ -583,6 +611,11 @@ function drawStatic(c: C, night: boolean, room: number) {
   c.strokeStyle = night ? 'rgba(0,0,0,.08)' : THEME.line; c.lineWidth = 0.45;
   for (let k = 1; k < NX; k++) { const a = iso(k, 0), b = iso(k, NY); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   for (let k = 1; k < NY; k++) { const a = iso(0, k), b = iso(NX, k); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  if (THEME.paint) for (let yy = 0; yy < NY; yy += 0.5) for (let xx = 0, i = 0; xx < NX; i++) {
+    const l = 1.1 + hash(`pl${room}:${yy}:${i}`) * 2, x1 = Math.min(NX, xx + l), v = hash(`pv${room}:${yy}:${i}`);
+    poly(c, [iso(xx, yy), iso(x1, yy), iso(x1, yy + 0.5), iso(xx, yy + 0.5)], night ? `rgba(0,0,0,${0.04 + v * 0.08})` : v < 0.33 ? 'rgba(120,70,30,.10)' : v < 0.66 ? 'rgba(255,230,190,.10)' : 'rgba(90,50,20,.05)');
+    xx = x1;
+  }
   // plank joints (staggered) so the floor reads as real flooring, plus a soft sheen
   c.strokeStyle = night ? 'rgba(0,0,0,.06)' : THEME.line; c.lineWidth = 0.35;
   for (let yy = 0; yy < NY; yy += 0.5) for (let xx = (yy * 2) % 2 ? 0.9 : 0.2; xx < NX; xx += 1.8) { const a = iso(xx, yy), b = iso(xx, yy + 0.5); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
@@ -591,7 +624,7 @@ function drawStatic(c: C, night: boolean, room: number) {
   const gl = c.createLinearGradient(gx0, gy0, gx1, gy1); gl.addColorStop(0, 'rgba(255,255,255,.16)'); gl.addColorStop(0.35, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(0,0,0,.05)');
   poly(c, [iso(0, 0), iso(NX, 0), iso(NX, NY), iso(0, NY)], gl);
   if (!night) for (const [y0, y1] of [[0.6, 3.1], [3.2, 5.7], [5.8, 8.3], [8.4, 10.6]]) {
-    const lg = c.createLinearGradient(iso(0, y0)[0], iso(0, y0)[1], iso(4.2, y0 + 1.4)[0], iso(4.2, y0 + 1.4)[1]); lg.addColorStop(0, 'rgba(255,250,235,.36)'); lg.addColorStop(1, 'rgba(255,250,235,0)');
+    const lg = c.createLinearGradient(iso(0, y0)[0], iso(0, y0)[1], iso(4.2, y0 + 1.4)[0], iso(4.2, y0 + 1.4)[1]); lg.addColorStop(0, THEME.paint ? 'rgba(255,214,140,.42)' : 'rgba(255,250,235,.36)'); lg.addColorStop(1, THEME.paint ? 'rgba(255,214,140,0)' : 'rgba(255,250,235,0)');
     poly(c, [iso(0, y0), iso(0, y1), iso(4.2, Math.min(NY, y1 + 1.4)), iso(4.2, Math.min(NY, y0 + 1.4))], lg);
   }
   poly(c, [iso(0, 0), iso(NX, 0), iso(NX, 0.4), iso(0.4, 0.4)], 'rgba(0,0,0,.07)');
@@ -620,12 +653,23 @@ function drawStatic(c: C, night: boolean, room: number) {
   poly(c, wallB(0, 2, 0, wh), wg);
   poly(c, wallB(0, NX, 0, 4), THEME.base); poly(c, wallL(0, NY, 0, 4), THEME.base);
   for (const [y0, y1] of [[0.55, 3.05], [3.15, 5.65], [5.75, 8.25], [8.35, 10.75]]) {
-    poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, wh - 4), '#1c1d21');
+    const FR = THEME.paint ? (night ? '#3a2416' : '#6b4429') : '#1c1d21';
+    poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, wh - 4), FR);
     const sky = c.createLinearGradient(0, iso(0, y0, wh - 8)[1], 0, iso(0, y0, 14)[1]);
-    if (night) { sky.addColorStop(0, '#0b1430'); sky.addColorStop(1, '#1a2550'); } else { sky.addColorStop(0, '#8cc6ec'); sky.addColorStop(1, '#e7f4fb'); }
+    if (night) { sky.addColorStop(0, '#0b1430'); sky.addColorStop(1, '#1a2550'); } else if (THEME.paint) { sky.addColorStop(0, '#9ccbe9'); sky.addColorStop(0.6, '#e1f0ee'); sky.addColorStop(1, '#f3e6c8'); } else { sky.addColorStop(0, '#8cc6ec'); sky.addColorStop(1, '#e7f4fb'); }
     c.save(); c.beginPath(); const p = wallL(y0, y1, 13, wh - 7); c.moveTo(p[0][0], p[0][1]); for (const q of p.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
     c.fillStyle = sky; c.fill();
-    for (const b of CITY) {
+    if (THEME.paint) {      // painted clouds + tree canopy + far hills outside
+      if (!night) for (let k = 0; k < 4; k++) { const [qx, qy] = iso(0, y0 + hash(`cl${room}${k}`) * (y1 - y0), wh - 30 - hash(`cz${room}${k}`) * 50); c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.ellipse(qx, qy, 9, 3.5, 0.46, 0, 7); c.fill(); c.beginPath(); c.ellipse(qx + 5, qy - 2, 6, 3, 0.46, 0, 7); c.fill(); }
+      for (let k = 0; k < 7; k++) { const yy = y0 + (k / 6) * (y1 - y0), [qx, qy] = iso(0, yy, 34 + hash(`hl${room}${k}`) * 10); c.fillStyle = night ? '#16233a' : '#a9c99a'; c.beginPath(); c.ellipse(qx, qy, 14, 8, 0.46, 0, 7); c.fill(); }
+      for (let k = 0; k < 44; k++) {
+        const yy = y0 + hash(`tr${room}${k}`) * (y1 - y0), zz = 14 + hash(`tz${room}${k}`) * (k < 26 ? 30 : 70), [qx, qy] = iso(0, yy, zz);
+        c.fillStyle = night ? ['#0f1d1a', '#13261f', '#0c1714'][k % 3] : ['#5e9a4c', '#78b35b', '#4a8443', '#94c46c', '#3f7340'][k % 5];
+        c.beginPath(); c.ellipse(qx, qy, 4 + hash(`ts${room}${k}`) * 5, 3 + hash(`tt${room}${k}`) * 3, 0.4, 0, 7); c.fill();
+      }
+      if (night) for (let k = 0; k < 5; k++) { const [qx, qy] = iso(0, y0 + hash(`ff${room}${k}`) * (y1 - y0), 20 + hash(`fz${room}${k}`) * 30); c.fillStyle = 'rgba(255,230,140,.7)'; c.beginPath(); c.arc(qx, qy, 0.7, 0, 7); c.fill(); }
+    }
+    else for (const b of CITY) {
       if (b.y + b.w < y0 || b.y > y1) continue;
       poly(c, wallL(b.y, b.y + b.w, 13, 13 + b.h * 0.8), night ? '#1b2440' : '#c3ccd6');
       poly(c, wallL(b.y, b.y + b.w * 0.35, 13, 13 + b.h * 0.8), night ? '#151c34' : '#b0bac6');
@@ -637,10 +681,10 @@ function drawStatic(c: C, night: boolean, room: number) {
     if (!night) for (let k = 0; k < 10; k++) { const yy = y0 + (k / 10) * (y1 - y0); const [sx, sy] = iso(0, yy, 16); c.fillStyle = k % 2 ? '#6fa86a' : '#5c9558'; c.beginPath(); c.ellipse(sx, sy, 4.5, 4, 0, 0, 7); c.fill(); }
     poly(c, [iso(0, y0 + 0.2, wh - 7), iso(0, y0 + 0.55, wh - 7), iso(0, y0 + 1.3, 13), iso(0, y0 + 0.95, 13)], 'rgba(255,255,255,.08)');
     c.restore();
-    for (let k = 1; k < 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); poly(c, wallL(yy - 0.03, yy + 0.03, 13, wh - 7), '#1c1d21'); }
-    for (let zz = 78; zz < wh - 20; zz += 64) poly(c, wallL(y0, y1, zz, zz + 1.6), '#1c1d21');      // transoms of the curtain wall
+    for (let k = 1; k < 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); poly(c, wallL(yy - 0.03, yy + 0.03, 13, wh - 7), FR); }
+    for (let zz = 78; zz < wh - 20; zz += 64) poly(c, wallL(y0, y1, zz, zz + 1.6), FR);      // transoms of the curtain wall
     poly(c, wallL(y0, y1, 13, 15), 'rgba(255,255,255,.18)');
-    poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), '#2f3036');
+    poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), THEME.paint ? '#8a5a36' : '#2f3036');
   }
   if (room > 0) { poly(c, wallL(0, NY, wh - 6, wh), '#2b2c31'); poly(c, wallB(0, NX, wh - 6, wh), '#2b2c31'); }
   if (room > 0) {   // pendant lamps hanging from the floor above
@@ -792,7 +836,7 @@ function clusterDesk(y0: number, north: string, south: string): Item {
       box(c, x0 + 0.04, y0 + 0.05, 0.08, d - 0.1, 0, 15, '#1e1f23');
       box(c, x0 + w - 0.12, y0 + 0.05, 0.08, d - 0.1, 0, 15, '#1e1f23');
       box(c, x0 + w - 0.66, ym + 0.08, 0.5, 0.55, 0, 15, '#24252a', '#1b1c20', '#2d2e34');
-      box(c, x0, y0, w, d, 15, 2.2, '#f7f7f5', '#d6d5d1', '#e7e6e2');
+      if (THEME.paint) box(c, x0, y0, w, d, 15, 2.2, '#d9ac7a', '#a8774c', '#bf8d5f'); else box(c, x0, y0, w, d, 15, 2.2, '#f7f7f5', '#d6d5d1', '#e7e6e2');
       box(c, x0 + 0.06, ym - 0.03, w - 0.12, 0.06, 17.2, 6, '#d8cfc2', '#bfb6a9', '#cbc2b5');
       const pairs: Array<[number, number]> = [[x0 + 0.14, x0 + 0.86], [x0 + 0.94, x0 + 1.66]];
       for (const [xa, xb] of pairs) {      // north trader's monitors (we see their backs)
@@ -1045,7 +1089,7 @@ function furniture(theme = 'modern'): Item[][] {
     shadow(c, 0.55, 5.4, 0.45, 1.0); box(c, 0.6, 5.45, 0.35, 0.9, 0, 12, '#26272c', '#1e1f23', '#2d2e34');
     for (let k = 0; k < 4; k++) for (const z of [12.2, 6]) { const y = 5.55 + k * 0.2; cyl(c, 0.78, y, z, 0.07, 2, '#3a3b42', '#2b2c31'); }
   } });
-  if (theme === 'hangat') {
+  if (theme === 'hangat' || theme === 'lukis') {
     // glass partitions (blocking, with a door gap)
     const glassX = (r: number, x: number, ya: number, yb: number) => R[r].push({ x0: x - 0.06, y0: ya, x1: x + 0.12, y1: yb, draw: (c) => {
       poly(c, [iso(x + 0.03, ya, 0), iso(x + 0.03, yb, 0), iso(x + 0.03, yb, 36), iso(x + 0.03, ya, 36)], 'rgba(185,225,245,.28)');
@@ -1152,6 +1196,7 @@ function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, 
   const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
   const jx = x0 + (dx * a) / d - (dy * h * bend) / d, jy = y0 + (dy * a) / d + (dx * h * bend) / d;
   c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round';
+  if (INK) { c.lineWidth = w + 0.7; c.strokeStyle = 'rgba(70,40,25,.55)'; c.beginPath(); c.moveTo(x0, y0); c.lineTo(jx, jy); c.lineTo(x1, y1); c.stroke(); c.lineWidth = w; }
   c.strokeStyle = col; c.beginPath(); c.moveTo(x0, y0); c.lineTo(jx, jy); c.stroke();
   c.strokeStyle = col2 ?? col; c.beginPath(); c.moveTo(jx, jy); c.lineTo(x1, y1); c.stroke();
   return [x1, y1] as const;
@@ -1193,8 +1238,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     c.save(); c.scale(1, 0.42); c.fillStyle = sg; c.beginPath(); c.arc(0, 0, 7 - jump * 0.4, 0, 7); c.fill(); c.restore();
   }
   c.translate(0, -jump);
-  const standHip = -6.9 - bob * 0.8 + squat, seatHip = bean ? -4 : -7.2;
-  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = 8.4;
+  const LEG = INK ? 3.85 : 3.3, standHip = (INK ? -8.0 : -6.9) - bob * 0.8 + squat, seatHip = bean ? -4 : -7.2;
+  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = INK ? 9.0 : 8.4;
   const shoe = '#26272c', pantsD = sh(p.pants, 0.8), shirtD = sh(p.shirt, 0.82);
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (sitting || bean) {
@@ -1209,7 +1254,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       const lift = anim ? Math.max(0, Math.sin(f)) * 2.4 * am : 0;
       const footY = -1.1 - lift;
       const hx0 = o + sway * 0.6, col = o < 0 ? pantsD : p.pants;
-      limb(c, hx0, hip, footX, footY, 3.3, 3.3, squat ? 1 : 0.9, 2.8, col);
+      limb(c, hx0, hip, footX, footY, LEG, LEG, squat ? 1 : 0.9, 2.8, col);
       // shoe: toes point down while the foot swings forward, heel strikes first
       const pitch = anim ? (Math.sin(f) > 0 ? -0.35 * Math.cos(f) : 0) : 0;
       c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); c.restore();
@@ -1219,10 +1264,13 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const hy = hip - torso - 5.6 + breathe * 0.5 + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
-  if (p.style === 'long') { c.fillStyle = sh(p.hair, 0.9); c.beginPath(); c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); }
+  const big = p.id === 'vet', HS = INK ? (big ? 1.2 : 0.8) : big ? 1.45 : 1;     // head scale (Ny. Vetrycia keeps her big head)
+  const headOn = () => { c.save(); c.translate(hx, hy + 5); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
+  if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.5)'; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
   const tg = c.createLinearGradient(-4.6, 0, 4.6, 0); tg.addColorStop(0, sh(p.shirt, front ? 1.08 : 0.9)); tg.addColorStop(1, shirtD);
   c.fillStyle = tg; c.beginPath(); c.roundRect(-4.6 + lean * 0.5, ty, 9.2, torso + 0.6, [3.2, 3.2, 1.6, 1.6]); c.fill();
+  if (INK) { c.strokeStyle = 'rgba(70,40,25,.5)'; c.lineWidth = 0.5; c.stroke(); c.fillStyle = 'rgba(60,30,30,.13)'; c.beginPath(); c.roundRect(0.8 + lean * 0.5, ty + 1, 3.6, torso - 0.6, 1.6); c.fill(); }
   if (p.tie && front) { c.fillStyle = '#f4f4f2'; c.beginPath(); c.moveTo(-1.6, ty); c.lineTo(1.6, ty); c.lineTo(0, ty + 3); c.fill(); c.fillStyle = '#c0392b'; c.fillRect(-0.6, ty + 1.5, 1.3, 5); }
   if (p.id === 'jaga' && front) { c.fillStyle = '#f2c230'; c.fillRect(-3, ty + 2, 1.6, 1.8); }
   const arm = (side: number, back: boolean) => {
@@ -1314,11 +1362,11 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   arm(-1, true);
   if (bean && !walking && prop === 'laptop') { c.fillStyle = '#c9cbd1'; c.beginPath(); c.moveTo(1, hip - 1.5); c.lineTo(8, hip - 0.5); c.lineTo(8, hip + 1); c.lineTo(1, hip); c.fill(); c.fillStyle = '#9fd3f2'; c.fillRect(2.5, hip - 6, 5, 4.5); }
   if (sitting && !walking && prop === 'laptop') { c.fillStyle = '#c9cbd1'; c.fillRect(3, hip - 5.5, 5.5, 4); }
-  const big = p.id === 'vet';
-  if (big) { c.save(); c.translate(hx, hy + 5); c.scale(1.45, 1.45); c.translate(-hx, -(hy + 5)); }
+  headOn();
   c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx - 1.4, hy + R - 2.2, 2.8, 3);
   const hg = c.createRadialGradient(hx + 1.5, hy - 2, 1, hx, hy, R + 1); hg.addColorStop(0, sh(p.skin, 1.08)); hg.addColorStop(1, sh(p.skin, 0.9));
   c.fillStyle = hg; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill();
+  if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.55; c.stroke(); }
   const angry = (p.id === 'bos' && whipT != null) || (p.id === 'vet' && !!a.act.whip && !walking && !!a.bubble && Date.now() < a.bubble.until);
   if (angry) { c.fillStyle = 'rgba(255,60,40,.28)'; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill(); }
   c.save(); c.beginPath(); c.arc(hx, hy, R + 0.7, 0, 7); c.clip();
@@ -1333,6 +1381,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     }
   } else { c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, 2 * R - (p.style === 'cap' ? 2.5 : 1.3)); if (p.style === 'cap') { c.fillStyle = p.cap ?? '#1e1f23'; c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, R - 0.5); } }
   c.restore();
+  if (INK && p.style !== 'cap') { c.fillStyle = 'rgba(255,255,255,.22)'; c.beginPath(); c.ellipse(hx - 1.5, hy - 4.6, 2.8, 0.8, -0.25, 0, 7); c.fill(); }      // hair shine
   if (p.style === 'cap') { c.fillStyle = p.cap ?? '#1e1f23'; c.beginPath(); c.ellipse(hx + (front ? 4.5 : -4.5), hy - 1.4, 3.6, 1.1, 0, 0, 7); c.fill(); }
   if (p.style === 'bun') { c.fillStyle = p.hair; c.beginPath(); c.arc(hx - 1, hy - R - 0.6, 2.6, 0, 7); c.fill(); }
   if (p.headset) { c.strokeStyle = '#1e1f23'; c.lineWidth = 1; c.beginPath(); c.arc(hx, hy, R + 0.6, Math.PI * 1.05, Math.PI * 1.95); c.stroke(); c.fillStyle = '#1e1f23'; c.beginPath(); c.arc(hx - R + 0.4, hy + 0.5, 1.8, 0, 7); c.fill(); }
@@ -1343,9 +1392,13 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     const closed = drama && (mood === 'KETAWA' || mood === 'NANGIS');
     for (const ex of [hx - 0.6, hx + 3.2]) {
       if (closed) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); if (mood === 'KETAWA') c.arc(ex, hy + 1.2, 0.9, Math.PI * 1.1, Math.PI * 1.9); else c.arc(ex, hy + 0.2, 0.9, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); }
-      else if (blink) c.fillRect(ex - 0.9, hy + 0.6 + look, 1.8, 0.5); else { c.beginPath(); c.ellipse(ex, hy + 0.6 + look + (drama && mood === 'SEDIH' ? 0.3 : 0), 0.85, shaking ? 1.5 : 1.15, 0, 0, 7); c.fill(); }
+      else if (blink) c.fillRect(ex - 0.9, hy + 0.6 + look, 1.8, 0.5); else {
+        c.fillStyle = INK ? '#2b1d16' : '#1e1f23'; c.beginPath(); c.ellipse(ex, hy + 0.6 + look + (drama && mood === 'SEDIH' ? 0.3 : 0), INK ? 0.95 : 0.85, shaking ? 1.6 : INK ? 1.45 : 1.15, 0, 0, 7); c.fill();
+        if (INK) { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex + 0.3, hy + 0.1 + look, 0.38, 0, 7); c.fill(); c.fillStyle = '#1e1f23'; }
+      }
     }
     c.fillStyle = 'rgba(255,120,120,.35)'; c.beginPath(); c.arc(hx - 1.6, hy + 2.8, 1.1, 0, 7); c.arc(hx + 4.3, hy + 2.8, 1.1, 0, 7); c.fill();
+    if (INK && !angry && !drama && !closed) { c.strokeStyle = sh(p.hair, 0.8); c.lineWidth = 0.45; c.beginPath(); c.moveTo(hx - 1.6, hy - 1.4); c.lineTo(hx + 0.3, hy - 1.7); c.moveTo(hx + 2.3, hy - 1.7); c.lineTo(hx + 4.1, hy - 1.4); c.stroke(); }
     if (drama) {
       if (mood === 'KETAWA') { c.fillStyle = '#7a1f1f'; c.beginPath(); c.moveTo(hx - 0.6, hy + 2.6); c.lineTo(hx + 3.4, hy + 2.6); c.quadraticCurveTo(hx + 1.4, hy + 6.2 + Math.abs(Math.sin(t * 14)) * 0.6, hx - 0.6, hy + 2.6); c.fill(); c.fillStyle = '#ff8a8a'; c.beginPath(); c.arc(hx + 1.4, hy + 4.4, 0.8, 0, 7); c.fill(); }
       else if (mood === 'MAKAN POPCORN') { c.fillStyle = '#7a3b2e'; c.beginPath(); c.ellipse(hx + 1.4, hy + 3.2, 0.9, Math.sin(t * 10) > 0 ? 0.7 : 0.3, 0, 0, 7); c.fill(); }
@@ -1379,7 +1432,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     const w = (t * 1.6 + k * 0.5) % 1; c.fillStyle = `rgba(110,180,255,${1 - w})`;
     c.beginPath(); c.ellipse(hx - 6 - k * 1.5, hy - 3 + w * 6, 0.8, 1.3, 0, 0, 7); c.fill();
   }
-  if (big) c.restore();
+  c.restore();
   arm(1, false);
   c.restore();
 }
@@ -1484,8 +1537,8 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
 const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
 
 /* ---------- component ---------- */
-export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'hangat', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
-  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape);
+export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
+  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.paint ? 'rgba(80,45,25,.42)' : null;
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
@@ -1984,16 +2037,16 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     placed.push(tg);
   }
   for (const tg of tags) {
-    if (tg.y + tg.h < tg.ay - 4 || Math.abs(tg.x + tg.w / 2 - tg.ax) > tg.w / 2) { c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(Math.max(tg.x + 3, Math.min(tg.x + tg.w - 3, tg.ax)), tg.y + tg.h); c.lineTo(tg.ax, tg.ay - 1); c.stroke(); }
-    c.fillStyle = 'rgba(18,19,23,.86)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, 4.5); c.fill();
-    c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 0.6; c.stroke();
+    if (tg.y + tg.h < tg.ay - 4 || Math.abs(tg.x + tg.w / 2 - tg.ax) > tg.w / 2) { c.strokeStyle = INK ? 'rgba(110,70,40,.6)' : 'rgba(255,255,255,.55)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(Math.max(tg.x + 3, Math.min(tg.x + tg.w - 3, tg.ax)), tg.y + tg.h); c.lineTo(tg.ax, tg.ay - 1); c.stroke(); }
+    c.fillStyle = INK ? 'rgba(255,247,232,.93)' : 'rgba(18,19,23,.86)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, 4.5); c.fill();
+    c.strokeStyle = INK ? 'rgba(110,70,40,.55)' : 'rgba(255,255,255,.12)'; c.lineWidth = INK ? 0.8 : 0.6; c.stroke();
     c.textBaseline = 'middle'; c.textAlign = 'center';
-    c.font = nameF; c.fillStyle = '#ffffff'; c.fillText(tg.name, tg.x + tg.w / 2, tg.y + 5.2 * ts);
+    c.font = nameF; c.fillStyle = INK ? '#4a2e1e' : '#ffffff'; c.fillText(tg.name, tg.x + tg.w / 2, tg.y + 5.2 * ts);
     c.font = stF; c.textAlign = 'left';
     const extra = tg.extra ? ` ${tg.extra.text}` : '', full = c.measureText(tg.label + extra).width + 6 * ts;
     let x = tg.x + (tg.w - full) / 2;
     c.fillStyle = tg.color; c.beginPath(); c.roundRect(x, tg.y + 11 * ts, 3.6 * ts, 3.6 * ts, 1); c.fill(); x += 6 * ts;
-    c.fillStyle = '#f1f3f6'; c.fillText(tg.label, x, tg.y + 12.9 * ts); x += c.measureText(tg.label).width;
+    c.fillStyle = INK ? '#7a5a40' : '#f1f3f6'; c.fillText(tg.label, x, tg.y + 12.9 * ts); x += c.measureText(tg.label).width;
     if (tg.extra) { c.fillStyle = tg.extra.color; c.fillText(extra, x, tg.y + 12.9 * ts); }
     if (tg.bubble) {
       c.font = `800 ${7.5 * ts}px -apple-system, system-ui, sans-serif`;
