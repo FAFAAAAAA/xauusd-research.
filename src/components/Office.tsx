@@ -1970,7 +1970,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         for (const m of MOPS) if (m.room === r) { const k = 1 - (wall - m.t) / 25_000; ell(c, m.x, m.y, 0.2, 0.32, `rgba(205,232,255,${0.22 * k})`); ell(c, m.x - 0.08, m.y - 0.05, 0.25, 0.1, `rgba(255,255,255,${0.35 * k})`); }
         const list: Item[] = items[r].slice();
         if (EV.cur?.items && wall < EV.cur.until) list.push(...EV.cur.items(r, wall));
-        if (SHAPE === 'tower') { const here = Math.round(liftPos) === r; list.push({ x0: 10.95, y0: 0.05, x1: 12.15, y1: 1.15, draw: (cc, tt) => drawLift(cc, r, here ? liftPos : null, liftDoor, nightNow, tt, here ? drawRiders : null) }); }
+        if (SHAPE === 'tower') { const here = Math.abs(r - liftPos) < 0.999; list.push({ x0: 10.95, y0: 0.05, x1: 12.15, y1: 1.15, draw: (cc, tt) => drawLift(cc, r, here ? liftPos : null, liftDoor, nightNow, tt, here ? drawRiders : null) }); }
         for (const p of PEOPLE) {
           const a = agents[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
           if (!a.path.length && a.act.prop === 'vanish') continue;          // in the toilet
@@ -1986,9 +1986,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           } });
         }
         for (const it of isoSort(list)) it.draw(c, t);
-        if (r === 0 && nightNow && awayHours(wall) && ['bos', 'vet'].every((id) => !agents[id] || agents[id].room !== 0)) {
-          const wh = FLAT ? FLATWH : WALL + 26; poly(c, [iso(0, NY, 0), iso(NX, NY, 0), iso(NX, 0, 0), iso(NX, 0, wh), iso(0, 0, wh), iso(0, NY, wh)], 'rgba(4,6,16,.5)');
-        }
         for (const p of PEOPLE) {
           const a = agents[p.id], s = S[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
           const [sx, sy] = iso(a.x, a.y);
@@ -2008,7 +2005,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
           glow(6, 5, 70, 120, 'rgba(255,220,150,.07)');
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
-          if (r === 0 && !awayHours(wall)) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
+          if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
           if (r === 2) { glow(8.0, 0.4, 30, 30, 'rgba(255,200,90,.18)'); glow(4.8, 8.8, 20, 34, 'rgba(255,200,90,.12)'); }
           if (r > 0) for (const [lx, ly] of r === 1 ? [[7.5, 5.1], [4.2, 5.4], [10.4, 8.6]] : [[7.6, 5.4], [4.8, 8.8], [10.2, 9.9]]) { glow(lx, ly, 112, 34, 'rgba(255,214,140,.22)'); glow(lx, ly, 30, 46, 'rgba(255,214,140,.08)'); }
         }
@@ -2375,7 +2372,10 @@ function drawLift(c: C, room: number, pos: number | null, door: number, night: b
   // the cabin (only on the floor it is closest to)
   if (pos != null) {
     const zc = (room - pos) * RH, hC = 50, ix0 = x0 + 0.08, ix1 = x1 - 0.08, iy0 = y0 + 0.06, iy1 = y1 - 0.08;
-    c.save(); c.translate(0, -zc);
+    c.save();
+    // only what is inside this floor's part of the shaft is visible: the cabin slides out through the ceiling / floor
+    c.beginPath(); for (const [i, q] of [iso(x0, y1, -2), iso(x1, y1, -2), iso(x1, y0, -2), iso(x1, y0, top), iso(x0, y0, top), iso(x0, y1, top)].entries()) { if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); } c.closePath(); c.clip();
+    c.translate(0, -zc);
     box(c, ix0, iy0, ix1 - ix0, iy1 - iy0, -3, 3, '#4a4c53', '#2a2b30', '#3a3b42');                  // floor
     poly(c, [iso(ix0, iy0, 0), iso(ix1, iy0, 0), iso(ix1, iy0, hC), iso(ix0, iy0, hC)], night ? 'rgba(255,232,180,.22)' : 'rgba(255,255,255,.35)');   // back panel
     poly(c, [iso(ix0, iy0, 0), iso(ix0, iy1, 0), iso(ix0, iy1, hC), iso(ix0, iy0, hC)], night ? 'rgba(255,232,180,.16)' : 'rgba(240,245,250,.3)');
