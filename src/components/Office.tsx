@@ -1226,6 +1226,7 @@ interface Agent {
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
   scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
   queue?: Array<{ act: Spot; dwell: number }>; kick?: boolean; talkAt?: number;
+  ride?: { from: number; to: number; t0: number; dur: number };      // riding the glass lift
 }
 /** two-bone limb (thigh + shin, upper arm + forearm): finds the joint so both bones keep their length */
 function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, l2: number, bend: number, w: number, col: string, col2?: string) {
@@ -1775,8 +1776,10 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         }
         if (a.pending && !a.path.length && a.act.id.startsWith('lift-')) {
           const nx = a.pending; a.pending = null;
-          a.room = nx.room; a.x = LIFT.x; a.y = LIFT.y + 0.15; a.vx = a.vy = 0; a.hiddenUntil = wall + 1400; a.face = 'py';
-          a.act = nx; a.until = Math.max(a.until, wall + 1400); a.path = findPath(grids[a.room], a.x, a.y, nx.x, nx.y);
+          const dur = 1500 + Math.abs(nx.room - a.room) * 1300;
+          a.ride = { from: a.room, to: nx.room, t0: wall, dur };
+          a.room = nx.room; a.x = LIFT.x; a.y = LIFT.y + 0.15; a.vx = a.vy = 0; a.hiddenUntil = wall + dur; a.face = 'py';
+          a.act = nx; a.until = Math.max(a.until, wall + dur); a.path = findPath(grids[a.room], a.x, a.y, nx.x, nx.y);
           continue;
         }
         const bosYelling = p.id === 'vet' && !!agents.bos?.act.whip && a.act.id !== 'melerai';
@@ -1942,6 +1945,20 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
             if (w > 0.2 && w < 0.42) { const dir = a.face === 'py' || a.face === 'nx' ? -1 : 1; c.fillStyle = '#ffd23f'; c.strokeStyle = '#1e1f23'; c.lineWidth = 1.2; c.font = '900 7px system-ui, sans-serif'; c.textAlign = 'center'; c.strokeText('CTAR!', sx + dir * 24, sy - 12); c.fillText('CTAR!', sx + dir * 24, sy - 12); c.textAlign = 'start'; }
           }
         }
+      }
+      if (SHAPE === 'tower') {
+        c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(0) * V.z), k * (V.ty + roomY(0) * V.z));
+        let pos = LIFTPOS.r; const riders: Array<{ p: Person; a: Agent }> = [];
+        for (const p of PEOPLE) { const a = agents[p.id]; if (a?.ride && wall < a.ride.t0 + a.ride.dur) riders.push({ p, a }); }
+        if (riders.length) {
+          const rd = riders[0].a.ride!, k2 = (wall - rd.t0) / rd.dur, hold = 0.18, m = Math.min(1, Math.max(0, (k2 - hold) / (1 - 2 * hold)));
+          pos = rd.from + (rd.to - rd.from) * (m * m * (3 - 2 * m));
+          LIFTPOS.r = pos;
+        }
+        drawGlassLift(c, pos, nightNow, t, riders.map(({ p, a }, i) => (cc: C, tt: number) => {
+          const ghost: Agent = { ...a, x: NX + 0.55 + i * 0.35, y: 0.95 - i * 0.12, path: [], vx: 0, vy: 0, act: { ...a.act, pose: 'stand', prop: undefined, face: 'py', whip: undefined }, scoldUntil: 0, bubble: null, carry: null };
+          drawPerson(cc, p, ghost, tt, S[p.id] ?? { label: '', color: '#58a6ff', sleep: false, tag: null }, null);
+        }));
       }
       if (nightNow) {
         c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(6,10,28,.26)'; c.fillRect(0, 0, cv.width, cv.height); c.restore();
@@ -2308,6 +2325,33 @@ function drawWeather(c: C, room: number, t: number) {
     else { c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(x0, y0, 0.9, 0, 7); c.fill(); }
   }
   c.restore();
+}
+
+/* ---------- the glass lift on the outside of the tower ---------- */
+const LIFTPOS = { r: 1 };          // where the cabin is (room index, fractional while moving)
+function drawGlassLift(c: C, pos: number, night: boolean, t: number, riders: Array<(c: C, t: number) => void>) {
+  const x0 = NX + 0.12, x1 = NX + 1.45, y0 = 0.15, y1 = 1.55, zb = -2 * RH - 8, zt = WALL + 34;
+  const frame = '#2a2b30', glass = night ? 'rgba(120,170,230,.14)' : 'rgba(190,228,250,.22)';
+  // shaft: back faces, then landings at every floor
+  poly(c, [iso(x0, y0, zb), iso(x1, y0, zb), iso(x1, y0, zt), iso(x0, y0, zt)], glass);
+  for (let r = 0; r < ROOMS; r++) { const z = -r * RH; box(c, NX - 0.05, y0 - 0.05, 0.2, y1 - y0 + 0.1, z - 4, 4, '#3a3b42', '#2a2b30', '#33343a'); }
+  // cabin
+  const zc = -pos * RH, hC = 54;
+  box(c, x0 + 0.05, y0 + 0.05, x1 - x0 - 0.1, y1 - y0 - 0.1, zc - 3, 3, '#3a3b42', '#2a2b30', '#33343a');
+  poly(c, [iso(x0 + 0.05, y0 + 0.05, zc), iso(x1 - 0.05, y0 + 0.05, zc), iso(x1 - 0.05, y0 + 0.05, zc + hC), iso(x0 + 0.05, y0 + 0.05, zc + hC)], night ? 'rgba(255,230,170,.18)' : 'rgba(255,255,255,.28)');
+  c.save(); c.translate(0, pos * RH); for (const draw of riders) draw(c, t); c.restore();
+  poly(c, [iso(x1 - 0.05, y0 + 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc + hC), iso(x1 - 0.05, y0 + 0.05, zc + hC)], night ? 'rgba(150,190,240,.16)' : 'rgba(200,235,255,.28)');
+  poly(c, [iso(x0 + 0.05, y1 - 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc + hC), iso(x0 + 0.05, y1 - 0.05, zc + hC)], night ? 'rgba(150,190,240,.14)' : 'rgba(200,235,255,.24)');
+  box(c, x0 + 0.05, y0 + 0.05, x1 - x0 - 0.1, y1 - y0 - 0.1, zc + hC, 3, '#3a3b42', '#2a2b30', '#33343a');
+  if (night) { const [lx, ly] = iso((x0 + x1) / 2, (y0 + y1) / 2, zc + hC - 2); const g = c.createRadialGradient(lx, ly, 0, lx, ly, 26); g.addColorStop(0, 'rgba(255,225,160,.35)'); g.addColorStop(1, 'rgba(255,225,160,0)'); c.fillStyle = g; c.fillRect(lx - 26, ly - 26, 52, 52); }
+  // shaft: front glass + frame posts + cables
+  poly(c, [iso(x1, y0, zb), iso(x1, y1, zb), iso(x1, y1, zt), iso(x1, y0, zt)], glass);
+  poly(c, [iso(x0, y1, zb), iso(x1, y1, zb), iso(x1, y1, zt), iso(x0, y1, zt)], glass);
+  c.strokeStyle = frame; c.lineWidth = 1.1;
+  for (const [x, y] of [[x0, y1], [x1, y1], [x1, y0]] as const) { const a = iso(x, y, zb), b = iso(x, y, zt); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  c.lineWidth = 0.6; for (let z = zb; z <= zt; z += RH / 3) { const a = iso(x0, y1, z), b = iso(x1, y1, z), d = iso(x1, y0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.stroke(); }
+  c.strokeStyle = 'rgba(40,40,45,.6)'; c.lineWidth = 0.4; { const a = iso((x0 + x1) / 2, (y0 + y1) / 2, zc + hC + 3), b = iso((x0 + x1) / 2, (y0 + y1) / 2, zt); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  box(c, x0 - 0.05, y0 - 0.05, x1 - x0 + 0.1, y1 - y0 + 0.1, zt, 6, '#2a2b30', '#1e1f23', '#26272c');
 }
 
 function isoSort(list: Item[]): Item[] {
