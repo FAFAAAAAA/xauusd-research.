@@ -1629,7 +1629,7 @@ const liftSpot = (room: number, id: string, up: boolean): Spot => (FLAT
   : { id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
 
 /* ---------- component ---------- */
-export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'senja', shape = 'flat' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
+export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
   THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.ink ?? (THEME.paint ? 'rgba(80,45,25,.42)' : null); OL = THEME.pixel ? 'rgba(10,10,18,.9)' : OL; PSV = INK ? 1.36 : PS;
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
