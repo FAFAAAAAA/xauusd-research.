@@ -69,6 +69,14 @@ const PEOPLE: Person[] = [
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
 const LIFT = { x: 11.65, y: 0.6 };
+const LIFT_WAIT = 1.6;             // where people wait in front of the lift doors
+const CAB_Y = -0.7;                // the cabin runs in a shaft behind the back wall (seen through a glass panel)
+const LW = { x0: 11.15, x1: 12.3, z: 92 };   // the glass panel in the back wall
+const lwOf = (room: number) => (room === 2 ? { x0: 9.3, x1: 10.45, z: LW.z } : LW);     // in the lobby: left of the clock-in machine, clear of Pentoel's desk
+const lwX = (room: number) => (lwOf(room).x0 + lwOf(room).x1) / 2;
+/** one trip of the lift: call the cabin (A), doors open / walk in / doors close (B), travel (C), doors open / walk out / doors close (D) */
+type Ride = { from: number; to: number; start: number; t0: number; dA: number; dB: number; dC: number; dD: number; dur: number };
+const LIFTCTL: { busyUntil: number; ride: Ride | null; who: string } = { busyUntil: 0, ride: null, who: '' };
 
 const S0: Array<Omit<Spot, 'room'>> = [
   { id: 'safe', x: 8.37, y: 1.45, face: 'ny', pose: 'stand', label: 'BUKA BRANKAS', zone: 'boss' },
@@ -1226,7 +1234,7 @@ interface Agent {
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
   scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
   queue?: Array<{ act: Spot; dwell: number }>; kick?: boolean; talkAt?: number;
-  ride?: { from: number; to: number; t0: number; dur: number };      // riding the glass lift
+  ride?: Ride;      // riding the glass lift
 }
 /** two-bone limb (thigh + shin, upper arm + forearm): finds the joint so both bones keep their length */
 function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, l2: number, bend: number, w: number, col: string, col2?: string) {
@@ -1668,11 +1676,11 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
 }
 const liftSpot = (room: number, id: string, up: boolean): Spot => (FLAT
   ? { id: `lift-${id}`, room, x: up ? 0.6 : NX - 0.6, y: DOOR_Y, face: up ? 'nx' : 'px', pose: 'stand', label: 'JALAN' }
-  : { id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
+  : { id: `lift-${id}`, room, x: lwX(room), y: LIFT_WAIT, face: 'ny', pose: 'stand', label: 'TUNGGU LIFT' });
 
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
-  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.ink ?? (THEME.paint ? 'rgba(80,45,25,.42)' : null); OL = THEME.pixel ? 'rgba(10,10,18,.9)' : OL; PSV = INK ? 1.36 : PS;
+  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.ink ?? (THEME.paint ? 'rgba(80,45,25,.42)' : null); OL = THEME.pixel ? 'rgba(10,10,18,.9)' : OL; PSV = INK ? 1.62 : PS;
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
@@ -1816,10 +1824,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           continue;
         }
         if (a.pending && !a.path.length && a.act.id.startsWith('lift-')) {
+          if (SHAPE === 'tower' && wall < LIFTCTL.busyUntil) { a.face = 'ny'; a.vx = a.vy = 0; continue; }      // the lift is busy: wait for it
           const nx = a.pending; a.pending = null;
-          const dur = 1500 + Math.abs(nx.room - a.room) * 1300;
-          a.ride = { from: a.room, to: nx.room, t0: wall, dur };
-          a.room = nx.room; a.x = LIFT.x; a.y = LIFT.y + 0.15; a.vx = a.vy = 0; a.hiddenUntil = wall + dur; a.face = 'py';
+          const from = a.room, dA = Math.abs(LIFTPOS.r - from) * 1100, dB = 1700, dC = Math.abs(nx.room - from) * 1400, dD = 1700;
+          const ride: Ride = { from, to: nx.room, start: LIFTPOS.r, t0: wall, dA, dB, dC, dD, dur: dA + dB + dC + dD };
+          const dur = ride.dur;
+          a.ride = ride; LIFTCTL.busyUntil = wall + dur; LIFTCTL.ride = ride; LIFTCTL.who = p.id;
+          a.room = nx.room; a.x = lwX(nx.room); a.y = LIFT_WAIT; a.vx = a.vy = 0; a.hiddenUntil = wall + dur; a.face = 'py';
           a.act = nx; a.until = Math.max(a.until, wall + dur); a.path = findPath(grids[a.room], a.x, a.y, nx.x, nx.y);
           continue;
         }
@@ -1948,18 +1959,24 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       }
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; c.fillRect(0, 0, cv.width, cv.height);
       if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
-      // the glass lift: where the cabin is, who is riding, how far the doors are open
-      let liftPos = LIFTPOS.r, liftDoor = 0; const riders: Array<{ p: Person; a: Agent }> = [];
-      for (const p of PEOPLE) { const a = agents[p.id]; if (a?.ride && wall < a.ride.t0 + a.ride.dur) riders.push({ p, a }); }
-      if (riders.length) {
-        const rd = riders[0].a.ride!, k2 = (wall - rd.t0) / rd.dur, hold = 0.2, m = Math.min(1, Math.max(0, (k2 - hold) / (1 - 2 * hold)));
-        liftPos = rd.from + (rd.to - rd.from) * (m * m * (3 - 2 * m)); LIFTPOS.r = liftPos;
-        liftDoor = k2 < hold ? 1 - k2 / hold : k2 > 1 - hold ? (k2 - (1 - hold)) / hold : 0;
+      // the glass lift: the cabin comes, the doors open, the rider walks in, rides, walks out
+      let liftPos = LIFTPOS.r, liftDoor = 0, rider: { p: Person; a: Agent; room: number; y: number; walk: number; inCab: boolean; out: boolean } | null = null;
+      const ez = (x: number) => { const m = Math.min(1, Math.max(0, x)); return m * m * (3 - 2 * m); };
+      const R0 = LIFTCTL.ride, who = LIFTCTL.who && agents[LIFTCTL.who];
+      if (R0 && wall < R0.t0 + R0.dur) {
+        const tt = wall - R0.t0, door = (b: number) => (b < 0.25 ? b / 0.25 : b > 0.75 ? (1 - b) / 0.25 : 1), walkIn = (b: number) => ez((b - 0.25) / 0.5);
+        let ry = LIFT_WAIT, room = R0.from, walk = 0;
+        if (tt < R0.dA) liftPos = R0.start + (R0.from - R0.start) * ez(tt / R0.dA);
+        else if (tt < R0.dA + R0.dB) { const b = (tt - R0.dA) / R0.dB; liftPos = R0.from; liftDoor = door(b); ry = LIFT_WAIT + (CAB_Y - LIFT_WAIT) * walkIn(b); walk = b > 0.25 && b < 0.75 ? 1 : 0; }
+        else if (tt < R0.dA + R0.dB + R0.dC) { liftPos = R0.from + (R0.to - R0.from) * ez((tt - R0.dA - R0.dB) / R0.dC); ry = CAB_Y; }
+        else { const b = (tt - R0.dA - R0.dB - R0.dC) / R0.dD; liftPos = R0.to; room = R0.to; liftDoor = door(b); ry = CAB_Y + (LIFT_WAIT - CAB_Y) * walkIn(b); walk = b > 0.25 && b < 0.75 ? 1 : 0; }
+        if (tt >= R0.dA + R0.dB) room = tt < R0.dA + R0.dB + R0.dC ? Math.round(liftPos) : R0.to;
+        LIFTPOS.r = liftPos;
+        const pp = PEOPLE.find((q) => q.id === LIFTCTL.who);
+        if (who && pp) rider = { p: pp, a: who, room, y: ry, walk, inCab: ry < 0.05, out: tt >= R0.dA + R0.dB + R0.dC };
       }
-      const drawRiders = (cc: C, tt: number) => riders.forEach(({ p, a }, i) => {
-        const ghost: Agent = { ...a, arms: undefined, x: 11.3 + i * 0.42, y: 0.62 + (i % 2) * 0.1, path: [], vx: 0, vy: 0, act: { ...a.act, pose: 'stand', prop: undefined, face: 'py', whip: undefined }, scoldUntil: 0, bubble: null, carry: null };
-        drawPerson(cc, p, ghost, tt, S[p.id] ?? { label: '', color: '#58a6ff', sleep: false, tag: null }, null);
-      });
+      const ghostOf = (rd: NonNullable<typeof rider>, rm = rd.room): Agent => ({ ...rd.a, arms: undefined, x: lwX(rm), y: rd.y, path: rd.walk ? [[LIFT.x, 0]] : [], vx: 0, vy: rd.walk ? 1.2 : 0, dist: wall / 700, face: rd.walk && !rd.out ? 'ny' : 'py', act: { ...rd.a.act, pose: 'stand', prop: undefined, face: 'py', whip: undefined }, scoldUntil: 0, bubble: null, carry: null });
+      const drawRiders = (cc: C, tt: number, rm: number) => { if (rider && rider.inCab) drawPerson(cc, rider.p, ghostOf(rider, rm), tt, S[rider.p.id] ?? { label: '', color: '#58a6ff', sleep: false, tag: null }, null); };
       for (const r of ORDER()) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
         if (r === 2) drawCars(c, t, nightNow);
@@ -1967,10 +1984,11 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (r === 1) drawPositions(c, posRef.current, t);
         drawBoards(c, r, wall, t);
         drawWeather(c, r, t);
+        if (SHAPE === 'tower') drawLift(c, r, Math.abs(r - liftPos) < 0.999 ? liftPos : null, liftDoor, nightNow, t, rider?.inCab ? drawRiders : null);
         for (const m of MOPS) if (m.room === r) { const k = 1 - (wall - m.t) / 25_000; ell(c, m.x, m.y, 0.2, 0.32, `rgba(205,232,255,${0.22 * k})`); ell(c, m.x - 0.08, m.y - 0.05, 0.25, 0.1, `rgba(255,255,255,${0.35 * k})`); }
         const list: Item[] = items[r].slice();
         if (EV.cur?.items && wall < EV.cur.until) list.push(...EV.cur.items(r, wall));
-        if (SHAPE === 'tower') { const here = Math.abs(r - liftPos) < 0.999; list.push({ x0: 10.95, y0: 0.05, x1: 12.15, y1: 1.15, draw: (cc, tt) => drawLift(cc, r, here ? liftPos : null, liftDoor, nightNow, tt, here ? drawRiders : null) }); }
+        if (SHAPE === 'tower' && rider && !rider.inCab && rider.room === r) { const rd = rider, g = ghostOf(rd); list.push({ x0: g.x - 0.2, y0: g.y - 0.2, x1: g.x + 0.2, y1: g.y + 0.2, draw: (cc, tt) => drawPerson(cc, rd.p, g, tt, S[rd.p.id] ?? { label: '', color: '#58a6ff', sleep: false, tag: null }, null) }); }
         for (const p of PEOPLE) {
           const a = agents[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
           if (!a.path.length && a.act.prop === 'vanish') continue;          // in the toilet
@@ -2366,39 +2384,35 @@ function drawWeather(c: C, room: number, t: number) {
 
 /* ---------- the glass lift (against the back wall, through all floors) ---------- */
 const LIFTPOS = { r: 1 };          // where the cabin is (room index, fractional while moving)
-function drawLift(c: C, room: number, pos: number | null, door: number, night: boolean, t: number, riders: ((c: C, t: number) => void) | null) {
-  const x0 = 10.95, x1 = 12.15, y0 = 0.05, y1 = 1.15, top = room === 0 ? WALL + 26 : RH - 8;
-  const frame = '#2a2b30', glass = night ? 'rgba(130,175,230,.13)' : 'rgba(195,230,250,.24)';
-  // the cabin (only on the floor it is closest to)
+function drawLift(c: C, room: number, pos: number | null, door: number, night: boolean, t: number, riders: ((c: C, t: number, room: number) => void) | null) {
+  const { x0, x1, z: wz } = lwOf(room), sy0 = -1.35, sy1 = -0.05, frame = '#2a2b30';
+  const win = wallB(x0, x1, 0, wz);
+  c.save(); c.beginPath(); c.moveTo(win[0][0], win[0][1]); for (const q of win.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
+  // the shaft behind the glass
+  const g = c.createLinearGradient(...iso(x0, sy0, wz), ...iso(x0, sy0, 0)); g.addColorStop(0, night ? '#1a1e27' : '#9aa6b2'); g.addColorStop(1, night ? '#262b36' : '#c4ccd4'); c.fillStyle = g; c.fillRect(-2000, -2000, 4000, 4000);
+  c.strokeStyle = night ? '#3a3f4a' : '#7d8894'; c.lineWidth = 0.8; for (const x of [x0 + 0.2, x1 - 0.2]) { const a = iso(x, sy0, -400), b = iso(x, sy0, 400); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   if (pos != null) {
-    const zc = (room - pos) * RH, hC = 50, ix0 = x0 + 0.08, ix1 = x1 - 0.08, iy0 = y0 + 0.06, iy1 = y1 - 0.08;
-    c.save();
-    // only what is inside this floor's part of the shaft is visible: the cabin slides out through the ceiling / floor
-    c.beginPath(); for (const [i, q] of [iso(x0, y1, -2), iso(x1, y1, -2), iso(x1, y0, -2), iso(x1, y0, top), iso(x0, y0, top), iso(x0, y1, top)].entries()) { if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); } c.closePath(); c.clip();
+    const zc = (room - pos) * RH, hC = 54, ix0 = x0 + 0.08, ix1 = x1 - 0.08;
     c.translate(0, -zc);
-    box(c, ix0, iy0, ix1 - ix0, iy1 - iy0, -3, 3, '#4a4c53', '#2a2b30', '#3a3b42');                  // floor
-    poly(c, [iso(ix0, iy0, 0), iso(ix1, iy0, 0), iso(ix1, iy0, hC), iso(ix0, iy0, hC)], night ? 'rgba(255,232,180,.22)' : 'rgba(255,255,255,.35)');   // back panel
-    poly(c, [iso(ix0, iy0, 0), iso(ix0, iy1, 0), iso(ix0, iy1, hC), iso(ix0, iy0, hC)], night ? 'rgba(255,232,180,.16)' : 'rgba(240,245,250,.3)');
-    c.strokeStyle = '#8b8f99'; c.lineWidth = 0.6; { const a = iso(ix0 + 0.05, iy0 + 0.3, 22), b = iso(ix0 + 0.05, iy1 - 0.2, 22); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }   // handrail
-    riders?.(c, t);
-    poly(c, [iso(ix1, iy0, 0), iso(ix1, iy1, 0), iso(ix1, iy1, hC), iso(ix1, iy0, hC)], night ? 'rgba(160,200,245,.16)' : 'rgba(205,235,255,.26)');   // side glass
-    // sliding glass doors on the front
-    const half = (ix1 - ix0) / 2, gap = half * door;
-    for (const [a, b] of [[ix0, ix0 + half - gap], [ix0 + half + gap, ix1]] as const) if (b - a > 0.01) {
-      poly(c, [iso(a, iy1, 0), iso(b, iy1, 0), iso(b, iy1, hC), iso(a, iy1, hC)], night ? 'rgba(160,200,245,.2)' : 'rgba(205,235,255,.32)');
-      c.strokeStyle = frame; c.lineWidth = 0.5; c.beginPath(); for (const x of [a, b]) { const p0 = iso(x, iy1, 0), p1 = iso(x, iy1, hC); c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); } c.stroke();
-    }
-    box(c, ix0, iy0, ix1 - ix0, iy1 - iy0, hC, 3, '#3a3b42', '#2a2b30', '#33343a');                   // roof
-    if (night) { const [lx, ly] = iso((ix0 + ix1) / 2, (iy0 + iy1) / 2, hC - 3); const g = c.createRadialGradient(lx, ly, 0, lx, ly, 24); g.addColorStop(0, 'rgba(255,225,160,.4)'); g.addColorStop(1, 'rgba(255,225,160,0)'); c.fillStyle = g; c.fillRect(lx - 24, ly - 24, 48, 48); }
-    c.restore();
+    box(c, ix0, sy0, ix1 - ix0, sy1 - sy0, -3, 3, '#4a4c53', '#2a2b30', '#3a3b42');
+    poly(c, [iso(ix0, sy0, 0), iso(ix1, sy0, 0), iso(ix1, sy0, hC), iso(ix0, sy0, hC)], night ? '#5b5446' : '#e9e4da');
+    poly(c, [iso(ix0, sy0, 0), iso(ix0, sy1, 0), iso(ix0, sy1, hC), iso(ix0, sy0, hC)], night ? '#4d473c' : '#ddd7cc');
+    c.strokeStyle = '#8b8f99'; c.lineWidth = 0.7; { const a = iso(ix0 + 0.05, sy0 + 0.2, 24), b = iso(ix0 + 0.05, sy1 - 0.1, 24); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+    if (night) { const [lx, ly] = iso((ix0 + ix1) / 2, (sy0 + sy1) / 2, hC - 3); const gl = c.createRadialGradient(lx, ly, 0, lx, ly, 26); gl.addColorStop(0, 'rgba(255,225,160,.45)'); gl.addColorStop(1, 'rgba(255,225,160,0)'); c.fillStyle = gl; c.fillRect(lx - 26, ly - 26, 52, 52); }
+    riders?.(c, t, room);
+    box(c, ix0, sy0, ix1 - ix0, sy1 - sy0, hC, 4, '#3a3b42', '#2a2b30', '#33343a');
   }
-  // the shaft: glass on the two open sides, a frame, the floor number above the door
-  poly(c, [iso(x1, y0, 0), iso(x1, y1, 0), iso(x1, y1, top), iso(x1, y0, top)], glass);
-  poly(c, [iso(x0, y1, 0), iso(x1, y1, 0), iso(x1, y1, top), iso(x0, y1, top)], glass);
-  c.strokeStyle = frame; c.lineWidth = 0.9;
-  for (const [x, y] of [[x0, y1], [x1, y1], [x1, y0]] as const) { const a = iso(x, y, 0), b = iso(x, y, top); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
-  for (const z of [0, 56, top]) { const a = iso(x0, y1, z), b = iso(x1, y1, z), d = iso(x1, y0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.stroke(); }
-  const [nx, ny] = iso((x0 + x1) / 2, y1, 60); c.fillStyle = '#141518'; c.fillRect(nx - 5, ny - 4, 10, 6); c.fillStyle = '#f2c230'; c.font = '700 4.5px ui-monospace, monospace'; c.textAlign = 'center'; c.fillText(`L${3 - room}`, nx, ny + 0.6); c.textAlign = 'start';
+  c.restore();
+  // the glass panel + sliding glass doors in the wall
+  poly(c, win, night ? 'rgba(150,190,240,.16)' : 'rgba(210,235,255,.3)');
+  const dx0 = x0 + 0.12, dx1 = x1 - 0.12, half = (dx1 - dx0) / 2, gap = half * door;
+  for (const [a, b] of [[dx0, dx0 + half - gap], [dx0 + half + gap, dx1]] as const) if (b - a > 0.01) {
+    poly(c, wallB(a, b, 0, 56), night ? 'rgba(160,200,245,.2)' : 'rgba(220,240,255,.35)');
+    c.strokeStyle = frame; c.lineWidth = 0.5; c.beginPath(); for (const x of [a, b]) { const p0 = iso(x, 0, 0), p1 = iso(x, 0, 56); c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); } c.stroke();
+  }
+  c.strokeStyle = frame; c.lineWidth = 1; c.beginPath(); for (const q of [...win, win[0]]) c.lineTo(q[0], q[1]); c.stroke();
+  { const a = iso(x0, 0, 58), b = iso(x1, 0, 58); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  const [nx, ny] = iso((x0 + x1) / 2, 0, 70); c.fillStyle = '#141518'; c.fillRect(nx - 5, ny - 4, 10, 6); c.fillStyle = '#f2c230'; c.font = '700 4.5px ui-monospace, monospace'; c.textAlign = 'center'; c.fillText(`L${3 - room}`, nx, ny + 0.6); c.textAlign = 'start';
 }
 
 function isoSort(list: Item[]): Item[] {
