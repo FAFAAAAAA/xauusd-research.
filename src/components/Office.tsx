@@ -13,7 +13,11 @@ import type { JournalTrade } from '@/lib/core/journal';
  * Everything (scene, wall screen, name tags) is drawn on one hi-DPI canvas at 60 fps; pinch / double tap to zoom. */
 
 type Live = { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null | undefined;
-export interface OfficeData { trades: JournalTrade[]; binance?: Live; mt5?: Live }
+export interface OfficeData {
+  trades: JournalTrade[]; binance?: Live; mt5?: Live;
+  market?: Array<{ name: string; move: number }>;          // % change of gold / BTC over the last 15 minutes
+  cal?: Array<{ title: string; at: number }>;               // big US news coming up (CPI, FOMC, NFP…)
+}
 export type ScreenLine = { k: string; v: string; color?: string; sub?: string; subColor?: string };
 
 /* ---------- geometry ---------- */
@@ -158,7 +162,7 @@ const CHAT: Record<string, string[]> = {
   NGOBROL: ['Market lagi sepi ya', 'Entry di mana?', 'Hari ini cuan?', 'Wkwk', 'Nanti makan apa?', 'Capek euy'],
   KARAOKE: ['♪ La la la ♪', '♪ Cinta… ♪', '♪ Yeah! ♪'],
   'MAIN GITAR': ['♪ jreng ♪', '♪ ~ ♪'],
-  'NONTON BERITA': ['NFP keluar!', 'Semoga aman…', 'Volatil banget!', 'Deg-degan…', 'Wah, gerak!'],
+  'NONTON BERITA': ['Beritanya keluar!', 'Semoga aman…', 'Volatil banget!', 'Deg-degan…', 'Wah, gerak!'],
   'NYANYI ULTAH': ['♪ Selamat ulang tahun ♪', '♪ Panjang umurnya ♪', 'Tiup lilinnya!'],
   'MAKAN PIZZA': ['Enak banget!', 'Siapa yang traktir?', 'Nambah dong'],
   'RAPAT DARURAT': ['Maaf bos…', 'Market lagi aneh', 'Kita evaluasi'],
@@ -282,6 +286,44 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     if (freeFor(ctx, 'bos')) plans.bos = [{ act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'RAPAT DARURAT', { say: ['KENAPA SL TERUS?!', '#e5242b'] }), dwell: S(22) }, { act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'EVALUASI', { say: ['Cek lagi aturannya!', '#e5242b'] }), dwell: S(26) }];
     return ev(plans, 52, { random: false });
   }
+  if (kind === 'pasar') {
+    // gold or BTC moved 1% or more in 15 minutes: everybody stands in front of the TVs, warning lights flash
+    const m = (ctx.data.market ?? []).filter((x) => Math.abs(x.move) >= 1).sort((a, b) => Math.abs(b.move) - Math.abs(a.move))[0]; if (!m) return null;
+    const who = [...workers(true), ...['ob', 'jaga'].filter((id) => freeFor(ctx, id))]; if (!who.length) return null;
+    const pos: Array<[number, number]> = [[7.4, 2.4], [8.4, 2.4], [9.4, 2.4], [10.4, 2.4], [7.9, 3.2], [8.9, 3.2], [9.9, 3.2]];
+    const up = m.move > 0, col = up ? '#2e9e5b' : '#e5242b';
+    const lines: Array<[string, string]> = [[`${m.name} ${up ? 'naik' : 'turun'} ${Math.abs(m.move).toFixed(1)}%!`, col], ['Cepat banget geraknya!', '#1e1f23'], [up ? 'Wih, terbang!' : 'Waduh, longsor!', col], ['Pantau terus!', '#1e1f23']];
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, pos.length).forEach((id, i) => { plans[id] = [{ act: sp(`ev-pasar-${id}`, 1, pos[i][0], pos[i][1], 'ny', 'LIHAT TV', { say: lines[i] }), dwell: S(75) }]; });
+    const e = ev(plans, 80, { random: false });
+    e.items = (room) => [{ x0: NX - 0.01, y0: NY - 0.01, x1: NX, y1: NY, draw: (c, t) => {
+      const on = Math.floor(t * 3) % 2 === 0, pulse = 0.5 + 0.5 * Math.sin(t * 6);
+      for (const bx of [3.2, 9.8]) {       // two red rotating lamps high on the back wall
+        const [lx, ly] = iso(bx, 0.05, WALL - 6);
+        c.fillStyle = '#3a3b42'; c.fillRect(lx - 7, ly + 0.5, 14, 3.2);
+        c.fillStyle = on ? '#ff3b3b' : '#7a1f1f'; c.beginPath(); c.ellipse(lx, ly + 0.6, 6.2, 7.5, 0, Math.PI, 0); c.fill(); if (on) { c.fillStyle = 'rgba(255,220,220,.9)'; c.beginPath(); c.ellipse(lx - 1.3, ly - 2, 1, 1.4, 0, 0, 7); c.fill(); }
+        const g = c.createRadialGradient(lx, ly, 0, lx, ly, 80); g.addColorStop(0, `rgba(255,50,50,${0.65 * pulse})`); g.addColorStop(1, 'rgba(255,50,50,0)'); c.fillStyle = g; c.fillRect(lx - 80, ly - 80, 160, 160);
+      }
+      const [cx, cy] = iso(NX / 2, NY / 2, 30), g2 = c.createRadialGradient(cx, cy, 10, cx, cy, 190);
+      g2.addColorStop(0, `rgba(255,40,40,${0.2 * pulse})`); g2.addColorStop(1, 'rgba(255,40,40,0)'); c.fillStyle = g2; c.fillRect(cx - 190, cy - 190, 380, 380);
+      void room;
+    } }];
+    return e;
+  }
+  if (kind === 'rekap') {
+    // 23:00: Marcel announces today's result (the same number as "PNL HARI INI" on the TV) before he goes home
+    const who = ctx.agents.bos && ctx.S.bos && !ctx.S.bos.sleep ? 'bos' : null; if (!who) return null;
+    const day0 = new Date(wall); day0.setHours(0, 0, 0, 0);
+    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'nas');
+    const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+    const amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
+    const said: Array<[string, string]> = !done.length ? [['Rekap hari ini: belum ada trade selesai.', '#1e1f23'], ['Sabar, tunggu setup yang bagus!', '#1e1f23']]
+      : pnl > 0 ? [[`Hari ini ${amt} dari ${done.length} trade!`, '#2e9e5b'], ['Kerja bagus semua!', '#2e9e5b']]
+      : pnl < 0 ? [[`Hari ini ${amt} dari ${done.length} trade.`, '#e5242b'], ['Tetap ikut aturan, besok fokus!', '#1e1f23']]
+      : [['Hari ini impas, $0.', '#1e1f23'], ['Besok lanjut lagi!', '#1e1f23']];
+    const at = (label: string, say?: [string, string]) => sp('ev-rekap-bos', 1, 8.9, 3.6, 'nx', label, { say });
+    return ev({ bos: [{ act: at('REKAP HARIAN', said[0]), dwell: S(3) }, { act: at('REKAP HARIAN', said[0]), dwell: S(5) }, { act: at('REKAP HARIAN', said[1]), dwell: S(5) }, { act: at('REKAP HARIAN', said[1]), dwell: S(4) }, { act: at('PAMIT PULANG', ['Saya pulang dulu ya!', '#1e1f23']), dwell: S(4) }] }, 120, { random: false });
+  }
   if (kind === 'berita') {
     const who = [...workers(true), ...['bos', 'ob'].filter((id) => freeFor(ctx, id))]; if (who.length < 2) return null;
     const pos: Array<[number, number]> = [[7.4, 2.4], [8.4, 2.4], [9.4, 2.4], [10.4, 2.4], [7.9, 3.2], [8.9, 3.2], [9.9, 3.2]];
@@ -332,7 +374,13 @@ function scheduleEvents(ctx: EvCtx) {
   const tdy = closed.filter((t) => (t.closedAt ?? 0) >= today.getTime());
   if (tdy.filter((t) => t.result === 'tp').length >= 2 && tdy.reduce((s, t) => s + Number(t.pnl ?? 0), 0) > 0 && EV.done.bonus !== day && h >= 8 && h < 22) want.push('bonus');
   if (d.getDate() === 25 && h === 10 && EV.done.gajian !== day) want.push('gajian');
-  if (d.getDay() === 5 && d.getDate() <= 7 && (h === 21 && m >= 15 || h === 22)) want.push('berita');     // first Friday: US jobs report (NFP)
+  // big US news on the calendar: watch the TV from 2 minutes before until 10 minutes after the release
+  // (no calendar: the old rule, first Friday evening = US jobs report)
+  const cal = data.cal ?? [];
+  if (cal.length ? cal.some((e) => wall > e.at - 2 * 60_000 && wall < e.at + 10 * 60_000) : d.getDay() === 5 && d.getDate() <= 7 && (h === 21 && m >= 15 || h === 22)) want.push('berita');
+  // gold / BTC moving 1% or more in 15 minutes (at most once every 30 minutes)
+  if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
+  if (h === 23 && m < 4 && EV.done.rekap !== day) want.unshift('rekap');
   if (h === 9 && m < 12 && d.getDay() > 0 && d.getDay() < 6 && EV.done.senam !== day) want.push('senam');
   for (const kind of want) {
     if (EV.cur && (!EV.cur.random || EV.cur.kind === kind)) break;
@@ -340,7 +388,7 @@ function scheduleEvents(ctx: EvCtx) {
     if (kind !== 'senam') e.random = false;
     if (EV.cur) kick(EV.cur.ids);
     EV.cur = e; kick(e.ids);
-    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : day;
+    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : day;
     return;
   }
   if (!EV.cur && wall >= EV.next) {
@@ -1815,6 +1863,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const dt = Math.min(0.05, (tm - last) / 1000); last = tm;
       const t = tm / 1000, wall = Date.now(), S0 = stRef.current;
       const S: Record<string, Status> = EV.cur?.courier && wall < EV.cur.until ? { ...S0, kurir: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : S0;
+      CAL = dataRef.current.cal ?? [];
       if (wall - evAt > 500) { evAt = wall; scheduleEvents({ agents, S, wall, data: dataRef.current }); }
       for (const id of WORKERS) { const s = S[id]; MODES[id] = !s || s.label === 'BELUM AKTIF' || s.sleep ? 'off' : s.label.startsWith('POSISI') ? 'pos' : 'idle'; }
       MODES.tgSend = S.tg?.label === 'KIRIM PESAN' ? 'pos' : 'off';
@@ -2157,6 +2206,8 @@ function drawPositions(c: C, list: Pos[], t: number) {
 }
 
 /* small wall boards: the H4 candle countdown (trading floor) and the clock + date (lobby) */
+let CAL: Array<{ title: string; at: number }> = [];
+const inTime = (ms: number) => { const mn = Math.ceil(ms / 60_000); if (mn < 60) return `${mn} MENIT LAGI`; const hr = Math.floor(mn / 60); if (hr < 48) return `${hr} JAM LAGI`; return `${Math.floor(hr / 24)} HARI LAGI`; };
 function drawBoards(c: C, room: number, wall: number, t: number) {
   const board = (x0: number, x1: number, z0: number, z1: number, fn: (w: number, h: number) => void) => {
     const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
@@ -2177,6 +2228,14 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
     const hm = `${String(d.getHours()).padStart(2, '0')}${d.getSeconds() % 2 ? ':' : ' '}${String(d.getMinutes()).padStart(2, '0')}`;
     const day = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'][d.getDay()];
     const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'][d.getMonth()];
+    // small board above the kitchen: countdown to the next big US news (only within 3 days; otherwise the menu stays)
+    const nx = CAL.find((e) => e.at > wall - 10 * 60_000);
+    if (nx && nx.at - wall < 3 * 86_400_000) board(7.15, 8.9, 40, 62, (w, h) => {
+      const left = nx.at - wall, soon = left < 15 * 60_000, live = left <= 0;
+      c.font = '700 3.4px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('BERITA', w / 2, 4.5);
+      c.font = '800 7.4px ui-monospace, Menlo, monospace'; c.fillStyle = soon && Math.floor(t * 3) % 2 ? '#ff5a5a' : '#f2c230'; c.fillText(nx.title, w / 2, h * 0.48);
+      c.font = '700 3.5px ui-monospace, Menlo, monospace'; c.fillStyle = live ? '#ff5a5a' : '#ffffff'; c.fillText(live ? 'SEDANG RILIS' : inTime(left), w / 2, h * 0.82);
+    });
     board(7.2, 11.8, 100, 168, (w, h) => {
       c.font = '800 19px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(hm, w / 2, h * 0.42);
       c.font = '700 5.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#f2c230'; c.fillText(`${day}, ${d.getDate()} ${mon} ${d.getFullYear()}`, w / 2, h * 0.8);

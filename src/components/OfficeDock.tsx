@@ -21,6 +21,32 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
     document.addEventListener('visibilitychange', vis);
     return () => { clearInterval(a); clearInterval(b); document.removeEventListener('visibilitychange', vis); };
   }, []);
+  // market watch for the office: gold (PAXG, a token that tracks the gold price) and BTC, % change over the last 15 minutes (every minute)
+  const [market, setMarket] = useState<Array<{ name: string; move: number }>>([]);
+  useEffect(() => {
+    let off = false;
+    const tick = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const got = await Promise.all([['EMAS', 'PAXGUSDT'], ['BTC', 'BTCUSDT']].map(async ([name, sym]) => {
+        try {
+          const r = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=1m&limit=16`); if (!r.ok) return null;
+          const k = await r.json() as Array<[number, string, string, string, string]>; if (!Array.isArray(k) || k.length < 16) return null;
+          const a = Number(k[0][4]), b = Number(k[k.length - 1][4]);
+          return a > 0 && b > 0 ? { name, move: ((b - a) / a) * 100 } : null;
+        } catch { return null; }
+      }));
+      if (!off) setMarket(got.filter((x): x is { name: string; move: number } => !!x));
+    };
+    tick(); const id = window.setInterval(tick, 60_000);
+    return () => { off = true; window.clearInterval(id); };
+  }, []);
+  // big US news coming up (CPI, FOMC, NFP…) for the countdown board in the lobby (every 30 minutes)
+  const [cal, setCal] = useState<Array<{ title: string; at: number }>>([]);
+  useEffect(() => {
+    const load = () => call<{ events: Array<{ title: string; at: number }> }>('/api/office-cal').then((x) => setCal(x.events ?? [])).catch(() => {});
+    load(); const id = window.setInterval(load, 30 * 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const open = useMemo(() => (j?.trades ?? []).filter((t) => t.result === 'open'), [j]);
   const syms = open.filter((t) => t.strategy !== 'v2' && t.strategy !== 'nas' && coinOf(t)).map((t) => `${coinOf(t)}USDT`).filter((x, i, a) => a.indexOf(x) === i).sort().join(',');
   useEffect(() => {
@@ -41,7 +67,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   }, [syms]);
 
   const cls = full ? 'office-home' : 'office-dock';
-  if (!j) return <div className={cls}><Office data={{ trades: [] }} now={now} screen={[]} full={full} onSwipe={onSwipe} /></div>;   // the building shows at once, people appear when the data arrives
+  if (!j) return <div className={cls}><Office data={{ trades: [], market, cal }} now={now} screen={[]} full={full} onSwipe={onSwipe} /></div>;   // the building shows at once, people appear when the data arrives
   // realtime floating P&L per crypto position from the mark price (falls back to the bot report)
   const posB: Record<string, number> = { ...(j.binance?.pos ?? {}) };
   let floatB = 0, liveB = false;
@@ -56,7 +82,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   for (const v of Object.values(posB)) floatB += v;
   if (!liveB && j.binance) floatB = j.binance.upnl ?? floatB;
   const floatM = j.mt5?.upnl ?? 0;
-  const data: OfficeData = { ...j, binance: j.binance ? { ...j.binance, pos: posB } : j.binance };
+  const data: OfficeData = { ...j, market, cal, binance: j.binance ? { ...j.binance, pos: posB } : j.binance };
   const today = new Date(now); today.setHours(0, 0, 0, 0);
   const closedToday = j.trades.filter((t) => t.result !== 'open' && t.closedAt && t.closedAt >= today.getTime());
   const isMt5 = (t: { strategy: string }) => t.strategy === 'v2' || t.strategy === 'nas';
