@@ -19,6 +19,21 @@ const LINKS = [
 export default function Shell({ children, showLogout = false }: { children: React.ReactNode; showLogout?: boolean }) {
   const path = usePathname();
   const [buildTag, setBuildTag] = useState('');
+  // TEMP diagnostics for the strip at the bottom of the iPhone app: real sizes the phone reports
+  const [diag, setDiag] = useState('');
+  useEffect(() => {
+    if (path !== '/') return;
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;left:0;top:0;width:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);height:100vh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(probe);
+    const read = () => {
+      const cs = getComputedStyle(probe), box = document.querySelector('.office-home') as HTMLElement | null;
+      const sa = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+      setDiag(`ih${window.innerHeight} sh${window.screen.height} vv${Math.round(window.visualViewport?.height ?? 0)} ch${document.documentElement.clientHeight} vh${Math.round(probe.getBoundingClientRect().height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom))} t${parseFloat(cs.paddingTop)} b${parseFloat(cs.paddingBottom)} box${box ? Math.round(box.getBoundingClientRect().height) : '-'} y${box ? Math.round(box.getBoundingClientRect().top) : '-'} ${sa ? 'SA' : 'web'}`);
+    };
+    read(); const id = window.setInterval(read, 2000);
+    return () => { window.clearInterval(id); probe.remove(); };
+  }, [path]);
   const [pending, setPending] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => { setPending(null); setMenuOpen(false); }, [path]);
@@ -135,7 +150,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
     window.location.href = '/login';
   };
   // the home screen is only the office, full screen (swipe sideways to open Trade)
-  if (path === '/') return <>{children}<Toaster />{buildTag ? <span className="build-tag" aria-hidden>{buildTag}</span> : null}</>;
+  if (path === '/') return <>{children}<Toaster />{buildTag ? <span className="build-tag" aria-hidden>{buildTag}{diag ? ` · ${diag}` : ''}</span> : null}</>;
   return (
     <div className="shell apple-shell">
       <header className="apple-topbar">
