@@ -26,7 +26,7 @@ const NX = 15, NY = 12, TW = 15, TH = 7.5, WALL = 82;
 const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
-const TV = { x0: 7.3, x1: 11.0, z0: 48, z1: 106 };
+const TV = { x0: 5.0, x1: 11.0, z0: 42, z1: 96 };
 const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
@@ -101,7 +101,7 @@ const S0: Array<Omit<Spot, 'room'>> = [
 const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
   { id: 'trash', x: 3.3, y: 1.35, face: 'ny', pose: 'stand', label: 'BUANG SAMPAH', prop: 'trash' },
-  { id: 'shelf', x: 6.35, y: 1.1, face: 'ny', pose: 'stand', label: 'BACA BUKU', prop: 'book' },
+  { id: 'shelf', x: 13.3, y: 1.1, face: 'ny', pose: 'stand', label: 'BACA BUKU', prop: 'book' },
   { id: 'printer', x: 10.35, y: 1.35, face: 'ny', pose: 'stand', label: 'AMBIL PRINT', prop: 'paper', alt: [{ label: 'FOTOKOPI' }, { label: 'ISI KERTAS' }, { label: 'SCAN DOKUMEN' }] },
   { id: 'tv', x: 9.0, y: 2.6, face: 'ny', pose: 'stand', label: 'LIHAT CHART', zone: 'meet' },
   { id: 'win1', x: 0.75, y: 3.2, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
@@ -1106,7 +1106,8 @@ function furniture(theme = 'modern'): Item[][] {
   const take = (x: number, y: number) => all.filter((it) => near(it, x, y));
   // trading floor: trader desks + chairs, Noel's desk, rack, bin, bookshelf, printer, water
   for (const it of all) if (it.x0 >= 0.5 && it.x0 <= 2.6 && it.y0 >= 0.9 && it.y0 <= 10.2 && !(it.x0 > 2.25 && it.y0 < 0.8)) R[1].push(it);
-  for (const [x, y] of [[3.6, 0.2], [3.0, 0.15], [3.15, 0.75], [5.8, 0.1], [9.95, 0.15]]) R[1].push(...take(x, y));
+  for (const [x, y] of [[3.6, 0.2], [3.0, 0.15], [3.15, 0.75], [9.95, 0.15]]) R[1].push(...take(x, y));
+  R[1].push(...take(5.8, 0.1).map((it) => moved(it, 6.95, 0)));       // bookshelf right of the lift (the wall boards need the space)
   R[1].push(...all.filter((it) => it.x0 > 4.2 && it.x0 < 4.35 && it.y0 > 1.45 && it.y0 < 2.15));                                // Noel's chair
   R[1].push(...take(2.3, 0.15).map((it) => moved(it, 5.0, 0)));
   // lobby: security, kitchen, fridge, water, dining table + chairs, lounge, sofa
@@ -2163,18 +2164,18 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
     c.fillStyle = live ? '#ff4d4f' : '#7a2a2a'; c.beginPath(); c.arc(4, 3.9, 1.4, 0, 7); c.fill();
     c.textBaseline = 'middle';
     c.font = '800 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('LIVE', 7, 4);
-    const rows = lines.slice(0, 4), rh = (th - 9) / Math.max(1, rows.length);
+    // 2 × 2 tiles: small label on top, big number below (shrunk to fit its tile, never outside it)
+    const rows = lines.slice(0, 4), top = 9, cw = tw / 2, ch = (th - top) / 2;
     rows.forEach((l, i) => {
-      // line 1: account name (left) and today's P&L (right, coloured); line 2: the balance, big
-      const top = 9 + rh * i;
-      c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(l.k, 3, top + rh * 0.24);
-      if (l.sub) { c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = l.subColor ?? '#9ec3e6'; c.textAlign = 'right'; c.fillText(l.sub, tw - 3, top + rh * 0.24); c.textAlign = 'left'; }
-      let fs = 6.6; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
-      while (fs > 4.5 && c.measureText(l.v).width > tw - 6) { fs -= 0.3; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; }
-      c.fillStyle = l.color ?? '#ffffff'; c.fillText(l.v, 3, top + rh * 0.7);
-      c.textAlign = 'left';
-      if (i < rows.length - 1) { c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(3, top + rh, tw - 6, 0.4); }
+      const cx = (i % 2) * cw, cy = top + Math.floor(i / 2) * ch;
+      c.save(); c.beginPath(); c.rect(cx, cy, cw, ch); c.clip();
+      c.font = '700 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(l.k, cx + 4, cy + ch * 0.28);
+      let fs = 10; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
+      while (fs > 3.5 && c.measureText(l.v).width > cw - 9) { fs -= 0.25; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; }
+      c.fillStyle = l.color ?? '#ffffff'; c.fillText(l.v, cx + 4, cy + ch * 0.66);
+      c.restore();
     });
+    c.fillStyle = 'rgba(255,255,255,.1)'; c.fillRect(cw - 0.2, top + 2, 0.4, th - top - 4); c.fillRect(3, top + ch - 0.2, tw - 6, 0.4);
     c.textBaseline = 'alphabetic';
   });
   const rw = (ROSTER.x1 - ROSTER.x0) * TW, rh2 = ROSTER.z1 - ROSTER.z0;
@@ -2207,7 +2208,7 @@ function openPositions(data: OfficeData): Pos[] {
 }
 function drawPositions(c: C, list: Pos[], t: number) {
   const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-  const x0 = TV.x0, x1 = TV.x1, z0 = TV.z1 + 7, z1 = TV.z1 + 50;      // right above the LIVE TV, kept under the floor above
+  const x0 = 6.5, x1 = TV.x1, z0 = TV.z1 + 8, z1 = TV.z1 + 54;      // right above the LIVE TV, kept under the floor above
   const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
   const mono = (wt: number, px: number) => `${wt} ${px}px ui-monospace, Menlo, monospace`;
   c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
@@ -2216,19 +2217,19 @@ function drawPositions(c: C, list: Pos[], t: number) {
   c.textBaseline = 'middle';
   // header: dot + title + count, then a thin rule
   c.fillStyle = list.length ? (Math.floor(t * 2) % 2 ? '#2ee59d' : '#1d6b4c') : '#4a5566'; c.beginPath(); c.arc(6, 7, 1.5, 0, 7); c.fill();
-  c.font = mono(800, 5.2); c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
+  c.font = mono(800, 5.6); c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
   c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(4, 13, w - 8, 0.6);
   if (!list.length) {
-    c.font = mono(600, 4.6); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
+    c.font = mono(600, 5.6); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
   } else {
     // one line per position: side, name, floating P&L
-    const max = 4, rows = list.slice(0, max), top = 15, rh = Math.min(9, (h - top - (list.length > max ? 7 : 2)) / rows.length);
+    const top = 15, max = list.length * 8 <= h - top - 2 ? list.length : Math.max(1, Math.floor((h - top - 7) / 7.6)), rows = list.slice(0, max), rh = Math.min(10, (h - top - (list.length > max ? 8 : 2)) / rows.length);
     rows.forEach((p, i) => {
       const y = top + rh * (i + 0.5);
       if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(3, y - rh / 2, w - 6, rh); }
-      c.font = mono(700, 4.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 5, y);
-      c.font = mono(800, 5); c.fillStyle = '#ffffff';
-      let name = p.name; while (name.length > 3 && c.measureText(name).width > w - 33) name = name.slice(0, -1);
+      c.font = mono(800, 5.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 5, y);
+      c.font = mono(800, 6); c.fillStyle = '#ffffff';
+      let name = p.name; while (name.length > 3 && c.measureText(name).width > w - 44) name = name.slice(0, -1);
       c.fillText(name, 10, y);
       c.textAlign = 'right'; c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 5, y); c.textAlign = 'left';
     });
