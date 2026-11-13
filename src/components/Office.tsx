@@ -111,10 +111,9 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'hot2', x: 8.15, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet', alt: [{ label: 'BIKIN SLIDE' }, { label: 'ZOOM MEETING' }] },
   { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
   { id: 'hot4', x: 8.15, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
-  { id: 'board', x: 11.3, y: 7.2, face: 'ny', pose: 'stand', label: 'CORAT-CORET', prop: 'paper', alt: [{ label: 'ANALISA CHART' }, { label: 'BRAINSTORM' }] },
   { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }] },
   { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
-  { id: 'vend', x: 13.2, y: 1.3, face: 'ny', pose: 'stand', label: 'BELI MINUM', prop: 'can', zone: 'break', alt: [{ label: 'BELI SNACK', prop: 'food' }] },
+  { id: 'vend', x: 1.05, y: 1.3, face: 'ny', pose: 'stand', label: 'BELI MINUM', prop: 'can', zone: 'break', alt: [{ label: 'BELI SNACK', prop: 'food' }] },
   { id: 'rest1', x: 13.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
   { id: 'rest2', x: 14.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'BACA BUKU', prop: 'book' }] },
 ];
@@ -536,10 +535,7 @@ const THEMES: Record<string, Theme> = {
         poly(c, wallB(x0, x1, z0, z1), night ? '#1c3a24' : '#2c6a3a');
         for (let i = 0; i < (x1 - x0) * (z1 - z0) * 0.5; i++) { const x = x0 + 0.05 + hash(`${seed}x${i}`) * (x1 - x0 - 0.1), z = z0 + 2 + hash(`${seed}z${i}`) * (z1 - z0 - 4); const [px, py] = iso(x, 0, z); c.fillStyle = (night ? ['#24502f', '#2f6a3c', '#1c4226'] : ['#3d9a4f', '#58b765', '#2f7a3d', '#7fcf7a'])[i % (night ? 3 : 4)]; c.beginPath(); c.ellipse(px, py, 2.4, 1.5, i, 0, 7); c.fill(); }
       };
-      if (room === 2) {
-        green(5.45, 6.95, 4, 120, 'l');
-      }
-      if (room === 0) green(8.0, 8.75, 26, wh - 6, 'b');
+      void green;     // the green walls were removed (owner's choice)
     },
   },
   senja: {     // dark, cosy pixel-art office (like an isometric game): navy walls, warm wood, dark outlines, chunky pixels
@@ -757,16 +753,7 @@ function drawStatic(c: C, night: boolean, room: number) {
     if (night) { sky.addColorStop(0, '#0b1430'); sky.addColorStop(1, '#1a2550'); } else if (THEME.paint) { sky.addColorStop(0, '#9ccbe9'); sky.addColorStop(0.6, '#e1f0ee'); sky.addColorStop(1, '#f3e6c8'); } else { sky.addColorStop(0, '#8cc6ec'); sky.addColorStop(1, '#e7f4fb'); }
     c.save(); c.beginPath(); const p = wallL(y0, y1, 13, wh - 7); c.moveTo(p[0][0], p[0][1]); for (const q of p.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
     c.fillStyle = sky; c.fill();
-    if (THEME.paint) {      // painted clouds + tree canopy + far hills outside
-      if (!night) for (let k = 0; k < 4; k++) { const [qx, qy] = iso(0, y0 + hash(`cl${room}${k}`) * (y1 - y0), wh - 30 - hash(`cz${room}${k}`) * 50); c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.ellipse(qx, qy, 9, 3.5, 0.46, 0, 7); c.fill(); c.beginPath(); c.ellipse(qx + 5, qy - 2, 6, 3, 0.46, 0, 7); c.fill(); }
-      for (let k = 0; k < 7; k++) { const yy = y0 + (k / 6) * (y1 - y0), [qx, qy] = iso(0, yy, 34 + hash(`hl${room}${k}`) * 10); c.fillStyle = night ? '#16233a' : '#a9c99a'; c.beginPath(); c.ellipse(qx, qy, 14, 8, 0.46, 0, 7); c.fill(); }
-      for (let k = 0; k < 44; k++) {
-        const yy = y0 + hash(`tr${room}${k}`) * (y1 - y0), zz = 14 + hash(`tz${room}${k}`) * (k < 26 ? 30 : 70), [qx, qy] = iso(0, yy, zz);
-        c.fillStyle = night ? ['#0f1d1a', '#13261f', '#0c1714'][k % 3] : ['#5e9a4c', '#78b35b', '#4a8443', '#94c46c', '#3f7340'][k % 5];
-        c.beginPath(); c.ellipse(qx, qy, 4 + hash(`ts${room}${k}`) * 5, 3 + hash(`tt${room}${k}`) * 3, 0.4, 0, 7); c.fill();
-      }
-      if (night) for (let k = 0; k < 5; k++) { const [qx, qy] = iso(0, y0 + hash(`ff${room}${k}`) * (y1 - y0), 20 + hash(`fz${room}${k}`) * 30); c.fillStyle = 'rgba(255,230,140,.7)'; c.beginPath(); c.arc(qx, qy, 0.7, 0, 7); c.fill(); }
-    }
+    if (THEME.paint) { /* plain glass: only the sky behind it */ }
     else for (const b of CITY) {
       if (b.y + b.w < y0 || b.y > y1) continue;
       poly(c, wallL(b.y, b.y + b.w, 13, 13 + b.h * 0.8), night ? '#1b2440' : '#c3ccd6');
@@ -776,7 +763,6 @@ function drawStatic(c: C, night: boolean, room: number) {
         if (night ? lit > 0.45 : lit > 0.7) poly(c, wallL(b.y + 0.06 + (k % 2) * b.w * 0.45, b.y + 0.1 + (k % 2) * b.w * 0.45, 17 + Math.floor(k / 2) * 9, 20 + Math.floor(k / 2) * 9), night ? '#ffd27a' : '#e9eef3');
       }
     }
-    if (!night) for (let k = 0; k < 10; k++) { const yy = y0 + (k / 10) * (y1 - y0); const [sx, sy] = iso(0, yy, 16); c.fillStyle = k % 2 ? '#6fa86a' : '#5c9558'; c.beginPath(); c.ellipse(sx, sy, 4.5, 4, 0, 0, 7); c.fill(); }
     poly(c, [iso(0, y0 + 0.2, wh - 7), iso(0, y0 + 0.55, wh - 7), iso(0, y0 + 1.3, 13), iso(0, y0 + 0.95, 13)], 'rgba(255,255,255,.08)');
     c.restore();
     for (let k = 1; k < 3; k++) { const yy = y0 + (k / 3) * (y1 - y0); poly(c, wallL(yy - 0.03, yy + 0.03, 13, wh - 7), FR); }
@@ -1135,8 +1121,8 @@ function furniture(theme = 'modern'): Item[][] {
   R[0].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7).map((it) => moved(it, -4.6, 2.2)));
   R[0].push(...take(9.2, 9.4));
   const pl = (r: number, list: Array<[number, number, number]>) => { for (const [px, py, sc] of list) R[r].push({ x0: px - 0.25, y0: py - 0.25, x1: px + 0.25, y1: py + 0.25, draw: (c, t) => plant(c, px, py, sc, t) }); };
-  pl(0, [[0.45, 0.45, 1.15], [0.45, 11.55, 1.2], [14.55, 11.5, 1.25], [14.6, 3.7, 0.95]]);
-  pl(1, [[0.45, 0.45, 1.15], [0.45, 11.55, 1.2], [14.6, 3.7, 0.95]]);
+  pl(0, [[0.45, 0.45, 1.15], [14.55, 11.5, 1.25], [14.6, 3.7, 0.95]]);
+  pl(1, [[0.45, 0.45, 1.15], [14.6, 3.7, 0.95]]);
   pl(2, [[0.45, 11.55, 1.2], [14.55, 11.5, 1.25], [14.6, 3.7, 0.95]]);
   // lobby: ping-pong table, the cat's bowl, the fingerprint clock-in machine by the lift
   R[2].push({ x0: 2.4, y0: 6.4, x1: 4.2, y1: 7.3, draw: (c) => {
@@ -1182,15 +1168,6 @@ function furniture(theme = 'modern'): Item[][] {
     }
     cyl(c, 7.5, 5.1, 16, 0.06, 2.5, '#ffffff', '#eeeeee');
   } });
-  R[1].push({ x0: 10.4, y0: 6.45, x1: 12.2, y1: 6.62, draw: (c, t) => {
-    for (const x of [10.5, 12.1]) box(c, x, 6.5, 0.06, 0.06, 0, 16, '#8b8f99');
-    box(c, 10.4, 6.5, 1.8, 0.06, 16, 22, '#ffffff', '#f4f4f2', '#d6d5d1');
-    const pts = [0.1, 0.3, 0.2, 0.55, 0.45, 0.7, 0.62, 0.9];
-    c.strokeStyle = '#2e9e5b'; c.lineWidth = 0.9; c.beginPath();
-    pts.forEach((v, i) => { const [x, y] = iso(10.55 + i * 0.2, 6.56, 19 + v * 15); if (i) c.lineTo(x, y); else c.moveTo(x, y); }); c.stroke();
-    c.strokeStyle = '#e5484d'; c.beginPath(); const [l0, l1] = iso(10.55, 6.56, 33), [l2, l3] = iso(11.3, 6.56, 33); c.moveTo(l0, l1); c.lineTo(l2, l3); c.stroke();
-    void t;
-  } });
   // lobby gym: treadmill + dumbbell rack
   R[2].push({ x0: 0.55, y0: 1.0, x1: 1.45, y1: 2.8, draw: (c, t) => {
     shadow(c, 0.55, 1.0, 0.9, 1.8);
@@ -1219,15 +1196,23 @@ function furniture(theme = 'modern'): Item[][] {
   } });
   R[0].push({ x0: 13.7, y0: 5.75, x1: 14.5, y1: 6.65, draw: (c) => armchair(c, 13.6, 6.2, '#8e2c48', '#6e2038') });
   R[0].push({ x0: 12.55, y0: 5.95, x1: 13.0, y1: 6.4, draw: (c, t) => { ell(c, 12.78, 6.18, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 12.78, 6.18, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 12.78, 6.18, 10, 0.26, 1.5, '#3a2a1e', '#2b1f16'); plant(c, 12.78, 6.18, 0.35, t); } });
+  // indoor trees in big pots (boss office + trading floor)
+  const bigTree = (r: number, x: number, y: number) => R[r].push({ x0: x - 0.4, y0: y - 0.4, x1: x + 0.4, y1: y + 0.4, draw: (c, t) => {
+    ell(c, x, y, 0, 0.5, 'rgba(0,0,0,.16)'); cyl(c, x, y, 0, 0.38, 9, THEME.paint ? '#c99a68' : '#e9e9e7', THEME.paint ? '#8f6a48' : '#c9c8c4'); ell(c, x, y, 9, 0.32, '#4a3a2c');
+    const [bx, by] = iso(x, y, 9); c.fillStyle = '#6b4a33'; c.fillRect(bx - 1.3, by - 26, 2.6, 26);
+    const sw = Math.sin(t * 0.8 + x) * 0.5;
+    for (const [dx, dy, rr, col] of [[0, -32, 11, '#2f7a3d'], [-9, -26, 8, '#3d9a4f'], [9, -27, 8, '#3d9a4f'], [-4, -40, 8, '#58b765'], [5, -38, 7, '#58b765'], [0, -46, 6, '#7fcf7a']] as Array<[number, number, number, string]>) { c.fillStyle = col; c.beginPath(); c.arc(bx + dx + sw * (-dy / 40), by + dy, rr, 0, 7); c.fill(); }
+  } });
+  bigTree(0, 1.0, 11.0); bigTree(0, 13.9, 8.6); bigTree(1, 1.0, 11.0); bigTree(1, 13.9, 4.6);
   // trading floor: a drinks vending machine, and a rest corner (sofa + rug)
-  R[1].push({ x0: 12.75, y0: 0.1, x1: 13.65, y1: 0.75, draw: (c, t) => {
+  R[1].push(moved({ x0: 12.75, y0: 0.1, x1: 13.65, y1: 0.75, draw: (c, t) => {
     shadow(c, 12.75, 0.1, 0.9, 0.65); box(c, 12.75, 0.1, 0.9, 0.65, 0, 50, '#e5484d', '#b8343a', '#cf3e44');
     poly(c, [iso(12.85, 0.75, 46), iso(13.35, 0.75, 46), iso(13.35, 0.75, 14), iso(12.85, 0.75, 14)], 'rgba(20,30,40,.85)');
     for (let r = 0; r < 4; r++) for (let k = 0; k < 3; k++) { const [bx, by] = iso(12.92 + k * 0.15, 0.75, 18 + r * 7.5); c.fillStyle = ['#2ee59d', '#f2c230', '#5ec2f2', '#ffffff'][(r + k) % 4]; c.fillRect(bx, by - 4, 2, 4); }
     poly(c, [iso(13.42, 0.75, 40), iso(13.58, 0.75, 40), iso(13.58, 0.75, 30), iso(13.42, 0.75, 30)], '#1e1f23');
     const [lx, ly] = iso(13.5, 0.75, 27); c.fillStyle = Math.floor(t * 1.2) % 2 ? '#2ee59d' : '#1d4d3a'; c.fillRect(lx - 0.6, ly, 1.2, 1.2);
     poly(c, [iso(12.85, 0.75, 9), iso(13.35, 0.75, 9), iso(13.35, 0.75, 5), iso(12.85, 0.75, 5)], '#141518');
-  } });
+  } }, -12.15, 0));
   R[1].push({ x0: 12.2, y0: 8.6, x1: 12.3, y1: 8.7, draw: (c) => { poly(c, [iso(12.2, 8.6, 0.2), iso(14.6, 8.6, 0.2), iso(14.6, 11.0, 0.2), iso(12.2, 11.0, 0.2)], THEME.paint ? '#c9a46a' : '#4a5568'); } });
   R[1].push(...take(9.2, 9.4).map((it) => moved(it, 3.3, 0.6)));
   R[1].push({ x0: 13.2, y0: 9.0, x1: 13.9, y1: 9.5, draw: (c) => { box(c, 13.2, 9.0, 0.7, 0.45, 0, 6, '#3a2a1e', '#2b1f16', '#4a3626'); cyl(c, 13.4, 9.2, 6, 0.06, 2.5, '#ffffff', '#eeeeee'); } });
@@ -1690,7 +1675,7 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   const pick = (list: Spot[]) => { const f = list.filter((q) => !taken.has(q.id)); return f.length ? variant(f[Math.floor(Math.random() * f.length)], now) : p.seat; };
   const near = (id: string, label: string): Spot => {
     const q = PEOPLE.find((x) => x.id === id)!.seat;
-    if (q.room === 1 && q.x < 3) return { id: `near-${id}-${p.id}`, room: 1, x: 3.45, y: q.face === 'py' ? q.y + 1.25 : q.y - 1.25, face: 'nx', pose: 'stand', label };
+    if (q.room === 1 && q.x < 3) return { id: `near-${id}-${p.id}`, room: 1, x: 3.65, y: q.face === 'py' ? q.y + 1.25 : q.y - 1.25, face: 'nx', pose: 'stand', label };
     return q.face === 'ny' ? { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.75, y: q.y + 0.6, face: 'ny', pose: 'stand', label } : { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.8, y: q.y + 0.65, face: 'nx', pose: 'stand', label };
   };
   const ev = EV.cur;
@@ -2222,7 +2207,7 @@ function openPositions(data: OfficeData): Pos[] {
 }
 function drawPositions(c: C, list: Pos[], t: number) {
   const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-  const x0 = TV.x0, x1 = TV.x1, z0 = TV.z1 + 8, z1 = TV.z1 + 66;
+  const x0 = 12.55, x1 = 14.85, z0 = 58, z1 = 138;      // right of the glass lift (TV.z1 + 66 went through the floor above once the floors got wider)
   const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
   const mono = (wt: number, px: number) => `${wt} ${px}px ui-monospace, Menlo, monospace`;
   c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
@@ -2231,23 +2216,24 @@ function drawPositions(c: C, list: Pos[], t: number) {
   c.textBaseline = 'middle';
   // header: dot + title + count, then a thin rule
   c.fillStyle = list.length ? (Math.floor(t * 2) % 2 ? '#2ee59d' : '#1d6b4c') : '#4a5566'; c.beginPath(); c.arc(6, 7, 1.5, 0, 7); c.fill();
-  c.font = mono(800, 5.2); c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
+  c.font = mono(800, 5.2); c.fillStyle = '#ffffff'; c.fillText('POSISI', 10, 7.2);
   c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(4, 13, w - 8, 0.6);
   if (!list.length) {
-    c.font = mono(600, 5.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
+    c.font = mono(600, 4.6); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada', w / 2, 13 + (h - 13) / 2 - 3.5); c.fillText('posisi', w / 2, 13 + (h - 13) / 2 + 3.5); c.textAlign = 'left';
   } else {
-    const max = 4, rows = list.slice(0, max), top = 15, rh = Math.min(10, (h - top - (list.length > max ? 7 : 2)) / rows.length);
+    // two lines per position: side + name, then the floating P&L
+    const max = 4, rows = list.slice(0, max), top = 15, rh = Math.min(15, (h - top - (list.length > max ? 7 : 2)) / rows.length);
     rows.forEach((p, i) => {
-      const y = top + rh * (i + 0.5);
-      if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(3, y - rh / 2, w - 6, rh); }
-      c.font = mono(700, 4.6); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 6, y);
-      c.font = mono(800, 5.6); c.fillStyle = '#ffffff';
-      let name = p.name; while (name.length > 3 && c.measureText(name).width > w * 0.5 - 14) name = name.slice(0, -1);
-      c.fillText(name, 12, y);
-      c.textAlign = 'right'; c.font = mono(800, 5.6);
-      c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 6, y); c.textAlign = 'left';
+      const y = top + rh * i;
+      if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(2, y, w - 4, rh); }
+      c.font = mono(700, 4.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 4, y + rh * 0.3);
+      c.font = mono(800, 4.8); c.fillStyle = '#ffffff';
+      let name = p.name; while (name.length > 3 && c.measureText(name).width > w - 12) name = name.slice(0, -1);
+      c.fillText(name, 9, y + rh * 0.3);
+      c.textAlign = 'right'; c.font = mono(800, 5.2);
+      c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 3, y + rh * 0.72); c.textAlign = 'left';
     });
-    if (list.length > max) { c.font = mono(600, 4.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText(`+${list.length - max} posisi lagi`, w / 2, h - 4); c.textAlign = 'left'; }
+    if (list.length > max) { c.font = mono(600, 4.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText(`+${list.length - max} lagi`, w / 2, h - 4); c.textAlign = 'left'; }
   }
   c.textBaseline = 'alphabetic'; c.restore();
 }
@@ -2262,14 +2248,6 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
     c.fillStyle = '#111214'; c.fillRect(-2.5, -2.5, w + 5, h + 5); c.fillStyle = '#0b1220'; c.fillRect(0, 0, w, h);
     c.textBaseline = 'middle'; c.textAlign = 'center'; fn(w, h); c.textAlign = 'left'; c.textBaseline = 'alphabetic'; c.restore();
   };
-  if (room === 1) {
-    const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
-    const txt = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
-    board(2.75, 5.95, TV.z1 - 34, TV.z1, (w, h) => {
-      c.font = '700 4.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('H4', w / 2, 8);
-      c.font = '800 10.5px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 ? (Math.floor(t * 4) % 2 ? '#f2c230' : '#ffffff') : '#f2c230'; c.fillText(txt, w / 2, h / 2 + 4);
-    });
-  }
   if (room === 2) {
     const d = new Date(wall);
     const hm = `${String(d.getHours()).padStart(2, '0')}${d.getSeconds() % 2 ? ':' : ' '}${String(d.getMinutes()).padStart(2, '0')}`;
@@ -2283,9 +2261,14 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
       c.font = '800 7.4px ui-monospace, Menlo, monospace'; c.fillStyle = soon && Math.floor(t * 3) % 2 ? '#ff5a5a' : '#f2c230'; c.fillText(nx.title, w / 2, h * 0.48);
       c.font = '700 3.5px ui-monospace, Menlo, monospace'; c.fillStyle = live ? '#ff5a5a' : '#ffffff'; c.fillText(live ? 'SEDANG RILIS' : inTime(left), w / 2, h * 0.82);
     });
-    board(7.2, 11.8, 100, 168, (w, h) => {
-      c.font = '800 19px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(hm, w / 2, h * 0.42);
-      c.font = '700 5.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#f2c230'; c.fillText(`${day}, ${d.getDate()} ${mon} ${d.getFullYear()}`, w / 2, h * 0.8);
+    const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
+    const h4 = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
+    board(7.2, 11.8, 98, 150, (w, h) => {
+      c.font = '800 17px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(hm, w / 2, h * 0.3);
+      c.font = '700 5.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#f2c230'; c.fillText(`${day}, ${d.getDate()} ${mon} ${d.getFullYear()}`, w / 2, h * 0.58);
+      c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(6, h * 0.7, w - 12, 0.6);
+      c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('H4', w * 0.24, h * 0.84);
+      c.font = '800 7px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 && Math.floor(t * 4) % 2 ? '#ffffff' : '#f2c230'; c.fillText(h4, w * 0.62, h * 0.84);
     });
   }
 }
