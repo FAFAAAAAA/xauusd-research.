@@ -21,8 +21,8 @@ export interface OfficeData {
 export type ScreenLine = { k: string; v: string; color?: string; sub?: string; subColor?: string };
 
 /* ---------- geometry ---------- */
-const W = 380, H = 292;
-const NX = 13, NY = 11, TW = 15, TH = 7.5, WALL = 82;
+const W = 430, H = 292;
+const NX = 15, NY = 12, TW = 15, TH = 7.5, WALL = 82;
 const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
@@ -94,7 +94,9 @@ const S0: Array<Omit<Spot, 'room'>> = [
   { id: 'bsofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'NUNGGU BOS', zone: 'lounge' },
   { id: 'bshelf', x: 5.55, y: 1.1, face: 'ny', pose: 'stand', label: 'BACA BUKU', prop: 'book' },
   { id: 'bwin', x: 0.95, y: 4.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
-  { id: 'bplant', x: 11.95, y: 10.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
+  { id: 'fish', x: 13.6, y: 1.25, face: 'ny', pose: 'stand', label: 'LIHAT IKAN', zone: 'boss', alt: [{ label: 'KASIH MAKAN IKAN' }] },
+  { id: 'bsofa3', x: 13.6, y: 6.2, face: 'nx', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'BACA KORAN', prop: 'paper' }] },
+  { id: 'bplant', x: 13.95, y: 11.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
 ];
 const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
@@ -112,6 +114,9 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'board', x: 11.3, y: 7.2, face: 'ny', pose: 'stand', label: 'CORAT-CORET', prop: 'paper', alt: [{ label: 'ANALISA CHART' }, { label: 'BRAINSTORM' }] },
   { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }] },
   { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
+  { id: 'vend', x: 13.2, y: 1.3, face: 'ny', pose: 'stand', label: 'BELI MINUM', prop: 'can', zone: 'break', alt: [{ label: 'BELI SNACK', prop: 'food' }] },
+  { id: 'rest1', x: 13.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'rest2', x: 14.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'BACA BUKU', prop: 'book' }] },
 ];
 const S2: Array<Omit<Spot, 'room'>> = [
   { id: 'coffee', x: 7.55, y: 1.3, face: 'ny', pose: 'stand', label: 'BIKIN KOPI', prop: 'cup', zone: 'break', alt: [{ label: 'BIKIN TEH' }, { label: 'SEDUH MIE' }] },
@@ -130,9 +135,12 @@ const S2: Array<Omit<Spot, 'room'>> = [
   { id: 'bean2', x: 5.75, y: 9.65, face: 'ny', pose: 'bean', label: 'SANTAI', prop: 'laptop', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa1', x: 9.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }] },
-  { id: 'plant', x: 11.95, y: 10.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
+  { id: 'plant', x: 13.95, y: 11.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
   { id: 'hp', x: 6.9, y: 9.4, face: 'py', pose: 'stand', label: 'MAIN HP', prop: 'hp' },
   { id: 'win4', x: 0.95, y: 7.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
+  { id: 'arcade', x: 13.55, y: 1.35, face: 'ny', pose: 'stand', label: 'MAIN ARCADE', zone: 'lounge' },
+  { id: 'pijat', x: 13.9, y: 5.2, face: 'nx', pose: 'sit', label: 'KURSI PIJAT', zone: 'lounge', alt: [{ label: 'PIJAT SANTAI', pose: 'nap' }] },
+  { id: 'bench', x: 11.0, y: 11.0, face: 'ny', pose: 'sit', label: 'NUNGGU TAMU', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
 ];
 const SPOTS: Spot[] = [...S0.map((q) => ({ ...q, room: 0 })), ...S1.map((q) => ({ ...q, room: 1 })), ...S2.map((q) => ({ ...q, room: 2 }))];
 const PATROL: Spot[] = ([
@@ -975,6 +983,14 @@ function chair(x: number, y: number, face: Face, color = '#f2c230'): Item[] {
     : face === 'ny' ? [{ x0: x - 0.22, y0: y + 0.21, x1: x + 0.22, y1: y + 0.3, draw: (c) => box(c, x - 0.22, y + 0.21, 0.44, 0.08, 9, 10, color) }] : [];
   return [seatItem, ...back];
 }
+/** a soft armchair facing -x (its back on the +x side); 'massage' adds a head pillow and a remote */
+function armchair(c: C, x: number, y: number, col: string, dark: string, massage = false) {
+  ell(c, x + 0.15, y, 0, 0.45, 'rgba(0,0,0,.15)');
+  box(c, x - 0.3, y - 0.38, 0.75, 0.76, 0, 8, col, dark, col);
+  box(c, x + 0.3, y - 0.38, 0.18, 0.76, 8, massage ? 20 : 15, col, dark, col);
+  box(c, x - 0.3, y - 0.42, 0.75, 0.1, 8, 6, dark); box(c, x - 0.3, y + 0.32, 0.75, 0.1, 8, 6, dark);
+  if (massage) { box(c, x + 0.28, y - 0.22, 0.16, 0.44, 26, 5, '#3a3b42'); box(c, x - 0.25, y + 0.32, 0.12, 0.1, 14, 1.5, '#f2c230'); }
+}
 function baseItems(): Item[] {
   const it: Item[] = [];
   it.push(clusterDesk(2.5, 'alt', 'big'), clusterDesk(7.0, 'xau', 'nas'));
@@ -1108,7 +1124,7 @@ function furniture(theme = 'modern'): Item[][] {
   R[1].push(...all.filter((it) => it.x0 > 4.2 && it.x0 < 4.35 && it.y0 > 1.45 && it.y0 < 2.15));                                // Noel's chair
   R[1].push(...take(2.3, 0.15).map((it) => moved(it, 5.0, 0)));
   // lobby: security, kitchen, fridge, water, dining table + chairs, lounge, sofa
-  for (const [x, y] of [[11.0, 2.45], [7.1, 0.1], [12.3, 0.1], [2.3, 0.15], [6.95, 4.8], [4.35, 8.4], [3.33, 7.73], [5.33, 9.23], [5.6, 7.55], [9.2, 9.4]]) R[2].push(...take(x, y));
+  for (const [x, y] of [[11.0, 2.45], [7.1, 0.1], [12.3, 0.1], [2.3, 0.15], [6.95, 4.8], [4.35, 8.4], [3.33, 7.73], [5.33, 9.23], [9.2, 9.4]]) R[2].push(...take(x, y));
   R[2].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7));       // its chairs
   R[2].push(...all.filter((it) => it.x0 > 11.4 && it.x0 < 11.6 && it.y0 > 1.6 && it.y0 < 1.9));                             // Pentoel's chair
   // boss office: boss desk + chair, bookshelves, meeting table + chairs, sofa
@@ -1119,9 +1135,9 @@ function furniture(theme = 'modern'): Item[][] {
   R[0].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7).map((it) => moved(it, -4.6, 2.2)));
   R[0].push(...take(9.2, 9.4));
   const pl = (r: number, list: Array<[number, number, number]>) => { for (const [px, py, sc] of list) R[r].push({ x0: px - 0.25, y0: py - 0.25, x1: px + 0.25, y1: py + 0.25, draw: (c, t) => plant(c, px, py, sc, t) }); };
-  pl(0, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
-  pl(1, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
-  pl(2, [[0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
+  pl(0, [[0.45, 0.45, 1.15], [0.45, 11.55, 1.2], [14.55, 11.5, 1.25], [14.6, 3.7, 0.95]]);
+  pl(1, [[0.45, 0.45, 1.15], [0.45, 11.55, 1.2], [14.6, 3.7, 0.95]]);
+  pl(2, [[0.45, 11.55, 1.2], [14.55, 11.5, 1.25], [14.6, 3.7, 0.95]]);
   // lobby: ping-pong table, the cat's bowl, the fingerprint clock-in machine by the lift
   R[2].push({ x0: 2.4, y0: 6.4, x1: 4.2, y1: 7.3, draw: (c) => {
     shadow(c, 2.4, 6.4, 1.8, 0.9);
@@ -1189,6 +1205,46 @@ function furniture(theme = 'modern'): Item[][] {
     shadow(c, 0.55, 5.4, 0.45, 1.0); box(c, 0.6, 5.45, 0.35, 0.9, 0, 12, '#26272c', '#1e1f23', '#2d2e34');
     for (let k = 0; k < 4; k++) for (const z of [12.2, 6]) { const y = 5.55 + k * 0.2; cyl(c, 0.78, y, z, 0.07, 2, '#3a3b42', '#2b2c31'); }
   } });
+  /* --- the wider floors (15 × 12): new pieces in the extra space --- */
+  // boss office: a big aquarium on the back wall, an armchair by the window side
+  R[0].push({ x0: 12.75, y0: 0.1, x1: 14.6, y1: 0.7, draw: (c, t) => {
+    shadow(c, 12.75, 0.1, 1.85, 0.6); box(c, 12.75, 0.1, 1.85, 0.6, 0, 14, '#3a2a1e', '#2b1f16', '#4a3626');
+    box(c, 12.78, 0.13, 1.79, 0.54, 14, 26, 'rgba(120,200,235,.35)', 'rgba(70,160,210,.55)', 'rgba(90,180,225,.5)');
+    poly(c, [iso(12.8, 0.67, 15), iso(14.55, 0.67, 15), iso(14.55, 0.67, 17.5), iso(12.8, 0.67, 17.5)], '#d9c9a0');
+    for (let k = 0; k < 4; k++) { const [wx, wy] = iso(13.0 + k * 0.45, 0.62, 18); c.strokeStyle = '#2f9a4f'; c.lineWidth = 1; c.beginPath(); c.moveTo(wx, wy); c.quadraticCurveTo(wx + Math.sin(t * 1.5 + k) * 2, wy - 6, wx + Math.sin(t + k) * 1.5, wy - 11 - k % 2 * 4); c.stroke(); }
+    const fish: Array<[string, number]> = [['#ff8c2a', 0], ['#f2c230', 1.7], ['#e5484d', 3.1], ['#4c7dff', 4.4]];
+    for (const [col, ph] of fish) { const u = (Math.sin(t * 0.45 + ph) + 1) / 2, dir = Math.cos(t * 0.45 + ph) > 0 ? 1 : -1; const [fx, fy] = iso(12.95 + u * 1.5, 0.62, 24 + ph * 3 + Math.sin(t * 1.3 + ph) * 1.5); c.fillStyle = col; c.beginPath(); c.ellipse(fx, fy, 2.2, 1.2, 0.46, 0, 7); c.fill(); c.beginPath(); c.moveTo(fx - dir * 2, fy - dir); c.lineTo(fx - dir * 3.6, fy - dir * 2.4); c.lineTo(fx - dir * 3.4, fy + 0.6); c.closePath(); c.fill(); }
+    for (let k = 0; k < 3; k++) { const ph = (t * 0.4 + k / 3) % 1, [bx, by] = iso(14.3, 0.6, 17 + ph * 22); c.fillStyle = 'rgba(255,255,255,.6)'; c.beginPath(); c.arc(bx, by, 0.7, 0, 7); c.fill(); }
+    box(c, 12.75, 0.1, 1.85, 0.6, 40, 2, '#3a2a1e', '#2b1f16', '#4a3626');
+  } });
+  R[0].push({ x0: 13.7, y0: 5.75, x1: 14.5, y1: 6.65, draw: (c) => armchair(c, 13.6, 6.2, '#8e2c48', '#6e2038') });
+  R[0].push({ x0: 12.55, y0: 5.95, x1: 13.0, y1: 6.4, draw: (c, t) => { ell(c, 12.78, 6.18, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 12.78, 6.18, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 12.78, 6.18, 10, 0.26, 1.5, '#3a2a1e', '#2b1f16'); plant(c, 12.78, 6.18, 0.35, t); } });
+  // trading floor: a drinks vending machine, and a rest corner (sofa + rug)
+  R[1].push({ x0: 12.75, y0: 0.1, x1: 13.65, y1: 0.75, draw: (c, t) => {
+    shadow(c, 12.75, 0.1, 0.9, 0.65); box(c, 12.75, 0.1, 0.9, 0.65, 0, 50, '#e5484d', '#b8343a', '#cf3e44');
+    poly(c, [iso(12.85, 0.75, 46), iso(13.35, 0.75, 46), iso(13.35, 0.75, 14), iso(12.85, 0.75, 14)], 'rgba(20,30,40,.85)');
+    for (let r = 0; r < 4; r++) for (let k = 0; k < 3; k++) { const [bx, by] = iso(12.92 + k * 0.15, 0.75, 18 + r * 7.5); c.fillStyle = ['#2ee59d', '#f2c230', '#5ec2f2', '#ffffff'][(r + k) % 4]; c.fillRect(bx, by - 4, 2, 4); }
+    poly(c, [iso(13.42, 0.75, 40), iso(13.58, 0.75, 40), iso(13.58, 0.75, 30), iso(13.42, 0.75, 30)], '#1e1f23');
+    const [lx, ly] = iso(13.5, 0.75, 27); c.fillStyle = Math.floor(t * 1.2) % 2 ? '#2ee59d' : '#1d4d3a'; c.fillRect(lx - 0.6, ly, 1.2, 1.2);
+    poly(c, [iso(12.85, 0.75, 9), iso(13.35, 0.75, 9), iso(13.35, 0.75, 5), iso(12.85, 0.75, 5)], '#141518');
+  } });
+  R[1].push({ x0: 12.2, y0: 8.6, x1: 12.3, y1: 8.7, draw: (c) => { poly(c, [iso(12.2, 8.6, 0.2), iso(14.6, 8.6, 0.2), iso(14.6, 11.0, 0.2), iso(12.2, 11.0, 0.2)], THEME.paint ? '#c9a46a' : '#4a5568'); } });
+  R[1].push(...take(9.2, 9.4).map((it) => moved(it, 3.3, 0.6)));
+  R[1].push({ x0: 13.2, y0: 9.0, x1: 13.9, y1: 9.5, draw: (c) => { box(c, 13.2, 9.0, 0.7, 0.45, 0, 6, '#3a2a1e', '#2b1f16', '#4a3626'); cyl(c, 13.4, 9.2, 6, 0.06, 2.5, '#ffffff', '#eeeeee'); } });
+  // lobby: an arcade cabinet, a massage chair, a waiting bench by the entrance
+  R[2].push({ x0: 13.2, y0: 0.1, x1: 13.9, y1: 0.8, draw: (c, t) => {
+    shadow(c, 13.2, 0.1, 0.7, 0.7); box(c, 13.2, 0.1, 0.7, 0.7, 0, 46, '#4c3dff', '#3a2fc4', '#4536e0');
+    poly(c, [iso(13.28, 0.8, 42), iso(13.82, 0.8, 42), iso(13.82, 0.8, 26), iso(13.28, 0.8, 26)], '#0b1220');
+    const busy = BUSY.arcade; for (let k = 0; k < 5; k++) { const [px, py] = iso(13.33 + ((k * 0.11 + (busy ? t * 0.3 : 0)) % 0.45), 0.8, 29 + k * 2.6); c.fillStyle = ['#ff5a5a', '#f2c230', '#2ee59d', '#5ec2f2', '#c792ea'][k]; c.fillRect(px, py, 1.6, 1.2); }
+    box(c, 13.25, 0.8, 0.6, 0.18, 20, 3, '#2a2b30'); const [jx, jy] = iso(13.4, 0.9, 23); c.fillStyle = '#e5484d'; c.beginPath(); c.arc(jx, jy - 2, 1.2, 0, 7); c.fill();
+    poly(c, [iso(13.28, 0.8, 48), iso(13.82, 0.8, 48), iso(13.82, 0.8, 44), iso(13.28, 0.8, 44)], '#f2c230');
+  } });
+  R[2].push({ x0: 13.95, y0: 4.75, x1: 14.6, y1: 5.65, draw: (c) => armchair(c, 13.9, 5.2, '#2a2b30', '#1e1f23', true) });
+  R[2].push({ x0: 10.3, y0: 11.25, x1: 11.7, y1: 11.6, draw: (c) => {
+    shadow(c, 10.3, 11.25, 1.4, 0.35); for (const x of [10.35, 11.55]) box(c, x, 11.3, 0.08, 0.25, 0, 7, '#1e1f23');
+    box(c, 10.3, 11.25, 1.4, 0.38, 7, 1.6, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
+    box(c, 10.3, 11.55, 1.4, 0.07, 8.6, 9, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
+  } });
   if (theme === 'hangat' || theme === 'lukis') {
     // glass partitions (blocking, with a door gap)
     const glassX = (r: number, x: number, ya: number, yb: number) => R[r].push({ x0: x - 0.06, y0: ya, x1: x + 0.12, y1: yb, draw: (c) => {
@@ -1211,16 +1267,6 @@ function furniture(theme = 'modern'): Item[][] {
       const blobs: Array<[number, number, number, string]> = [[0, -44, 18, '#2f7a3d'], [-14, -36, 13, '#2f7a3d'], [14, -38, 13, '#3d9a4f'], [-7, -54, 13, '#3d9a4f'], [9, -52, 12, '#58b765'], [0, -62, 10, '#58b765'], [-15, -48, 9, '#58b765'], [16, -47, 8, '#7fcf7a']];
       for (const [dx, dy, r, col] of blobs) { c.fillStyle = col; c.beginPath(); c.arc(bx + dx + sw * (-dy / 60), by + dy, r, 0, 7); c.fill(); }
       c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.arc(bx - 6, by - 60, 6, 0, 7); c.fill();
-    } });
-    R[2].push({ x0: 9.2, y0: 3.4, x1: 10.9, y1: 5.6, draw: (c) => {
-      shadow(c, 9.2, 3.4, 1.7, 2.2);
-      const steps = 5, d = 2.2 / steps;
-      for (let k = steps - 1; k >= 0; k--) {
-        const y = 3.4 + k * d, h = (steps - k) * 6;
-        box(c, 9.2, y, 1.7, d, 0, h, '#c99a68', '#8f6a48', '#a87b52');
-        if (k % 2 === 0) box(c, 9.35 + (k % 3) * 0.3, y + 0.06, 0.5, d - 0.12, h, 1.4, ['#e5484d', '#f2c230', '#4c7dff'][k % 3]);
-      }
-      for (const x of [9.2, 10.9]) { const a = iso(x, 5.6, 8), b = iso(x, 3.4, 38); c.strokeStyle = '#1e1f23'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
     } });
   }
   return R;
@@ -1848,7 +1894,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const w = box0.clientWidth || W; dpr = THEME.pixel ? 1 : Math.min(3, window.devicePixelRatio || 1); cv.style.imageRendering = THEME.pixel ? 'pixelated' : '';
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.16) : Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.08) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       const cx1 = roomX(1) + OX + (NX - NY) * TW * 0.5;
       lhRef.current = LH; homeRef.current = { z, tx: FLAT ? Math.min(0, Math.max(W - CW * z, W / 2 - cx1 * z)) : (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
@@ -1996,6 +2042,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       BUSY.printer = Object.values(agents).some((a) => a.act.id === 'printer' && !a.path.length);
       BUSY.fridge = Object.values(agents).some((a) => a.act.id === 'fridge' && !a.path.length);
       BUSY.safe = Object.values(agents).some((a) => a.act.id === 'safe' && !a.path.length);
+      BUSY.arcade = Object.values(agents).some((a) => a.act.id === 'arcade' && !a.path.length);
       BUSY.tread = Object.values(agents).some((a) => a.act.id === 'tread' && !a.path.length);
       /* ---- draw world: three rooms stacked ---- */
       const V = view.current, nightNow = nightRef.current;
