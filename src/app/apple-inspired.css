@@ -958,9 +958,8 @@ body::before { display: none; }
 .office-reset { pointer-events: auto; border: 0; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 10px; }
 /* home: the office alone, full screen */
 /* the office fills the whole screen, top to bottom (the app draws under the clock / battery, so no offsets are needed) */
-.office-home { position: fixed; top: 0; left: 0; right: 0; bottom: auto; height: max(var(--app-h, 0px), calc(100vh + env(safe-area-inset-top, 0px))); background: var(--office-ground, #86b96f); overflow: hidden; }
-/* iOS home-screen app with a see-through status bar: 100vh (and bottom: 0) stop one status-bar height short of the real bottom,
-   so the office is made that much taller; --app-h (the real screen height, from JS) is the other guard */
+.office-home { position: fixed; inset: 0; background: var(--office-ground, #86b96f); overflow: hidden; }
+/* a strip under the office in the iPhone app = an app installed before the see-through status bar setting (iOS bug, WebKit #316008): reinstall from Safari */
 /* behind the office: the lawn colour, so if iOS leaves a strip under the page at the bottom it blends with the grass */
 html:has(.office-home), html:has(.office-home) body { background: var(--office-ground, #86b96f); }
 body:has(.office-home)::after { display: none; }
