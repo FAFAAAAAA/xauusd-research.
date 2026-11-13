@@ -738,7 +738,7 @@ function drawStatic(c: C, night: boolean, room: number) {
   poly(c, wallB(11.35, 11.95, 62, 68), '#1f9d57'); poly(c, wallB(11.45, 11.6, 63.5, 66.5), '#ffffff'); poly(c, wallB(11.7, 11.85, 64.4, 65.6), '#ffffff');
   { const [cx, cy] = iso(0.5, 0, wh - 14); c.fillStyle = '#26272c'; c.beginPath(); c.arc(cx, cy, 2.6, 0, Math.PI); c.fill(); c.fillStyle = night ? '#ff4d4f' : '#7a2a2a'; c.fillRect(cx - 0.5, cy + 0.6, 1, 1); }
   // lift on every floor (the way between the rooms); on the open floor: the entrance door in the lobby
-  if (!FLAT || room === 2) {
+  if ((!FLAT || room === 2) && SHAPE !== 'tower') {
   poly(c, wallB(11.1, 12.2, 0, 54), '#1e1f23');
   poly(c, wallB(11.2, 11.64, 0, 50), night ? '#8d939c' : '#b9bfc8'); poly(c, wallB(11.66, 12.1, 0, 50), night ? '#868c95' : '#aeb4bd');
   poly(c, wallB(11.5, 11.8, 57, 61), '#141518'); poly(c, wallB(11.6, 11.7, 58, 60), '#f2c230');
@@ -1948,6 +1948,18 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       }
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; c.fillRect(0, 0, cv.width, cv.height);
       if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
+      // the glass lift: where the cabin is, who is riding, how far the doors are open
+      let liftPos = LIFTPOS.r, liftDoor = 0; const riders: Array<{ p: Person; a: Agent }> = [];
+      for (const p of PEOPLE) { const a = agents[p.id]; if (a?.ride && wall < a.ride.t0 + a.ride.dur) riders.push({ p, a }); }
+      if (riders.length) {
+        const rd = riders[0].a.ride!, k2 = (wall - rd.t0) / rd.dur, hold = 0.2, m = Math.min(1, Math.max(0, (k2 - hold) / (1 - 2 * hold)));
+        liftPos = rd.from + (rd.to - rd.from) * (m * m * (3 - 2 * m)); LIFTPOS.r = liftPos;
+        liftDoor = k2 < hold ? 1 - k2 / hold : k2 > 1 - hold ? (k2 - (1 - hold)) / hold : 0;
+      }
+      const drawRiders = (cc: C, tt: number) => riders.forEach(({ p, a }, i) => {
+        const ghost: Agent = { ...a, arms: undefined, x: 11.3 + i * 0.42, y: 0.62 + (i % 2) * 0.1, path: [], vx: 0, vy: 0, act: { ...a.act, pose: 'stand', prop: undefined, face: 'py', whip: undefined }, scoldUntil: 0, bubble: null, carry: null };
+        drawPerson(cc, p, ghost, tt, S[p.id] ?? { label: '', color: '#58a6ff', sleep: false, tag: null }, null);
+      });
       for (const r of ORDER()) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
         if (r === 2) drawCars(c, t, nightNow);
@@ -1958,6 +1970,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         for (const m of MOPS) if (m.room === r) { const k = 1 - (wall - m.t) / 25_000; ell(c, m.x, m.y, 0.2, 0.32, `rgba(205,232,255,${0.22 * k})`); ell(c, m.x - 0.08, m.y - 0.05, 0.25, 0.1, `rgba(255,255,255,${0.35 * k})`); }
         const list: Item[] = items[r].slice();
         if (EV.cur?.items && wall < EV.cur.until) list.push(...EV.cur.items(r, wall));
+        if (SHAPE === 'tower') { const here = Math.round(liftPos) === r; list.push({ x0: 10.95, y0: 0.05, x1: 12.15, y1: 1.15, draw: (cc, tt) => drawLift(cc, r, here ? liftPos : null, liftDoor, nightNow, tt, here ? drawRiders : null) }); }
         for (const p of PEOPLE) {
           const a = agents[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
           if (!a.path.length && a.act.prop === 'vanish') continue;          // in the toilet
@@ -1986,20 +1999,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
             if (w > 0.2 && w < 0.42) { const dir = a.face === 'py' || a.face === 'nx' ? -1 : 1; c.fillStyle = '#ffd23f'; c.strokeStyle = '#1e1f23'; c.lineWidth = 1.2; c.font = '900 7px system-ui, sans-serif'; c.textAlign = 'center'; c.strokeText('CTAR!', sx + dir * 24, sy - 12); c.fillText('CTAR!', sx + dir * 24, sy - 12); c.textAlign = 'start'; }
           }
         }
-      }
-      if (SHAPE === 'tower') {
-        c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(0) * V.z), k * (V.ty + roomY(0) * V.z));
-        let pos = LIFTPOS.r; const riders: Array<{ p: Person; a: Agent }> = [];
-        for (const p of PEOPLE) { const a = agents[p.id]; if (a?.ride && wall < a.ride.t0 + a.ride.dur) riders.push({ p, a }); }
-        if (riders.length) {
-          const rd = riders[0].a.ride!, k2 = (wall - rd.t0) / rd.dur, hold = 0.18, m = Math.min(1, Math.max(0, (k2 - hold) / (1 - 2 * hold)));
-          pos = rd.from + (rd.to - rd.from) * (m * m * (3 - 2 * m));
-          LIFTPOS.r = pos;
-        }
-        drawGlassLift(c, pos, nightNow, t, riders.map(({ p, a }, i) => (cc: C, tt: number) => {
-          const ghost: Agent = { ...a, x: NX + 0.55 + i * 0.35, y: 0.95 - i * 0.12, path: [], vx: 0, vy: 0, act: { ...a.act, pose: 'stand', prop: undefined, face: 'py', whip: undefined }, scoldUntil: 0, bubble: null, carry: null };
-          drawPerson(cc, p, ghost, tt, S[p.id] ?? { label: '', color: '#58a6ff', sleep: false, tag: null }, null);
-        }));
       }
       if (nightNow) {
         c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(6,10,28,.26)'; c.fillRect(0, 0, cv.width, cv.height); c.restore();
@@ -2368,31 +2367,38 @@ function drawWeather(c: C, room: number, t: number) {
   c.restore();
 }
 
-/* ---------- the glass lift on the outside of the tower ---------- */
+/* ---------- the glass lift (against the back wall, through all floors) ---------- */
 const LIFTPOS = { r: 1 };          // where the cabin is (room index, fractional while moving)
-function drawGlassLift(c: C, pos: number, night: boolean, t: number, riders: Array<(c: C, t: number) => void>) {
-  const x0 = NX + 0.12, x1 = NX + 1.45, y0 = 0.15, y1 = 1.55, zb = -2 * RH - 8, zt = WALL + 34;
-  const frame = '#2a2b30', glass = night ? 'rgba(120,170,230,.14)' : 'rgba(190,228,250,.22)';
-  // shaft: back faces, then landings at every floor
-  poly(c, [iso(x0, y0, zb), iso(x1, y0, zb), iso(x1, y0, zt), iso(x0, y0, zt)], glass);
-  for (let r = 0; r < ROOMS; r++) { const z = -r * RH; box(c, NX - 0.05, y0 - 0.05, 0.2, y1 - y0 + 0.1, z - 4, 4, '#3a3b42', '#2a2b30', '#33343a'); }
-  // cabin
-  const zc = -pos * RH, hC = 54;
-  box(c, x0 + 0.05, y0 + 0.05, x1 - x0 - 0.1, y1 - y0 - 0.1, zc - 3, 3, '#3a3b42', '#2a2b30', '#33343a');
-  poly(c, [iso(x0 + 0.05, y0 + 0.05, zc), iso(x1 - 0.05, y0 + 0.05, zc), iso(x1 - 0.05, y0 + 0.05, zc + hC), iso(x0 + 0.05, y0 + 0.05, zc + hC)], night ? 'rgba(255,230,170,.18)' : 'rgba(255,255,255,.28)');
-  c.save(); c.translate(0, pos * RH); for (const draw of riders) draw(c, t); c.restore();
-  poly(c, [iso(x1 - 0.05, y0 + 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc + hC), iso(x1 - 0.05, y0 + 0.05, zc + hC)], night ? 'rgba(150,190,240,.16)' : 'rgba(200,235,255,.28)');
-  poly(c, [iso(x0 + 0.05, y1 - 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc), iso(x1 - 0.05, y1 - 0.05, zc + hC), iso(x0 + 0.05, y1 - 0.05, zc + hC)], night ? 'rgba(150,190,240,.14)' : 'rgba(200,235,255,.24)');
-  box(c, x0 + 0.05, y0 + 0.05, x1 - x0 - 0.1, y1 - y0 - 0.1, zc + hC, 3, '#3a3b42', '#2a2b30', '#33343a');
-  if (night) { const [lx, ly] = iso((x0 + x1) / 2, (y0 + y1) / 2, zc + hC - 2); const g = c.createRadialGradient(lx, ly, 0, lx, ly, 26); g.addColorStop(0, 'rgba(255,225,160,.35)'); g.addColorStop(1, 'rgba(255,225,160,0)'); c.fillStyle = g; c.fillRect(lx - 26, ly - 26, 52, 52); }
-  // shaft: front glass + frame posts + cables
-  poly(c, [iso(x1, y0, zb), iso(x1, y1, zb), iso(x1, y1, zt), iso(x1, y0, zt)], glass);
-  poly(c, [iso(x0, y1, zb), iso(x1, y1, zb), iso(x1, y1, zt), iso(x0, y1, zt)], glass);
-  c.strokeStyle = frame; c.lineWidth = 1.1;
-  for (const [x, y] of [[x0, y1], [x1, y1], [x1, y0]] as const) { const a = iso(x, y, zb), b = iso(x, y, zt); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
-  c.lineWidth = 0.6; for (let z = zb; z <= zt; z += RH / 3) { const a = iso(x0, y1, z), b = iso(x1, y1, z), d = iso(x1, y0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.stroke(); }
-  c.strokeStyle = 'rgba(40,40,45,.6)'; c.lineWidth = 0.4; { const a = iso((x0 + x1) / 2, (y0 + y1) / 2, zc + hC + 3), b = iso((x0 + x1) / 2, (y0 + y1) / 2, zt); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
-  box(c, x0 - 0.05, y0 - 0.05, x1 - x0 + 0.1, y1 - y0 + 0.1, zt, 6, '#2a2b30', '#1e1f23', '#26272c');
+function drawLift(c: C, room: number, pos: number | null, door: number, night: boolean, t: number, riders: ((c: C, t: number) => void) | null) {
+  const x0 = 10.95, x1 = 12.15, y0 = 0.05, y1 = 1.15, top = room === 0 ? WALL + 26 : RH - 8;
+  const frame = '#2a2b30', glass = night ? 'rgba(130,175,230,.13)' : 'rgba(195,230,250,.24)';
+  // the cabin (only on the floor it is closest to)
+  if (pos != null) {
+    const zc = (room - pos) * RH, hC = 50, ix0 = x0 + 0.08, ix1 = x1 - 0.08, iy0 = y0 + 0.06, iy1 = y1 - 0.08;
+    c.save(); c.translate(0, -zc);
+    box(c, ix0, iy0, ix1 - ix0, iy1 - iy0, -3, 3, '#4a4c53', '#2a2b30', '#3a3b42');                  // floor
+    poly(c, [iso(ix0, iy0, 0), iso(ix1, iy0, 0), iso(ix1, iy0, hC), iso(ix0, iy0, hC)], night ? 'rgba(255,232,180,.22)' : 'rgba(255,255,255,.35)');   // back panel
+    poly(c, [iso(ix0, iy0, 0), iso(ix0, iy1, 0), iso(ix0, iy1, hC), iso(ix0, iy0, hC)], night ? 'rgba(255,232,180,.16)' : 'rgba(240,245,250,.3)');
+    c.strokeStyle = '#8b8f99'; c.lineWidth = 0.6; { const a = iso(ix0 + 0.05, iy0 + 0.3, 22), b = iso(ix0 + 0.05, iy1 - 0.2, 22); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }   // handrail
+    riders?.(c, t);
+    poly(c, [iso(ix1, iy0, 0), iso(ix1, iy1, 0), iso(ix1, iy1, hC), iso(ix1, iy0, hC)], night ? 'rgba(160,200,245,.16)' : 'rgba(205,235,255,.26)');   // side glass
+    // sliding glass doors on the front
+    const half = (ix1 - ix0) / 2, gap = half * door;
+    for (const [a, b] of [[ix0, ix0 + half - gap], [ix0 + half + gap, ix1]] as const) if (b - a > 0.01) {
+      poly(c, [iso(a, iy1, 0), iso(b, iy1, 0), iso(b, iy1, hC), iso(a, iy1, hC)], night ? 'rgba(160,200,245,.2)' : 'rgba(205,235,255,.32)');
+      c.strokeStyle = frame; c.lineWidth = 0.5; c.beginPath(); for (const x of [a, b]) { const p0 = iso(x, iy1, 0), p1 = iso(x, iy1, hC); c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); } c.stroke();
+    }
+    box(c, ix0, iy0, ix1 - ix0, iy1 - iy0, hC, 3, '#3a3b42', '#2a2b30', '#33343a');                   // roof
+    if (night) { const [lx, ly] = iso((ix0 + ix1) / 2, (iy0 + iy1) / 2, hC - 3); const g = c.createRadialGradient(lx, ly, 0, lx, ly, 24); g.addColorStop(0, 'rgba(255,225,160,.4)'); g.addColorStop(1, 'rgba(255,225,160,0)'); c.fillStyle = g; c.fillRect(lx - 24, ly - 24, 48, 48); }
+    c.restore();
+  }
+  // the shaft: glass on the two open sides, a frame, the floor number above the door
+  poly(c, [iso(x1, y0, 0), iso(x1, y1, 0), iso(x1, y1, top), iso(x1, y0, top)], glass);
+  poly(c, [iso(x0, y1, 0), iso(x1, y1, 0), iso(x1, y1, top), iso(x0, y1, top)], glass);
+  c.strokeStyle = frame; c.lineWidth = 0.9;
+  for (const [x, y] of [[x0, y1], [x1, y1], [x1, y0]] as const) { const a = iso(x, y, 0), b = iso(x, y, top); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  for (const z of [0, 56, top]) { const a = iso(x0, y1, z), b = iso(x1, y1, z), d = iso(x1, y0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.stroke(); }
+  const [nx, ny] = iso((x0 + x1) / 2, y1, 60); c.fillStyle = '#141518'; c.fillRect(nx - 5, ny - 4, 10, 6); c.fillStyle = '#f2c230'; c.font = '700 4.5px ui-monospace, monospace'; c.textAlign = 'center'; c.fillText(`L${3 - room}`, nx, ny + 0.6); c.textAlign = 'start';
 }
 
 function isoSort(list: Item[]): Item[] {
