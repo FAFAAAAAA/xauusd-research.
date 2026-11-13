@@ -977,3 +977,6 @@ body:has(.office-home)::after { display: none; }
   .btn, button, [role="button"], .b-tile, .b-stat, .item { transition: none; }
   .btn:active:not(:disabled), button:active:not(:disabled), .b-tile:hover, .b-stat:hover, .b-tile:active, .b-stat:active, .item:active, .item:hover { transform: none; }
 }
+
+/* which build is on the screen (tiny, bottom left of the office) */
+.build-tag { position: fixed; left: 8px; bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); z-index: 5; font: 600 9px ui-monospace, Menlo, monospace; color: rgba(255,255,255,.55); text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; }

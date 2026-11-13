@@ -1866,7 +1866,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const w = box0.clientWidth || W; dpr = THEME.pixel ? 1 : Math.min(3, window.devicePixelRatio || 1); cv.style.imageRendering = THEME.pixel ? 'pixelated' : '';
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.08) : Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, LH / TOTAL) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       const cx1 = roomX(1) + OX + (NX - NY) * TW * 0.5;
       lhRef.current = LH; homeRef.current = { z, tx: FLAT ? Math.min(0, Math.max(W - CW * z, W / 2 - cx1 * z)) : (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
@@ -2041,7 +2041,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = skyTop(nightNow); c.fillRect(0, 0, cv.width, cv.height);
       if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
       // the phone's status bar shows the page colour: copy the exact colour of the picture's top edge into it (every 2 s)
-      if (wall - skyAt > 2000) { skyAt = wall; try { const px = c.getImageData(2, 1, 1, 1).data; const col = `rgb(${px[0]},${px[1]},${px[2]})`; if (col !== skyCol) { skyCol = col; document.documentElement.style.setProperty('--office-sky', col); } } catch { /* ignore */ } }
+      if (wall - skyAt > 2000) { skyAt = wall; try { const px = c.getImageData(2, 1, 1, 1).data; const col = `rgb(${px[0]},${px[1]},${px[2]})`; if (col !== skyCol) { skyCol = col; document.documentElement.style.setProperty('--office-sky', col); document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', col)); } } catch { /* ignore */ } }
       // the glass lift: the cabin comes, the doors open, the rider walks in, rides, walks out
       let liftPos = LIFTPOS.r, liftDoor = 0, rider: { p: Person; a: Agent; room: number; y: number; walk: number; inCab: boolean; out: boolean } | null = null;
       const ez = (x: number) => { const m = Math.min(1, Math.max(0, x)); return m * m * (3 - 2 * m); };

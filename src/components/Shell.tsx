@@ -18,6 +18,7 @@ const LINKS = [
 
 export default function Shell({ children, showLogout = false }: { children: React.ReactNode; showLogout?: boolean }) {
   const path = usePathname();
+  const [buildTag, setBuildTag] = useState('');
   const [pending, setPending] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => { setPending(null); setMenuOpen(false); }, [path]);
@@ -42,7 +43,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
     let build = '';
     const check = () => fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()).then((j) => {
       const v = String(j?.data?.build ?? ''); if (!v) return;
-      if (build && v !== build) window.location.reload(); else build = v;
+      if (build && v !== build) window.location.reload(); else { build = v; setBuildTag(v.slice(0, 7)); }
     }).catch(() => {});
     check();
     const vt = window.setInterval(check, 180_000);
@@ -134,7 +135,7 @@ export default function Shell({ children, showLogout = false }: { children: Reac
     window.location.href = '/login';
   };
   // the home screen is only the office, full screen (swipe sideways to open Trade)
-  if (path === '/') return <>{children}<Toaster /></>;
+  if (path === '/') return <>{children}<Toaster />{buildTag ? <span className="build-tag" aria-hidden>{buildTag}</span> : null}</>;
   return (
     <div className="shell apple-shell">
       <header className="apple-topbar">
