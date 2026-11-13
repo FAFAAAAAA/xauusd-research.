@@ -557,12 +557,16 @@ function drawRoofDeck(c: C, night: boolean) {
 
 /* ---------- the static room ---------- */
 const CITY = Array.from({ length: 26 }, (_, i) => ({ y: 0.5 + i * 0.4 + hash(`b${i}`) * 0.15, w: 0.25 + hash(`w${i}`) * 0.3, h: 22 + hash(`h${i}`) * 42 }));
+// the colour at the very top of the sky: also used above the drawing and behind the phone's clock, so there is no visible edge
+const skyTop = (night: boolean) => (night ? '#03060f' : THEME.sky?.[0] ?? '#5aa8e0');
 function drawBackdrop(c: C, night: boolean) {
   const y0 = -H, y1 = TOTAL + H;
+  c.fillStyle = skyTop(night); c.fillRect(-W * 4, y0 - TOTAL * 4, CW + 8 * W, TOTAL * 4 + 1);
   const sky = c.createLinearGradient(0, y0, 0, TOTAL);
   if (night) { sky.addColorStop(0, '#03060f'); sky.addColorStop(0.6, '#0b1430'); sky.addColorStop(1, '#1a2550'); }
   else { const sk = THEME.sky ?? ['#5aa8e0', '#a9d5f2', '#e6f3fb']; sky.addColorStop(0, sk[0]); sky.addColorStop(0.55, sk[1]); sky.addColorStop(1, sk[2]); }
-  c.fillStyle = sky; c.fillRect(-W, y0, CW + 2 * W, y1 - y0);
+  c.fillStyle = sky; c.fillRect(-W * 4, y0, CW + 8 * W, y1 - y0);
+  c.fillStyle = night ? '#1a2550' : THEME.sky?.[2] ?? '#e6f3fb'; c.fillRect(-W * 4, y1 - 1, CW + 8 * W, TOTAL * 4);
   if (night) {
     for (let i = 0; i < 140; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.5})`; const r = hash(`r${i}`) > 0.9 ? 1.1 : 0.7; c.fillRect(-20 + hash(`st${i}`) * (CW + 40), -40 + hash(`sy${i}`) * TOTAL * 0.8, r, r); }
     const mg = c.createRadialGradient(60, 70, 2, 60, 70, 45); mg.addColorStop(0, 'rgba(255,248,220,.35)'); mg.addColorStop(1, 'rgba(255,248,220,0)'); c.fillStyle = mg; c.fillRect(15, 25, 90, 90);
@@ -1789,7 +1793,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true;
     loadPhoto(() => { bgKey = ''; });
     const agents: Record<string, Agent> = {};
-    let evAt = 0, mopAt = 0, shooAt = 0;
+    let evAt = 0, mopAt = 0, shooAt = 0, skyAt = 0, skyCol = '';
     const cat: Cat = { room: 1, x: 7.5, y: 5.1, z: 0, vx: 0, vy: 0, dx: 1, dy: 0, path: [], spot: CAT_SPOTS[6], mode: 'sleep', until: Date.now() + 8000, hidden: 0, pending: null, hop: null, meow: 0 };
     CATREF = cat;
     const resize = () => {
@@ -1958,8 +1962,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       if (!bg || base !== bgKey || ((outside || (settled && (bgV!.z !== V.z || bgV!.tx !== V.tx || bgV!.ty !== V.ty))))) {
         bgM = Math.round(Math.max(cv.width, cv.height) * 0.25); bgW = cv.width + 2 * bgM; bgH = cv.height + 2 * bgM;
         if (!bg || bg.width !== bgW || bg.height !== bgH) { bg = document.createElement('canvas'); bg.width = bgW; bg.height = bgH; }
-        document.documentElement.style.setProperty('--office-sky', nightNow ? '#0b1430' : '#a9d5f2');
-        const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; b.fillRect(0, 0, bgW, bgH);
+                const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.fillStyle = skyTop(nightNow); b.fillRect(0, 0, bgW, bgH);
         b.setTransform(k * V.z, 0, 0, k * V.z, bgM + k * V.tx, bgM + k * V.ty); drawBackdrop(b, nightNow);
         if (SHAPE === 'zigzag') drawLiftTube(b, nightNow);
         if (FLAT) { b.save(); b.translate(roomX(2), roomY(2)); drawFlatGround(b, nightNow); b.restore(); }
@@ -1967,8 +1970,10 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (SHAPE === 'rooftop') { b.save(); b.translate(0, TOPM - RH); drawRoofDeck(b, nightNow); b.restore(); }
         bgKey = base; bgV = { z: V.z, tx: V.tx, ty: V.ty };
       }
-      c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; c.fillRect(0, 0, cv.width, cv.height);
+      c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = skyTop(nightNow); c.fillRect(0, 0, cv.width, cv.height);
       if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
+      // the phone's status bar shows the page colour: copy the exact colour of the picture's top edge into it (every 2 s)
+      if (wall - skyAt > 2000) { skyAt = wall; try { const px = c.getImageData(2, 1, 1, 1).data; const col = `rgb(${px[0]},${px[1]},${px[2]})`; if (col !== skyCol) { skyCol = col; document.documentElement.style.setProperty('--office-sky', col); } } catch { /* ignore */ } }
       // the glass lift: the cabin comes, the doors open, the rider walks in, rides, walks out
       let liftPos = LIFTPOS.r, liftDoor = 0, rider: { p: Person; a: Agent; room: number; y: number; walk: number; inCab: boolean; out: boolean } | null = null;
       const ez = (x: number) => { const m = Math.min(1, Math.max(0, x)); return m * m * (3 - 2 * m); };
