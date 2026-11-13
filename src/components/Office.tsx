@@ -27,9 +27,22 @@ const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs i
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
 /* building shape: 'tower' (3 floors in one glass tower), 'zigzag' (cantilevered floors around a glass lift tube), 'rooftop' (tower + roof deck) */
-let SHAPE = 'tower', TOPM = 50, TOTAL = RH * ROOMS + TOPM;
-const roomX = (r: number) => (SHAPE === 'zigzag' ? (r % 2 ? 34 : -34) : 0);
-function setShape(sh: string) { SHAPE = sh; TOPM = sh === 'rooftop' ? 50 + RH : 50; TOTAL = RH * ROOMS + TOPM; }
+let SHAPE = 'tower', TOPM = 50, TOTAL = RH * ROOMS + TOPM, CW = W;
+/* 'flat': one big open floor — the three rooms sit side by side (boss | trading | lobby) behind glass partitions */
+let FLAT = false;
+const FLATWH = 200;                          // wall height of the open floor
+const ORDER = () => (FLAT ? [0, 1, 2] : [2, 1, 0]);      // back to front
+const roomX = (r: number) => (FLAT ? r * NX * TW : SHAPE === 'zigzag' ? (r % 2 ? 34 : -34) : 0);
+const roomY = (r: number) => (FLAT ? TOPM + r * NX * TH : r * RH + TOPM);
+function setShape(sh: string) {
+  SHAPE = sh; FLAT = sh === 'flat';
+  TOPM = sh === 'rooftop' ? 50 + RH : FLAT ? FLATWH - OY + 30 : 50;
+  TOTAL = FLAT ? roomY(2) + OY + (NX + NY) * TH + 60 : RH * ROOMS + TOPM;
+  CW = FLAT ? roomX(2) + OX + NX * TW + 20 : W;
+}
+/* walking between the rooms of the open floor: through a gap in the glass partition */
+const DOOR_Y = 5.5;
+const hopRoom = (from: number, to: number) => (to > from ? from + 1 : from - 1);
 const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the three rooms)
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
@@ -227,7 +240,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const v = (label: string, more: Partial<Spot> = {}) => ({ ...PEOPLE[0].seat, id: 'ev-paket-vet', label, ...more });
     return ev({
       vet: [{ act: v('NUNGGU PAKET', { prop: 'hp' }), dwell: S(10) }, { act: v('BUKA PAKET', { prop: 'box', say: ['Yeay, paketku datang!', '#c0392b'] }), dwell: S(14) }, { act: v('BELANJA ONLINE', { prop: 'hp' }), dwell: S(16) }],
-      kurir: [{ act: sp('ev-kurir-in', 0, 3.0, 3.9, 'nx', 'ANTAR PAKET', { prop: 'box', say: ['Paket buat Ny. Vetrycia!', '#c0392b'] }), dwell: S(4) }, { act: sp('ev-kurir-out', 0, 11.65, 0.6, 'ny', 'PULANG', { prop: 'vanish' }), dwell: S(60) }],
+      kurir: [{ act: sp('ev-kurir-in', 0, 3.0, 3.9, 'nx', 'ANTAR PAKET', { prop: 'box', say: ['Paket buat Ny. Vetrycia!', '#c0392b'] }), dwell: S(4) }, { act: sp('ev-kurir-out', FLAT ? 2 : 0, 11.65, 0.6, 'ny', 'PULANG', { prop: 'vanish' }), dwell: S(60) }],
     }, 42, { courier: true });
   }
   if (kind === 'suruh') {
@@ -384,7 +397,7 @@ const sh = (hex: string, k: number) => {
 };
 /** painted look: warm brown ink outlines instead of faint grey edges */
 let INK: string | null = null;
-let PSV = 1.14;      // character scale (set from the theme)
+let PSV = 1.14, OL = 'rgba(70,40,25,.6)';      // character scale + outline colour (set from the theme)      // character scale (set from the theme)
 function poly(c: C, pts: Array<[number, number]>, fill: string | CanvasGradient, edge = false) {
   c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
@@ -423,7 +436,7 @@ const wallL = (y0: number, y1: number, z0: number, z1: number): Array<[number, n
 const wallB = (x0: number, x1: number, z0: number, z1: number): Array<[number, number]> => [iso(x0, 0, z1), iso(x1, 0, z1), iso(x1, 0, z0), iso(x0, 0, z0)];
 
 /* ---------- looks (themes) ---------- */
-type Theme = { floor: string; floorN: string; line: string; back: string; backN: string; left: string; leftN: string; cap: string; base: string; sky?: [string, string, string]; paint?: boolean; extra?: (c: C, night: boolean, room: number, wh: number) => void };
+type Theme = { floor: string; floorN: string; line: string; back: string; backN: string; left: string; leftN: string; cap: string; base: string; sky?: [string, string, string]; paint?: boolean; planks?: boolean; ink?: string; pixel?: boolean; extra?: (c: C, night: boolean, room: number, wh: number) => void };
 const THEMES: Record<string, Theme> = {
   modern: { floor: '#dcd9d3', floorN: '#b9b6b0', line: 'rgba(120,110,95,.13)', back: '#f5f4f1', backN: '#c9c7c2', left: '#eceae6', leftN: '#bdbbb6', cap: '#26272c', base: '#2b2c31' },
   kayu: {
@@ -464,6 +477,11 @@ const THEMES: Record<string, Theme> = {
       }
       if (room === 0) green(8.0, 8.75, 26, wh - 6, 'b');
     },
+  },
+  senja: {     // dark, cosy pixel-art office (like an isometric game): navy walls, warm wood, dark outlines, chunky pixels
+    floor: '#8a5a3a', floorN: '#5a3a26', line: 'rgba(0,0,0,.22)', back: '#2f3747', backN: '#232a3a', left: '#2a3242', leftN: '#1f2534', cap: '#12151c', base: '#151922',
+    sky: ['#5f8fc0', '#9cc0de', '#d6e6f1'], planks: true, ink: 'rgba(12,12,20,.85)', pixel: true,
+    extra: (c, night, room, wh) => THEMES.hangat.extra!(c, night, room, wh),
   },
   lukis: {     // warm, hand-painted look (like a cosy animated film): honey wood, cream plaster, ink outlines
     floor: '#c38a57', floorN: '#6e4d34', line: 'rgba(110,65,35,.22)', back: '#f1e2c4', backN: '#8f7c63', left: '#ead6b2', leftN: '#85735a', cap: '#6b4429', base: '#8a5a36',
@@ -536,16 +554,16 @@ function drawBackdrop(c: C, night: boolean) {
   const sky = c.createLinearGradient(0, y0, 0, TOTAL);
   if (night) { sky.addColorStop(0, '#03060f'); sky.addColorStop(0.6, '#0b1430'); sky.addColorStop(1, '#1a2550'); }
   else { const sk = THEME.sky ?? ['#5aa8e0', '#a9d5f2', '#e6f3fb']; sky.addColorStop(0, sk[0]); sky.addColorStop(0.55, sk[1]); sky.addColorStop(1, sk[2]); }
-  c.fillStyle = sky; c.fillRect(-W, y0, 3 * W, y1 - y0);
+  c.fillStyle = sky; c.fillRect(-W, y0, CW + 2 * W, y1 - y0);
   if (night) {
-    for (let i = 0; i < 140; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.5})`; const r = hash(`r${i}`) > 0.9 ? 1.1 : 0.7; c.fillRect(-20 + hash(`st${i}`) * (W + 40), -40 + hash(`sy${i}`) * TOTAL * 0.8, r, r); }
+    for (let i = 0; i < 140; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.5})`; const r = hash(`r${i}`) > 0.9 ? 1.1 : 0.7; c.fillRect(-20 + hash(`st${i}`) * (CW + 40), -40 + hash(`sy${i}`) * TOTAL * 0.8, r, r); }
     const mg = c.createRadialGradient(60, 70, 2, 60, 70, 45); mg.addColorStop(0, 'rgba(255,248,220,.35)'); mg.addColorStop(1, 'rgba(255,248,220,0)'); c.fillStyle = mg; c.fillRect(15, 25, 90, 90);
     c.fillStyle = '#f4efd9'; c.beginPath(); c.arc(60, 70, 11, 0, 7); c.fill(); c.fillStyle = '#0b1430'; c.beginPath(); c.arc(65, 66, 10, 0, 7); c.fill();
   } else {
-    const sg = c.createRadialGradient(W - 55, 60, 4, W - 55, 60, 70); sg.addColorStop(0, 'rgba(255,250,215,.95)'); sg.addColorStop(0.25, 'rgba(255,240,180,.45)'); sg.addColorStop(1, 'rgba(255,240,180,0)');
-    c.fillStyle = sg; c.fillRect(W - 140, -20, 170, 170);
+    const sg = c.createRadialGradient(CW - 55, 60, 4, CW - 55, 60, 70); sg.addColorStop(0, 'rgba(255,250,215,.95)'); sg.addColorStop(0.25, 'rgba(255,240,180,.45)'); sg.addColorStop(1, 'rgba(255,240,180,0)');
+    c.fillStyle = sg; c.fillRect(CW - 140, -20, 170, 170);
     for (let i = 0; i < 9; i++) {      // soft clouds
-      const cx = hash(`cx${i}`) * (W + 60) - 30, cy = 30 + hash(`cy${i}`) * TOTAL * 0.62, sc = 0.6 + hash(`cs${i}`) * 0.9;
+      const cx = hash(`cx${i}`) * (CW + 60) - 30, cy = 30 + hash(`cy${i}`) * TOTAL * 0.62, sc = 0.6 + hash(`cs${i}`) * 0.9;
       c.fillStyle = 'rgba(255,255,255,.75)';
       for (const [dx, dy, r] of [[0, 0, 12], [13, -5, 14], [27, 0, 11], [8, 4, 10], [20, 5, 10]]) { c.beginPath(); c.ellipse(cx + dx * sc, cy + dy * sc, r * sc * 1.2, r * sc * 0.75, 0, 0, 7); c.fill(); }
     }
@@ -553,16 +571,16 @@ function drawBackdrop(c: C, night: boolean) {
   if (THEME.paint) {      // rolling hills and trees instead of a city
     for (const [base, col, amp, sd] of [[TOTAL - 120, night ? '#14213a' : '#b9d3b0', 40, 'h1'], [TOTAL - 30, night ? '#101b2c' : '#8fbc7f', 55, 'h2']] as const) {
       c.fillStyle = col; c.beginPath(); c.moveTo(-W, TOTAL + H);
-      for (let x = -W; x <= 2 * W; x += 20) c.lineTo(x, base - Math.sin(x / 90 + hash(sd) * 6) * amp * 0.5 - Math.sin(x / 37) * amp * 0.15);
-      c.lineTo(2 * W, TOTAL + H); c.closePath(); c.fill();
+      for (let x = -W; x <= CW + W; x += 20) c.lineTo(x, base - Math.sin(x / 90 + hash(sd) * 6) * amp * 0.5 - Math.sin(x / 37) * amp * 0.15);
+      c.lineTo(CW + W, TOTAL + H); c.closePath(); c.fill();
     }
-    for (let i = 0; i < 40; i++) { const x = -40 + hash(`bt${i}`) * (W + 80), y = TOTAL - 60 + hash(`bu${i}`) * 80; c.fillStyle = night ? '#0d1626' : ['#6fa463', '#5e9a4c', '#86b874'][i % 3]; c.beginPath(); c.ellipse(x, y, 10 + hash(`bv${i}`) * 10, 7 + hash(`bw${i}`) * 6, 0, 0, 7); c.fill(); }
+    for (let i = 0; i < 40; i++) { const x = -40 + hash(`bt${i}`) * (CW + 80), y = TOTAL - 60 + hash(`bu${i}`) * 80; c.fillStyle = night ? '#0d1626' : ['#6fa463', '#5e9a4c', '#86b874'][i % 3]; c.beginPath(); c.ellipse(x, y, 10 + hash(`bv${i}`) * 10, 7 + hash(`bw${i}`) * 6, 0, 0, 7); c.fill(); }
     return;
   }
   // two layers of city skyline behind the tower
-  for (const [layer, base, hmax, col, win] of [[0, TOTAL - 40, 260, night ? '#0f1730' : '#bdd0e2', night ? 'rgba(255,214,120,.55)' : 'rgba(255,255,255,.55)'], [1, TOTAL + 10, 190, night ? '#141d38' : '#a3b8cd', night ? 'rgba(255,214,120,.8)' : 'rgba(255,255,255,.6)']] as const) {
+  for (const [layer, base, hmax, col, win] of [[0, FLAT ? TOPM + 40 : TOTAL - 40, 260, night ? '#0f1730' : '#bdd0e2', night ? 'rgba(255,214,120,.55)' : 'rgba(255,255,255,.55)'], [1, FLAT ? TOPM + 90 : TOTAL + 10, 190, night ? '#141d38' : '#a3b8cd', night ? 'rgba(255,214,120,.8)' : 'rgba(255,255,255,.6)']] as const) {
     let x = -30;
-    for (let i = 0; x < W + 30; i++) {
+    for (let i = 0; x < CW + 30; i++) {
       const w = 16 + hash(`w${layer}${i}`) * 28, h = 50 + hash(`h${layer}${i}`) * hmax, y = base - h;
       c.fillStyle = col; c.fillRect(x, y, w, h + 300);
       if (hash(`ant${layer}${i}`) > 0.75) c.fillRect(x + w / 2 - 0.5, y - 12, 1, 12);
@@ -579,10 +597,20 @@ function loadPhoto(done: () => void) {
   im.onload = () => { PHOTO.ok = true; done(); };
   im.src = '/office/foto.jpg';
 }
+function drawFlatGround(c: C, night: boolean) {
+  const L = -2 * NX;
+  poly(c, [iso(L - 3, -3, -8), iso(NX + 40, -3, -8), iso(NX + 40, NY + 40, -8), iso(L - 3, NY + 40, -8)], night ? '#16231b' : '#86b96f');
+  poly(c, [iso(L - 1.4, -1.4, -8), iso(NX + 1.4, -1.4, -8), iso(NX + 1.4, NY + 1.4, -8), iso(L - 1.4, NY + 1.4, -8)], night ? '#3a3b40' : '#d6d3cc');
+  poly(c, [iso(NX + 3, -9, -8), iso(NX + 5.5, -9, -8), iso(NX + 5.5, NY + 9, -8), iso(NX + 3, NY + 9, -8)], night ? '#1c1d22' : '#4a4c53');
+  poly(c, [iso(L - 9, NY + 3, -8), iso(NX + 9, NY + 3, -8), iso(NX + 9, NY + 5.5, -8), iso(L - 9, NY + 5.5, -8)], night ? '#1c1d22' : '#4a4c53');
+  for (let k = -8; k < NY + 8; k += 1.6) poly(c, [iso(NX + 4.2, k, -7.9), iso(NX + 4.3, k, -7.9), iso(NX + 4.3, k + 0.8, -7.9), iso(NX + 4.2, k + 0.8, -7.9)], '#f2c230');
+  for (let k = L - 8; k < NX + 8; k += 1.6) poly(c, [iso(k, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.2, -7.9), iso(k + 0.8, NY + 4.3, -7.9), iso(k, NY + 4.3, -7.9)], '#f2c230');
+  for (const [tx, ty, sc] of [[L - 2.6, 2, 1], [L - 2.6, 6, 1.15], [L - 2.6, 10, 0.95], [L + 4, NY + 2.0, 1.1], [L + 14, NY + 2.0, 1], [-6, NY + 2.0, 1.05], [5, NY + 2.0, 0.95], [NX + 2.0, 1.5, 0.9], [NX + 2.0, 6.5, 1]] as const) tree(c, tx, ty, sc, night);
+}
 function drawStatic(c: C, night: boolean, room: number) {
   // one building: the walls of a lower floor go all the way up to the floor slab of the room above (glass facade)
-  const wh = SHAPE === 'zigzag' ? WALL + 26 : room === 0 && SHAPE !== 'rooftop' ? WALL + 26 : RH - 8;
-  if (room === 2) {    // the street level: lawn, pavement and a road around the tower
+  const wh = FLAT ? FLATWH : SHAPE === 'zigzag' ? WALL + 26 : room === 0 && SHAPE !== 'rooftop' ? WALL + 26 : RH - 8;
+  if (room === 2 && !FLAT) {    // the street level: lawn, pavement and a road around the tower
     poly(c, [iso(-9, -9, -8), iso(NX + 9, -9, -8), iso(NX + 9, NY + 9, -8), iso(-9, NY + 9, -8)], night ? '#16231b' : '#86b96f');
     poly(c, [iso(-1.4, -1.4, -8), iso(NX + 1.4, -1.4, -8), iso(NX + 1.4, NY + 1.4, -8), iso(-1.4, NY + 1.4, -8)], night ? '#3a3b40' : '#d6d3cc');
     poly(c, [iso(NX + 3, -9, -8), iso(NX + 5.5, -9, -8), iso(NX + 5.5, NY + 9, -8), iso(NX + 3, NY + 9, -8)], night ? '#1c1d22' : '#4a4c53');
@@ -597,7 +625,7 @@ function drawStatic(c: C, night: boolean, room: number) {
       if (night) { const g = c.createRadialGradient(b0 + 5, b1 + 20, 2, b0 + 5, b1 + 20, 26); g.addColorStop(0, 'rgba(255,225,150,.3)'); g.addColorStop(1, 'rgba(255,225,150,0)'); c.fillStyle = g; c.fillRect(b0 - 25, b1 - 8, 60, 60); }
     }
   }
-  if (room === 0 && SHAPE !== 'rooftop') {    // roof: parapet, AC units, antenna and the black / yellow logo sign
+  if (room === 0 && SHAPE !== 'rooftop' && !FLAT) {    // roof: parapet, AC units, antenna and the black / yellow logo sign
     for (const [x, y] of [[1.4, -1.25], [2.6, -1.25], [8.8, -1.25]]) { box(c, x, y, 0.9, 0.8, wh + 8, 9, '#d9dade', '#b5b7bd', '#c7c9ce'); ell(c, x + 0.45, y + 0.4, wh + 17.2, 0.25, '#8b8f99'); }
     const [a0, a1] = iso(-0.15, -0.15, wh + 8), [b0, b1] = iso(-0.15, -0.15, wh + 48); c.strokeStyle = '#3a3b42'; c.lineWidth = 1; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
     c.fillStyle = night ? '#ff4d4f' : '#c0392b'; c.beginPath(); c.arc(b0, b1, 1.5, 0, 7); c.fill();
@@ -612,7 +640,7 @@ function drawStatic(c: C, night: boolean, room: number) {
   c.strokeStyle = night ? 'rgba(0,0,0,.08)' : THEME.line; c.lineWidth = 0.45;
   for (let k = 1; k < NX; k++) { const a = iso(k, 0), b = iso(k, NY); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   for (let k = 1; k < NY; k++) { const a = iso(0, k), b = iso(NX, k); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
-  if (THEME.paint) for (let yy = 0; yy < NY; yy += 0.5) for (let xx = 0, i = 0; xx < NX; i++) {
+  if (THEME.paint || THEME.planks) for (let yy = 0; yy < NY; yy += 0.5) for (let xx = 0, i = 0; xx < NX; i++) {
     const l = 1.1 + hash(`pl${room}:${yy}:${i}`) * 2, x1 = Math.min(NX, xx + l), v = hash(`pv${room}:${yy}:${i}`);
     poly(c, [iso(xx, yy), iso(x1, yy), iso(x1, yy + 0.5), iso(xx, yy + 0.5)], night ? `rgba(0,0,0,${0.04 + v * 0.08})` : v < 0.33 ? 'rgba(120,70,30,.10)' : v < 0.66 ? 'rgba(255,230,190,.10)' : 'rgba(90,50,20,.05)');
     xx = x1;
@@ -647,13 +675,14 @@ function drawStatic(c: C, night: boolean, room: number) {
   if (room === 1) poly(c, [iso(6.0, 3.8, 0.3), iso(9.0, 3.8, 0.3), iso(9.0, 6.4, 0.3), iso(6.0, 6.4, 0.3)], '#3a3b42');
   const cap = THEME.cap;
   box(c, -0.28, -0.28, NX + 0.28, 0.28, -8, wh + 8, cap, night ? THEME.backN : THEME.back, cap, false);
-  box(c, -0.28, -0.28, 0.28, NY + 0.28, -8, wh + 8, cap, cap, night ? THEME.leftN : THEME.left, false);
+  const inner = FLAT && room > 0;      // a glass partition instead of the outer wall
+  if (!inner) box(c, -0.28, -0.28, 0.28, NY + 0.28, -8, wh + 8, cap, cap, night ? THEME.leftN : THEME.left, false);
   THEME.extra?.(c, night, room, wh);
   const [w0] = iso(0, 0), [w1] = iso(2, 0);
   const wg = c.createLinearGradient(w0, 0, w1, 0); wg.addColorStop(0, 'rgba(0,0,0,.1)'); wg.addColorStop(1, 'rgba(0,0,0,0)');
   poly(c, wallB(0, 2, 0, wh), wg);
-  poly(c, wallB(0, NX, 0, 4), THEME.base); poly(c, wallL(0, NY, 0, 4), THEME.base);
-  for (const [y0, y1] of [[0.55, 3.05], [3.15, 5.65], [5.75, 8.25], [8.35, 10.75]]) {
+  poly(c, wallB(0, NX, 0, 4), THEME.base); if (!inner) poly(c, wallL(0, NY, 0, 4), THEME.base);
+  for (const [y0, y1] of inner ? [] : [[0.55, 3.05], [3.15, 5.65], [5.75, 8.25], [8.35, 10.75]]) {
     const FR = THEME.paint ? (night ? '#3a2416' : '#6b4429') : '#1c1d21';
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, wh - 4), FR);
     const sky = c.createLinearGradient(0, iso(0, y0, wh - 8)[1], 0, iso(0, y0, 14)[1]);
@@ -697,14 +726,24 @@ function drawStatic(c: C, night: boolean, room: number) {
       c.fillStyle = '#ffe9a8'; c.beginPath(); c.ellipse(b0, b1 + 7, 7, 2, 0, 0, 7); c.fill();
     }
   }
+  if (inner) {      // glass partition with a gap (the way through) in the middle
+    for (const [ya, yb] of [[0.05, DOOR_Y - 0.75], [DOOR_Y + 0.75, NY - 0.05]]) {
+      poly(c, wallL(ya, yb, 0, 74), night ? 'rgba(120,160,210,.10)' : 'rgba(185,225,245,.22)');
+      for (const z of [0, 74]) poly(c, wallL(ya, yb, z, z + 2.2), '#1a1d24');
+      for (let y = ya; y <= yb + 0.01; y += (yb - ya) / Math.max(1, Math.round((yb - ya) / 1.6))) poly(c, wallL(y - 0.03, y + 0.03, 0, 74), '#1a1d24');
+      poly(c, [iso(0, ya + 0.3, 70), iso(0, ya + 0.6, 70), iso(0, ya + 1.4, 6), iso(0, ya + 1.1, 6)], 'rgba(255,255,255,.08)');
+    }
+  }
   // everyday wall hardware: air conditioner, exit sign, camera, fire extinguisher, sockets
   poly(c, wallB(11.35, 11.95, 62, 68), '#1f9d57'); poly(c, wallB(11.45, 11.6, 63.5, 66.5), '#ffffff'); poly(c, wallB(11.7, 11.85, 64.4, 65.6), '#ffffff');
   { const [cx, cy] = iso(0.5, 0, wh - 14); c.fillStyle = '#26272c'; c.beginPath(); c.arc(cx, cy, 2.6, 0, Math.PI); c.fill(); c.fillStyle = night ? '#ff4d4f' : '#7a2a2a'; c.fillRect(cx - 0.5, cy + 0.6, 1, 1); }
-  // lift on every floor (the way between the rooms)
+  // lift on every floor (the way between the rooms); on the open floor: the entrance door in the lobby
+  if (!FLAT || room === 2) {
   poly(c, wallB(11.1, 12.2, 0, 54), '#1e1f23');
   poly(c, wallB(11.2, 11.64, 0, 50), night ? '#8d939c' : '#b9bfc8'); poly(c, wallB(11.66, 12.1, 0, 50), night ? '#868c95' : '#aeb4bd');
   poly(c, wallB(11.5, 11.8, 57, 61), '#141518'); poly(c, wallB(11.6, 11.7, 58, 60), '#f2c230');
   poly(c, wallB(12.3, 12.42, 24, 30), '#2a2b30'); poly(c, wallB(12.33, 12.39, 25.5, 28.5), '#f2c230');
+  }
   if (room === 1) {
     poly(c, wallB(TV.x0 - 0.1, TV.x1 + 0.1, TV.z0 - 3, TV.z1 + 2.5), '#111214');
   }
@@ -1196,8 +1235,20 @@ function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, 
   if (d < 0.01) d = 0.01;
   const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
   const jx = x0 + (dx * a) / d - (dy * h * bend) / d, jy = y0 + (dy * a) / d + (dx * h * bend) / d;
+  if (INK) {         // tapered limb: thick at the hip / shoulder, thinner at the knee / elbow, thinnest at the ankle / wrist
+    const seg = (ax: number, ay: number, bx: number, by: number, wa: number, wb: number, fill: string) => {
+      const L = Math.hypot(bx - ax, by - ay) || 0.01, nx = -(by - ay) / L, ny = (bx - ax) / L;
+      c.beginPath(); c.moveTo(ax + nx * wa / 2, ay + ny * wa / 2); c.lineTo(bx + nx * wb / 2, by + ny * wb / 2); c.lineTo(bx - nx * wb / 2, by - ny * wb / 2); c.lineTo(ax - nx * wa / 2, ay - ny * wa / 2); c.closePath(); c.fillStyle = fill; c.fill();
+      c.beginPath(); c.arc(ax, ay, wa / 2, 0, 7); c.arc(bx, by, wb / 2, 0, 7); c.fill();
+    };
+    const w1 = w * 1.08, wk = w * 0.82, w2 = w * 0.62, o = 0.75, ink = OL;
+    seg(x0, y0, jx, jy, w1 + o, wk + o, ink); seg(jx, jy, x1, y1, wk + o, w2 + o, ink);
+    seg(x0, y0, jx, jy, w1, wk, col); seg(jx, jy, x1, y1, wk, w2, col2 ?? col);
+    c.strokeStyle = 'rgba(0,0,0,.12)'; c.lineWidth = 0.35; c.beginPath(); c.moveTo(jx - 0.3, jy - 0.2); c.lineTo(jx + 0.3, jy + 0.2); c.stroke();
+    return [x1, y1] as const;
+  }
   c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round';
-  if (INK) { c.lineWidth = w + 0.7; c.strokeStyle = 'rgba(70,40,25,.55)'; c.beginPath(); c.moveTo(x0, y0); c.lineTo(jx, jy); c.lineTo(x1, y1); c.stroke(); c.lineWidth = w; }
+  if (INK) { c.lineWidth = w + 0.7; c.strokeStyle = OL; c.beginPath(); c.moveTo(x0, y0); c.lineTo(jx, jy); c.lineTo(x1, y1); c.stroke(); c.lineWidth = w; }
   c.strokeStyle = col; c.beginPath(); c.moveTo(x0, y0); c.lineTo(jx, jy); c.stroke();
   c.strokeStyle = col2 ?? col; c.beginPath(); c.moveTo(jx, jy); c.lineTo(x1, y1); c.stroke();
   return [x1, y1] as const;
@@ -1245,10 +1296,10 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (sitting || bean) {
     const fx = (front ? 4.5 : 3.5) + (INK ? 1.2 : 0);
-    if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 3.5; for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); } }
+    if (INK) { c.strokeStyle = OL; c.lineWidth = 3.5; for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); } }
     c.strokeStyle = p.pants; c.lineWidth = 2.8;
     for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); }
-    c.fillStyle = shoe; for (const o of [-1.4, 1.4]) { c.beginPath(); c.ellipse(fx + 1.8 + o * 0.4, bean ? hip + 3 : -0.5, 1.9, 1.1, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.45; c.stroke(); } }
+    c.fillStyle = shoe; for (const o of [-1.4, 1.4]) { c.beginPath(); c.ellipse(fx + 1.8 + o * 0.4, bean ? hip + 3 : -0.5, 1.9, 1.1, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.45; c.stroke(); } }
   } else {
     for (const [o, k] of [[-1.5, 0], [1.5, Math.PI]] as const) {
       const f = ph + k, stride = 2.7 * am;
@@ -1259,7 +1310,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       limb(c, hx0, hip, footX, footY, LEG, LEG, squat ? 1 : 0.9, INK ? 3.0 : 2.8, col);
       // shoe: toes point down while the foot swings forward, heel strikes first
       const pitch = anim ? (Math.sin(f) > 0 ? -0.35 * Math.cos(f) : 0) : 0;
-      c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.45; c.stroke(); } c.restore();
+      c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.45; c.stroke(); } c.restore();
     }
   }
   const lean = (anim ? 0.7 * am : 0) + sway * 0.5, twist = anim ? Math.sin(ph) * 0.5 * am : 0;
@@ -1268,14 +1319,14 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const R = 6.2;
   const big = p.id === 'vet', HS = INK ? (big ? 1.0 : 0.64) : big ? 1.45 : 1, NECK = INK ? 1.3 : 0;     // head scale (Ny. Vetrycia keeps her big head)
   const headOn = () => { c.save(); c.translate(hx, hy + 5 - NECK); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
-  if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.5)'; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
+  if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
   const tg = c.createLinearGradient(-4.6, 0, 4.6, 0); tg.addColorStop(0, sh(p.shirt, front ? 1.08 : 0.9)); tg.addColorStop(1, shirtD);
   if (!INK) { c.fillStyle = tg; c.beginPath(); c.roundRect(-4.6 + lean * 0.5, ty, 9.2, torso + 0.6, [3.2, 3.2, 1.6, 1.6]); c.fill(); }
   else {
     const cx = lean * 0.5, shW = 5.0, wW = p.id === 'vet' ? 4.8 : 4.1, bot = ty + torso + 0.6;
     c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx * 0.5 - 1.1, ty - NECK - 0.6, 2.2, NECK + 1.2);              // neck
-    c.strokeStyle = 'rgba(70,40,25,.5)'; c.lineWidth = 0.4; c.strokeRect(hx * 0.5 - 1.1, ty - NECK - 0.6, 2.2, NECK + 1.2);
+    c.strokeStyle = OL; c.lineWidth = 0.4; c.strokeRect(hx * 0.5 - 1.1, ty - NECK - 0.6, 2.2, NECK + 1.2);
     const shirt = () => { c.beginPath(); c.moveTo(cx - 1.8, ty); c.quadraticCurveTo(cx - shW, ty + 0.1, cx - shW, ty + 2.3); c.lineTo(cx - wW, bot); c.lineTo(cx + wW, bot); c.lineTo(cx + shW, ty + 2.3); c.quadraticCurveTo(cx + shW, ty + 0.1, cx + 1.8, ty); c.closePath(); };
     c.fillStyle = tg; shirt(); c.fill();
     c.save(); shirt(); c.clip(); c.fillStyle = 'rgba(60,30,30,.15)'; c.fillRect(cx + 1.2, ty, 6, torso + 1); c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(cx - shW, ty, 1.6, torso + 1);
@@ -1301,9 +1352,9 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       }
     }
     c.restore();
-    c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.5; shirt(); c.stroke();
+    c.strokeStyle = OL; c.lineWidth = 0.5; shirt(); c.stroke();
     if (p.id === 'vet' && !sitting && !bean) {      // the skirt of her dress over the legs
-      c.fillStyle = sh(p.shirt, 0.92); c.beginPath(); c.moveTo(cx - wW, bot - 0.4); c.lineTo(cx + wW, bot - 0.4); c.lineTo(cx + wW + 1.2, hip + 3.6); c.lineTo(cx - wW - 1.2, hip + 3.6); c.closePath(); c.fill(); c.strokeStyle = 'rgba(70,40,25,.6)'; c.stroke();
+      c.fillStyle = sh(p.shirt, 0.92); c.beginPath(); c.moveTo(cx - wW, bot - 0.4); c.lineTo(cx + wW, bot - 0.4); c.lineTo(cx + wW + 1.2, hip + 3.6); c.lineTo(cx - wW - 1.2, hip + 3.6); c.closePath(); c.fill(); c.strokeStyle = OL; c.stroke();
     }
   }
   if (!INK && p.tie && front) { c.fillStyle = '#f4f4f2'; c.beginPath(); c.moveTo(-1.6, ty); c.lineTo(1.6, ty); c.lineTo(0, ty + 3); c.fill(); c.fillStyle = '#c0392b'; c.fillRect(-0.6, ty + 1.5, 1.3, 5); }
@@ -1342,7 +1393,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     else if (anim && a.carry && side < 0) { const f = ph + Math.PI; ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side > 0) { ex = sxh + 2.2; ey = syh + 3.6; }
     limb(c, sxh + twist * side * 0.3, syh, ex, ey, ARM, ARM, ey < syh ? -0.6 : -0.8, 2.4, back ? shirtD : p.shirt);
-    c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.4; c.stroke(); }
+    if (INK) { c.fillStyle = p.skin; c.beginPath(); c.ellipse(ex, ey + 0.9, 1.0, 1.35, 0, 0, 7); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.35; c.stroke(); c.beginPath(); c.ellipse(ex + side * 0.0 + 0.85, ey + 0.4, 0.42, 0.7, -0.5, 0, 7); c.fill(); c.stroke(); }
+    else { c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill(); }
     if (!walking && prop === 'dumbbell' && !shaking) { c.fillStyle = '#26272c'; c.fillRect(ex - 2.4, ey - 0.4, 4.8, 1.4); c.fillRect(ex - 3, ey - 1.2, 1.4, 3); c.fillRect(ex + 1.6, ey - 1.2, 1.4, 3); }
     if (side > 0) {
       if ((prop === 'cup' || prop === 'can') && pose === 'stand' && a.act.id !== 'plant') { c.fillStyle = prop === 'can' ? '#e5484d' : '#ffffff'; c.fillRect(ex - 0.5, ey - 2.2, 2.6, 3.4); if (prop === 'cup') { c.fillStyle = '#6b4a2b'; c.fillRect(ex - 0.5, ey - 2.2, 2.6, 0.8); } }
@@ -1401,11 +1453,13 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   headOn();
   if (!INK) { c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx - 1.4, hy + R - 2.2, 2.8, 3); }
   const hg = c.createRadialGradient(hx + 1.5, hy - 2, 1, hx, hy, R + 1); hg.addColorStop(0, sh(p.skin, 1.08)); hg.addColorStop(1, sh(p.skin, 0.9));
-  c.fillStyle = hg; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill();
-  if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.55; c.stroke(); }
+  const head = () => { c.beginPath(); if (INK) c.ellipse(hx, hy + 0.4, R * 0.88, R * 1.06, 0, 0, 7); else c.arc(hx, hy, R, 0, 7); };
+  if (INK && front) { c.fillStyle = sh(p.skin, 0.93); c.beginPath(); c.ellipse(hx - R * 0.86, hy + 1, 1.1, 1.6, 0, 0, 7); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.45; c.stroke(); }
+  c.fillStyle = hg; head(); c.fill();
+  if (INK) { c.strokeStyle = OL; c.lineWidth = 0.55; c.stroke(); c.save(); head(); c.clip(); c.fillStyle = 'rgba(150,80,60,.12)'; c.beginPath(); c.ellipse(hx - 3.5, hy + 3, 3, 4.5, 0, 0, 7); c.fill(); c.restore(); }
   const angry = (p.id === 'bos' && whipT != null) || (p.id === 'vet' && !!a.act.whip && !walking && !!a.bubble && Date.now() < a.bubble.until);
   if (angry) { c.fillStyle = 'rgba(255,60,40,.28)'; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill(); }
-  c.save(); c.beginPath(); c.arc(hx, hy, R + 0.7, 0, 7); c.clip();
+  c.save(); c.beginPath(); if (INK) c.ellipse(hx, hy + 0.4, R * 0.88 + 0.6, R * 1.06 + 0.6, 0, 0, 7); else c.arc(hx, hy, R + 0.7, 0, 7); c.clip();
   c.fillStyle = p.hair;
   if (front) {
     if (p.style === 'cap') { c.fillStyle = p.cap ?? '#1e1f23'; c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, R - 0.5); }
@@ -1494,7 +1548,7 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   const ev = EV.cur;
   if (ev && now < ev.until && ev.plans[p.id]?.length) return ev.plans[p.id].shift()!;
   if (a.queue?.length) return a.queue.shift()!;
-  if (p.id === 'kurir') return { act: sp('ev-kurir-out', a.room, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 60_000 };
+  if (p.id === 'kurir') return { act: sp('ev-kurir-out', FLAT ? 2 : a.room, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 60_000 };
   // Marcel and Ny. Vetrycia go home at night (the bots keep working overtime), and clock in again in the morning
   if ((p.id === 'bos' || p.id === 'vet') && awayHours(now)) return { act: sp(`pulang-${p.id}`, 2, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 120_000 };
   if ((p.id === 'bos' || p.id === 'vet') && a.act.id === `pulang-${p.id}`) { a.queue = [{ act: { ...p.seat, label: p.id === 'vet' ? 'NONTON DRAKOR' : 'NGITUNG CUAN', prop: p.id === 'vet' ? 'tablet' : undefined }, dwell: rnd(20, 30) }]; return { act: { ...X.absen, id: `absen-${p.id}`, label: 'ABSEN PAGI' }, dwell: rnd(2.5, 4) }; }
@@ -1570,11 +1624,13 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   if (x < 0.36 && new Date(now).getHours() >= 7 && new Date(now).getHours() < 10 && !taken.has('absen')) return { act: { ...X.absen }, dwell: rnd(2.5, 4) };
   return { act: pick(ROAM), dwell: rnd(7, 16) };
 }
-const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
+const liftSpot = (room: number, id: string, up: boolean): Spot => (FLAT
+  ? { id: `lift-${id}`, room, x: up ? 0.6 : NX - 0.6, y: DOOR_Y, face: up ? 'nx' : 'px', pose: 'stand', label: 'JALAN' }
+  : { id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
 
 /* ---------- component ---------- */
-export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
-  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.paint ? 'rgba(80,45,25,.42)' : null; PSV = THEME.paint ? 1.36 : PS;
+export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'senja', shape = 'flat' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
+  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.ink ?? (THEME.paint ? 'rgba(80,45,25,.42)' : null); OL = THEME.pixel ? 'rgba(10,10,18,.9)' : OL; PSV = INK ? 1.36 : PS;
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
@@ -1609,9 +1665,10 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const cv = ref.current; if (!cv) return;
     const V = view.current;
     const HOMEz = () => homeRef.current.z;
-    const clamp = () => { const LH = lhRef.current; V.z = Math.max(HOMEz(), Math.min(4, V.z)); V.tx = W * V.z <= W ? (W - W * V.z) / 2 : Math.min(0, Math.max(W - W * V.z, V.tx)); V.ty = TOTAL * V.z <= LH ? (LH - TOTAL * V.z) / 2 : Math.min(0, Math.max(LH - TOTAL * V.z, V.ty)); setZoomed(V.z > HOMEz() + 0.01); cv.style.touchAction = fullRef.current || V.z > HOMEz() + 0.01 ? 'none' : 'pan-y'; };
+    const MINz = () => (FLAT ? Math.min(HOMEz(), (W / CW) * 0.98) : HOMEz());
+    const clamp = () => { const LH = lhRef.current; V.z = Math.max(MINz(), Math.min(4, V.z)); V.tx = CW * V.z <= W ? (W - CW * V.z) / 2 : Math.min(0, Math.max(W - CW * V.z, V.tx)); V.ty = TOTAL * V.z <= LH ? (LH - TOTAL * V.z) / 2 : Math.min(0, Math.max(LH - TOTAL * V.z, V.ty)); setZoomed(V.z > HOMEz() + 0.01); cv.style.touchAction = fullRef.current || V.z > HOMEz() + 0.01 ? 'none' : 'pan-y'; };
     const pt = (cx: number, cy: number) => { const r = cv.getBoundingClientRect(); return [(cx - r.left) * W / r.width, (cy - r.top) * W / r.width] as const; };
-    const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(HOMEz(), Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
+    const zoomAt = (lx: number, ly: number, nz: number) => { const wx = (lx - V.tx) / V.z, wy = (ly - V.ty) / V.z; V.z = Math.max(MINz(), Math.min(4, nz)); V.tx = lx - wx * V.z; V.ty = ly - wy * V.z; clamp(); };
     let vpan = false, pinch: { d: number; z: number; wx: number; wy: number } | null = null, pan: { x: number; y: number } | null = null, lastTap = 0, sw: { x: number; y: number } | null = null;
     const ts = (e: TouchEvent) => {
       if (e.touches.length === 2) {
@@ -1621,17 +1678,18 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       } else if (e.touches.length === 1) {
         const [x, y] = pt(e.touches[0].clientX, e.touches[0].clientY);
         const nowT = Date.now();
-        if (nowT - lastTap < 300) { e.preventDefault(); if (V.z > HOMEz() + 0.01) Object.assign(V, homeRef.current); else zoomAt(x, y, 2.4); clamp(); lastTap = 0; return; }
+        const atHome = Math.abs(V.z - HOMEz()) < 0.01 && Math.abs(V.tx - homeRef.current.tx) < 1 && Math.abs(V.ty - homeRef.current.ty) < 1;
+        if (nowT - lastTap < 300) { e.preventDefault(); if (!atHome) Object.assign(V, homeRef.current); else zoomAt(x, y, 2.4); clamp(); lastTap = 0; return; }
         lastTap = nowT;
-        sw = V.z <= HOMEz() + 0.01 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
-        if (V.z > HOMEz() + 0.01) { e.preventDefault(); pan = { x, y }; } else { pan = { x, y }; vpan = true; }
+        sw = !FLAT && V.z <= HOMEz() + 0.01 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+        if (FLAT || V.z > HOMEz() + 0.01) { e.preventDefault(); pan = { x, y }; } else { pan = { x, y }; vpan = true; }
       }
     };
     const tm = (e: TouchEvent) => {
       if (pinch && e.touches.length === 2) {
         e.preventDefault();
         const a = e.touches[0], b = e.touches[1], [mx, my] = pt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
-        V.z = Math.max(HOMEz(), Math.min(4, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
+        V.z = Math.max(MINz(), Math.min(4, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
         V.tx = mx - pinch.wx * V.z; V.ty = my - pinch.wy * V.z; clamp();
       } else if (pan && e.touches.length === 1) {
         if (e.cancelable) e.preventDefault();
@@ -1651,8 +1709,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     };
     const wheel = (e: WheelEvent) => { if (!e.ctrlKey && V.z <= HOMEz() + 0.01 && e.deltaY > 0) return; e.preventDefault(); const [x, y] = pt(e.clientX, e.clientY); zoomAt(x, y, V.z * Math.exp(-e.deltaY * 0.0025)); };
     let drag: { x: number; y: number } | null = null;
-    const md = (e: MouseEvent) => { if (V.z > HOMEz() + 0.01) drag = { x: e.clientX, y: e.clientY }; };
-    const mm = (e: MouseEvent) => { if (!drag) return; const r = cv.getBoundingClientRect(); V.tx += (e.clientX - drag.x) * W / r.width; V.ty += (e.clientY - drag.y) * H / r.height; drag = { x: e.clientX, y: e.clientY }; clamp(); };
+    const md = (e: MouseEvent) => { if (FLAT || V.z > HOMEz() + 0.01) drag = { x: e.clientX, y: e.clientY }; };
+    const mm = (e: MouseEvent) => { if (!drag) return; const r = cv.getBoundingClientRect(); V.tx += (e.clientX - drag.x) * W / r.width; V.ty += (e.clientY - drag.y) * W / r.width; drag = { x: e.clientX, y: e.clientY }; clamp(); };
     const mu = () => { drag = null; };
     const dbl = (e: MouseEvent) => { const [x, y] = pt(e.clientX, e.clientY); if (V.z > HOMEz() + 0.01) { Object.assign(V, homeRef.current); clamp(); } else zoomAt(x, y, 2.4); };
     cv.addEventListener('touchstart', ts, { passive: false }); cv.addEventListener('touchmove', tm, { passive: false }); cv.addEventListener('touchend', te); cv.addEventListener('touchcancel', te);
@@ -1675,12 +1733,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const cat: Cat = { room: 1, x: 7.5, y: 5.1, z: 0, vx: 0, vy: 0, dx: 1, dy: 0, path: [], spot: CAT_SPOTS[6], mode: 'sleep', until: Date.now() + 8000, hidden: 0, pending: null, hop: null, meow: 0 };
     CATREF = cat;
     const resize = () => {
-      const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
+      const w = box0.clientWidth || W; dpr = THEME.pixel ? 1 : Math.min(3, window.devicePixelRatio || 1); cv.style.imageRendering = THEME.pixel ? 'pixelated' : '';
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.16) : Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 1.16) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
-      lhRef.current = LH; homeRef.current = { z, tx: (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
+      const cx1 = roomX(1) + OX + (NX - NY) * TW * 0.5;
+      lhRef.current = LH; homeRef.current = { z, tx: FLAT ? Math.min(0, Math.max(W - CW * z, W / 2 - cx1 * z)) : (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
       if (atHome) Object.assign(view.current, homeRef.current);
     };
     resize();
@@ -1707,6 +1766,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (wall < a.hiddenUntil) continue;                                          // riding the lift
         if (wall < a.scoldUntil) { a.path = []; a.vx = a.vy = 0; continue; }          // frozen while being yelled at
         // arrived at the lift with somewhere to go: ride to the other floor, step out, walk on
+        if (FLAT && a.pending && !a.path.length && a.act.id.startsWith('lift-')) {      // through the partition into the next room
+          const nx = a.pending, next = hopRoom(a.room, nx.room), right = next > a.room;
+          a.room = next; a.x = right ? 0.6 : NX - 0.6; a.y = DOOR_Y;
+          if (next === nx.room) { a.pending = null; a.act = nx; } else a.act = liftSpot(next, p.id, nx.room < next);
+          a.path = findPath(grids[a.room], a.x, a.y, a.act.x, a.act.y);
+          continue;
+        }
         if (a.pending && !a.path.length && a.act.id.startsWith('lift-')) {
           const nx = a.pending; a.pending = null;
           a.room = nx.room; a.x = LIFT.x; a.y = LIFT.y + 0.15; a.vx = a.vy = 0; a.hiddenUntil = wall + 1400; a.face = 'py';
@@ -1734,7 +1800,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           const v = agents[a.act.whip];
           if (!v) a.until = 0;
           else if (v.room !== a.room || wall < v.hiddenUntil) {
-            if (wall - a.chase > 800) { a.chase = wall; const target = { ...a.act, room: v.room, x: v.x, y: v.y }; a.pending = target; a.act = liftSpot(a.room, p.id, v.room < a.room); a.path = findPath(grids[a.room], a.x, a.y, LIFT.x, LIFT.y); a.until = Math.max(a.until, wall + 4000); }
+            if (wall - a.chase > 800) { a.chase = wall; const target = { ...a.act, room: v.room, x: v.x, y: v.y }; a.pending = target; a.act = liftSpot(a.room, p.id, v.room < a.room); a.path = findPath(grids[a.room], a.x, a.y, a.act.x, a.act.y); a.until = Math.max(a.until, wall + 4000); }
           } else {
             const d = Math.hypot(v.x - a.x, v.y - a.y);
             if (d > 0.95 && wall - a.chase > 600 && wall >= v.scoldUntil) {
@@ -1831,14 +1897,15 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         const b = bg.getContext('2d')!; b.setTransform(1, 0, 0, 1, 0, 0); b.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; b.fillRect(0, 0, bgW, bgH);
         b.setTransform(k * V.z, 0, 0, k * V.z, bgM + k * V.tx, bgM + k * V.ty); drawBackdrop(b, nightNow);
         if (SHAPE === 'zigzag') drawLiftTube(b, nightNow);
-        for (let r = ROOMS - 1; r >= 0; r--) { b.save(); b.translate(roomX(r), r * RH + TOPM); drawStatic(b, nightNow, r); b.restore(); }
+        if (FLAT) { b.save(); b.translate(roomX(2), roomY(2)); drawFlatGround(b, nightNow); b.restore(); }
+        for (const r of ORDER()) { b.save(); b.translate(roomX(r), roomY(r)); drawStatic(b, nightNow, r); b.restore(); }
         if (SHAPE === 'rooftop') { b.save(); b.translate(0, TOPM - RH); drawRoofDeck(b, nightNow); b.restore(); }
         bgKey = base; bgV = { z: V.z, tx: V.tx, ty: V.ty };
       }
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = nightNow ? '#0b1430' : '#a9d5f2'; c.fillRect(0, 0, cv.width, cv.height);
       if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
-      for (let r = ROOMS - 1; r >= 0; r--) {
-        c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + (r * RH + TOPM) * V.z));
+      for (const r of ORDER()) {
+        c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
         if (r === 2) drawCars(c, t, nightNow);
         if (r <= 1) drawWallText(c, scrRef.current, r, t);
         if (r === 1) drawPositions(c, posRef.current, t);
@@ -1863,7 +1930,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         }
         for (const it of isoSort(list)) it.draw(c, t);
         if (r === 0 && nightNow && awayHours(wall) && ['bos', 'vet'].every((id) => !agents[id] || agents[id].room !== 0)) {
-          const wh = WALL + 26; poly(c, [iso(0, NY, 0), iso(NX, NY, 0), iso(NX, 0, 0), iso(NX, 0, wh), iso(0, 0, wh), iso(0, NY, wh)], 'rgba(4,6,16,.5)');
+          const wh = FLAT ? FLATWH : WALL + 26; poly(c, [iso(0, NY, 0), iso(NX, NY, 0), iso(NX, 0, 0), iso(NX, 0, wh), iso(0, 0, wh), iso(0, NY, wh)], 'rgba(4,6,16,.5)');
         }
         for (const p of PEOPLE) {
           const a = agents[p.id], s = S[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
@@ -1881,7 +1948,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         c.globalCompositeOperation = 'lighter';
         const glow = (x: number, y: number, z: number, r: number, col: string) => { const [gx, gy] = iso(x, y, z); const g = c.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(gx - r, gy - r, 2 * r, 2 * r); };
         for (let r = 0; r < ROOMS; r++) {
-          c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + (r * RH + TOPM) * V.z));
+          c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
           glow(6, 5, 70, 120, 'rgba(255,220,150,.07)');
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
           if (r === 0 && !awayHours(wall)) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
@@ -1892,7 +1959,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       }
       /* ---- name tags (screen space, never overlapping) ---- */
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawTags(c, agents, S, wall, (x, y, r) => [((x + roomX(r)) * V.z + V.tx) * css, ((y + r * RH + TOPM) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
+      drawTags(c, agents, S, wall, (x, y, r) => [((x + roomX(r)) * V.z + V.tx) * css, ((y + roomY(r)) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
     };
     const io = new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was) { last = performance.now(); raf = requestAnimationFrame(frame); } }, { threshold: 0 });
     io.observe(box0);
@@ -1909,6 +1976,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       <canvas ref={ref} className="office-canvas" style={full ? { width: '100%', height: '100%', touchAction: 'none' } : { aspectRatio: `${W} / ${TOTAL}`, touchAction: 'pan-y' }} aria-label="Kantor virtual: status bot dan EA" />
       {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div></>}
+      {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
       {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, homeRef.current); driftRef.current = fullRef.current; setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
         : null}
     </div>
@@ -2073,16 +2141,16 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     placed.push(tg);
   }
   for (const tg of tags) {
-    if (tg.y + tg.h < tg.ay - 4 || Math.abs(tg.x + tg.w / 2 - tg.ax) > tg.w / 2) { c.strokeStyle = INK ? 'rgba(110,70,40,.6)' : 'rgba(255,255,255,.55)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(Math.max(tg.x + 3, Math.min(tg.x + tg.w - 3, tg.ax)), tg.y + tg.h); c.lineTo(tg.ax, tg.ay - 1); c.stroke(); }
-    c.fillStyle = INK ? 'rgba(255,247,232,.93)' : 'rgba(18,19,23,.86)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, 4.5); c.fill();
-    c.strokeStyle = INK ? 'rgba(110,70,40,.55)' : 'rgba(255,255,255,.12)'; c.lineWidth = INK ? 0.8 : 0.6; c.stroke();
+    if (tg.y + tg.h < tg.ay - 4 || Math.abs(tg.x + tg.w / 2 - tg.ax) > tg.w / 2) { c.strokeStyle = THEME.paint ? 'rgba(110,70,40,.6)' : 'rgba(255,255,255,.55)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(Math.max(tg.x + 3, Math.min(tg.x + tg.w - 3, tg.ax)), tg.y + tg.h); c.lineTo(tg.ax, tg.ay - 1); c.stroke(); }
+    c.fillStyle = THEME.paint ? 'rgba(255,247,232,.93)' : 'rgba(18,19,23,.86)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, 4.5); c.fill();
+    c.strokeStyle = THEME.paint ? 'rgba(110,70,40,.55)' : 'rgba(255,255,255,.12)'; c.lineWidth = INK ? 0.8 : 0.6; c.stroke();
     c.textBaseline = 'middle'; c.textAlign = 'center';
-    c.font = nameF; c.fillStyle = INK ? '#4a2e1e' : '#ffffff'; c.fillText(tg.name, tg.x + tg.w / 2, tg.y + 5.2 * ts);
+    c.font = nameF; c.fillStyle = THEME.paint ? '#4a2e1e' : '#ffffff'; c.fillText(tg.name, tg.x + tg.w / 2, tg.y + 5.2 * ts);
     c.font = stF; c.textAlign = 'left';
     const extra = tg.extra ? ` ${tg.extra.text}` : '', full = c.measureText(tg.label + extra).width + 6 * ts;
     let x = tg.x + (tg.w - full) / 2;
     c.fillStyle = tg.color; c.beginPath(); c.roundRect(x, tg.y + 11 * ts, 3.6 * ts, 3.6 * ts, 1); c.fill(); x += 6 * ts;
-    c.fillStyle = INK ? '#7a5a40' : '#f1f3f6'; c.fillText(tg.label, x, tg.y + 12.9 * ts); x += c.measureText(tg.label).width;
+    c.fillStyle = THEME.paint ? '#7a5a40' : '#f1f3f6'; c.fillText(tg.label, x, tg.y + 12.9 * ts); x += c.measureText(tg.label).width;
     if (tg.extra) { c.fillStyle = tg.extra.color; c.fillText(extra, x, tg.y + 12.9 * ts); }
     if (tg.bubble) {
       c.font = `800 ${7.5 * ts}px -apple-system, system-ui, sans-serif`;
@@ -2143,7 +2211,14 @@ function stepCat(c: Cat, grids: boolean[][][], dt: number, wall: number): CatSpo
   }
   c.vx = c.vy = 0;
   // arrived at the lift: ride to the other floor
-  if (c.pending && Math.hypot(c.x - LIFT.x, c.y - LIFT.y - 0.15) < 0.6) {
+  const door = (room: number, to: number) => (FLAT ? { x: to < room ? 0.6 : NX - 0.6, y: DOOR_Y } : { x: LIFT.x, y: LIFT.y + 0.15 });
+  if (FLAT && c.pending) { const d = door(c.room, c.pending.room); if (Math.hypot(c.x - d.x, c.y - d.y) < 0.6) {
+    const next = hopRoom(c.room, c.pending.room), right = next > c.room; c.room = next; c.x = right ? 0.6 : NX - 0.6; c.y = DOOR_Y;
+    if (next === c.pending.room) { c.spot = c.pending; c.pending = null; c.path = findPath(grids[c.room], c.x, c.y, c.spot.x, c.spot.y); }
+    else { const d2 = door(next, c.pending.room); c.path = findPath(grids[c.room], c.x, c.y, d2.x, d2.y); }
+    return null;
+  } }
+  if (!FLAT && c.pending && Math.hypot(c.x - LIFT.x, c.y - LIFT.y - 0.15) < 0.6) {
     const nx = c.pending; c.pending = null; c.room = nx.room; c.x = LIFT.x; c.y = LIFT.y + 0.4; c.hidden = wall + 1500;
     c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); return null;
   }
@@ -2153,7 +2228,7 @@ function stepCat(c: Cat, grids: boolean[][][], dt: number, wall: number): CatSpo
   // time to move on: first hop down if we are up on something
   if (c.z > 0.6) { const [fx, fy] = findPath(grids[c.room], c.x, c.y, c.x + 0.8, c.y + 0.8).slice(-1)[0] ?? [c.x + 0.8, c.y]; c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: fx, y1: fy, z1: 0, t0: wall }; c.spot = null; c.mode = 'walk'; return null; }
   const nx = catPick(c, wall); c.mode = 'walk';
-  if (nx.room !== c.room) { c.pending = nx; c.spot = null; c.path = findPath(grids[c.room], c.x, c.y, LIFT.x, LIFT.y + 0.15); }
+  if (nx.room !== c.room) { c.pending = nx; c.spot = null; const d = door(c.room, nx.room); c.path = findPath(grids[c.room], c.x, c.y, d.x, d.y); }
   else { c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); }
   return null;
 }
@@ -2220,10 +2295,10 @@ function drawCatBody(c: C, k: Cat, t: number) {
 
 /** rain or snow behind the big window wall of each floor (Seoul weather) */
 function drawWeather(c: C, room: number, t: number) {
-  const kind = WEATHER.kind; if (!kind) return;
-  const wh = room === 0 ? WALL + 22 : RH - 14;
+  const kind = WEATHER.kind; if (!kind || (FLAT && room > 0)) return;
+  const wh = FLAT ? FLATWH - 8 : room === 0 ? WALL + 22 : RH - 14;
   // the floor above hides the top of the glass towards the back: keep the drops below it
-  const top = (y: number) => Math.min(wh, RH - 2 * TH * (NY - y) - 12);
+  const top = (y: number) => (FLAT ? wh : Math.min(wh, RH - 2 * TH * (NY - y) - 12));
   c.save(); c.beginPath(); const pts = [iso(0, 0.2, 2), iso(0, NY - 0.2, 2), iso(0, NY - 0.2, top(NY - 0.2)), iso(0, 0.2, top(0.2))]; c.moveTo(pts[0][0], pts[0][1]); for (const q of pts.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
   const n = kind === 'rain' ? 70 : 55;
   for (let i = 0; i < n; i++) {
