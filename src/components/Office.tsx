@@ -2185,7 +2185,7 @@ let TAGHIT: Array<{ id: string; x: number; y: number; w: number; h: number; ax: 
 function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>, wall: number, toScreen: (x: number, y: number, room: number) => [number, number], cw: number, unit: number, ts = 1) {
   type Tag = { id: string; full: boolean; x: number; y: number; w: number; h: number; ax: number; ay: number; name: string; label: string; color: string; extra?: { text: string; color: string } | null; bubble?: Agent['bubble'] };
   const tags: Tag[] = [];
-  const nameF = `700 ${7.2 * ts}px -apple-system, system-ui, sans-serif`, stF = `700 ${5.6 * ts}px ui-monospace, Menlo, monospace`, smallF = `700 ${5.8 * ts}px -apple-system, system-ui, sans-serif`;
+  const nameF = `700 ${7.2 * ts}px -apple-system, system-ui, sans-serif`, stF = `700 ${5.6 * ts}px ui-monospace, Menlo, monospace`, smallF = `700 ${5.2 * ts}px ui-monospace, Menlo, monospace`;
   for (const p of PEOPLE) {
     const a = agents[p.id], s = S[p.id]; if (!a || !s) continue;
     const walking = a.path.length > 0, hidden = !walking && a.act.prop === 'vanish';
@@ -2208,8 +2208,8 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
     const ay = hidden ? ay0 - 4 : ay0 - ((seated ? (INK ? 31 : 27) : INK ? 37 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
     const important = busy || /^(MARAH|NGEJAR|SELEBRASI|DIMARAHI|MELERAI|ALARM|KIRIM PESAN|POSISI)/.test(label) || !!(s.tag && !busy);
-    const full = important || (SEL.id === p.id && wall < SEL.until);
-    c.font = full ? nameF : smallF; const nw = c.measureText(p.name).width;
+    const full = important || p.id === 'bos' || p.id === 'vet' || (SEL.id === p.id && wall < SEL.until);      // the bosses always show name + activity
+    c.font = full ? nameF : smallF; const nw = c.measureText(full ? p.name : label).width;
     c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = full ? c.measureText(label + extraTxt).width + 6 * ts : 0;
     const w = full ? Math.max(nw, lw) + 7 * ts : nw + 10 * ts, h = full ? 17 * ts : 9.5 * ts;
     tags.push({ id: p.id, full, x: ax - w / 2, y: ay - h - 2, w, h, ax, ay, name: p.name, label, color, extra: busy ? null : s.tag, bubble: a.bubble && wall < a.bubble.until ? a.bubble : null });
@@ -2232,7 +2232,7 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     if (!tg.full) {      // small name pill with a status dot
       c.fillStyle = THEME.paint ? 'rgba(255,247,232,.88)' : 'rgba(18,19,23,.72)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, tg.h / 2); c.fill();
       c.fillStyle = tg.color; c.beginPath(); c.arc(tg.x + 4.2 * ts, tg.y + tg.h / 2, 1.5 * ts, 0, 7); c.fill();
-      c.font = smallF; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = THEME.paint ? '#4a2e1e' : '#ffffff'; c.fillText(tg.name, tg.x + 7 * ts, tg.y + tg.h / 2 + 0.3);
+      c.font = smallF; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = THEME.paint ? '#4a2e1e' : '#ffffff'; c.fillText(tg.label, tg.x + 7 * ts, tg.y + tg.h / 2 + 0.3);
       if (tg.bubble) {
         c.font = `800 ${7 * ts}px -apple-system, system-ui, sans-serif`;
         const bw = c.measureText(tg.bubble.text).width + 10 * ts, right = tg.x + tg.w + 3 + bw <= cw, bx = right ? tg.x + tg.w + 3 : tg.x - bw - 3, by = tg.y - 2;
