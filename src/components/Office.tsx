@@ -26,7 +26,7 @@ const NX = 15, NY = 12, TW = 15, TH = 7.5, WALL = 82;
 const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
-const TV = { x0: 7.55, x1: 11.0, z0: 62, z1: 118 };
+const TV = { x0: 7.3, x1: 11.0, z0: 48, z1: 106 };
 const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
@@ -2207,7 +2207,7 @@ function openPositions(data: OfficeData): Pos[] {
 }
 function drawPositions(c: C, list: Pos[], t: number) {
   const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-  const x0 = 4.45, x1 = 7.3, z0 = 62, z1 = 112;      // left of the LIVE TV, above the bookshelf (kept under the floor above)
+  const x0 = TV.x0, x1 = TV.x1, z0 = TV.z1 + 7, z1 = TV.z1 + 50;      // right above the LIVE TV, kept under the floor above
   const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
   const mono = (wt: number, px: number) => `${wt} ${px}px ui-monospace, Menlo, monospace`;
   c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
@@ -2216,22 +2216,21 @@ function drawPositions(c: C, list: Pos[], t: number) {
   c.textBaseline = 'middle';
   // header: dot + title + count, then a thin rule
   c.fillStyle = list.length ? (Math.floor(t * 2) % 2 ? '#2ee59d' : '#1d6b4c') : '#4a5566'; c.beginPath(); c.arc(6, 7, 1.5, 0, 7); c.fill();
-  c.font = mono(800, 5.2); c.fillStyle = '#ffffff'; c.fillText('POSISI', 10, 7.2);
+  c.font = mono(800, 5.2); c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
   c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(4, 13, w - 8, 0.6);
   if (!list.length) {
-    c.font = mono(600, 4.6); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada', w / 2, 13 + (h - 13) / 2 - 3.5); c.fillText('posisi', w / 2, 13 + (h - 13) / 2 + 3.5); c.textAlign = 'left';
+    c.font = mono(600, 4.6); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
   } else {
-    // two lines per position: side + name, then the floating P&L
-    const max = 4, rows = list.slice(0, max), top = 15, rh = Math.min(15, (h - top - (list.length > max ? 7 : 2)) / rows.length);
+    // one line per position: side, name, floating P&L
+    const max = 4, rows = list.slice(0, max), top = 15, rh = Math.min(9, (h - top - (list.length > max ? 7 : 2)) / rows.length);
     rows.forEach((p, i) => {
-      const y = top + rh * i;
-      if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(2, y, w - 4, rh); }
-      c.font = mono(700, 4.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 4, y + rh * 0.3);
-      c.font = mono(800, 4.8); c.fillStyle = '#ffffff';
-      let name = p.name; while (name.length > 3 && c.measureText(name).width > w - 12) name = name.slice(0, -1);
-      c.fillText(name, 9, y + rh * 0.3);
-      c.textAlign = 'right'; c.font = mono(800, 5.2);
-      c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 3, y + rh * 0.72); c.textAlign = 'left';
+      const y = top + rh * (i + 0.5);
+      if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(3, y - rh / 2, w - 6, rh); }
+      c.font = mono(700, 4.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 5, y);
+      c.font = mono(800, 5); c.fillStyle = '#ffffff';
+      let name = p.name; while (name.length > 3 && c.measureText(name).width > w - 33) name = name.slice(0, -1);
+      c.fillText(name, 10, y);
+      c.textAlign = 'right'; c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 5, y); c.textAlign = 'left';
     });
     if (list.length > max) { c.font = mono(600, 4.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText(`+${list.length - max} lagi`, w / 2, h - 4); c.textAlign = 'left'; }
   }
