@@ -1239,12 +1239,12 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     c.save(); c.scale(1, 0.42); c.fillStyle = sg; c.beginPath(); c.arc(0, 0, 7 - jump * 0.4, 0, 7); c.fill(); c.restore();
   }
   c.translate(0, -jump);
-  const LEG = INK ? 4.3 : 3.3, standHip = (INK ? -9.5 : -6.9) - bob * 0.8 + squat, seatHip = (bean ? -4.56 : -8.2) / PSV;
-  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = INK ? 9.8 : 8.4;
+  const LEG = INK ? 5.0 : 3.3, standHip = (INK ? -11.0 : -6.9) - bob * 0.8 + squat, seatHip = (bean ? -4.56 : -8.2) / PSV;
+  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = INK ? 11.2 : 8.4;
   const shoe = '#26272c', pantsD = sh(p.pants, 0.8), shirtD = sh(p.shirt, 0.82);
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (sitting || bean) {
-    const fx = front ? 4.5 : 3.5;
+    const fx = (front ? 4.5 : 3.5) + (INK ? 1.2 : 0);
     if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 3.5; for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); } }
     c.strokeStyle = p.pants; c.lineWidth = 2.8;
     for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); }
@@ -1252,11 +1252,11 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   } else {
     for (const [o, k] of [[-1.5, 0], [1.5, Math.PI]] as const) {
       const f = ph + k, stride = 2.7 * am;
-      const footX = o * 0.9 + (anim ? -Math.cos(f) * stride : 0) + sway * 0.3;
+      const footX = o * (INK ? 1.0 : 0.9) + (anim ? -Math.cos(f) * stride : 0) + sway * 0.3;
       const lift = anim ? Math.max(0, Math.sin(f)) * 2.4 * am : 0;
       const footY = -1.1 - lift;
       const hx0 = o + sway * 0.6, col = o < 0 ? pantsD : p.pants;
-      limb(c, hx0, hip, footX, footY, LEG, LEG, squat ? 1 : 0.9, 2.8, col);
+      limb(c, hx0, hip, footX, footY, LEG, LEG, squat ? 1 : 0.9, INK ? 3.0 : 2.8, col);
       // shoe: toes point down while the foot swings forward, heel strikes first
       const pitch = anim ? (Math.sin(f) > 0 ? -0.35 * Math.cos(f) : 0) : 0;
       c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.45; c.stroke(); } c.restore();
@@ -1310,8 +1310,9 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   if (!INK && p.id === 'jaga' && front) { c.fillStyle = '#f2c230'; c.fillRect(-3, ty + 2, 1.6, 1.8); }
   const arm = (side: number, back: boolean) => {
     c.strokeStyle = back ? shirtD : p.shirt; c.lineWidth = 2.4;
-    const sxh = side * 4.4 + lean * 0.5, syh = ty + 1.6;
-    let ex = sxh + side * 0.6 + swing * side * -2, ey = syh + 6.2;
+    const sxh = side * (INK ? 4.5 : 4.4) + lean * 0.5, syh = ty + 1.6;
+    const ARM = INK ? 4.9 : 3.4;
+    let ex = INK ? sxh + side * 0.15 + swing * side * -2 : sxh + side * 0.6 + swing * side * -2, ey = INK ? syh + 9.6 : syh + 6.2;
     if (typing) { ex = sxh + (side > 0 ? 3.4 : 2.2); ey = syh + 4.6 + (Math.sin(t * 17 + side * 2) > 0 ? -0.8 : 0); }
     if (sitting && !typing) { ex = sxh + 2.4; ey = syh + 5.2; }
     if (bean) { ex = sxh + 3; ey = syh + 4.4 + (prop === 'hp' ? Math.sin(t * 9 + side) * 0.5 : 0); }
@@ -1337,10 +1338,10 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (!walking && !shaking && prop === 'guitar') { ex = side > 0 ? 3.4 : 7.5; ey = side > 0 ? hip - 3 + Math.sin(t * 12) * 0.7 : hip - 6; }
     if (!walking && !shaking && prop === 'box' && !sitting) { ex = sxh + 2.6; ey = syh + 3.6; }
     if (whipT != null && side > 0) { const w = (whipT % 0.9) / 0.9; ex = sxh + 2 + Math.cos(w * 6.28) * 1.5; ey = syh - 7 + (w < 0.25 ? 6 * (w / 0.25) : 6 - 6 * ((w - 0.25) / 0.75)); }
-    if (anim && !shaking && whipT == null && !a.carry) { const f = ph + (side > 0 ? 0 : Math.PI); ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
+    if (anim && !shaking && whipT == null && !a.carry) { const f = ph + (side > 0 ? 0 : Math.PI); ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + (INK ? 9.4 : 6.3) - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side < 0) { const f = ph + Math.PI; ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side > 0) { ex = sxh + 2.2; ey = syh + 3.6; }
-    limb(c, sxh + twist * side * 0.3, syh, ex, ey, 3.4, 3.4, ey < syh ? -0.6 : -0.8, 2.4, back ? shirtD : p.shirt);
+    limb(c, sxh + twist * side * 0.3, syh, ex, ey, ARM, ARM, ey < syh ? -0.6 : -0.8, 2.4, back ? shirtD : p.shirt);
     c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.4; c.stroke(); }
     if (!walking && prop === 'dumbbell' && !shaking) { c.fillStyle = '#26272c'; c.fillRect(ex - 2.4, ey - 0.4, 4.8, 1.4); c.fillRect(ex - 3, ey - 1.2, 1.4, 3); c.fillRect(ex + 1.6, ey - 1.2, 1.4, 3); }
     if (side > 0) {
@@ -1573,7 +1574,7 @@ const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-$
 
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
-  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.paint ? 'rgba(80,45,25,.42)' : null; PSV = THEME.paint ? 1.26 : PS;
+  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.paint ? 'rgba(80,45,25,.42)' : null; PSV = THEME.paint ? 1.36 : PS;
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
@@ -2052,7 +2053,7 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     if (wall < a.hiddenUntil) continue;                     // inside the lift
     const [ix, iy] = iso(a.x, a.y), [ax, ay0] = toScreen(ix, iy, a.room);
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
-    const ay = hidden ? ay0 - 4 : ay0 - ((seated ? 27 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
+    const ay = hidden ? ay0 - 4 : ay0 - ((seated ? (INK ? 30 : 27) : INK ? 38 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
     c.font = nameF; const nw = c.measureText(p.name).width;
     c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = c.measureText(label + extraTxt).width + 6 * ts;
     const w = Math.max(nw, lw) + 7 * ts, h = 17 * ts;
