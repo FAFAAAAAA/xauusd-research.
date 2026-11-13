@@ -95,7 +95,6 @@ const S0: Array<Omit<Spot, 'room'>> = [
   { id: 'bwin', x: 0.95, y: 4.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
   { id: 'fish', x: 13.6, y: 1.25, face: 'ny', pose: 'stand', label: 'LIHAT IKAN', zone: 'boss', alt: [{ label: 'KASIH MAKAN IKAN' }] },
   { id: 'bsofa3', x: 13.6, y: 6.2, face: 'nx', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'BACA KORAN', prop: 'paper' }] },
-  { id: 'bplant', x: 13.2, y: 8.6, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
 ];
 const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
@@ -1253,7 +1252,7 @@ function furniture(theme = 'modern'): Item[][] {
     const sw = Math.sin(t * 0.8 + x) * 0.5;
     for (const [dx, dy, rr, col] of [[0, -32, 11, '#2f7a3d'], [-9, -26, 8, '#3d9a4f'], [9, -27, 8, '#3d9a4f'], [-4, -40, 8, '#58b765'], [5, -38, 7, '#58b765'], [0, -46, 6, '#7fcf7a']] as Array<[number, number, number, string]>) { c.fillStyle = col; c.beginPath(); c.arc(bx + dx + sw * (-dy / 40), by + dy, rr, 0, 7); c.fill(); }
   } });
-  bigTree(0, 1.0, 11.0); bigTree(0, 13.9, 8.6); bigTree(1, 5.6, 11.2); bigTree(1, 13.9, 4.6);
+  void bigTree;      // no trees inside the rooms (owner's choice)
   // trading floor: a drinks vending machine, and a rest corner (sofa + rug)
   R[2].push(moved({ x0: 12.75, y0: 0.1, x1: 13.65, y1: 0.75, draw: (c, t) => {
     shadow(c, 12.75, 0.1, 0.9, 0.65); box(c, 12.75, 0.1, 0.9, 0.65, 0, 50, '#e5484d', '#b8343a', '#cf3e44');
@@ -1744,7 +1743,6 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
     if (job < 0.58) { const rm = Math.random() < 0.5 ? 1 : 2; return { act: sp(`galon-${rm}`, rm, rm === 1 ? 7.6 : 2.6, 1.25, 'ny', 'GANTI GALON', { prop: 'galon' }), dwell: rnd(5, 8) }; }
     if (job < 0.68) { CATCALL.at = now; return { act: { ...X.bowl }, dwell: rnd(5, 8) }; }
     if (job < 0.76) return { act: { ...SPOTS.find((q) => q.id === 'trash')!, id: 'ob-trash' }, dwell: rnd(4, 6) };
-    if (job < 0.84) return { act: { ...SPOTS.find((q) => q.id === 'bplant')!, id: 'ob-plant' }, dwell: rnd(5, 8) };
     if (job < 0.92) return { act: { ...SPOTS.find((q) => q.id === 'eat3')!, id: 'ob-rest', label: 'ISTIRAHAT', prop: 'cup' }, dwell: rnd(10, 18) };
     return { act: { ...SPOTS.find((q) => q.id === 'sink')!, id: 'ob-sink', label: 'CUCI PIRING' }, dwell: rnd(6, 10) };
   }
@@ -1928,7 +1926,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const w = box0.clientWidth || W; dpr = THEME.pixel ? 1 : Math.min(3, window.devicePixelRatio || 1); cv.style.imageRendering = THEME.pixel ? 'pixelated' : '';
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
-      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 0.93) : Math.min(1, LH / TOTAL);
+      const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 0.98) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       const cx1 = roomX(1) + OX + (NX - NY) * TW * 0.5;
       lhRef.current = LH; homeRef.current = { z, tx: FLAT ? Math.min(0, Math.max(W - CW * z, W / 2 - cx1 * z)) : (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };

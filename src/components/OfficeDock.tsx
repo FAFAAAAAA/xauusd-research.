@@ -66,6 +66,19 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
     return () => { off = true; window.clearInterval(id); };
   }, [syms]);
 
+  // installed iPhone app: the page can report a shorter window than the screen, so the office takes the full screen height
+  useEffect(() => {
+    if (!full) return;
+    const set = () => {
+      const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true || window.matchMedia?.('(display-mode: standalone)').matches;
+      const portrait = window.innerHeight >= window.innerWidth;
+      const scr = portrait ? Math.max(window.screen.height, window.screen.width) : Math.min(window.screen.height, window.screen.width);
+      const h = standalone ? Math.max(window.innerHeight, scr) : window.innerHeight;
+      document.documentElement.style.setProperty('--app-h', `${h}px`);
+    };
+    set(); window.addEventListener('resize', set); window.addEventListener('orientationchange', set);
+    return () => { window.removeEventListener('resize', set); window.removeEventListener('orientationchange', set); document.documentElement.style.removeProperty('--app-h'); };
+  }, [full]);
   const cls = full ? 'office-home' : 'office-dock';
   if (!j) return <div className={cls}><Office data={{ trades: [], market, cal }} now={now} screen={[]} full={full} onSwipe={onSwipe} /></div>;   // the building shows at once, people appear when the data arrives
   // realtime floating P&L per crypto position from the mark price (falls back to the bot report)
