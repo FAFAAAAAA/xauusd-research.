@@ -1221,7 +1221,7 @@ function findPath(free: boolean[][], fx: number, fy: number, tx: number, ty: num
 
 /* ---------- people ---------- */
 interface Agent {
-  room: number; pending: Spot | null; hiddenUntil: number; fx?: number; sit?: number; lt?: number; fidget?: number;
+  room: number; pending: Spot | null; hiddenUntil: number; fx?: number; sit?: number; lt?: number; fidget?: number; arms?: Record<string, [number, number]>;
   x: number; y: number; vx: number; vy: number; face: Face; path: Array<[number, number]>; act: Spot; until: number; dist: number; speed: number;
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
   scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
@@ -1305,7 +1305,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     for (const [o, k] of [[-1.5, 0], [1.5, Math.PI]] as const) {
       const f = ph + k, stride = 2.7 * am;
       const footX = o * (INK ? 1.0 : 0.9) + (anim ? -Math.cos(f) * stride : 0) + sway * 0.3;
-      const lift = anim ? Math.max(0, Math.sin(f)) * 2.4 * am : 0;
+      const lift = anim ? Math.max(0, Math.sin(f)) * (INK ? 3.0 : 2.4) * am : 0;
       const footY = -1.1 - lift;
       const hx0 = o + sway * 0.6, col = o < 0 ? pantsD : p.pants;
       limb(c, hx0, hip, footX, footY, LEG, LEG, squat ? 1 : 0.9, INK ? 3.0 : 2.8, col);
@@ -1314,8 +1314,11 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.45; c.stroke(); } c.restore();
     }
   }
-  const lean = (anim ? 0.7 * am : 0) + sway * 0.5, twist = anim ? Math.sin(ph) * 0.5 * am : 0;
-  const hy = hip - torso - 5.6 + breathe * 0.5 + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
+  const gT = (t + hash(p.id + 'g') * 40) % 26;
+  const gesture = typing && !drama ? (gT < 2.4 ? 'stretch' : gT > 12 && gT < 13.8 ? 'sip' : gT > 19 && gT < 21.6 ? 'chin' : null)
+    : idle && !prop && pose === 'stand' ? (gT < 4 ? 'hips' : gT > 10 && gT < 14 ? 'cross' : gT > 18 && gT < 19.8 ? 'scratch' : null) : null;
+  const lean = (anim ? 0.7 * am : 0) + sway * 0.5 + (typing && gesture !== 'stretch' ? 0.45 : 0), twist = anim ? Math.sin(ph) * 0.5 * am : 0;
+  const hy = hip - torso - 5.6 + breathe * 0.5 + (typing ? Math.sin(t * 1.7 + hash(p.id) * 9) * 0.22 : 0) + (gesture === 'stretch' ? -0.6 : 0) + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
   const big = p.id === 'vet', HS = INK ? (big ? 1.0 : 0.64) : big ? 1.45 : 1, NECK = INK ? 1.3 : 0;     // head scale (Ny. Vetrycia keeps her big head)
@@ -1367,6 +1370,12 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     let ex = INK ? sxh + side * 0.15 + swing * side * -2 : sxh + side * 0.6 + swing * side * -2, ey = INK ? syh + 9.6 : syh + 6.2;
     if (typing) { ex = sxh + (side > 0 ? 3.4 : 2.2); ey = syh + 4.6 + (Math.sin(t * 17 + side * 2) > 0 ? -0.8 : 0); }
     if (sitting && !typing) { ex = sxh + 2.4; ey = syh + 5.2; }
+    if (gesture === 'stretch') { ex = sxh + side * 1.4; ey = syh - 8.5 - Math.sin(t * 3) * 0.6; }
+    if (gesture === 'sip' && side > 0) { ex = 2.8; ey = hy + 3.8; }
+    if (gesture === 'chin' && side > 0) { ex = 2.3; ey = hy + 5.2; }
+    if (gesture === 'hips') { ex = sxh + side * 2.6; ey = syh + 5.4; }
+    if (gesture === 'cross') { ex = sxh - side * 4.6 + 1; ey = syh + 4.6 + side * 0.5; }
+    if (gesture === 'scratch' && side > 0) { ex = hx + 1 + Math.sin(t * 14) * 0.5; ey = hy - 3; }
     if (bean) { ex = sxh + 3; ey = syh + 4.4 + (prop === 'hp' ? Math.sin(t * 9 + side) * 0.5 : 0); }
     if (pose === 'stretch') { ex = sxh + side * 1.2; ey = syh - 7 - Math.sin(t * 2.4) * 1.2; }
     if (pose === 'jump') { ex = sxh + side * 2; ey = syh - 7; }
@@ -1393,7 +1402,11 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (anim && !shaking && whipT == null && !a.carry) { const f = ph + (side > 0 ? 0 : Math.PI); ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + (INK ? 9.4 : 6.3) - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side < 0) { const f = ph + Math.PI; ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side > 0) { ex = sxh + 2.2; ey = syh + 3.6; }
+    { const key = side > 0 ? 'r' : 'l'; a.arms ??= {}; const pr = a.arms[key];
+      if (pr && whipT == null && !shaking && Math.hypot(ex - pr[0], ey - pr[1]) > 1.0) { const kk = Math.min(1, dtp * (anim ? 16 : 8)); ex = pr[0] + (ex - pr[0]) * kk; ey = pr[1] + (ey - pr[1]) * kk; }
+      a.arms[key] = [ex, ey]; }
     limb(c, sxh + twist * side * 0.3, syh, ex, ey, ARM, ARM, ey < syh ? -0.6 : -0.8, 2.4, back ? shirtD : p.shirt);
+    if (gesture === 'sip' && side > 0) { c.fillStyle = '#ffffff'; c.fillRect(ex - 0.4, ey - 2.6, 2.4, 3.2); c.fillStyle = '#6b4a2b'; c.fillRect(ex - 0.4, ey - 2.6, 2.4, 0.7); }
     if (INK) { c.fillStyle = p.skin; c.beginPath(); c.ellipse(ex, ey + 0.9, 1.0, 1.35, 0, 0, 7); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.35; c.stroke(); c.beginPath(); c.ellipse(ex + side * 0.0 + 0.85, ey + 0.4, 0.42, 0.7, -0.5, 0, 7); c.fill(); c.stroke(); }
     else { c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill(); }
     if (!walking && prop === 'dumbbell' && !shaking) { c.fillStyle = '#26272c'; c.fillRect(ex - 2.4, ey - 0.4, 4.8, 1.4); c.fillRect(ex - 3, ey - 1.2, 1.4, 3); c.fillRect(ex + 1.6, ey - 1.2, 1.4, 3); }
