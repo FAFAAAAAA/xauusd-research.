@@ -34,8 +34,8 @@ const HOME = { z: 1, tx: 0, ty: 0 };   // replaced on the first resize (fit the 
 
 type Face = 'px' | 'py' | 'nx' | 'ny';
 type Pose = 'stand' | 'sit' | 'sleep' | 'bean' | 'stretch' | 'squat' | 'jump' | 'nap' | 'run';
-type Prop = 'tablet' | 'cup' | 'phone' | 'hp' | 'book' | 'paper' | 'laptop' | 'food' | 'vanish' | 'trash' | 'can' | 'club' | 'dumbbell';
-interface Spot { id: string; room: number; x: number; y: number; face: Face; pose: Pose; label: string; prop?: Prop; zone?: 'break' | 'meet' | 'lounge' | 'eat' | 'gym' | 'boss'; alt?: Array<{ label: string; pose?: Pose; prop?: Prop }>; whip?: string }
+type Prop = 'tablet' | 'cup' | 'phone' | 'hp' | 'book' | 'paper' | 'laptop' | 'food' | 'vanish' | 'trash' | 'can' | 'club' | 'dumbbell' | 'mop' | 'rag' | 'galon' | 'mic' | 'guitar' | 'box' | 'envelope' | 'paddle';
+interface Spot { id: string; room: number; x: number; y: number; face: Face; pose: Pose; label: string; prop?: Prop; zone?: 'break' | 'meet' | 'lounge' | 'eat' | 'gym' | 'boss'; alt?: Array<{ label: string; pose?: Pose; prop?: Prop }>; whip?: string; say?: [string, string] }
 interface Person {
   id: string; name: string; role: string; seat: Spot;
   hair: string; skin: string; shirt: string; pants: string; style: 'short' | 'long' | 'bun' | 'cap' | 'slick' | 'curly';
@@ -51,6 +51,8 @@ const PEOPLE: Person[] = [
   { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.2, 9.2, 'ny'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
   { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 4.5, 1.85, 'ny', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
   { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 11.75, 2.0, 'py', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
+  { id: 'ob', name: 'Udin', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
+  { id: 'kurir', name: 'Kurir', role: 'KURIR', seat: { ...seat('kurir', 2, 11.65, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#222', skin: '#e2b48a', shirt: '#e5484d', pants: '#2a2b30', style: 'cap', cap: '#c0392b' },
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
 const LIFT = { x: 11.65, y: 0.6 };
@@ -73,22 +75,22 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
   { id: 'trash', x: 3.3, y: 1.35, face: 'ny', pose: 'stand', label: 'BUANG SAMPAH', prop: 'trash' },
   { id: 'shelf', x: 6.35, y: 1.1, face: 'ny', pose: 'stand', label: 'BACA BUKU', prop: 'book' },
-  { id: 'printer', x: 10.35, y: 1.35, face: 'ny', pose: 'stand', label: 'AMBIL PRINT', prop: 'paper', alt: [{ label: 'FOTOKOPI' }] },
+  { id: 'printer', x: 10.35, y: 1.35, face: 'ny', pose: 'stand', label: 'AMBIL PRINT', prop: 'paper', alt: [{ label: 'FOTOKOPI' }, { label: 'ISI KERTAS' }, { label: 'SCAN DOKUMEN' }] },
   { id: 'tv', x: 9.0, y: 2.6, face: 'ny', pose: 'stand', label: 'LIHAT CHART', zone: 'meet' },
   { id: 'win1', x: 0.75, y: 3.2, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'win2', x: 0.75, y: 5.45, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'TELEPON', prop: 'phone' }] },
   { id: 'win3', x: 0.75, y: 7.7, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
-  { id: 'hot1', x: 6.95, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet' },
-  { id: 'hot2', x: 8.15, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet' },
+  { id: 'hot1', x: 6.95, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet', alt: [{ label: 'ZOOM MEETING' }, { label: 'CEK EMAIL' }] },
+  { id: 'hot2', x: 8.15, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet', alt: [{ label: 'BIKIN SLIDE' }, { label: 'ZOOM MEETING' }] },
   { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
   { id: 'hot4', x: 8.15, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
-  { id: 'board', x: 11.3, y: 7.2, face: 'ny', pose: 'stand', label: 'CORAT-CORET', prop: 'paper', alt: [{ label: 'ANALISA CHART' }] },
-  { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone' },
+  { id: 'board', x: 11.3, y: 7.2, face: 'ny', pose: 'stand', label: 'CORAT-CORET', prop: 'paper', alt: [{ label: 'ANALISA CHART' }, { label: 'BRAINSTORM' }] },
+  { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }] },
   { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
 ];
 const S2: Array<Omit<Spot, 'room'>> = [
-  { id: 'coffee', x: 7.55, y: 1.3, face: 'ny', pose: 'stand', label: 'BIKIN KOPI', prop: 'cup', zone: 'break' },
-  { id: 'sink', x: 8.5, y: 1.3, face: 'ny', pose: 'stand', label: 'CUCI GELAS', zone: 'break' },
+  { id: 'coffee', x: 7.55, y: 1.3, face: 'ny', pose: 'stand', label: 'BIKIN KOPI', prop: 'cup', zone: 'break', alt: [{ label: 'BIKIN TEH' }, { label: 'SEDUH MIE' }] },
+  { id: 'sink', x: 8.5, y: 1.3, face: 'ny', pose: 'stand', label: 'CUCI GELAS', zone: 'break', alt: [{ label: 'CUCI TANGAN' }, { label: 'ISI BOTOL' }] },
   { id: 'fridge', x: 12.62, y: 1.45, face: 'ny', pose: 'stand', label: 'AMBIL SNACK', prop: 'food', zone: 'break', alt: [{ label: 'AMBIL MINUMAN', prop: 'can' }] },
   { id: 'water2', x: 2.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
   { id: 'toilet', x: 4.7, y: 0.5, face: 'ny', pose: 'stand', label: 'KE TOILET', prop: 'vanish' },
@@ -121,6 +123,216 @@ const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', xau: 'nas', na
 const YELL = ['KERJA!!', 'PROFIT MANA?!', 'JANGAN SANTAI!', 'CEPAT!!', 'GAJI POTONG!', 'BALIK KE MEJA!', 'LEMBUR KAMU!'];
 const SL_YELL = ['KENA SL LAGI?!', 'RUGI TERUS!', 'MAU DIPECAT?!'];
 const SORRY = ['Ampun bos!', 'Iya bos!', 'Siap bos!', 'Maaf bos…'];
+/** extra places that are not in the everyday roaming list */
+const X = {
+  absen: { id: 'absen', room: 2, x: 10.85, y: 1.2, face: 'ny', pose: 'stand', label: 'ABSEN' } as Spot,
+  bowl: { id: 'bowl', room: 2, x: 5.75, y: 1.55, face: 'ny', pose: 'squat', label: 'KASIH MAKAN KUCING' } as Spot,
+  karaoke: { id: 'karaoke', room: 2, x: 6.9, y: 8.0, face: 'py', pose: 'stand', label: 'KARAOKE', prop: 'mic' } as Spot,
+  gitar: { id: 'gitar', room: 2, x: 5.75, y: 9.65, face: 'ny', pose: 'bean', label: 'MAIN GITAR', prop: 'guitar' } as Spot,
+  ttd: { id: 'ttd', room: 0, x: 7.6, y: 3.45, face: 'nx', pose: 'stand', label: 'MINTA TTD', prop: 'paper', say: ['Pak, minta tanda tangan', '#1e1f23'] } as Spot,
+  kopiBos: { id: 'kopibos', room: 0, x: 7.6, y: 3.45, face: 'nx', pose: 'stand', label: 'ANTAR KOPI', prop: 'cup', say: ['Kopinya pak', '#1e1f23'] } as Spot,
+};
+const CHAT: Record<string, string[]> = {
+  GOSIP: ['Eh tau gak…', 'Serius?!', 'Wkwkwk', 'Jangan bilang bos ya', 'Gajian kapan sih', 'Marcel galak banget', 'Sstt…'],
+  NGOBROL: ['Market lagi sepi ya', 'Entry di mana?', 'Hari ini cuan?', 'Wkwk', 'Nanti makan apa?', 'Capek euy'],
+  KARAOKE: ['♪ La la la ♪', '♪ Cinta… ♪', '♪ Yeah! ♪'],
+  'MAIN GITAR': ['♪ jreng ♪', '♪ ~ ♪'],
+  'NONTON BERITA': ['NFP keluar!', 'Semoga aman…', 'Volatil banget!', 'Deg-degan…', 'Wah, gerak!'],
+  'NYANYI ULTAH': ['♪ Selamat ulang tahun ♪', '♪ Panjang umurnya ♪', 'Tiup lilinnya!'],
+  'MAKAN PIZZA': ['Enak banget!', 'Siapa yang traktir?', 'Nambah dong'],
+  'RAPAT DARURAT': ['Maaf bos…', 'Market lagi aneh', 'Kita evaluasi'],
+  'MAIN CATUR': ['Skak!', 'Hmm…', 'Giliranmu'],
+  'MAIN PINGPONG': ['Smash!', 'Yes!', 'Out!'],
+  'SENAM PAGI': ['Semangat!', 'Huft…', 'Satu, dua!'],
+};
+/* ---------- office events: several people do one thing together for a while ---------- */
+type Step = { act: Spot; dwell: number };
+type Ev = { kind: string; start: number; until: number; plans: Record<string, Step[]>; ids: string[]; random: boolean; courier?: boolean; items?: (room: number, wall: number) => Item[] };
+const EV: { cur: Ev | null; next: number; done: Record<string, string> } = { cur: null, next: 0, done: {} };
+const inEvent = (id: string, wall: number) => !!EV.cur && wall < EV.cur.until && EV.cur.ids.includes(id);
+const awayHours = (now: number) => { const h = new Date(now).getHours(); return h >= 23 || h < 7; };       // Marcel and Ny. Vetrycia go home
+const sp = (id: string, room: number, x: number, y: number, face: Face, label: string, more: Partial<Spot> = {}): Spot => ({ id, room, x, y, face, pose: 'stand', label, ...more });
+const shuffle = <T,>(a: T[]) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+type EvCtx = { agents: Record<string, Agent>; S: Record<string, Status>; wall: number; data: OfficeData };
+function freeFor(ctx: EvCtx, id: string, busyOk = false) {
+  const a = ctx.agents[id], s = ctx.S[id]; if (!a || !s) return false;
+  if (s.sleep || s.label === 'BELUM AKTIF' || s.label === 'KIRIM PESAN' || s.label === 'ALARM') return false;
+  if (!busyOk && s.label.startsWith('POSISI')) return false;
+  if ((id === 'bos' || id === 'vet') && awayHours(ctx.wall)) return false;
+  return ctx.wall >= a.scoldUntil;
+}
+const TABLE2 = { x: 7.6, y: 5.4, z: 15 };      // the round table in the pantry
+function tableItem(room: number, x: number, y: number, z: number, draw: (c: C, t: number, sx: number, sy: number) => void): Item {
+  return { x0: x - 0.1, y0: y - 0.1, x1: x + 0.2, y1: y + 0.2, draw: (c, t) => { if (room < 0) return; const [sx, sy] = iso(x, y, z); draw(c, t, sx, sy); } };
+}
+function confetti(c: C, x: number, y: number, t: number) {
+  const [cx, cy] = iso(x, y, 40);
+  const cols = ['#e5484d', '#f2c230', '#2ee59d', '#4c7dff', '#c792ea'];
+  for (let k = 0; k < 26; k++) { const ph = (t * 0.35 + hash(`cf${k}`)) % 1, dx = (hash(`cx${k}`) - 0.5) * 70 + Math.sin(t * 2 + k) * 3; c.fillStyle = cols[k % 5]; c.fillRect(cx + dx, cy - 30 + ph * 60, 1.6, 1); }
+}
+function makeEvent(kind: string, ctx: EvCtx): Ev | null {
+  const { wall } = ctx, W5 = ['alt', 'big', 'xau', 'nas', 'tg'];
+  const ev = (plans: Record<string, Step[]>, dur: number, more: Partial<Ev> = {}): Ev => ({ kind, start: wall, until: wall + dur * 1000, plans, ids: Object.keys(plans), random: true, ...more });
+  const workers = (busyOk = false) => shuffle(W5.filter((id) => freeFor(ctx, id, busyOk)));
+  const S = (sec: number) => sec * 1000;
+  if (kind === 'senam') {
+    const who = [...workers(), ...(freeFor(ctx, 'ob') ? ['ob'] : [])]; if (who.length < 3) return null;
+    const grid: Array<[number, number]> = [[7.0, 6.6], [8.2, 6.6], [9.4, 6.6], [7.0, 7.8], [8.2, 7.8], [9.4, 7.8]];
+    const moves: Pose[] = ['stretch', 'squat', 'jump', 'stretch', 'squat', 'jump', 'stretch', 'squat'];
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, 6).forEach((id, i) => { plans[id] = moves.map((m) => ({ act: sp(`ev-senam-${id}`, 2, grid[i][0], grid[i][1], 'px', 'SENAM PAGI', { pose: m }), dwell: S(7) })); });
+    if (freeFor(ctx, 'bos')) plans.bos = moves.map((m, i) => ({ act: sp('ev-senam-bos', 2, 11.0, 7.2, 'nx', 'PIMPIN SENAM', { pose: m, say: i === 0 ? ['Ayo senam! 1, 2, 3!', '#1e1f23'] : undefined }), dwell: S(7) }));
+    return ev(plans, 62);
+  }
+  if (kind === 'ultah' || kind === 'pizza') {
+    const who = workers(); if (who.length < 2) return null;
+    const all = [...who, ...['ob', 'bos', 'vet'].filter((id) => freeFor(ctx, id))];
+    const seats = [sp('', 2, 7.6, 4.5, 'py', '', { pose: 'sit' }), sp('', 2, 7.6, 6.3, 'ny', '', { pose: 'sit' }), sp('', 2, 6.7, 5.4, 'px', '', { pose: 'sit' }), sp('', 2, 8.5, 5.4, 'nx', '', { pose: 'sit' }),
+      sp('', 2, 6.1, 4.3, 'px', ''), sp('', 2, 6.1, 6.5, 'px', ''), sp('', 2, 8.95, 6.6, 'nx', ''), sp('', 2, 8.6, 3.95, 'py', '')];
+    const plans: Record<string, Step[]> = {};
+    const bday = who[0];
+    // the birthday person and the big boss get chairs first
+    const order = kind === 'ultah' ? [bday, ...all.filter((id) => id === 'vet'), ...all.filter((id) => id !== bday && id !== 'vet')] : [...all.filter((id) => id === 'vet'), ...all.filter((id) => id !== 'vet')];
+    order.slice(0, seats.length).forEach((id, i) => {
+      const at = (label: string, more: Partial<Spot> = {}) => ({ ...seats[i], id: `ev-${kind}-${id}`, label, ...more });
+      if (kind === 'ultah') plans[id] = id === bday
+        ? [{ act: at('ULANG TAHUN', { say: ['Wah, makasih semua!', '#c0392b'] }), dwell: S(26) }, { act: at('TIUP LILIN', { say: ['Fuuuh~', '#1e1f23'] }), dwell: S(5) }, { act: at('MAKAN KUE', { prop: 'food' }), dwell: S(20) }]
+        : [{ act: at(id === 'vet' ? 'MAKAN KUE' : 'NYANYI ULTAH', id === 'vet' ? { prop: 'food' } : {}), dwell: S(31) }, { act: at('MAKAN KUE', { prop: 'food' }), dwell: S(20) }];
+      else plans[id] = [{ act: at('NUNGGU PIZZA'), dwell: S(9) }, { act: at('MAKAN PIZZA', { prop: 'food' }), dwell: S(40) }];
+    });
+    const e = ev(plans, kind === 'ultah' ? 55 : 52);
+    if (kind === 'pizza') {
+      e.courier = true;
+      e.plans.kurir = [{ act: sp('ev-kurir-in', 2, 7.6, 3.95, 'py', 'ANTAR PIZZA', { prop: 'box', say: ['Permisi, pizza datang!', '#c0392b'] }), dwell: S(5) }, { act: sp('ev-kurir-out', 2, 11.65, 0.6, 'ny', 'PULANG', { prop: 'vanish' }), dwell: S(60) }];
+      e.ids.push('kurir');
+    }
+    e.items = (room, w) => room !== 2 ? [] : [tableItem(2, TABLE2.x, TABLE2.y, TABLE2.z, (c, t, sx, sy) => {
+      const el = (w - e.start) / 1000;
+      if (kind === 'ultah') {
+        c.fillStyle = '#fbe3c4'; c.beginPath(); c.ellipse(sx, sy - 1, 5, 2.4, 0, 0, 7); c.fill();
+        c.fillStyle = '#f7d0dd'; c.fillRect(sx - 5, sy - 5, 10, 4); c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(sx, sy - 5, 5, 2.4, 0, 0, 7); c.fill();
+        c.fillStyle = '#e5484d'; for (const dx of [-2.5, 0, 2.5]) c.fillRect(sx + dx - 0.4, sy - 9, 0.8, 4);
+        if (el < 31) for (const dx of [-2.5, 0, 2.5]) { c.fillStyle = Math.sin(t * 20 + dx) > 0 ? '#ffd23f' : '#ff9a3c'; c.beginPath(); c.ellipse(sx + dx, sy - 10, 0.7, 1.2, 0, 0, 7); c.fill(); }
+        confetti(c, TABLE2.x, TABLE2.y, t);
+      } else if (el > 5) {
+        c.fillStyle = '#c8a26b'; c.beginPath(); c.moveTo(sx - 7, sy - 1); c.lineTo(sx, sy - 4.5); c.lineTo(sx + 7, sy - 1); c.lineTo(sx, sy + 2.5); c.closePath(); c.fill();
+        c.fillStyle = '#f2b04a'; c.beginPath(); c.ellipse(sx, sy - 1, 5, 2.4, 0, 0, 7); c.fill();
+        c.fillStyle = '#d9473b'; for (let k = 0; k < 6; k++) { c.beginPath(); c.arc(sx + Math.cos(k) * 3, sy - 1 + Math.sin(k * 1.7) * 1.3, 0.7, 0, 7); c.fill(); }
+      }
+    })];
+    return e;
+  }
+  if (kind === 'paket') {
+    if (!freeFor(ctx, 'vet') || ctx.agents.vet.room !== 0) return null;
+    const v = (label: string, more: Partial<Spot> = {}) => ({ ...PEOPLE[0].seat, id: 'ev-paket-vet', label, ...more });
+    return ev({
+      vet: [{ act: v('NUNGGU PAKET', { prop: 'hp' }), dwell: S(10) }, { act: v('BUKA PAKET', { prop: 'box', say: ['Yeay, paketku datang!', '#c0392b'] }), dwell: S(14) }, { act: v('BELANJA ONLINE', { prop: 'hp' }), dwell: S(16) }],
+      kurir: [{ act: sp('ev-kurir-in', 0, 3.0, 3.9, 'nx', 'ANTAR PAKET', { prop: 'box', say: ['Paket buat Ny. Vetrycia!', '#c0392b'] }), dwell: S(4) }, { act: sp('ev-kurir-out', 0, 11.65, 0.6, 'ny', 'PULANG', { prop: 'vanish' }), dwell: S(60) }],
+    }, 42, { courier: true });
+  }
+  if (kind === 'suruh') {
+    if (!freeFor(ctx, 'vet') || !freeFor(ctx, 'bos') || ctx.agents.vet.room !== 0) return null;
+    const v = (label: string, more: Partial<Spot> = {}) => ({ ...PEOPLE[0].seat, id: 'ev-suruh-vet', label, ...more });
+    return ev({
+      vet: [{ act: v('NYURUH MARCEL', { say: ['Marcel! Ambilin cemilan!', '#c0392b'] }), dwell: S(24) }, { act: v('MAKAN', { prop: 'food' }), dwell: S(16) }],
+      bos: [{ act: sp('ev-suruh-1', 2, 12.62, 1.45, 'ny', 'AMBILIN CEMILAN', { prop: 'food', say: ['Iya bu… iya…', '#1e1f23'] }), dwell: S(3) }, { act: sp('ev-suruh-2', 0, 3.0, 3.9, 'nx', 'ANTAR CEMILAN', { prop: 'food', say: ['Ini bu cemilannya', '#1e1f23'] }), dwell: S(4) }],
+    }, 44);
+  }
+  if (kind === 'foto') {
+    const cam = freeFor(ctx, 'tg') ? 'tg' : freeFor(ctx, 'ob') ? 'ob' : null; if (!cam) return null;
+    const who = [...['vet', 'bos'].filter((id) => freeFor(ctx, id)), ...workers().filter((id) => id !== cam), ...['ob', 'jaga'].filter((id) => id !== cam && freeFor(ctx, id))];
+    if (who.length < 3) return null;
+    const pos: Array<[number, number]> = [[6.4, 2.2], [5.4, 2.2], [7.4, 2.2], [4.4, 2.2], [8.4, 2.2], [5.9, 1.3], [6.9, 1.3], [4.9, 1.3], [7.9, 1.3]];
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, pos.length).forEach((id, i) => { const at = (label: string, pose: Pose) => sp(`ev-foto-${id}`, 0, pos[i][0], pos[i][1], 'py', label, { pose }); plans[id] = [{ act: at('FOTO BARENG', 'stand'), dwell: S(14) }, { act: at('CHEESE!', 'jump'), dwell: S(5) }, { act: at('FOTO BARENG', 'stand'), dwell: S(9) }]; });
+    plans[cam] = [{ act: sp('ev-foto-cam', 0, 6.4, 3.5, 'ny', 'FOTOIN', { prop: 'phone', say: ['Senyum… 1, 2, 3!', '#1e1f23'] }), dwell: S(30) }];
+    const e = ev(plans, 32);
+    e.items = (room, w) => room !== 0 ? [] : [{ x0: 6.3, y0: 3.4, x1: 6.5, y1: 3.6, draw: (c) => {
+      const el = (w - e.start) / 1000, ph = el % 4; if (el < 8 || ph > 0.35) return;
+      const [fx, fy] = iso(6.4, 3.5, 20), g = c.createRadialGradient(fx, fy, 0, fx, fy, 60); g.addColorStop(0, `rgba(255,255,255,${0.85 * (1 - ph / 0.35)})`); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(fx - 60, fy - 60, 120, 120);
+    } }];
+    return e;
+  }
+  if (kind === 'darurat') {
+    const who = workers(true); if (!who.length) return null;
+    const seats = [sp('', 0, 2.1, 7.6, 'px', '', { pose: 'sit' }), sp('', 0, 3.9, 7.6, 'nx', '', { pose: 'sit' }), sp('', 0, 3.0, 8.5, 'ny', '', { pose: 'sit' }), sp('', 0, 3.0, 6.7, 'py', '', { pose: 'sit' }), sp('', 0, 1.3, 7.0, 'px', ''), sp('', 0, 4.8, 7.0, 'nx', ''), sp('', 0, 4.8, 8.6, 'nx', '')];
+    const plans: Record<string, Step[]> = {};
+    who.forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-darurat-${id}`, label: 'RAPAT DARURAT' }, dwell: S(50) }]; });
+    if (freeFor(ctx, 'bos')) plans.bos = [{ act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'RAPAT DARURAT', { say: ['KENAPA SL TERUS?!', '#e5242b'] }), dwell: S(22) }, { act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'EVALUASI', { say: ['Cek lagi aturannya!', '#e5242b'] }), dwell: S(26) }];
+    return ev(plans, 52, { random: false });
+  }
+  if (kind === 'berita') {
+    const who = [...workers(true), ...['bos', 'ob'].filter((id) => freeFor(ctx, id))]; if (who.length < 2) return null;
+    const pos: Array<[number, number]> = [[7.4, 2.4], [8.4, 2.4], [9.4, 2.4], [10.4, 2.4], [7.9, 3.2], [8.9, 3.2], [9.9, 3.2]];
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, pos.length).forEach((id, i) => { plans[id] = [{ act: sp(`ev-berita-${id}`, 1, pos[i][0], pos[i][1], 'ny', 'NONTON BERITA'), dwell: S(110) }]; });
+    return ev(plans, 115, { random: false });
+  }
+  if (kind === 'bonus' || kind === 'gajian') {
+    if (!freeFor(ctx, 'bos')) return null;
+    const who = [...workers(true), ...['ob', 'jaga'].filter((id) => freeFor(ctx, id))]; if (!who.length) return null;
+    const word = kind === 'bonus' ? 'BONUS' : 'GAJI';
+    const plans: Record<string, Step[]> = { bos: [{ act: sp('ev-bonus-safe', 0, 8.37, 1.45, 'ny', 'BUKA BRANKAS'), dwell: S(5) }, { act: sp('ev-bonus-bos', 0, 8.6, 2.6, 'py', `BAGI ${word}`, { prop: 'envelope', say: [kind === 'bonus' ? 'Profit bagus, ini bonus kalian!' : 'Gajian, gajian!', '#2e9e5b'] }), dwell: S(36) }] };
+    who.slice(0, 7).forEach((id, i) => { const at = (label: string, more: Partial<Spot> = {}) => sp(`ev-bonus-${id}`, 0, 8.6, 3.5 + i * 0.8, 'ny', label, more); plans[id] = [{ act: at(`ANTRI ${word}`), dwell: S(10 + i * 3) }, { act: at(`DAPAT ${word}!`, { pose: 'jump', prop: 'envelope', say: ['Makasih bos!', '#2e9e5b'] }), dwell: S(6) }]; });
+    return ev(plans, 46, { random: false });
+  }
+  if (kind === 'catur' || kind === 'pingpong' || kind === 'gosip') {
+    const who = [...workers(), ...(freeFor(ctx, 'ob') ? ['ob'] : [])].slice(0, 2); if (who.length < 2) return null;
+    const pl: Array<[Spot, Spot]> = kind === 'catur' ? [[sp('', 2, 6.7, 5.4, 'px', 'MAIN CATUR', { pose: 'sit' }), sp('', 2, 8.5, 5.4, 'nx', 'MAIN CATUR', { pose: 'sit' })]]
+      : kind === 'pingpong' ? [[sp('', 2, 1.8, 6.85, 'px', 'MAIN PINGPONG', { prop: 'paddle' }), sp('', 2, 4.8, 6.85, 'nx', 'MAIN PINGPONG', { prop: 'paddle' })]]
+      : [[sp('', 2, 6.25, 2.35, 'px', 'GOSIP'), sp('', 2, 7.05, 2.35, 'nx', 'GOSIP')]];
+    const plans: Record<string, Step[]> = {};
+    who.forEach((id, i) => { plans[id] = [{ act: { ...pl[0][i], id: `ev-${kind}-${id}` }, dwell: S(kind === 'gosip' ? 30 : 48) }]; });
+    const e = ev(plans, kind === 'gosip' ? 32 : 50);
+    if (kind === 'catur') e.items = (room) => room !== 2 ? [] : [tableItem(2, TABLE2.x, TABLE2.y, TABLE2.z, (c, t, sx, sy) => {
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { c.fillStyle = (i + j) % 2 ? '#3a2a1e' : '#f1e3c6'; const [ax, ay] = [sx + (i - j) * 1.3, sy - 1 + (i + j - 3) * 0.65]; c.beginPath(); c.moveTo(ax, ay - 0.65); c.lineTo(ax + 1.3, ay); c.lineTo(ax, ay + 0.65); c.lineTo(ax - 1.3, ay); c.closePath(); c.fill(); }
+      const k = Math.floor(t / 3) % 4; c.fillStyle = '#ffffff'; c.fillRect(sx - 2 + k, sy - 4.5, 1.2, 2.8); c.fillStyle = '#1e1f23'; c.fillRect(sx + 1.5 - k * 0.6, sy - 4, 1.2, 2.8);
+    })];
+    if (kind === 'pingpong') e.items = (room) => room !== 2 ? [] : [{ x0: 2.45, y0: 6.9, x1: 4.15, y1: 7.0, draw: (c, t) => {
+      const ph = (t * 0.9) % 2, u = ph < 1 ? ph : 2 - ph, x = 2.1 + u * 2.4, z = 13 + Math.abs(Math.sin(u * Math.PI * 2)) * 7;
+      const [bx, by] = iso(x, 6.85, z); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(bx, by, 0.9, 0, 7); c.fill();
+    } }];
+    return e;
+  }
+  return null;
+}
+const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6]];
+/** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
+function scheduleEvents(ctx: EvCtx) {
+  const { wall, data, agents } = ctx;
+  const kick = (ids: string[]) => { for (const id of ids) { const a = agents[id]; if (a) { a.kick = true; a.queue = []; a.run = false; } } };
+  if (EV.cur && wall >= EV.cur.until) { kick(EV.cur.ids); EV.cur = null; EV.next = wall + (150 + Math.random() * 120) * 1000; }
+  if (!EV.next) EV.next = wall + 40_000;
+  const d = new Date(wall), day = d.toDateString(), h = d.getHours(), m = d.getMinutes();
+  const want: string[] = [];
+  const closed = data.trades.filter((t) => t.result !== 'open' && t.closedAt).sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0));
+  if (closed.length >= 3 && closed.slice(0, 3).every((t) => t.result === 'sl') && wall - (closed[0].closedAt ?? 0) < 30 * 60_000 && EV.done.darurat !== String(closed[0].id)) want.push('darurat');
+  const today = new Date(wall); today.setHours(0, 0, 0, 0);
+  const tdy = closed.filter((t) => (t.closedAt ?? 0) >= today.getTime());
+  if (tdy.filter((t) => t.result === 'tp').length >= 2 && tdy.reduce((s, t) => s + Number(t.pnl ?? 0), 0) > 0 && EV.done.bonus !== day && h >= 8 && h < 22) want.push('bonus');
+  if (d.getDate() === 25 && h === 10 && EV.done.gajian !== day) want.push('gajian');
+  if (d.getDay() === 5 && d.getDate() <= 7 && (h === 21 && m >= 15 || h === 22)) want.push('berita');     // first Friday: US jobs report (NFP)
+  if (h === 9 && m < 12 && d.getDay() > 0 && d.getDay() < 6 && EV.done.senam !== day) want.push('senam');
+  for (const kind of want) {
+    if (EV.cur && (!EV.cur.random || EV.cur.kind === kind)) break;
+    const e = makeEvent(kind, ctx); if (!e) continue;
+    if (kind !== 'senam') e.random = false;
+    if (EV.cur) kick(EV.cur.ids);
+    EV.cur = e; kick(e.ids);
+    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : day;
+    return;
+  }
+  if (!EV.cur && wall >= EV.next) {
+    const total = RANDOM_EVENTS.reduce((s, [, w]) => s + w, 0);
+    for (let tries = 0; tries < 4; tries++) {
+      let r = Math.random() * total, kind = RANDOM_EVENTS[0][0];
+      for (const [k, w] of RANDOM_EVENTS) { r -= w; if (r <= 0) { kind = k; break; } }
+      const e = makeEvent(kind, ctx);
+      if (e) { EV.cur = e; kick(e.ids); return; }
+    }
+    EV.next = wall + 60_000;
+  }
+}
 
 /* ---------- status from real data ---------- */
 type Status = { label: string; color: string; sleep: boolean; tag?: { text: string; color: string } | null; tp?: boolean; sl?: boolean };
@@ -159,6 +371,7 @@ function statuses(data: OfficeData, now: number): Record<string, Status> {
     jaga: silent ? { label: 'ALARM', color: '#ff5a5f', sleep: false, tag: { text: '⚠ ada yang diam', color: '#ff6b6b' } } : { label: 'AMAN', color: '#2ee59d', sleep: false, tag: null },
     bos: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
     vet: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
+    ob: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
   };
 }
 
@@ -765,6 +978,20 @@ function furniture(theme = 'modern'): Item[][] {
   pl(0, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
   pl(1, [[0.45, 0.45, 1.15], [0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
   pl(2, [[0.45, 10.55, 1.2], [12.55, 10.5, 1.25], [12.6, 3.7, 0.95]]);
+  // lobby: ping-pong table, the cat's bowl, the fingerprint clock-in machine by the lift
+  R[2].push({ x0: 2.4, y0: 6.4, x1: 4.2, y1: 7.3, draw: (c) => {
+    shadow(c, 2.4, 6.4, 1.8, 0.9);
+    for (const [x, y] of [[2.5, 6.5], [4.05, 6.5], [2.5, 7.15], [4.05, 7.15]]) box(c, x, y, 0.07, 0.07, 0, 11, '#1e1f23');
+    box(c, 2.4, 6.4, 1.8, 0.9, 11, 1.2, '#1f6b4f', '#17543d', '#1b5f46');
+    poly(c, [iso(2.45, 6.84, 12.25), iso(4.15, 6.84, 12.25), iso(4.15, 6.86, 12.25), iso(2.45, 6.86, 12.25)], '#ffffff');
+    poly(c, [iso(3.29, 6.4, 12.2), iso(3.31, 6.4, 12.2), iso(3.31, 7.3, 12.2), iso(3.29, 7.3, 12.2)], 'rgba(255,255,255,.7)');
+    poly(c, [iso(3.3, 6.35, 12.2), iso(3.3, 7.35, 12.2), iso(3.3, 7.35, 15), iso(3.3, 6.35, 15)], 'rgba(240,240,240,.55)');
+  } });
+  R[2].push({ x0: 5.75, y0: 0.95, x1: 5.95, y1: 1.15, draw: (c) => { ell(c, 5.85, 1.05, 0, 0.16, 'rgba(0,0,0,.12)'); cyl(c, 5.85, 1.05, 0, 0.13, 1.4, '#e5484d', '#c0392b'); ell(c, 5.85, 1.05, 1.4, 0.09, '#8a5a34'); } });
+  R[2].push({ x0: 10.75, y0: 0.3, x1: 10.95, y1: 0.5, draw: (c) => {
+    box(c, 10.78, 0.33, 0.14, 0.14, 0, 13, '#2a2b30'); box(c, 10.72, 0.3, 0.26, 0.2, 13, 5, '#33343a', '#26272c', '#2d2e34');
+    poly(c, [iso(10.76, 0.505, 14.5), iso(10.94, 0.505, 14.5), iso(10.94, 0.505, 17), iso(10.76, 0.505, 17)], '#2ee59d');
+  } });
   /* --- new pieces --- */
   R[0].push(...chair(2.2, 3.4, 'px', '#c9a227'));
   R[0].push({ x0: 2.0, y0: 2.45, x1: 2.45, y1: 2.9, draw: (c) => { ell(c, 2.22, 2.68, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 2.22, 2.68, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 2.22, 2.68, 10, 0.24, 1.5, '#f2c230', '#c9a227'); cyl(c, 2.15, 2.62, 11.5, 0.05, 2.5, '#ffffff', '#eeeeee'); } });
@@ -914,6 +1141,7 @@ interface Agent {
   x: number; y: number; vx: number; vy: number; face: Face; path: Array<[number, number]>; act: Spot; until: number; dist: number; speed: number;
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
   scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
+  queue?: Array<{ act: Spot; dwell: number }>; kick?: boolean; talkAt?: number;
 }
 /** two-bone limb (thigh + shin, upper arm + forearm): finds the joint so both bones keep their length */
 function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, l2: number, bend: number, w: number, col: string, col2?: string) {
@@ -1018,6 +1246,13 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     if (!walking && prop === 'can' && a.act.id === 'plant' && side > 0) { ex = 7; ey = syh + 3; }
     if (!walking && prop === 'club' && !shaking) { const w = Math.sin(t * 2.2); ex = 2.5 + w * 2.5 - side * 0.5; ey = syh + 6 - Math.abs(w) * 1.5; }
     if (!walking && prop === 'dumbbell' && !shaking) { ex = sxh + 1; ey = syh + 5 - Math.max(0, Math.sin(t * 3 + (side > 0 ? 0 : 3.14))) * 8; }
+    if (!walking && !shaking && prop === 'mop') { ex = 3.4 + Math.sin(t * 4) * 1.4 - side * 0.6; ey = syh + 4.2; }
+    if (!walking && !shaking && prop === 'rag' && side > 0) { ex = 5.2 + Math.cos(t * 6) * 1.4; ey = syh - 3 + Math.sin(t * 6) * 1.4; }
+    if (!walking && !shaking && prop === 'galon') { ex = sxh + side * 0.8 + 1.5; ey = syh - 6.5; }
+    if (!walking && !shaking && prop === 'mic' && side > 0) { ex = 2.8; ey = hy + 3.4; }
+    if (!walking && !shaking && prop === 'paddle' && side > 0) { const w = Math.sin(t * 0.9 * Math.PI * 2); ex = 3 + w * 2.6; ey = syh + 2.5 - Math.abs(w) * 1.2; }
+    if (!walking && !shaking && prop === 'guitar') { ex = side > 0 ? 3.4 : 7.5; ey = side > 0 ? hip - 3 + Math.sin(t * 12) * 0.7 : hip - 6; }
+    if (!walking && !shaking && prop === 'box' && !sitting) { ex = sxh + 2.6; ey = syh + 3.6; }
     if (whipT != null && side > 0) { const w = (whipT % 0.9) / 0.9; ex = sxh + 2 + Math.cos(w * 6.28) * 1.5; ey = syh - 7 + (w < 0.25 ? 6 * (w / 0.25) : 6 - 6 * ((w - 0.25) / 0.75)); }
     if (anim && !shaking && whipT == null && !a.carry) { const f = ph + (side > 0 ? 0 : Math.PI); ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side < 0) { const f = ph + Math.PI; ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
@@ -1031,6 +1266,19 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       if (prop === 'trash' && pose === 'stand') { c.fillStyle = '#1e1f23'; c.beginPath(); c.ellipse(ex + 0.5, ey + 2.5, 2.2, 2.8, 0, 0, 7); c.fill(); }
       if (prop === 'club' && !walking) { const w = Math.sin(t * 2.2); c.strokeStyle = '#d8d8d8'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + 1 + w * 4, -1.2); c.stroke(); c.fillStyle = '#9aa0a8'; c.fillRect(ex + w * 4, -2, 3, 1.4); if (w > 0.85) { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex + 9 + (t * 20) % 12, -1.2, 0.9, 0, 7); c.fill(); } }
       if (prop === 'phone' && !walking) { c.fillStyle = '#1e1f23'; c.fillRect(ex + 0.3, ey - 2.5, 1.4, 3.6); }
+      if (prop === 'mop' && !walking) { const mx = 7 + Math.sin(t * 4) * 3.2; c.strokeStyle = '#a07a4a'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(ex - 1, ey - 3); c.lineTo(mx, -0.8); c.stroke(); c.fillStyle = '#e4ded0'; c.beginPath(); c.ellipse(mx, -0.6, 2.8, 0.9, 0, 0, 7); c.fill(); }
+      if (prop === 'rag' && !walking) { c.fillStyle = '#f2c230'; c.fillRect(ex - 1.2, ey - 1.2, 2.6, 2.2); }
+      if (prop === 'galon' && !walking) { c.fillStyle = 'rgba(150,210,245,.92)'; c.beginPath(); c.roundRect(-0.5, syh - 16, 6.5, 9.5, 2.2); c.fill(); c.fillStyle = '#4c7dff'; c.fillRect(2, syh - 7, 1.6, 1.6); c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(0.6, syh - 14.5, 1, 6); }
+      if (prop === 'galon' && walking) { c.fillStyle = 'rgba(150,210,245,.92)'; c.beginPath(); c.roundRect(ex - 1, ey - 5, 5, 7, 1.8); c.fill(); }
+      if (prop === 'mic' && !walking) {
+        c.fillStyle = '#1e1f23'; c.fillRect(ex - 0.4, ey - 2.8, 0.9, 3.2); c.beginPath(); c.arc(ex, ey - 3.2, 1.1, 0, 7); c.fill();
+        for (let k = 0; k < 2; k++) { const w = (t * 0.6 + k * 0.5) % 1; c.fillStyle = `rgba(242,194,48,${1 - w})`; const nx = 6 + k * 3 + w * 3, ny = hy - 7 - w * 9; c.beginPath(); c.ellipse(nx, ny, 1, 0.8, -0.4, 0, 7); c.fill(); c.fillRect(nx + 0.6, ny - 3.2, 0.5, 3.2); }
+      }
+      if (prop === 'guitar' && !walking) { c.strokeStyle = '#5a3a1e'; c.lineWidth = 1; c.beginPath(); c.moveTo(4.5, hip - 3); c.lineTo(10.5, hip - 6.5); c.stroke(); c.fillStyle = '#c47a2c'; c.beginPath(); c.ellipse(3.6, hip - 2.4, 3.1, 2.3, -0.5, 0, 7); c.fill(); c.fillStyle = '#3a2412'; c.beginPath(); c.arc(4, hip - 2.7, 0.8, 0, 7); c.fill(); }
+      if (prop === 'box') { const bx = sitting && !walking ? 2.2 : ex - 1.5, by = sitting && !walking ? hip - 6.5 : ey - 4.2; c.fillStyle = '#c8a26b'; c.fillRect(bx, by, 6, 4.4); c.fillStyle = '#a8844e'; c.fillRect(bx, by, 6, 0.9); c.fillStyle = '#e9d9b0'; c.fillRect(bx + 2.6, by, 0.8, 4.4);
+        if (sitting && !walking) { c.fillStyle = '#f3a6c8'; c.beginPath(); c.arc(bx + 3, by - 0.8 - Math.abs(Math.sin(t * 2)) * 0.8, 1.6, 0, 7); c.fill(); } }
+      if (prop === 'envelope' && !walking) { c.fillStyle = '#ffffff'; c.fillRect(ex - 1.7, ey - 2.6, 3.6, 2.4); c.fillStyle = '#e5484d'; c.fillRect(ex - 0.3, ey - 2.6, 0.8, 2.4); }
+      if (prop === 'paddle' && !walking) { c.fillStyle = '#5a3a1e'; c.fillRect(ex - 0.3, ey - 0.6, 0.8, 2); c.fillStyle = '#d7262c'; c.beginPath(); c.arc(ex + 0.9, ey - 1.6, 1.9, 0, 7); c.fill(); }
       if (drama) {        // laptop on her lap with a Korean drama playing
         const sc = ['#f3a6c8', '#a6d8f3', '#f7d89a', '#c5b3f0'][Math.floor(t * 0.7) % 4];
         c.fillStyle = '#b9bcc4'; c.beginPath(); c.moveTo(4.2, hip - 2.6); c.lineTo(10.2, hip - 2.6); c.lineTo(9.4, hip - 0.9); c.lineTo(3.6, hip - 0.9); c.closePath(); c.fill();
@@ -1117,6 +1365,10 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     else if (pose === 'jump') { c.fillStyle = '#5a1a1a'; c.beginPath(); c.arc(hx + 1.4, hy + 2.8, 1.3, 0, Math.PI); c.fill(); }
     else { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.6; c.beginPath(); c.arc(hx + 1.4, hy + 3, 0.9, 0.2, Math.PI - 0.2); c.stroke(); }
     if (p.glasses) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.6; c.strokeRect(hx - 2.3, hy - 0.6, 3.2, 2.4); c.strokeRect(hx + 1.6, hy - 0.6, 3.2, 2.4); c.beginPath(); c.moveTo(hx + 0.9, hy + 0.2); c.lineTo(hx + 1.6, hy + 0.2); c.stroke(); }
+    if (a.act.label === 'MASKERAN' && !walking) {      // green face mask + cucumber slices
+      c.fillStyle = 'rgba(150,215,160,.94)'; c.beginPath(); c.ellipse(hx + 1.2, hy + 1.4, R * 0.8, R * 0.66, 0, 0, 7); c.fill();
+      for (const ex of [hx - 0.6, hx + 3.2]) { c.fillStyle = '#e3f5cf'; c.beginPath(); c.arc(ex, hy + 0.6, 1.45, 0, 7); c.fill(); c.strokeStyle = '#6fb35e'; c.lineWidth = 0.45; c.stroke(); }
+    }
   }
   if (angry) {
     const ax = hx + 4.5, ay = hy - 7 - Math.abs(Math.sin(t * 5)) * 0.8;
@@ -1136,6 +1388,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
 const lunch = (now: number) => { const h = new Date(now).getHours(); return h >= 12 && h < 13; };
 function variant(s: Spot, now: number): Spot {
   if (s.zone === 'eat' && lunch(now)) return { ...s, label: 'MAKAN SIANG', prop: 'food' };
+  if (s.label === 'LIHAT LUAR' && WEATHER.kind && Math.random() < 0.7) return { ...s, label: WEATHER.kind === 'snow' ? 'LIHAT SALJU' : 'LIHAT HUJAN' };
   if (!s.alt || Math.random() < 0.45) return s;
   const v = s.alt[Math.floor(Math.random() * s.alt.length)];
   return { ...s, label: v.label, pose: v.pose ?? s.pose, prop: v.prop ?? s.prop };
@@ -1149,6 +1402,27 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
     if (q.room === 1 && q.x < 3) return { id: `near-${id}-${p.id}`, room: 1, x: 3.45, y: q.face === 'py' ? q.y + 1.25 : q.y - 1.25, face: 'nx', pose: 'stand', label };
     return q.face === 'ny' ? { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.75, y: q.y + 0.6, face: 'ny', pose: 'stand', label } : { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.8, y: q.y + 0.65, face: 'nx', pose: 'stand', label };
   };
+  const ev = EV.cur;
+  if (ev && now < ev.until && ev.plans[p.id]?.length) return ev.plans[p.id].shift()!;
+  if (a.queue?.length) return a.queue.shift()!;
+  if (p.id === 'kurir') return { act: sp('ev-kurir-out', a.room, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 60_000 };
+  // Marcel and Ny. Vetrycia go home at night (the bots keep working overtime), and clock in again in the morning
+  if ((p.id === 'bos' || p.id === 'vet') && awayHours(now)) return { act: sp(`pulang-${p.id}`, 2, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 120_000 };
+  if ((p.id === 'bos' || p.id === 'vet') && a.act.id === `pulang-${p.id}`) { a.queue = [{ act: { ...p.seat, label: p.id === 'vet' ? 'NONTON DRAKOR' : 'NGITUNG CUAN', prop: p.id === 'vet' ? 'tablet' : undefined }, dwell: rnd(20, 30) }]; return { act: { ...X.absen, id: `absen-${p.id}`, label: 'ABSEN PAGI' }, dwell: rnd(2.5, 4) }; }
+  if (p.id === 'ob') {           // Udin the office boy: cleaning, coffee for the boss, water gallons, feeding the cat
+    const h = new Date(now).getHours(), late = h >= 21 || h < 6, bos = all.bos;
+    if (a.act.id !== p.seat.id && r < 0.25) return { act: p.seat, dwell: rnd(8, 16) };
+    const job = Math.random();
+    if (job < (late ? 0.45 : 0.22)) { const rm = Math.floor(Math.random() * 3); return { act: sp(`pel-${rm}`, rm, 1.5 + Math.random() * 9.5, 1.6 + Math.random() * 8, 'px', 'NGEPEL', { prop: 'mop' }), dwell: rnd(9, 15) }; }
+    if (job < (late ? 0.6 : 0.34)) { const rm = Math.floor(Math.random() * 3); return { act: sp(`lap-${rm}`, rm, 0.8, 2 + Math.random() * 6.5, 'nx', 'LAP JENDELA', { prop: 'rag' }), dwell: rnd(7, 12) }; }
+    if (job < 0.48 && bos && bos.act.id === 'seat-bos' && !bos.path.length && !taken.has('kopibos')) { a.queue = [{ act: { ...X.kopiBos }, dwell: rnd(3.5, 5) }]; return { act: { ...SPOTS.find((q) => q.id === 'coffee')!, id: 'ob-kopi', label: 'BIKIN KOPI BOS' }, dwell: rnd(4, 6) }; }
+    if (job < 0.58) { const rm = Math.random() < 0.5 ? 1 : 2; return { act: sp(`galon-${rm}`, rm, rm === 1 ? 7.6 : 2.6, 1.25, 'ny', 'GANTI GALON', { prop: 'galon' }), dwell: rnd(5, 8) }; }
+    if (job < 0.68) { CATCALL.at = now; return { act: { ...X.bowl }, dwell: rnd(5, 8) }; }
+    if (job < 0.76) return { act: { ...SPOTS.find((q) => q.id === 'trash')!, id: 'ob-trash' }, dwell: rnd(4, 6) };
+    if (job < 0.84) return { act: { ...SPOTS.find((q) => q.id === (Math.random() < 0.5 ? 'plant' : 'bplant'))!, id: 'ob-plant' }, dwell: rnd(5, 8) };
+    if (job < 0.92) return { act: { ...SPOTS.find((q) => q.id === 'eat3')!, id: 'ob-rest', label: 'ISTIRAHAT', prop: 'cup' }, dwell: rnd(10, 18) };
+    return { act: { ...SPOTS.find((q) => q.id === 'sink')!, id: 'ob-sink', label: 'CUCI PIRING' }, dwell: rnd(6, 10) };
+  }
   if (p.id === 'jaga') {
     if (s.label === 'ALARM') return { act: { ...p.seat, label: 'ALARM' }, dwell: 4000 };
     if (a.patrol > 0 && a.patrol <= PATROL.length) { const w = PATROL[a.patrol - 1]; a.patrol++; return { act: w, dwell: rnd(1.2, 3) }; }
@@ -1161,14 +1435,16 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   if (p.id === 'vet') {      // the big boss only eats, sleeps and watches Korean dramas, and breaks it up when Marcel yells at someone
     const m = all.bos;
     if (m && m.act.whip && m.room >= 0) return { act: { id: 'melerai', room: m.room, x: m.x, y: m.y, face: 'px', pose: 'stand', label: 'MAU MELERAI', whip: 'bos' }, dwell: 9000 };
-    if (r < 0.55) return { act: { ...p.seat, label: 'NONTON DRAKOR', prop: 'tablet' }, dwell: rnd(25, 45) };
+    if (r < 0.42) return { act: { ...p.seat, label: 'NONTON DRAKOR', prop: 'tablet' }, dwell: rnd(25, 45) };
+    if (r < 0.52) return { act: { ...p.seat, label: 'MASKERAN', prop: 'tablet' }, dwell: rnd(18, 30) };
+    if (r < 0.6) return { act: { ...p.seat, label: 'BELANJA ONLINE', prop: 'hp' }, dwell: rnd(12, 20) };
     if (r < 0.72) return { act: { ...p.seat, label: 'MAKAN', prop: 'food' }, dwell: rnd(10, 18) };
     if (r < 0.88) return { act: { ...p.seat, label: 'TIDUR', pose: 'nap' }, dwell: rnd(15, 30) };
     if (r < 0.95 && !taken.has('bsofa1')) return { act: { ...SPOTS.find((q) => q.id === 'bsofa1')!, label: 'TIDUR', pose: 'nap' }, dwell: rnd(15, 30) };
     return { act: { ...SPOTS.find((q) => q.id === 'fridge')!, id: 'vet-snack', label: 'AMBIL CEMILAN' }, dwell: rnd(4, 7) };
   }
   if (p.id === 'bos') {
-    const victims = WORKERS.filter((id) => all[id] && !S[id]?.sleep && S[id]?.label !== 'LIBUR' && !(all[id].act.prop === 'vanish' && !all[id].path.length) && !all[id].pending);
+    const victims = WORKERS.filter((id) => all[id] && !inEvent(id, now) && !S[id]?.sleep && S[id]?.label !== 'LIBUR' && !(all[id].act.prop === 'vanish' && !all[id].path.length) && !all[id].pending);
     const sl = victims.filter((id) => S[id]?.sl);
     const slack = victims.filter((id) => { const v = all[id]; return !v.act.id.startsWith('seat-') && !v.path.length; });
     const mad = sl.length ? sl : r < 0.45 && slack.length ? slack : r < 0.55 ? victims : [];
@@ -1188,12 +1464,21 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
     if (!a.act.id.startsWith('seat-') && r < 0.9) return { act: p.seat, dwell: rnd(25, 50) };
     return r < 0.8 ? { act: p.seat, dwell: rnd(25, 50) } : { act: pick(SPOTS.filter((q) => ['water', 'win1', 'win2', 'win3', 'tv', 'stretch', 'trash', 'board', 'printer'].includes(q.id))), dwell: rnd(5, 9) };
   }
+  if (s.label === 'LIBUR' && r < 0.3) { const f = [X.karaoke, X.gitar].filter((q) => !taken.has(q.id)); if (f.length) return { act: { ...f[Math.floor(Math.random() * f.length)] }, dwell: rnd(15, 25) }; }
   if (s.label === 'LIBUR') return { act: pick(ROAM.filter((q) => q.zone === 'lounge' || q.zone === 'break' || q.zone === 'eat' || q.zone === 'gym' || q.id === 'hp')), dwell: rnd(10, 22) };
   if (!a.act.id.startsWith('seat-') && r < 0.4) {
     const h = new Date(now).getHours(), late = h >= 22 || h < 6;
     return { act: { ...p.seat, label: p.id === 'tg' ? 'BALAS CHAT' : late && Math.random() < 0.4 ? 'NGANTUK' : 'MEMANTAU' }, dwell: rnd(15, 35) };
   }
   if (r < 0.5 && PARTNER[p.id]) return { act: near(PARTNER[p.id], Math.random() < 0.5 ? 'NGOBROL' : 'LIHAT CHART TEMAN'), dwell: rnd(6, 12) };
+  const x = Math.random(), cat = CATREF;
+  if (x < 0.14 && cat && cat.mode !== 'walk' && !cat.hop && cat.z < 8 && !taken.has('elus')) {
+    const tx = cat.x + 0.55, ty = cat.y + 0.45; cat.until = Math.max(cat.until, now + 14_000);
+    return { act: sp('elus', cat.room, tx, ty, faceTo(cat.x - tx, cat.y - ty), 'ELUS KUCING', { pose: cat.z < 1 ? 'squat' : 'stand', say: ['Pus, pus~', '#1e1f23'] }), dwell: rnd(6, 10) };
+  }
+  if (x < 0.22 && taken.has('toilet')) return { act: sp(`antri-${p.id}`, 2, 4.7, 1.45 + Math.random() * 0.4, 'ny', 'ANTRI TOILET', { say: ['Lama banget sih…', '#1e1f23'] }), dwell: rnd(5, 8) };
+  if (x < 0.3 && all.bos && all.bos.act.id === 'seat-bos' && !all.bos.path.length && !taken.has('ttd')) return { act: { ...X.ttd }, dwell: rnd(5, 8) };
+  if (x < 0.36 && new Date(now).getHours() >= 7 && new Date(now).getHours() < 10 && !taken.has('absen')) return { act: { ...X.absen }, dwell: rnd(2.5, 4) };
   return { act: pick(ROAM), dwell: rnd(7, 16) };
 }
 const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-${id}`, room, x: LIFT.x, y: LIFT.y, face: 'ny', pose: 'stand', label: up ? 'NAIK LIFT' : 'TURUN LIFT' });
@@ -1207,6 +1492,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const wrap = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLCanvasElement>(null);
   const st = useMemo(() => statuses(data, now), [data, now]);
+  const dataRef = useRef(data); dataRef.current = data;
   const stRef = useRef(st); stRef.current = st;
   const scrRef = useRef(screen); scrRef.current = screen;
   const positions = useMemo(() => openPositions(data), [data]);
@@ -1219,6 +1505,15 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const fullRef = useRef(full); fullRef.current = full;
   const driftRef = useRef(false);
   const [zoomed, setZoomed] = useState(false);
+  useEffect(() => {
+    let off = false;
+    const load = () => fetch('https://api.open-meteo.com/v1/forecast?latitude=37.57&longitude=126.98&current=weather_code').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (off || !j) return; const w = Number(j?.current?.weather_code);
+      WEATHER.kind = (w >= 71 && w <= 77) || w === 85 || w === 86 ? 'snow' : (w >= 51 && w <= 67) || (w >= 80 && w <= 82) || w >= 95 ? 'rain' : null;
+    }).catch(() => {});
+    load(); const id = window.setInterval(load, 20 * 60_000);
+    return () => { off = true; window.clearInterval(id); };
+  }, []);
 
   // pinch / pan / double tap / wheel zoom (page scroll keeps working while not zoomed)
   useEffect(() => {
@@ -1287,7 +1582,9 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true;
     loadPhoto(() => { bgKey = ''; });
     const agents: Record<string, Agent> = {};
+    let evAt = 0, mopAt = 0, shooAt = 0;
     const cat: Cat = { room: 1, x: 7.5, y: 5.1, z: 0, vx: 0, vy: 0, dx: 1, dy: 0, path: [], spot: CAT_SPOTS[6], mode: 'sleep', until: Date.now() + 8000, hidden: 0, pending: null, hop: null, meow: 0 };
+    CATREF = cat;
     const resize = () => {
       const w = box0.clientWidth || W; dpr = Math.min(3, window.devicePixelRatio || 1);
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
@@ -1304,7 +1601,9 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       raf = requestAnimationFrame(frame);
       if (document.visibilityState !== 'visible') { last = tm; return; }
       const dt = Math.min(0.05, (tm - last) / 1000); last = tm;
-      const t = tm / 1000, wall = Date.now(), S = stRef.current;
+      const t = tm / 1000, wall = Date.now(), S0 = stRef.current;
+      const S: Record<string, Status> = EV.cur?.courier && wall < EV.cur.until ? { ...S0, kurir: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : S0;
+      if (wall - evAt > 500) { evAt = wall; scheduleEvents({ agents, S, wall, data: dataRef.current }); }
       for (const id of WORKERS) { const s = S[id]; MODES[id] = !s || s.label === 'BELUM AKTIF' || s.sleep ? 'off' : s.label.startsWith('POSISI') ? 'pos' : 'idle'; }
       MODES.tgSend = S.tg?.label === 'KIRIM PESAN' ? 'pos' : 'off';
       MODES.alarm = S.jaga?.label === 'ALARM' ? 'pos' : 'off';
@@ -1315,6 +1614,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (!s || s.label === 'BELUM AKTIF') { delete agents[p.id]; continue; }
         let a = agents[p.id];
         if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.id === 'vet' ? { ...p.seat, prop: 'tablet' } : p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
+        if (p.id === 'kurir' && !a.act.id.startsWith('ev-')) { a.hiddenUntil = wall + 1200; a.carry = 'box'; a.carryUntil = wall + 14_000; a.until = 0; a.face = 'py'; }
         if (wall < a.hiddenUntil) continue;                                          // riding the lift
         if (wall < a.scoldUntil) { a.path = []; a.vx = a.vy = 0; continue; }          // frozen while being yelled at
         // arrived at the lift with somewhere to go: ride to the other floor, step out, walk on
@@ -1327,7 +1627,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         const bosYelling = p.id === 'vet' && !!agents.bos?.act.whip && a.act.id !== 'melerai';
         const forced = ((s.sleep || s.label === 'KIRIM PESAN' || s.label === 'ALARM') && a.act.id !== p.seat.id) || bosYelling;
         const changed = a.last !== s.label; a.last = s.label;
-        if ((!a.path.length && wall > a.until) || forced || (changed && s.label.startsWith('POSISI'))) {
+        if ((!a.path.length && wall > a.until) || forced || a.kick || (changed && s.label.startsWith('POSISI'))) {
+          a.kick = false;
           taken.delete(a.act.id);
           if (a.act.prop && ['cup', 'food', 'can', 'paper', 'book'].includes(a.act.prop) && a.act.id !== 'plant') { a.carry = a.act.prop; a.carryUntil = wall + 20_000; }
           const nx = choose(p, S, a, taken, wall, agents);
@@ -1335,6 +1636,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           if (a.act.room !== a.room) { a.pending = a.act; a.act = liftSpot(a.room, p.id, a.pending.room < a.room); }
           a.speed = a.run ? 2.7 : p.id === 'jaga' && s.label === 'ALARM' ? 2.6 : p.id === 'vet' && a.act.whip ? 2.5 : p.id === 'bos' && a.act.whip ? 2.1 : 1.35 + hash(p.id) * 0.25;
           a.path = Math.hypot(a.act.x - a.x, a.act.y - a.y) > 0.02 ? findPath(grids[a.room], a.x, a.y, a.act.x, a.act.y) : [];
+          if (!a.path.length && a.act.say) a.bubble = { text: a.act.say[0], until: wall + 3800, color: a.act.say[1] };
+          if (p.id === 'kurir' && a.act.id === 'ev-kurir-out') a.carry = null;
         }
         if (wall > a.carryUntil) a.carry = null;
         // the boss chases his victim, then yells and cracks the whip
@@ -1389,11 +1692,32 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           if (sp > 0.25) { const nf = faceTo(a.vx, a.vy); if (nf !== a.face && (Math.abs(a.vx) > Math.abs(a.vy) * 1.25 || Math.abs(a.vy) > Math.abs(a.vx) * 1.25)) a.face = nf; }
           if ((!lastPt && d < 0.28) || (lastPt && d < 0.025)) {
             a.path.shift();
-            if (!a.path.length) { a.x = gx; a.y = gy; a.vx = a.vy = 0; a.until = Math.max(a.until, wall + 2500); }
+            if (!a.path.length) { a.x = gx; a.y = gy; a.vx = a.vy = 0; a.until = Math.max(a.until, wall + 2500); if (a.act.say) a.bubble = { text: a.act.say[0], until: wall + 3800, color: a.act.say[1] }; }
           }
         } else { a.vx *= 0.8; a.vy *= 0.8; }
       }
-      stepCat(cat, grids, dt, wall);
+      // small talk: people chatting / singing / watching the news say something now and then
+      for (const p of PEOPLE) {
+        const a = agents[p.id]; if (!a || a.path.length || wall < a.scoldUntil || (a.bubble && wall < a.bubble.until + 1500)) continue;
+        const lines = CHAT[a.act.label]; if (!lines) continue;
+        if (wall - (a.talkAt ?? 0) > 3500 + hash(p.id + Math.floor(wall / 4000)) * 5000) { a.talkAt = wall; a.bubble = { text: lines[Math.floor(Math.random() * lines.length)], until: wall + 2600, color: '#1e1f23' }; }
+      }
+      // Udin's wet floor
+      const ob = agents.ob;
+      if (ob && !ob.path.length && ob.act.prop === 'mop' && wall - mopAt > 350) { mopAt = wall; MOPS.push({ room: ob.room, x: ob.x + 0.35 + (Math.random() - 0.5) * 0.7, y: ob.y + (Math.random() - 0.5) * 0.7, t: wall }); }
+      while (MOPS.length && wall - MOPS[0].t > 25_000) MOPS.shift();
+      const catAt = stepCat(cat, grids, dt, wall);
+      // the cat lies down on a keyboard: the trader is not amused
+      if (catAt && catAt.room === 1 && catAt.z > 10) {
+        const ids = catAt.y < 5 ? ['alt', 'big'] : ['xau', 'nas'];
+        for (const id of ids) { const a = agents[id]; if (a && a.act.id.startsWith('seat-') && !a.path.length) { a.bubble = { text: ['Kucing, minggir dong…', 'Eh, itu keyboard aku!', 'Aduh, chartnya ketutup'][Math.floor(Math.random() * 3)], until: wall + 4000, color: '#1e1f23' }; break; } }
+      }
+      // the cat in the boss room: Pentoel shoos it out
+      const jg = agents.jaga;
+      if (jg && cat.room === 0 && cat.mode !== 'walk' && !cat.hop && wall - shooAt > 40_000 && S.jaga?.label === 'AMAN' && !inEvent('jaga', wall)) {
+        shooAt = wall; jg.queue = [{ act: sp('usir', 0, cat.x + 0.6, cat.y + 0.4, faceTo(-0.6, -0.4), 'USIR KUCING', { say: ['Hus! Hus! Keluar!', '#1e1f23'] }), dwell: 3500 }]; jg.kick = true;
+      }
+      if (jg && jg.act.id === 'usir' && jg.room === cat.room && Math.hypot(jg.x - cat.x, jg.y - cat.y) < 1.3 && !(cat.flee && wall < cat.flee)) { cat.flee = wall + 7000; cat.until = 0; cat.meow = wall + 1500; cat.meowText = 'MEONG!'; }
       BUSY.coffee = Object.values(agents).some((a) => a.act.id === 'coffee' && !a.path.length);
       BUSY.sink = Object.values(agents).some((a) => a.act.id === 'sink' && !a.path.length);
       BUSY.printer = Object.values(agents).some((a) => a.act.id === 'printer' && !a.path.length);
@@ -1430,7 +1754,10 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (r <= 1) drawWallText(c, scrRef.current, r, t);
         if (r === 1) drawPositions(c, posRef.current, t);
         drawBoards(c, r, wall, t);
+        drawWeather(c, r, t);
+        for (const m of MOPS) if (m.room === r) { const k = 1 - (wall - m.t) / 25_000; ell(c, m.x, m.y, 0.2, 0.32, `rgba(205,232,255,${0.22 * k})`); ell(c, m.x - 0.08, m.y - 0.05, 0.25, 0.1, `rgba(255,255,255,${0.35 * k})`); }
         const list: Item[] = items[r].slice();
+        if (EV.cur?.items && wall < EV.cur.until) list.push(...EV.cur.items(r, wall));
         for (const p of PEOPLE) {
           const a = agents[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
           if (!a.path.length && a.act.prop === 'vanish') continue;          // in the toilet
@@ -1442,10 +1769,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           const up = cat.z > 3;      // on a desk / sofa: draw after the furniture it sits on
           list.push({ x0: cat.x - 0.15 + (up ? 0.5 : 0), y0: cat.y - 0.15 + (up ? 0.5 : 0), x1: cat.x + 0.15 + (up ? 0.5 : 0), y1: cat.y + 0.15 + (up ? 0.5 : 0), draw: (cc, tt) => {
             drawCat(cc, cat, tt);
-            if (wall < cat.meow) { const [mx, my] = iso(cat.x, cat.y, cat.z); cc.font = '800 5px system-ui, sans-serif'; cc.textAlign = 'center'; cc.fillStyle = '#ffffff'; cc.strokeStyle = 'rgba(30,31,35,.8)'; cc.lineWidth = 1.6; cc.strokeText('meong~', mx, my - 14); cc.fillText('meong~', mx, my - 14); cc.textAlign = 'start'; }
+            if (wall < cat.meow) { const [mx, my] = iso(cat.x, cat.y, cat.z); cc.font = '800 5px system-ui, sans-serif'; cc.textAlign = 'center'; cc.fillStyle = '#ffffff'; cc.strokeStyle = 'rgba(30,31,35,.8)'; cc.lineWidth = 1.6; const mt = cat.meowText ?? 'meong~'; cc.strokeText(mt, mx, my - 14); cc.fillText(mt, mx, my - 14); cc.textAlign = 'start'; }
           } });
         }
         for (const it of isoSort(list)) it.draw(c, t);
+        if (r === 0 && nightNow && awayHours(wall) && ['bos', 'vet'].every((id) => !agents[id] || agents[id].room !== 0)) {
+          const wh = WALL + 26; poly(c, [iso(0, NY, 0), iso(NX, NY, 0), iso(NX, 0, 0), iso(NX, 0, wh), iso(0, 0, wh), iso(0, NY, wh)], 'rgba(4,6,16,.5)');
+        }
         for (const p of PEOPLE) {
           const a = agents[p.id], s = S[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
           const [sx, sy] = iso(a.x, a.y);
@@ -1465,7 +1795,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + (r * RH + TOPM) * V.z));
           glow(6, 5, 70, 120, 'rgba(255,220,150,.07)');
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
-          if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
+          if (r === 0 && !awayHours(wall)) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
           if (r === 2) { glow(8.0, 0.4, 30, 30, 'rgba(255,200,90,.18)'); glow(4.8, 8.8, 20, 34, 'rgba(255,200,90,.12)'); }
           if (r > 0) for (const [lx, ly] of r === 1 ? [[7.5, 5.1], [4.2, 5.4], [10.4, 8.6]] : [[7.6, 5.4], [4.8, 8.8], [10.2, 9.9]]) { glow(lx, ly, 112, 34, 'rgba(255,214,140,.22)'); glow(lx, ly, 30, 46, 'rgba(255,214,140,.08)'); }
         }
@@ -1526,8 +1856,8 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
   if (room === 0) onWall(ROSTER.x0, ROSTER.z1, () => {
     c.textBaseline = 'middle';
     c.font = '900 6px system-ui, sans-serif'; c.fillStyle = '#b8901a'; c.textAlign = 'center'; c.fillText('T I M', rw / 2, 5); c.textAlign = 'left';
-    const lh = (rh2 - 10) / PEOPLE.length;
-    PEOPLE.forEach((p, i) => {
+    const team = PEOPLE.filter((p) => p.id !== 'kurir'), lh = (rh2 - 10) / team.length;
+    team.forEach((p, i) => {
       const y = 10 + lh * (i + 0.5);
       c.font = '600 4px ui-monospace, Menlo, monospace'; const roleW = c.measureText(p.role).width;
       let fs = 5; c.font = `800 ${fs}px system-ui, sans-serif`; while (fs > 3 && c.measureText(p.name).width + roleW + 9 > rw) { fs -= 0.25; c.font = `800 ${fs}px system-ui, sans-serif`; }
@@ -1617,13 +1947,16 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
   for (const p of PEOPLE) {
     const a = agents[p.id], s = S[p.id]; if (!a || !s) continue;
     const walking = a.path.length > 0, hidden = !walking && a.act.prop === 'vanish';
+    if (hidden && a.act.label === 'PULANG') continue;            // gone home / left the building
+    // big group events: one name tag tells the story, the others only show up when they say something
+    if (EV.cur && wall < EV.cur.until && EV.cur.ids.length >= 4 && EV.cur.ids.includes(p.id) && p.id !== EV.cur.ids[0] && !(a.bubble && wall < a.bubble.until) && a.act.id.startsWith('ev-')) continue;
     const busy = wall < a.scoldUntil;
     let what = walking ? (a.run ? 'LARI KE MEJA' : (p.id === 'bos' || p.id === 'vet') && a.act.whip ? (p.id === 'vet' ? 'NYARI MARCEL' : 'NGEJAR') : 'JALAN') : a.act.label;
     if (busy) what = 'DIMARAHI BOS';
     if (p.id === 'vet' && !walking && a.act.label === 'NONTON DRAKOR') what = `DRAKOR · ${vetMood(wall / 1000)}`;
     let label = s.label, color = s.color;
     if (busy) { label = what; color = '#ff6b6b'; }
-    else if (s.label === 'MEMANTAU' || p.id === 'bos' || p.id === 'vet' || (p.id === 'jaga' && s.label === 'AMAN')) {
+    else if (s.label === 'MEMANTAU' || p.id === 'bos' || p.id === 'vet' || p.id === 'ob' || p.id === 'kurir' || (p.id === 'jaga' && s.label === 'AMAN')) {
       label = what; color = what === 'MEMANTAU' || what === 'BALAS CHAT' ? s.color : what.startsWith('MARAH') || what === 'NGEJAR' ? '#ff6b6b' : what.startsWith('MELERAI') || what === 'MAU MELERAI' ? '#2ee59d' : what.startsWith('NGOMEL') ? '#ff6b6b' : ['JAGA', 'PATROLI', 'CEK CCTV', 'CEK PINTU'].includes(what) ? '#2ee59d' : '#f5b83d';
     } else if (s.label === 'LIBUR') label = `LIBUR · ${what}`;
     else if (s.label.startsWith('POSISI') && what === 'SELEBRASI TP') label = what;
@@ -1678,7 +2011,11 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
 type CatMode = 'walk' | 'sit' | 'sleep' | 'groom' | 'loaf';
 type CatSpot = { room: number; x: number; y: number; z: number; mode: CatMode; dwell: [number, number] };
 type Cat = { room: number; x: number; y: number; z: number; vx: number; vy: number; dx: number; dy: number; path: Array<[number, number]>; spot: CatSpot | null; mode: CatMode;
-  until: number; hidden: number; pending: CatSpot | null; hop: { x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; t0: number } | null; meow: number };
+  until: number; hidden: number; pending: CatSpot | null; hop: { x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; t0: number } | null; meow: number; flee?: number; meowText?: string };
+let CATREF: Cat | null = null;
+const CATCALL = { at: 0, seen: 0 };
+const WEATHER: { kind: 'rain' | 'snow' | null } = { kind: null };
+const MOPS: Array<{ room: number; x: number; y: number; t: number }> = [];
 const CAT_SPOTS: CatSpot[] = [
   { room: 2, x: 10.2, y: 9.8, z: 7, mode: 'sleep', dwell: [25, 50] },        // lobby sofa
   { room: 2, x: 4.75, y: 8.85, z: 0.5, mode: 'loaf', dwell: [12, 25] },      // lounge rug
@@ -1692,39 +2029,44 @@ const CAT_SPOTS: CatSpot[] = [
   { room: 0, x: 3.0, y: 4.2, z: 0, mode: 'sit', dwell: [8, 15] },            // next to Ny. Vetrycia
   { room: 0, x: 6.4, y: 4.75, z: 0, mode: 'groom', dwell: [8, 15] },         // at Marcel's feet
 ];
+const BOWL: CatSpot = { room: 2, x: 5.85, y: 1.1, z: 0, mode: 'loaf', dwell: [10, 16] };
 function catPick(c: Cat, wall: number) {
+  if (CATCALL.at > CATCALL.seen) { CATCALL.seen = CATCALL.at; return BOWL; }
+  if (c.flee && wall < c.flee) { const away = CAT_SPOTS.filter((q) => q.room !== c.room); return away[Math.floor(Math.random() * away.length)]; }
   if (Math.random() < 0.35) { c.spot = null; c.mode = 'walk'; c.until = wall + 4000 + Math.random() * 5000; return { room: c.room, x: 1 + Math.random() * 10.5, y: 1.2 + Math.random() * 9, z: 0, mode: 'sit' as CatMode, dwell: [3, 7] as [number, number] }; }
   return CAT_SPOTS[Math.floor(Math.random() * CAT_SPOTS.length)];
 }
-function stepCat(c: Cat, grids: boolean[][][], dt: number, wall: number) {
-  if (wall < c.hidden) return;
+function stepCat(c: Cat, grids: boolean[][][], dt: number, wall: number): CatSpot | null {
+  if (wall < c.hidden) return null;
+  if (CATCALL.at > CATCALL.seen && !c.hop && c.mode !== 'walk') c.until = 0;     // food! (Udin is filling the bowl)
   if (c.hop) {                                       // jumping up onto / down from furniture
     const k = Math.min(1, (wall - c.hop.t0) / 450), h = c.hop;
     c.x = h.x0 + (h.x1 - h.x0) * k; c.y = h.y0 + (h.y1 - h.y0) * k; c.z = h.z0 + (h.z1 - h.z0) * k + Math.sin(k * Math.PI) * (h.z0 !== h.z1 ? 9 : 1.5);
     if (k >= 1) { c.hop = null; c.z = h.z1; }
-    return;
+    return null;
   }
   if (c.path.length) {
-    const [gx, gy] = c.path[0], dx = gx - c.x, dy = gy - c.y, d = Math.hypot(dx, dy), sp = 1.1;
+    const [gx, gy] = c.path[0], dx = gx - c.x, dy = gy - c.y, d = Math.hypot(dx, dy), sp = c.flee && wall < c.flee ? 2.4 : 1.1;
     if (d > 1e-4) { c.vx = (dx / d) * sp; c.vy = (dy / d) * sp; c.dx = dx / d; c.dy = dy / d; }
     c.x += c.vx * dt; c.y += c.vy * dt; c.mode = 'walk';
     if (d < 0.08) { c.path.shift(); if (!c.path.length) { c.vx = c.vy = 0; } }
-    return;
+    return null;
   }
   c.vx = c.vy = 0;
   // arrived at the lift: ride to the other floor
   if (c.pending && Math.hypot(c.x - LIFT.x, c.y - LIFT.y - 0.15) < 0.6) {
     const nx = c.pending; c.pending = null; c.room = nx.room; c.x = LIFT.x; c.y = LIFT.y + 0.4; c.hidden = wall + 1500;
-    c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); return;
+    c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); return null;
   }
-  if (c.spot && Math.hypot(c.spot.x - c.x, c.spot.y - c.y) > 0.05) { c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: c.spot.x, y1: c.spot.y, z1: c.spot.z, t0: wall }; return; }
-  if (c.spot && c.mode === 'walk') { c.mode = c.spot.mode; c.until = wall + (c.spot.dwell[0] + Math.random() * (c.spot.dwell[1] - c.spot.dwell[0])) * 1000; if (Math.random() < 0.4) c.meow = wall + 1800; return; }
-  if (wall < c.until) return;
+  if (c.spot && Math.hypot(c.spot.x - c.x, c.spot.y - c.y) > 0.05) { c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: c.spot.x, y1: c.spot.y, z1: c.spot.z, t0: wall }; return null; }
+  if (c.spot && c.mode === 'walk') { c.mode = c.spot.mode; c.until = wall + (c.spot.dwell[0] + Math.random() * (c.spot.dwell[1] - c.spot.dwell[0])) * 1000; if (Math.random() < 0.4) c.meow = wall + 1800; c.meowText = c.spot === BOWL ? 'nyam nyam~' : 'meong~'; return c.spot; }
+  if (wall < c.until) return null;
   // time to move on: first hop down if we are up on something
-  if (c.z > 0.6) { const [fx, fy] = findPath(grids[c.room], c.x, c.y, c.x + 0.8, c.y + 0.8).slice(-1)[0] ?? [c.x + 0.8, c.y]; c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: fx, y1: fy, z1: 0, t0: wall }; c.spot = null; c.mode = 'walk'; return; }
+  if (c.z > 0.6) { const [fx, fy] = findPath(grids[c.room], c.x, c.y, c.x + 0.8, c.y + 0.8).slice(-1)[0] ?? [c.x + 0.8, c.y]; c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: fx, y1: fy, z1: 0, t0: wall }; c.spot = null; c.mode = 'walk'; return null; }
   const nx = catPick(c, wall); c.mode = 'walk';
   if (nx.room !== c.room) { c.pending = nx; c.spot = null; c.path = findPath(grids[c.room], c.x, c.y, LIFT.x, LIFT.y + 0.15); }
   else { c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); }
+  return null;
 }
 function drawCat(c: C, k: Cat, t: number) {
   const [px, py] = iso(k.x, k.y, k.z);
@@ -1785,6 +2127,23 @@ function drawCatBody(c: C, k: Cat, t: number) {
   const blink = Math.floor(t * 0.7 + k.x) % 6 === 0;
   eyes(hx, hy, 1.9, groom || blink || loaf && Math.floor(t / 4) % 2 === 1);
   if (groom) { c.fillStyle = light; c.beginPath(); c.ellipse(hx + side * 1.6, hy + 1.2 + Math.sin(t * 9) * 0.6, 0.9, 0.7, 0, 0, 7); c.fill(); }
+}
+
+/** rain or snow behind the big window wall of each floor (Seoul weather) */
+function drawWeather(c: C, room: number, t: number) {
+  const kind = WEATHER.kind; if (!kind) return;
+  const wh = room === 0 ? WALL + 22 : RH - 14;
+  // the floor above hides the top of the glass towards the back: keep the drops below it
+  const top = (y: number) => Math.min(wh, RH - 2 * TH * (NY - y) - 12);
+  c.save(); c.beginPath(); const pts = [iso(0, 0.2, 2), iso(0, NY - 0.2, 2), iso(0, NY - 0.2, top(NY - 0.2)), iso(0, 0.2, top(0.2))]; c.moveTo(pts[0][0], pts[0][1]); for (const q of pts.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
+  const n = kind === 'rain' ? 70 : 55;
+  for (let i = 0; i < n; i++) {
+    const y = 0.2 + hash(`wy${room}${i}`) * (NY - 0.4), sp2 = kind === 'rain' ? 140 : 18, z = wh - ((t * sp2 + hash(`wz${room}${i}`) * wh) % wh);
+    const [x0, y0] = iso(0, y + (kind === 'snow' ? Math.sin(t + i) * 0.15 : 0), z);
+    if (kind === 'rain') { c.strokeStyle = 'rgba(200,220,255,.35)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 - 1.2, y0 + 6); c.stroke(); }
+    else { c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(x0, y0, 0.9, 0, 7); c.fill(); }
+  }
+  c.restore();
 }
 
 function isoSort(list: Item[]): Item[] {
