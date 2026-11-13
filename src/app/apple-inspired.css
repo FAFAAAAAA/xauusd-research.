@@ -962,3 +962,17 @@ html:has(.office-home), html:has(.office-home) body { background: var(--office-s
 body:has(.office-home)::after { display: none; }
 .office.office-full { width: 100%; height: 100%; border-radius: 0; background: transparent; }
 .office.office-full .office-canvas { display: block; }
+
+/* ---- micro-interactions: buttons give a little when pressed, cards lift softly, rows respond to a tap ---- */
+.btn, button, [role="button"], .cal-arrow, .seg button { transition: transform .14s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease, background-color .2s ease, opacity .2s ease; }
+.btn:active:not(:disabled), button:active:not(:disabled), [role="button"]:active { transform: scale(.95); }
+.b-tile, .b-stat, .item, .op-strat, .hc-name { transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease; }
+.b-tile:active, .b-stat:active, .item:active { transform: scale(.985); }
+@media (hover: hover) {
+  .b-tile:hover, .b-stat:hover { transform: translateY(-3px) perspective(700px) rotateX(1.5deg); box-shadow: 0 14px 30px rgba(0,0,0,.10); }
+  .item:hover { transform: translateY(-1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, button, [role="button"], .b-tile, .b-stat, .item { transition: none; }
+  .btn:active:not(:disabled), button:active:not(:disabled), .b-tile:hover, .b-stat:hover, .b-tile:active, .b-stat:active, .item:active, .item:hover { transform: none; }
+}

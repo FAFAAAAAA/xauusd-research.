@@ -643,7 +643,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
         </div>
       </details>
       </div>
-      {!sets.length ? <div className="notice">{markets.length ? 'Data belum siap.' : 'Memuat daftar pair…'}</div> : null}
+      {!sets.length ? (markets.length ? <div className="notice">Data belum siap.</div> : <Loading what="daftar pair" variant="list" />) : null}
       {busy
         ? <button className="btn block" onClick={() => { stop.current = true; }}><Spinner />Berhenti setelah tahun ini</button>
         : <button className="btn primary block" onClick={run} disabled={!f.strategy || !chosen.length || (!custom && !list.length)}>
