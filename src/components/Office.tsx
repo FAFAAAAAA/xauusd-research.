@@ -62,14 +62,13 @@ const seat = (id: string, room: number, x: number, y: number, face: Face, label 
 const PEOPLE: Person[] = [
   { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'NONTON DRAKOR'), hair: '#4a1422', skin: '#f3cfb0', shirt: '#8e2c48', pants: '#7a2440', style: 'long', glasses: true },
   { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
-  { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.2, 1.7, 'py'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
-  { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.2, 4.7, 'ny'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
-  { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.2, 6.2, 'py'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
-  { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.2, 9.2, 'ny'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
-  { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 4.5, 1.85, 'ny', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
-  { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 11.75, 2.0, 'py', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
+  { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.35, 1.55, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
+  { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.35, 3.75, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
+  { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.35, 5.95, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
+  { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.35, 8.15, 'nx'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
+  { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 2.35, 10.35, 'nx', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
+  { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 13.65, 3.2, 'px', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
   { id: 'ob', name: 'Udin', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
-  { id: 'kantin', name: 'Bu Imah', role: 'KANTIN', seat: { ...seat('kantin', 2, 10.5, 3.85, 'py', 'JUALAN'), pose: 'stand' }, hair: '#2a1a12', skin: '#d9a477', shirt: '#d9734a', pants: '#4a3a30', style: 'bun' },
   { id: 'kurir', name: 'Kurir', role: 'KURIR', seat: { ...seat('kurir', 2, 11.65, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#222', skin: '#e2b48a', shirt: '#e5484d', pants: '#2a2b30', style: 'cap', cap: '#c0392b' },
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
@@ -96,7 +95,7 @@ const S0: Array<Omit<Spot, 'room'>> = [
   { id: 'bwin', x: 0.95, y: 4.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
   { id: 'fish', x: 13.6, y: 1.25, face: 'ny', pose: 'stand', label: 'LIHAT IKAN', zone: 'boss', alt: [{ label: 'KASIH MAKAN IKAN' }] },
   { id: 'bsofa3', x: 13.6, y: 6.2, face: 'nx', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'BACA KORAN', prop: 'paper' }] },
-  { id: 'bplant', x: 13.95, y: 11.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
+  { id: 'bplant', x: 13.2, y: 8.6, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
 ];
 const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
@@ -112,10 +111,7 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'hot4', x: 8.15, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
   { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }] },
   { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
-  { id: 'vend', x: 1.05, y: 1.3, face: 'ny', pose: 'stand', label: 'BELI MINUM', prop: 'can', zone: 'break', alt: [{ label: 'BELI SNACK', prop: 'food' }] },
   { id: 'rest1', x: 13.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
-  { id: 'nap1', x: 10.5, y: 7.0, face: 'py', pose: 'bean', label: 'TIDUR SIANG', zone: 'lounge' },
-  { id: 'nap2', x: 11.8, y: 7.0, face: 'py', pose: 'bean', label: 'TIDUR SIANG', zone: 'lounge', alt: [{ label: 'REBAHAN', prop: 'hp' }] },
   { id: 'rest2', x: 14.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'BACA BUKU', prop: 'book' }] },
 ];
 const S2: Array<Omit<Spot, 'room'>> = [
@@ -135,13 +131,10 @@ const S2: Array<Omit<Spot, 'room'>> = [
   { id: 'bean2', x: 5.75, y: 9.65, face: 'ny', pose: 'bean', label: 'SANTAI', prop: 'laptop', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa1', x: 9.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }] },
-  { id: 'plant', x: 13.95, y: 11.45, face: 'px', pose: 'stand', label: 'SIRAM TANAMAN', prop: 'can' },
   { id: 'hp', x: 6.9, y: 9.4, face: 'py', pose: 'stand', label: 'MAIN HP', prop: 'hp' },
   { id: 'win4', x: 0.95, y: 7.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
-  { id: 'arcade', x: 13.55, y: 1.35, face: 'ny', pose: 'stand', label: 'MAIN ARCADE', zone: 'lounge' },
-  { id: 'jajan', x: 10.5, y: 5.3, face: 'ny', pose: 'stand', label: 'BELI GORENGAN', prop: 'food', zone: 'eat', alt: [{ label: 'PESAN MIE AYAM' }, { label: 'BELI ES TEH', prop: 'cup' }] },
-  { id: 'kan1', x: 9.9, y: 6.15, face: 'py', pose: 'sit', label: 'MAKAN', prop: 'food', zone: 'eat', alt: [{ label: 'NGOPI', prop: 'cup' }] },
-  { id: 'kan2', x: 11.5, y: 7.75, face: 'ny', pose: 'sit', label: 'MAKAN', prop: 'food', zone: 'eat', alt: [{ label: 'NGOBROL' }] },
+  { id: 'vend', x: 3.45, y: 1.3, face: 'ny', pose: 'stand', label: 'BELI MINUM', prop: 'can', zone: 'break', alt: [{ label: 'BELI SNACK', prop: 'food' }] },
+  { id: 'arcade', x: 11.65, y: 1.35, face: 'ny', pose: 'stand', label: 'MAIN ARCADE', zone: 'lounge' },
   { id: 'pijat', x: 13.9, y: 5.2, face: 'nx', pose: 'sit', label: 'KURSI PIJAT', zone: 'lounge', alt: [{ label: 'PIJAT SANTAI', pose: 'nap' }] },
   { id: 'bench', x: 11.0, y: 11.0, face: 'ny', pose: 'sit', label: 'NUNGGU TAMU', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
 ];
@@ -297,32 +290,6 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     if (freeFor(ctx, 'bos')) plans.bos = [{ act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'RAPAT DARURAT', { say: ['KENAPA SL TERUS?!', '#e5242b'] }), dwell: S(22) }, { act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'EVALUASI', { say: ['Cek lagi aturannya!', '#e5242b'] }), dwell: S(26) }];
     return ev(plans, 52, { random: false });
   }
-  if (kind === 'makan') {
-    // lunch: everybody queues at the canteen counter, then eats together at the long table
-    const who = [...workers(true), ...['ob', 'jaga'].filter((id) => freeFor(ctx, id))]; if (who.length < 2) return null;
-    const seats: Array<[number, number, Face]> = [[9.9, 6.15, 'py'], [10.9, 6.15, 'py'], [11.9, 6.15, 'py'], [9.9, 7.75, 'ny'], [10.9, 7.75, 'ny'], [11.9, 7.75, 'ny']];
-    const menu = ['Nasi goreng satu, bu!', 'Mie ayam ya bu', 'Gorengan lima, bu', 'Nasi padang, bu!', 'Soto satu ya bu', 'Es teh manis, bu'];
-    const plans: Record<string, Step[]> = {};
-    who.slice(0, seats.length).forEach((id, i) => {
-      const [x, y, f] = seats[i];
-      plans[id] = [
-        { act: sp(`ev-makan-q-${id}`, 2, 9.7 + (i % 4) * 0.55, 5.35, 'ny', 'ANTRE MAKAN', { say: i < 3 ? [menu[i % menu.length], '#1e1f23'] : undefined }), dwell: S(5 + i * 3) },
-        { act: sp(`ev-makan-${id}`, 2, x, y, f, 'MAKAN SIANG', { pose: 'sit', prop: 'food', say: i === 0 ? ['Enak banget!', '#2e9e5b'] : undefined }), dwell: S(150) },
-      ];
-    });
-    if (ctx.agents.kantin && ctx.S.kantin) plans.kantin = [{ act: { ...PEOPLE.find((q) => q.id === 'kantin')!.seat, id: 'ev-makan-kantin', label: 'MELAYANI', say: ['Silakan, silakan, antre ya!', '#c0392b'] }, dwell: S(60) }, { act: { ...PEOPLE.find((q) => q.id === 'kantin')!.seat, id: 'ev-makan-kantin', label: 'MELAYANI', prop: 'food' }, dwell: S(120) }];
-    return ev(plans, 210, { random: false });
-  }
-  if (kind === 'salat') {
-    // prayer time: a few people take turns on the prayer mats (standing, bowing down, standing)
-    const who = [...workers(), ...['ob'].filter((id) => freeFor(ctx, id))].slice(0, 3); if (!who.length) return null;
-    const plans: Record<string, Step[]> = {};
-    who.forEach((id, i) => {
-      const at = (label: string, pose: Pose) => sp(`ev-salat-${id}`, 0, 5.25, 9.47 + i * 0.75, 'nx', label, { pose });
-      plans[id] = [{ act: at('SALAT', 'stand'), dwell: S(24) }, { act: at('SALAT', 'squat'), dwell: S(7) }, { act: at('SALAT', 'stand'), dwell: S(16) }, { act: at('SALAT', 'squat'), dwell: S(7) }, { act: at('BERDOA', 'stand'), dwell: S(12) }];
-    });
-    return ev(plans, 100, { random: false });
-  }
   if (kind === 'rapat') {
     // Monday morning: weekly meeting in the boss office, Marcel reads last week's result (Binance, same as the TV)
     if (!freeFor(ctx, 'bos')) return null;
@@ -416,7 +383,6 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   return null;
 }
-let SALAT_SLOT = '';
 const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6]];
 /** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
 function scheduleEvents(ctx: EvCtx) {
@@ -439,10 +405,7 @@ function scheduleEvents(ctx: EvCtx) {
   // gold / BTC moving 1% or more in 15 minutes (at most once every 30 minutes)
   if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
   if (h === 23 && m < 4 && EV.done.rekap !== day) want.unshift('rekap');
-  if (h === 12 && m < 20 && EV.done.makan !== day) want.push('makan');                                  // lunch at the canteen
   if (d.getDay() === 1 && h === 9 && m >= 30 && EV.done.rapat !== day) want.push('rapat');              // Monday weekly meeting
-  // prayer times (fixed, roughly Seoul): Zuhur 12:25, Asar 15:20, Maghrib 17:35, Isya 19:05 — each once, in the 25 minutes after
-  for (const [ph, pm] of [[12, 25], [15, 20], [17, 35], [19, 5]]) { const mins = h * 60 + m - (ph * 60 + pm); if (mins >= 0 && mins < 25 && EV.done.salat !== `${day}-${ph}`) { want.push('salat'); SALAT_SLOT = `${day}-${ph}`; } }
   if (h === 9 && m < 12 && d.getDay() > 0 && d.getDay() < 6 && EV.done.senam !== day) want.push('senam');
   for (const kind of want) {
     if (EV.cur && (!EV.cur.random || EV.cur.kind === kind)) break;
@@ -450,7 +413,7 @@ function scheduleEvents(ctx: EvCtx) {
     if (kind !== 'senam') e.random = false;
     if (EV.cur) kick(EV.cur.ids);
     EV.cur = e; kick(e.ids);
-    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : kind === 'salat' ? SALAT_SLOT : day;
+    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : day;
     return;
   }
   if (!EV.cur && wall >= EV.next) {
@@ -503,7 +466,6 @@ function statuses(data: OfficeData, now: number): Record<string, Status> {
     bos: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
     vet: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
     ob: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
-    kantin: { label: 'JUALAN', color: '#f2c230', sleep: false, tag: null },
   };
 }
 
@@ -843,7 +805,11 @@ function drawStatic(c: C, night: boolean, room: number) {
     }
   }
   // everyday wall hardware: air conditioner, exit sign, camera, fire extinguisher, sockets
-  poly(c, wallB(11.35, 11.95, 62, 68), '#1f9d57'); poly(c, wallB(11.45, 11.6, 63.5, 66.5), '#ffffff'); poly(c, wallB(11.7, 11.85, 64.4, 65.6), '#ffffff');
+  if (room === 2) {      // exit: a glass double door with a green KELUAR sign above it
+    poly(c, wallB(13.0, 14.0, 0, 58), '#1e1f23'); poly(c, wallB(13.08, 13.48, 0, 54), night ? 'rgba(140,170,200,.55)' : 'rgba(170,210,240,.75)'); poly(c, wallB(13.52, 13.92, 0, 54), night ? 'rgba(130,160,190,.55)' : 'rgba(160,200,232,.75)');
+    poly(c, wallB(13.43, 13.46, 22, 34), '#d9dade'); poly(c, wallB(13.54, 13.57, 22, 34), '#d9dade');
+    poly(c, wallB(13.05, 13.95, 61, 68), '#1f9d57'); const [ex, ey] = iso(13.5, 0, 64.5); c.save(); c.translate(ex, ey); c.transform(1, 0.5, 0, 1, 0, 0); c.fillStyle = '#ffffff'; c.font = '800 4.6px ui-monospace, Menlo, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('KELUAR', 0, 0); c.restore();
+  }
   { const [cx, cy] = iso(0.5, 0, wh - 14); c.fillStyle = '#26272c'; c.beginPath(); c.arc(cx, cy, 2.6, 0, Math.PI); c.fill(); c.fillStyle = night ? '#ff4d4f' : '#7a2a2a'; c.fillRect(cx - 0.5, cy + 0.6, 1, 1); }
   // lift on every floor (the way between the rooms); on the open floor: the entrance door in the lobby
   if ((!FLAT || room === 2) && SHAPE !== 'tower') {
@@ -958,7 +924,7 @@ const CARS = [
 ] as const;
 /** the car park beside the lobby: Marcel's and Ny. Vetrycia's cars while they are at the office, the staff's motorbikes (the bots work overtime, so those stay) */
 function drawParking(c: C, wall: number, night: boolean) {
-  const h = new Date(wall).getHours(), bossIn = !(h >= 23 || h < 7), imahIn = h >= 7 && h < 21;
+  const h = new Date(wall).getHours(), bossIn = !(h >= 23 || h < 7);
   for (const y of [2.3, 3.2, 4.1]) poly(c, [iso(NX + 0.4, y, -7.9), iso(NX + 2.3, y, -7.9), iso(NX + 2.3, y + 0.05, -7.9), iso(NX + 0.4, y + 0.05, -7.9)], 'rgba(255,255,255,.7)');
   const car = (y: number, col: string) => {
     const x = NX + 0.55, w = 1.5, d = 0.7;
@@ -968,7 +934,6 @@ function drawParking(c: C, wall: number, night: boolean) {
   };
   if (bossIn) { car(2.4, '#1e1f23'); car(3.3, '#d0568a'); }
   const bikes: Array<[number, string]> = [[7.9, '#e5484d'], [8.4, '#2fb67c'], [8.9, '#f2c230'], [9.4, '#4c7dff'], [10.6, '#229ed9']];
-  if (imahIn) bikes.push([11.1, '#d9734a']);
   for (const [y, col] of bikes) {
     const x = NX + 0.6; poly(c, [iso(x, y - 0.05, -8), iso(x + 1.0, y - 0.05, -8), iso(x + 1.0, y + 0.2, -8), iso(x, y + 0.2, -8)], 'rgba(0,0,0,.2)');
     for (const wx of [x + 0.12, x + 0.88]) { const [a0, a1] = iso(wx, y + 0.08, -6.8); c.fillStyle = '#141518'; c.beginPath(); c.ellipse(a0, a1, 1.3, 1.2, 0, 0, 7); c.fill(); }
@@ -997,6 +962,30 @@ function drawCars(c: C, t: number, night: boolean) {
   }
 }
 /** two traders facing each other across one desk: the north one's monitors show their backs, the south one's screens face us */
+/** one trader's desk by the window: the trader sits on the room side and looks at the window, the screens face the room (we see them) */
+function windowDesk(y0: number, id: string): Item {
+  const x0 = 1.0, w = 0.75, d = 1.3;
+  return {
+    x0, y0, x1: x0 + w, y1: y0 + d, draw: (c, t) => {
+      shadow(c, x0, y0, w, d);
+      box(c, x0 + 0.05, y0 + 0.05, w - 0.1, 0.08, 0, 15, '#1e1f23'); box(c, x0 + 0.05, y0 + d - 0.13, w - 0.1, 0.08, 0, 15, '#1e1f23');
+      box(c, x0 + 0.1, y0 + 0.2, 0.45, 0.4, 0, 15, '#24252a', '#1b1c20', '#2d2e34');
+      if (THEME.paint) box(c, x0, y0, w, d, 15, 2.2, '#d9ac7a', '#a8774c', '#bf8d5f'); else box(c, x0, y0, w, d, 15, 2.2, '#f7f7f5', '#d6d5d1', '#e7e6e2');
+      for (const [ya, yb] of [[y0 + 0.1, y0 + 0.62], [y0 + 0.68, y0 + 1.2]]) {
+        box(c, x0 + 0.18, (ya + yb) / 2 - 0.05, 0.1, 0.1, 17.2, 4, '#1e1f23');
+        box(c, x0 + 0.24, ya, 0.07, yb - ya, 20, 12, '#1e1f23', '#141518', '#1e1f23');
+        const A = ya + 0.04, B = yb - 0.04;
+        screenPlane(c, (u, z) => iso(x0 + 0.315, A + u * (B - A), 21 + z * 10), MODES[id] ?? 'idle', t, Math.floor(y0 * 10 + ya * 3));
+      }
+      box(c, x0 + 0.42, y0 + 0.35, 0.2, 0.6, 17.2, 0.8, '#e3e3e1');
+      cyl(c, x0 + 0.55, y0 + 1.15, 17.2, 0.05, 3, '#f2c230', '#d9a91c');
+      if (id === 'tg' && MODES.tgSend === 'pos') for (let k = 0; k < 3; k++) {
+        const ph = (t * 0.55 + k / 3) % 1, [px, py] = iso(x0 + 0.3, y0 + 0.6 - ph * 0.6, 32 + ph * 34);
+        c.globalAlpha = 1 - ph; c.fillStyle = '#5ec2f2'; c.beginPath(); c.moveTo(px, py); c.lineTo(px + 6, py - 3); c.lineTo(px + 1.5, py + 2); c.closePath(); c.fill(); c.globalAlpha = 1;
+      }
+    },
+  };
+}
 function clusterDesk(y0: number, north: string, south: string): Item {
   const x0 = 1.3, w = 1.8, d = 1.4, ym = y0 + d / 2;
   return {
@@ -1054,9 +1043,9 @@ function armchair(c: C, x: number, y: number, col: string, dark: string, massage
 }
 function baseItems(): Item[] {
   const it: Item[] = [];
-  it.push(clusterDesk(2.5, 'alt', 'big'), clusterDesk(7.0, 'xau', 'nas'));
+  for (const [y0, id] of [[0.9, 'alt'], [3.1, 'big'], [5.3, 'xau'], [7.5, 'nas'], [9.7, 'tg']] as Array<[number, string]>) it.push(windowDesk(y0, id));
   for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
-  it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(11.75, 2.0, 'py', '#1e1f23'));
+  it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(13.65, 3.2, 'px', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
     shadow(c, 3.6, 0.2, 1.8, 0.95);
@@ -1181,13 +1170,12 @@ function furniture(theme = 'modern'): Item[][] {
   const take = (x: number, y: number) => all.filter((it) => near(it, x, y));
   // trading floor: trader desks + chairs, Noel's desk, rack, bin, bookshelf, printer, water
   for (const it of all) if (it.x0 >= 0.5 && it.x0 <= 2.6 && it.y0 >= 0.9 && it.y0 <= 10.2 && !(it.x0 > 2.25 && it.y0 < 0.8)) R[1].push(it);
-  for (const [x, y] of [[3.6, 0.2], [3.15, 0.75], [9.95, 0.15]]) R[1].push(...take(x, y));
-  R[1].push(...all.filter((it) => it.x0 > 4.2 && it.x0 < 4.35 && it.y0 > 1.45 && it.y0 < 2.15));                                // Noel's chair
+  for (const [x, y] of [[3.15, 0.75], [9.95, 0.15]]) R[1].push(...take(x, y));
   R[1].push(...take(2.3, 0.15).map((it) => moved(it, 5.0, 0)));
   // lobby: security, kitchen, fridge, water, dining table + chairs, lounge, sofa
-  for (const [x, y] of [[11.0, 2.45], [7.1, 0.1], [12.3, 0.1], [2.3, 0.15], [6.95, 4.8], [4.35, 8.4], [3.33, 7.73], [5.33, 9.23], [9.2, 9.4]]) R[2].push(...take(x, y));
+  for (const [x, y] of [[7.1, 0.1], [12.3, 0.1], [2.3, 0.15], [6.95, 4.8], [4.35, 8.4], [3.33, 7.73], [5.33, 9.23], [9.2, 9.4]]) R[2].push(...take(x, y));
   R[2].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7));       // its chairs
-  R[2].push(...all.filter((it) => it.x0 > 11.4 && it.x0 < 11.6 && it.y0 > 1.6 && it.y0 < 1.9));                             // Pentoel's chair
+  R[2].push(...all.filter((it) => it.x0 > 13.3 && it.x0 < 13.5 && it.y0 > 2.85 && it.y0 < 3.05));                             // Pentoel's chair
   // boss office: boss desk + chair, bookshelves, meeting table + chairs, sofa
   R[0].push(...take(9.6, 5.9).map((it) => moved(it, -4.1, -1.3)));
   R[0].push(...all.filter((it) => it.x0 > 10.1 && it.x0 < 10.4 && it.y0 > 4.9 && it.y0 < 5.2).map((it) => moved(it, -4.1, -1.3)));
@@ -1195,9 +1183,6 @@ function furniture(theme = 'modern'): Item[][] {
   R[0].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7).map((it) => moved(it, -4.6, 2.2)));
   R[0].push(...take(9.2, 9.4));
   const pl = (r: number, list: Array<[number, number, number]>) => { for (const [px, py, sc] of list) R[r].push({ x0: px - 0.25, y0: py - 0.25, x1: px + 0.25, y1: py + 0.25, draw: (c, t) => plant(c, px, py, sc, t) }); };
-  pl(0, [[0.45, 0.45, 1.15], [14.55, 11.5, 1.25], [14.6, 3.7, 0.95]]);
-  pl(1, [[0.45, 0.45, 1.15], [14.6, 3.7, 0.95]]);
-  pl(2, [[0.45, 11.55, 1.2], [14.55, 11.5, 1.25], [14.6, 3.7, 0.95]]);
   // lobby: ping-pong table, the cat's bowl, the fingerprint clock-in machine by the lift
   R[2].push({ x0: 2.4, y0: 6.4, x1: 4.2, y1: 7.3, draw: (c) => {
     shadow(c, 2.4, 6.4, 1.8, 0.9);
@@ -1269,7 +1254,7 @@ function furniture(theme = 'modern'): Item[][] {
     box(c, 12.75, 0.1, 1.85, 0.6, 40, 2, '#3a2a1e', '#2b1f16', '#4a3626');
   } });
   R[0].push({ x0: 13.7, y0: 5.75, x1: 14.5, y1: 6.65, draw: (c) => armchair(c, 13.6, 6.2, '#8e2c48', '#6e2038') });
-  R[0].push({ x0: 12.55, y0: 5.95, x1: 13.0, y1: 6.4, draw: (c, t) => { ell(c, 12.78, 6.18, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 12.78, 6.18, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 12.78, 6.18, 10, 0.26, 1.5, '#3a2a1e', '#2b1f16'); plant(c, 12.78, 6.18, 0.35, t); } });
+  R[0].push({ x0: 12.55, y0: 5.95, x1: 13.0, y1: 6.4, draw: (c, t) => { ell(c, 12.78, 6.18, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 12.78, 6.18, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 12.78, 6.18, 10, 0.26, 1.5, '#3a2a1e', '#2b1f16'); cyl(c, 12.78, 6.18, 11.5, 0.07, 3, '#ffffff', '#eeeeee'); void t; } });
   // indoor trees in big pots (boss office + trading floor)
   const bigTree = (r: number, x: number, y: number) => R[r].push({ x0: x - 0.4, y0: y - 0.4, x1: x + 0.4, y1: y + 0.4, draw: (c, t) => {
     ell(c, x, y, 0, 0.5, 'rgba(0,0,0,.16)'); cyl(c, x, y, 0, 0.38, 9, THEME.paint ? '#c99a68' : '#e9e9e7', THEME.paint ? '#8f6a48' : '#c9c8c4'); ell(c, x, y, 9, 0.32, '#4a3a2c');
@@ -1277,68 +1262,39 @@ function furniture(theme = 'modern'): Item[][] {
     const sw = Math.sin(t * 0.8 + x) * 0.5;
     for (const [dx, dy, rr, col] of [[0, -32, 11, '#2f7a3d'], [-9, -26, 8, '#3d9a4f'], [9, -27, 8, '#3d9a4f'], [-4, -40, 8, '#58b765'], [5, -38, 7, '#58b765'], [0, -46, 6, '#7fcf7a']] as Array<[number, number, number, string]>) { c.fillStyle = col; c.beginPath(); c.arc(bx + dx + sw * (-dy / 40), by + dy, rr, 0, 7); c.fill(); }
   } });
-  bigTree(0, 1.0, 11.0); bigTree(0, 13.9, 8.6); bigTree(1, 1.0, 11.0); bigTree(1, 13.9, 4.6);
+  bigTree(0, 1.0, 11.0); bigTree(0, 13.9, 8.6); bigTree(1, 5.6, 11.2); bigTree(1, 13.9, 4.6);
   // trading floor: a drinks vending machine, and a rest corner (sofa + rug)
-  R[1].push(moved({ x0: 12.75, y0: 0.1, x1: 13.65, y1: 0.75, draw: (c, t) => {
+  R[2].push(moved({ x0: 12.75, y0: 0.1, x1: 13.65, y1: 0.75, draw: (c, t) => {
     shadow(c, 12.75, 0.1, 0.9, 0.65); box(c, 12.75, 0.1, 0.9, 0.65, 0, 50, '#e5484d', '#b8343a', '#cf3e44');
     poly(c, [iso(12.85, 0.75, 46), iso(13.35, 0.75, 46), iso(13.35, 0.75, 14), iso(12.85, 0.75, 14)], 'rgba(20,30,40,.85)');
     for (let r = 0; r < 4; r++) for (let k = 0; k < 3; k++) { const [bx, by] = iso(12.92 + k * 0.15, 0.75, 18 + r * 7.5); c.fillStyle = ['#2ee59d', '#f2c230', '#5ec2f2', '#ffffff'][(r + k) % 4]; c.fillRect(bx, by - 4, 2, 4); }
     poly(c, [iso(13.42, 0.75, 40), iso(13.58, 0.75, 40), iso(13.58, 0.75, 30), iso(13.42, 0.75, 30)], '#1e1f23');
     const [lx, ly] = iso(13.5, 0.75, 27); c.fillStyle = Math.floor(t * 1.2) % 2 ? '#2ee59d' : '#1d4d3a'; c.fillRect(lx - 0.6, ly, 1.2, 1.2);
     poly(c, [iso(12.85, 0.75, 9), iso(13.35, 0.75, 9), iso(13.35, 0.75, 5), iso(12.85, 0.75, 5)], '#141518');
-  } }, -12.15, 0));
+  } }, -9.75, 0));
   R[1].push({ x0: 12.2, y0: 8.6, x1: 12.3, y1: 8.7, draw: (c) => { poly(c, [iso(12.2, 8.6, 0.2), iso(14.6, 8.6, 0.2), iso(14.6, 11.0, 0.2), iso(12.2, 11.0, 0.2)], THEME.paint ? '#c9a46a' : '#4a5568'); } });
   R[1].push(...take(9.2, 9.4).map((it) => moved(it, 3.3, 0.6)));
   R[1].push({ x0: 13.2, y0: 9.0, x1: 13.9, y1: 9.5, draw: (c) => { box(c, 13.2, 9.0, 0.7, 0.45, 0, 6, '#3a2a1e', '#2b1f16', '#4a3626'); cyl(c, 13.4, 9.2, 6, 0.06, 2.5, '#ffffff', '#eeeeee'); } });
   // lobby: an arcade cabinet, a massage chair, a waiting bench by the entrance
-  R[2].push({ x0: 13.2, y0: 0.1, x1: 13.9, y1: 0.8, draw: (c, t) => {
+  R[2].push(moved({ x0: 13.2, y0: 0.1, x1: 13.9, y1: 0.8, draw: (c, t) => {
     shadow(c, 13.2, 0.1, 0.7, 0.7); box(c, 13.2, 0.1, 0.7, 0.7, 0, 46, '#4c3dff', '#3a2fc4', '#4536e0');
     poly(c, [iso(13.28, 0.8, 42), iso(13.82, 0.8, 42), iso(13.82, 0.8, 26), iso(13.28, 0.8, 26)], '#0b1220');
     const busy = BUSY.arcade; for (let k = 0; k < 5; k++) { const [px, py] = iso(13.33 + ((k * 0.11 + (busy ? t * 0.3 : 0)) % 0.45), 0.8, 29 + k * 2.6); c.fillStyle = ['#ff5a5a', '#f2c230', '#2ee59d', '#5ec2f2', '#c792ea'][k]; c.fillRect(px, py, 1.6, 1.2); }
     box(c, 13.25, 0.8, 0.6, 0.18, 20, 3, '#2a2b30'); const [jx, jy] = iso(13.4, 0.9, 23); c.fillStyle = '#e5484d'; c.beginPath(); c.arc(jx, jy - 2, 1.2, 0, 7); c.fill();
     poly(c, [iso(13.28, 0.8, 48), iso(13.82, 0.8, 48), iso(13.82, 0.8, 44), iso(13.28, 0.8, 44)], '#f2c230');
+  } }, -1.9, 0));
+  // Pentoel's security desk beside the exit door (CCTV monitors face him, so we see their backs)
+  R[2].push({ x0: 14.15, y0: 2.45, x1: 14.8, y1: 4.05, draw: (c) => {
+    shadow(c, 14.15, 2.45, 0.65, 1.6); box(c, 14.15, 2.45, 0.65, 1.6, 0, 15, '#26272c', '#1e1f23', '#2d2e34');
+    box(c, 14.1, 2.4, 0.75, 1.7, 15, 2, '#f4f4f2', '#d4d3cf', '#e6e5e1');
+    for (const ya of [2.6, 3.3]) { box(c, 14.5, ya + 0.25, 0.1, 0.1, 17, 3, '#1e1f23'); box(c, 14.42, ya, 0.07, 0.6, 20, 10, '#2a2b30', '#33343a', '#2a2b30'); }
+    poly(c, [iso(14.15, 4.05, 9), iso(14.8, 4.05, 9), iso(14.8, 4.05, 11), iso(14.15, 4.05, 11)], '#f2c230');
   } });
   R[2].push({ x0: 13.95, y0: 4.75, x1: 14.6, y1: 5.65, draw: (c) => armchair(c, 13.9, 5.2, '#2a2b30', '#1e1f23', true) });
   R[2].push({ x0: 10.3, y0: 11.25, x1: 11.7, y1: 11.6, draw: (c) => {
     shadow(c, 10.3, 11.25, 1.4, 0.35); for (const x of [10.35, 11.55]) box(c, x, 11.3, 0.08, 0.25, 0, 7, '#1e1f23');
     box(c, 10.3, 11.25, 1.4, 0.38, 7, 1.6, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
     box(c, 10.3, 11.55, 1.4, 0.07, 8.6, 9, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
-  } });
-  // lobby canteen: food counter with a glass display (Bu Imah behind it), a long table with two benches
-  R[2].push({ x0: 9.4, y0: 4.3, x1: 11.6, y1: 4.9, draw: (c, t) => {
-    shadow(c, 9.4, 4.3, 2.2, 0.6); box(c, 9.4, 4.3, 2.2, 0.6, 0, 13, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
-    box(c, 9.45, 4.35, 2.1, 0.5, 13, 9, 'rgba(200,230,245,.35)', 'rgba(150,200,230,.5)', 'rgba(170,215,240,.45)');
-    const food: Array<[number, string]> = [[9.65, '#e0a040'], [9.95, '#c8642c'], [10.25, '#f2d27a'], [10.55, '#8b4a2a'], [10.85, '#e9c46a'], [11.15, '#d9733f']];
-    for (const [fx, col] of food) { ell(c, fx, 4.6, 14, 0.12, '#f4f4f2'); ell(c, fx, 4.6, 14.6, 0.09, col); }
-    box(c, 9.4, 4.3, 2.2, 0.6, 22, 1, THEME.paint ? '#8a5a36' : '#3a3b42');
-    for (let k = 0; k < 3; k++) { const ph = (t * 0.5 + k / 3) % 1, [sx, sy] = iso(10.0 + k * 0.5, 4.6, 24 + ph * 10); c.fillStyle = `rgba(255,255,255,${0.4 * (1 - ph)})`; c.beginPath(); c.arc(sx, sy, 1.1, 0, 7); c.fill(); }
-    const [bx, by] = iso(10.5, 4.3, 40); c.save(); c.translate(bx, by); c.transform(1, 0.5, 0, 1, 0, 0);
-    c.fillStyle = '#c0392b'; c.fillRect(-13, -4.5, 26, 9); c.fillStyle = '#ffffff'; c.font = '800 5.4px ui-monospace, Menlo, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('KANTIN', 0, 0.3); c.restore();
-    const [p0, p1] = iso(10.5, 4.3, 22), [q0, q1] = iso(10.5, 4.3, 35.5); c.strokeStyle = '#3a3b42'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(p0, p1); c.lineTo(q0, q1); c.stroke();
-  } });
-  R[2].push({ x0: 9.4, y0: 6.5, x1: 12.4, y1: 7.3, draw: (c) => {
-    shadow(c, 9.4, 6.5, 3.0, 0.8); for (const [x, y] of [[9.5, 6.6], [12.25, 6.6], [9.5, 7.15], [12.25, 7.15]]) box(c, x, y, 0.07, 0.07, 0, 13, '#1e1f23');
-    box(c, 9.4, 6.5, 3.0, 0.8, 13, 1.8, THEME.paint ? '#d9ac7a' : '#f4f4f2', THEME.paint ? '#a8774c' : '#d4d3cf', THEME.paint ? '#bf8d5f' : '#e6e5e1');
-    for (const x of [9.9, 10.9, 11.9]) { ell(c, x, 6.75, 14.9, 0.16, '#ffffff'); ell(c, x + 0.1, 7.05, 14.9, 0.1, '#f2c230'); }
-  } });
-  for (const by of [5.95, 7.55]) R[2].push({ x0: 9.4, y0: by, x1: 12.4, y1: by + 0.35, draw: (c) => {
-    for (const x of [9.5, 12.25]) box(c, x, by + 0.1, 0.07, 0.15, 0, 7, '#1e1f23');
-    box(c, 9.4, by, 3.0, 0.35, 7, 1.6, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
-  } });
-  // trading floor: nap corner (two floor mattresses with pillows)
-  for (const mx of [10.0, 11.3]) R[1].push({ x0: mx, y0: 6.3, x1: mx + 1.0, y1: 7.7, draw: (c) => {
-    shadow(c, mx, 6.3, 1.0, 1.4, 0.1); box(c, mx, 6.3, 1.0, 1.4, 0, 2.6, '#e9eef5', '#c9d1db', '#d9e0e8');
-    box(c, mx + 0.08, 6.38, 0.84, 0.36, 2.6, 1.6, '#ffffff', '#e5e5e5', '#f0f0f0');
-    box(c, mx + 0.05, 6.95, 0.9, 0.7, 2.62, 0.6, mx < 11 ? '#8fb3e0' : '#e0a0b8');
-  } });
-  // boss floor: a small prayer room corner (three prayer mats + a shelf with prayer clothes)
-  for (const [k, col] of [[0, '#2e7d4f'], [1, '#9c3b2c'], [2, '#2c5d8f']] as Array<[number, string]>) R[0].push({ x0: 4.4, y0: 9.2 + k * 0.75, x1: 4.45, y1: 9.25 + k * 0.75, draw: (c) => {
-    const y = 9.2 + k * 0.75; poly(c, [iso(4.4, y, 0.3), iso(5.7, y, 0.3), iso(5.7, y + 0.55, 0.3), iso(4.4, y + 0.55, 0.3)], col);
-    poly(c, [iso(4.48, y + 0.06, 0.35), iso(4.75, y + 0.06, 0.35), iso(4.75, y + 0.49, 0.35), iso(4.48, y + 0.49, 0.35)], 'rgba(242,194,48,.55)');
-  } });
-  R[0].push({ x0: 6.1, y0: 9.4, x1: 6.5, y1: 10.6, draw: (c) => {
-    shadow(c, 6.1, 9.4, 0.4, 1.2); box(c, 6.1, 9.4, 0.4, 1.2, 0, 16, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
-    for (const [y, col] of [[9.55, '#f4f4f2'], [9.85, '#2e7d4f'], [10.15, '#f4f4f2']] as Array<[number, string]>) box(c, 6.13, y, 0.34, 0.25, 16, 2.4, col);
   } });
   if (theme === 'hangat' || theme === 'lukis') {
     // glass partitions (blocking, with a door gap)
@@ -1777,7 +1733,7 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   const pick = (list: Spot[]) => { const f = list.filter((q) => !taken.has(q.id)); return f.length ? variant(f[Math.floor(Math.random() * f.length)], now) : p.seat; };
   const near = (id: string, label: string): Spot => {
     const q = PEOPLE.find((x) => x.id === id)!.seat;
-    if (q.room === 1 && q.x < 3) return { id: `near-${id}-${p.id}`, room: 1, x: 3.65, y: q.face === 'py' ? q.y + 1.25 : q.y - 1.25, face: 'nx', pose: 'stand', label };
+    if (q.room === 1 && q.x < 3) return { id: `near-${id}-${p.id}`, room: 1, x: 3.15, y: q.y + 0.6, face: 'nx', pose: 'stand', label };
     return q.face === 'ny' ? { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.75, y: q.y + 0.6, face: 'ny', pose: 'stand', label } : { id: `near-${id}-${p.id}`, room: q.room, x: q.x + 0.8, y: q.y + 0.65, face: 'nx', pose: 'stand', label };
   };
   const ev = EV.cur;
@@ -1797,23 +1753,15 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
     if (job < 0.58) { const rm = Math.random() < 0.5 ? 1 : 2; return { act: sp(`galon-${rm}`, rm, rm === 1 ? 7.6 : 2.6, 1.25, 'ny', 'GANTI GALON', { prop: 'galon' }), dwell: rnd(5, 8) }; }
     if (job < 0.68) { CATCALL.at = now; return { act: { ...X.bowl }, dwell: rnd(5, 8) }; }
     if (job < 0.76) return { act: { ...SPOTS.find((q) => q.id === 'trash')!, id: 'ob-trash' }, dwell: rnd(4, 6) };
-    if (job < 0.84) return { act: { ...SPOTS.find((q) => q.id === (Math.random() < 0.5 ? 'plant' : 'bplant'))!, id: 'ob-plant' }, dwell: rnd(5, 8) };
+    if (job < 0.84) return { act: { ...SPOTS.find((q) => q.id === 'bplant')!, id: 'ob-plant' }, dwell: rnd(5, 8) };
     if (job < 0.92) return { act: { ...SPOTS.find((q) => q.id === 'eat3')!, id: 'ob-rest', label: 'ISTIRAHAT', prop: 'cup' }, dwell: rnd(10, 18) };
     return { act: { ...SPOTS.find((q) => q.id === 'sink')!, id: 'ob-sink', label: 'CUCI PIRING' }, dwell: rnd(6, 10) };
-  }
-  if (p.id === 'kantin') {
-    const h = new Date(now).getHours();
-    if (h >= 21 || h < 7) return { act: sp('pulang-kantin', 2, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 120_000 };
-    if (r < 0.5) return { act: { ...p.seat, label: 'JUALAN', say: Math.random() < 0.45 ? [['Gorengan, gorengan!', 'Nasi goreng ada!', 'Es teh manis, es teh!', 'Mie ayam, mie ayam!', 'Kopi susu hangat!'][Math.floor(Math.random() * 5)], '#c0392b'] : undefined }, dwell: rnd(12, 22) };
-    if (r < 0.72) return { act: { ...SPOTS.find((q) => q.id === 'coffee')!, id: 'kantin-masak', label: 'MASAK', prop: undefined }, dwell: rnd(8, 14) };
-    if (r < 0.88) return { act: sp('kantin-lap', 2, 10.9, 6.15, 'py', 'LAP MEJA', { prop: 'rag' }), dwell: rnd(5, 8) };
-    return { act: { ...p.seat, label: 'HITUNG UANG' }, dwell: rnd(8, 14) };
   }
   if (p.id === 'jaga') {
     if (s.label === 'ALARM') return { act: { ...p.seat, label: 'ALARM' }, dwell: 4000 };
     if (a.patrol > 0 && a.patrol <= PATROL.length) { const w = PATROL[a.patrol - 1]; a.patrol++; return { act: w, dwell: rnd(1.2, 3) }; }
     if (a.act.id === p.seat.id) {
-      if (r < 0.2) return { act: { ...SPOTS.find((q) => q.id === 'toilet')!, id: 'cekpintu', label: 'CEK PINTU', prop: undefined }, dwell: rnd(3, 6) };
+      if (r < 0.2) return { act: sp('cekpintu', 2, 13.9, 1.1, 'ny', 'CEK PINTU'), dwell: rnd(3, 6) };
       a.patrol = 2; return { act: PATROL[0], dwell: rnd(1.5, 3) };
     }
     a.patrol = 0; return { act: { ...p.seat, label: Math.random() < 0.5 ? 'CEK CCTV' : 'JAGA' }, dwell: rnd(18, 35) };
