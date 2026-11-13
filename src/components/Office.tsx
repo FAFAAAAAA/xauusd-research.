@@ -1749,6 +1749,16 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         pan = { x, y };
       }
     };
+    const pick = (clientX: number, clientY: number) => {
+      const r = cv.getBoundingClientRect(), x = clientX - r.left, y = clientY - r.top;
+      let best = '', bd = 1e9;
+      for (const tg of TAGHIT) { const inTag = x >= tg.x && x <= tg.x + tg.w && y >= tg.y && y <= tg.y + tg.h; const d = inTag ? 0 : Math.hypot(x - tg.ax, y - (tg.ay - 22)); if (d < bd) { bd = d; best = tg.id; } }
+      if (best && bd < 34) { SEL.id = best; SEL.until = Date.now() + 5000; }
+    };
+    let tap: { x: number; y: number; t: number } | null = null;
+    cv.addEventListener('touchstart', (e) => { tap = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null; }, { passive: true });
+    cv.addEventListener('touchend', (e) => { const c0 = e.changedTouches[0]; if (tap && c0 && Date.now() - tap.t < 300 && Math.hypot(c0.clientX - tap.x, c0.clientY - tap.y) < 8) pick(c0.clientX, c0.clientY); tap = null; });
+    cv.addEventListener('click', (e) => pick(e.clientX, e.clientY));
     const te = (e: TouchEvent) => {
       if (sw && !e.touches.length && e.changedTouches[0]) {      // horizontal swipe on the full-screen office opens Trade
         const dx = e.changedTouches[0].clientX - sw.x, dy = e.changedTouches[0].clientY - sw.y;
@@ -2169,10 +2179,13 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
   }
 }
 
+/** name tags are small (name only); tap a person to see what they are doing. Important moments always show in full. */
+const SEL = { id: '', until: 0 };
+let TAGHIT: Array<{ id: string; x: number; y: number; w: number; h: number; ax: number; ay: number }> = [];
 function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>, wall: number, toScreen: (x: number, y: number, room: number) => [number, number], cw: number, unit: number, ts = 1) {
-  type Tag = { x: number; y: number; w: number; h: number; ax: number; ay: number; name: string; label: string; color: string; extra?: { text: string; color: string } | null; bubble?: Agent['bubble'] };
+  type Tag = { id: string; full: boolean; x: number; y: number; w: number; h: number; ax: number; ay: number; name: string; label: string; color: string; extra?: { text: string; color: string } | null; bubble?: Agent['bubble'] };
   const tags: Tag[] = [];
-  const nameF = `700 ${7.2 * ts}px -apple-system, system-ui, sans-serif`, stF = `700 ${5.6 * ts}px ui-monospace, Menlo, monospace`;
+  const nameF = `700 ${7.2 * ts}px -apple-system, system-ui, sans-serif`, stF = `700 ${5.6 * ts}px ui-monospace, Menlo, monospace`, smallF = `700 ${5.8 * ts}px -apple-system, system-ui, sans-serif`;
   for (const p of PEOPLE) {
     const a = agents[p.id], s = S[p.id]; if (!a || !s) continue;
     const walking = a.path.length > 0, hidden = !walking && a.act.prop === 'vanish';
@@ -2194,10 +2207,12 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     const [ix, iy] = iso(a.x, a.y), [ax, ay0] = toScreen(ix, iy, a.room);
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
     const ay = hidden ? ay0 - 4 : ay0 - ((seated ? (INK ? 31 : 27) : INK ? 37 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
-    c.font = nameF; const nw = c.measureText(p.name).width;
-    c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = c.measureText(label + extraTxt).width + 6 * ts;
-    const w = Math.max(nw, lw) + 7 * ts, h = 17 * ts;
-    tags.push({ x: ax - w / 2, y: ay - h - 2, w, h, ax, ay, name: p.name, label, color, extra: busy ? null : s.tag, bubble: a.bubble && wall < a.bubble.until ? a.bubble : null });
+    const important = busy || /^(MARAH|NGEJAR|SELEBRASI|DIMARAHI|MELERAI|ALARM|KIRIM PESAN|POSISI)/.test(label) || !!(s.tag && !busy);
+    const full = important || (SEL.id === p.id && wall < SEL.until);
+    c.font = full ? nameF : smallF; const nw = c.measureText(p.name).width;
+    c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = full ? c.measureText(label + extraTxt).width + 6 * ts : 0;
+    const w = full ? Math.max(nw, lw) + 7 * ts : nw + 10 * ts, h = full ? 17 * ts : 9.5 * ts;
+    tags.push({ id: p.id, full, x: ax - w / 2, y: ay - h - 2, w, h, ax, ay, name: p.name, label, color, extra: busy ? null : s.tag, bubble: a.bubble && wall < a.bubble.until ? a.bubble : null });
   }
   // place from the bottom up, pushing tags upward / sideways until nothing overlaps
   tags.sort((a, b) => b.ay - a.ay);
@@ -2212,7 +2227,21 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     }
     placed.push(tg);
   }
+  TAGHIT = tags.map((tg) => ({ id: tg.id, x: tg.x, y: tg.y, w: tg.w, h: tg.h, ax: tg.ax, ay: tg.ay }));
   for (const tg of tags) {
+    if (!tg.full) {      // small name pill with a status dot
+      c.fillStyle = THEME.paint ? 'rgba(255,247,232,.88)' : 'rgba(18,19,23,.72)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, tg.h / 2); c.fill();
+      c.fillStyle = tg.color; c.beginPath(); c.arc(tg.x + 4.2 * ts, tg.y + tg.h / 2, 1.5 * ts, 0, 7); c.fill();
+      c.font = smallF; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = THEME.paint ? '#4a2e1e' : '#ffffff'; c.fillText(tg.name, tg.x + 7 * ts, tg.y + tg.h / 2 + 0.3);
+      if (tg.bubble) {
+        c.font = `800 ${7 * ts}px -apple-system, system-ui, sans-serif`;
+        const bw = c.measureText(tg.bubble.text).width + 10 * ts, right = tg.x + tg.w + 3 + bw <= cw, bx = right ? tg.x + tg.w + 3 : tg.x - bw - 3, by = tg.y - 2;
+        c.fillStyle = '#ffffff'; c.beginPath(); c.roundRect(bx, by, bw, 13 * ts, 6.5 * ts); c.fill();
+        c.fillStyle = tg.bubble.color; c.textAlign = 'center'; c.fillText(tg.bubble.text, bx + bw / 2, by + 6.8 * ts); c.textAlign = 'left';
+      }
+      c.textBaseline = 'alphabetic';
+      continue;
+    }
     if (tg.y + tg.h < tg.ay - 4 || Math.abs(tg.x + tg.w / 2 - tg.ax) > tg.w / 2) { c.strokeStyle = THEME.paint ? 'rgba(110,70,40,.6)' : 'rgba(255,255,255,.55)'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(Math.max(tg.x + 3, Math.min(tg.x + tg.w - 3, tg.ax)), tg.y + tg.h); c.lineTo(tg.ax, tg.ay - 1); c.stroke(); }
     c.fillStyle = THEME.paint ? 'rgba(255,247,232,.93)' : 'rgba(18,19,23,.86)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, 4.5); c.fill();
     c.strokeStyle = THEME.paint ? 'rgba(110,70,40,.55)' : 'rgba(255,255,255,.12)'; c.lineWidth = INK ? 0.8 : 0.6; c.stroke();
