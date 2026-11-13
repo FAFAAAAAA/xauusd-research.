@@ -787,15 +787,6 @@ function drawStatic(c: C, night: boolean, room: number) {
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), THEME.paint ? '#8a5a36' : '#2f3036');
   }
   if (room > 0) { poly(c, wallL(0, NY, wh - 6, wh), '#2b2c31'); poly(c, wallB(0, NX, wh - 6, wh), '#2b2c31'); }
-  if (room > 0) {   // pendant lamps hanging from the floor above
-    const lamps = room === 1 ? [[7.5, 5.1], [4.2, 5.4], [10.4, 8.6]] : [[7.6, 5.4], [4.8, 8.8], [10.2, 9.9]];
-    for (const [lx, ly] of lamps) {
-      const [a0, a1] = iso(lx, ly, wh), [b0, b1] = iso(lx, ly, 120);
-      c.strokeStyle = '#2b2c31'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(a0, a1); c.lineTo(b0, b1); c.stroke();
-      c.fillStyle = '#1e1f23'; c.beginPath(); c.moveTo(b0 - 2, b1); c.lineTo(b0 + 2, b1); c.lineTo(b0 + 7, b1 + 7); c.lineTo(b0 - 7, b1 + 7); c.closePath(); c.fill();
-      c.fillStyle = '#ffe9a8'; c.beginPath(); c.ellipse(b0, b1 + 7, 7, 2, 0, 0, 7); c.fill();
-    }
-  }
   if (inner) {      // glass partition with a gap (the way through) in the middle
     for (const [ya, yb] of [[0.05, DOOR_Y - 0.75], [DOOR_Y + 0.75, NY - 0.05]]) {
       poly(c, wallL(ya, yb, 0, 74), night ? 'rgba(120,160,210,.10)' : 'rgba(185,225,245,.22)');
