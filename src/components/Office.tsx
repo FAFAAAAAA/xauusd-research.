@@ -26,7 +26,7 @@ const NX = 15, NY = 12, TW = 15, TH = 7.5, WALL = 82;
 const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
-const TV = { x0: 6.85, x1: 11.0, z0: 68, z1: 122 };
+const TV = { x0: 7.55, x1: 11.0, z0: 62, z1: 118 };
 const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
@@ -2207,7 +2207,7 @@ function openPositions(data: OfficeData): Pos[] {
 }
 function drawPositions(c: C, list: Pos[], t: number) {
   const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-  const x0 = 12.55, x1 = 14.85, z0 = 58, z1 = 138;      // right of the glass lift (TV.z1 + 66 went through the floor above once the floors got wider)
+  const x0 = 4.45, x1 = 7.3, z0 = 62, z1 = 112;      // left of the LIVE TV, above the bookshelf (kept under the floor above)
   const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
   const mono = (wt: number, px: number) => `${wt} ${px}px ui-monospace, Menlo, monospace`;
   c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
