@@ -957,7 +957,8 @@ body::before { display: none; }
 .office-full .office-reset { right: auto; left: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
 .office-reset { pointer-events: auto; border: 0; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 10px; }
 /* home: the office alone, full screen */
-.office-home { position: fixed; inset: 0; background: var(--office-sky, #0b1430); overflow: hidden; }
+.office-home { position: fixed; left: 0; right: 0; bottom: 0; top: calc(0px - env(safe-area-inset-top, 0px)); background: var(--office-sky, #0b1430); overflow: hidden; }
+@supports (height: 100lvh) { .office-home { height: calc(100lvh + env(safe-area-inset-top, 0px)); bottom: auto; } }
 html:has(.office-home), html:has(.office-home) body { background: var(--office-sky, #0b1430); }
 body:has(.office-home)::after { display: none; }
 .office.office-full { width: 100%; height: 100%; border-radius: 0; background: transparent; }
