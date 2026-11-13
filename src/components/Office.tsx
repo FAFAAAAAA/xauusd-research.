@@ -384,6 +384,7 @@ const sh = (hex: string, k: number) => {
 };
 /** painted look: warm brown ink outlines instead of faint grey edges */
 let INK: string | null = null;
+let PSV = 1.14;      // character scale (set from the theme)
 function poly(c: C, pts: Array<[number, number]>, fill: string | CanvasGradient, edge = false) {
   c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
@@ -1232,21 +1233,22 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const idle = !anim && pose === 'stand' && !shaking && whipT == null;
   const sway = idle ? Math.sin(t * 0.9 + hash(p.id) * 7) * 0.45 : 0;
   const lookT = (t * 0.22 + hash(p.id + 'l')) % 1, look2 = idle && lookT < 0.18 ? Math.sin((lookT / 0.18) * Math.PI) * 1.3 * (hash(p.id + Math.floor(t * 0.22)) > 0.5 ? 1 : -1) : 0;
-  c.save(); c.translate(sx + (shaking ? Math.sin(t * 60) * 0.5 : 0) + (drama && mood === 'KETAWA' ? Math.sin(t * 30) * 0.35 : 0), sy); c.scale(PS, PS); c.scale(fxs, 1);
+  c.save(); c.translate(sx + (shaking ? Math.sin(t * 60) * 0.5 : 0) + (drama && mood === 'KETAWA' ? Math.sin(t * 30) * 0.35 : 0), sy); c.scale(PSV, PSV); c.scale(fxs, 1);
   if (!sitting && !bean) {
     const sg = c.createRadialGradient(0, 0, 0.5, 0, 0, 7); sg.addColorStop(0, 'rgba(0,0,0,.3)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
     c.save(); c.scale(1, 0.42); c.fillStyle = sg; c.beginPath(); c.arc(0, 0, 7 - jump * 0.4, 0, 7); c.fill(); c.restore();
   }
   c.translate(0, -jump);
-  const LEG = INK ? 3.85 : 3.3, standHip = (INK ? -8.0 : -6.9) - bob * 0.8 + squat, seatHip = bean ? -4 : -7.2;
-  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = INK ? 9.0 : 8.4;
+  const LEG = INK ? 4.3 : 3.3, standHip = (INK ? -9.5 : -6.9) - bob * 0.8 + squat, seatHip = (bean ? -4.56 : -8.2) / PSV;
+  const hip = seatedNow ? standHip + (seatHip - standHip) * a.sit : seatHip + (standHip - seatHip) * (1 - a.sit), torso = INK ? 9.8 : 8.4;
   const shoe = '#26272c', pantsD = sh(p.pants, 0.8), shirtD = sh(p.shirt, 0.82);
   c.lineCap = 'round'; c.lineJoin = 'round';
   if (sitting || bean) {
     const fx = front ? 4.5 : 3.5;
+    if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 3.5; for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); } }
     c.strokeStyle = p.pants; c.lineWidth = 2.8;
     for (const o of [-1.4, 1.4]) { c.beginPath(); c.moveTo(o, hip); c.lineTo(fx + o * 0.4, hip + (bean ? 0.5 : 1)); c.lineTo(fx + 1 + o * 0.4, bean ? hip + 2.5 : 0); c.stroke(); }
-    c.fillStyle = shoe; for (const o of [-1.4, 1.4]) { c.beginPath(); c.ellipse(fx + 1.8 + o * 0.4, bean ? hip + 3 : -0.5, 1.9, 1.1, 0, 0, 7); c.fill(); }
+    c.fillStyle = shoe; for (const o of [-1.4, 1.4]) { c.beginPath(); c.ellipse(fx + 1.8 + o * 0.4, bean ? hip + 3 : -0.5, 1.9, 1.1, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.45; c.stroke(); } }
   } else {
     for (const [o, k] of [[-1.5, 0], [1.5, Math.PI]] as const) {
       const f = ph + k, stride = 2.7 * am;
@@ -1257,22 +1259,55 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       limb(c, hx0, hip, footX, footY, LEG, LEG, squat ? 1 : 0.9, 2.8, col);
       // shoe: toes point down while the foot swings forward, heel strikes first
       const pitch = anim ? (Math.sin(f) > 0 ? -0.35 * Math.cos(f) : 0) : 0;
-      c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); c.restore();
+      c.save(); c.translate(footX + (front ? 0.7 : -0.2), footY + 0.5); c.rotate(pitch); c.fillStyle = shoe; c.beginPath(); c.ellipse(0, 0, 2.0, 1.15, 0, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.45; c.stroke(); } c.restore();
     }
   }
   const lean = (anim ? 0.7 * am : 0) + sway * 0.5, twist = anim ? Math.sin(ph) * 0.5 * am : 0;
   const hy = hip - torso - 5.6 + breathe * 0.5 + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
-  const big = p.id === 'vet', HS = INK ? (big ? 1.2 : 0.8) : big ? 1.45 : 1;     // head scale (Ny. Vetrycia keeps her big head)
-  const headOn = () => { c.save(); c.translate(hx, hy + 5); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
+  const big = p.id === 'vet', HS = INK ? (big ? 1.0 : 0.64) : big ? 1.45 : 1, NECK = INK ? 1.3 : 0;     // head scale (Ny. Vetrycia keeps her big head)
+  const headOn = () => { c.save(); c.translate(hx, hy + 5 - NECK); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
   if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.5)'; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
   const tg = c.createLinearGradient(-4.6, 0, 4.6, 0); tg.addColorStop(0, sh(p.shirt, front ? 1.08 : 0.9)); tg.addColorStop(1, shirtD);
-  c.fillStyle = tg; c.beginPath(); c.roundRect(-4.6 + lean * 0.5, ty, 9.2, torso + 0.6, [3.2, 3.2, 1.6, 1.6]); c.fill();
-  if (INK) { c.strokeStyle = 'rgba(70,40,25,.5)'; c.lineWidth = 0.5; c.stroke(); c.fillStyle = 'rgba(60,30,30,.13)'; c.beginPath(); c.roundRect(0.8 + lean * 0.5, ty + 1, 3.6, torso - 0.6, 1.6); c.fill(); }
-  if (p.tie && front) { c.fillStyle = '#f4f4f2'; c.beginPath(); c.moveTo(-1.6, ty); c.lineTo(1.6, ty); c.lineTo(0, ty + 3); c.fill(); c.fillStyle = '#c0392b'; c.fillRect(-0.6, ty + 1.5, 1.3, 5); }
-  if (p.id === 'jaga' && front) { c.fillStyle = '#f2c230'; c.fillRect(-3, ty + 2, 1.6, 1.8); }
+  if (!INK) { c.fillStyle = tg; c.beginPath(); c.roundRect(-4.6 + lean * 0.5, ty, 9.2, torso + 0.6, [3.2, 3.2, 1.6, 1.6]); c.fill(); }
+  else {
+    const cx = lean * 0.5, shW = 5.0, wW = p.id === 'vet' ? 4.8 : 4.1, bot = ty + torso + 0.6;
+    c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx * 0.5 - 1.1, ty - NECK - 0.6, 2.2, NECK + 1.2);              // neck
+    c.strokeStyle = 'rgba(70,40,25,.5)'; c.lineWidth = 0.4; c.strokeRect(hx * 0.5 - 1.1, ty - NECK - 0.6, 2.2, NECK + 1.2);
+    const shirt = () => { c.beginPath(); c.moveTo(cx - 1.8, ty); c.quadraticCurveTo(cx - shW, ty + 0.1, cx - shW, ty + 2.3); c.lineTo(cx - wW, bot); c.lineTo(cx + wW, bot); c.lineTo(cx + shW, ty + 2.3); c.quadraticCurveTo(cx + shW, ty + 0.1, cx + 1.8, ty); c.closePath(); };
+    c.fillStyle = tg; shirt(); c.fill();
+    c.save(); shirt(); c.clip(); c.fillStyle = 'rgba(60,30,30,.15)'; c.fillRect(cx + 1.2, ty, 6, torso + 1); c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(cx - shW, ty, 1.6, torso + 1);
+    if (front) {
+      if (p.id === 'bos') {        // dark suit: white shirt, red tie, lapels
+        c.fillStyle = '#f4f2ee'; c.beginPath(); c.moveTo(cx - 1.7, ty); c.lineTo(cx + 1.7, ty); c.lineTo(cx, ty + 5); c.closePath(); c.fill();
+        c.fillStyle = '#b8322a'; c.beginPath(); c.moveTo(cx - 0.5, ty + 0.6); c.lineTo(cx + 0.5, ty + 0.6); c.lineTo(cx + 0.7, ty + 4.6); c.lineTo(cx, ty + 5.4); c.lineTo(cx - 0.7, ty + 4.6); c.closePath(); c.fill();
+        c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 0.4; c.beginPath(); c.moveTo(cx - 1.9, ty); c.lineTo(cx - 0.4, ty + 5.6); c.moveTo(cx + 1.9, ty); c.lineTo(cx + 0.4, ty + 5.6); c.stroke();
+      } else if (p.id === 'jaga') {   // security uniform: epaulettes, badge, pocket
+        c.fillStyle = '#1b2233'; c.fillRect(cx - shW, ty + 0.4, 2.2, 0.9); c.fillRect(cx + shW - 2.2, ty + 0.4, 2.2, 0.9);
+        c.fillStyle = '#f2c230'; c.beginPath(); c.arc(cx - 2.2, ty + 3, 0.8, 0, 7); c.fill(); c.strokeStyle = 'rgba(0,0,0,.3)'; c.lineWidth = 0.35; c.strokeRect(cx + 0.8, ty + 2.4, 2, 1.6);
+      } else if (p.id === 'ob') {     // office boy: apron + name patch
+        c.fillStyle = '#e9e2d3'; c.beginPath(); c.moveTo(cx - 3, ty + 3.2); c.lineTo(cx + 3, ty + 3.2); c.lineTo(cx + 3.4, bot); c.lineTo(cx - 3.4, bot); c.closePath(); c.fill();
+        c.fillStyle = '#ffffff'; c.fillRect(cx - 2.6, ty + 1.2, 1.8, 0.9);
+      } else if (p.id === 'vet') {    // a dress with a soft V neck and a belt
+        c.fillStyle = sh(p.skin, 0.95); c.beginPath(); c.moveTo(cx - 1.4, ty); c.lineTo(cx + 1.4, ty); c.lineTo(cx, ty + 2.2); c.closePath(); c.fill();
+        c.fillStyle = sh(p.shirt, 0.7); c.fillRect(cx - wW, ty + torso - 2.4, 2 * wW, 0.8);
+      } else if (p.id === 'kurir') {
+        c.fillStyle = '#ffffff'; c.fillRect(cx - 3, ty + 3, 6, 1); c.fillStyle = '#1e1f23'; c.fillRect(cx - shW, ty + torso - 0.8, 2 * shW, 0.9);
+      } else {                         // shirt with a collar and buttons
+        c.fillStyle = sh(p.shirt, 1.3); c.beginPath(); c.moveTo(cx - 1.9, ty); c.lineTo(cx, ty + 1.6); c.lineTo(cx - 0.9, ty + 2.2); c.closePath(); c.fill(); c.beginPath(); c.moveTo(cx + 1.9, ty); c.lineTo(cx, ty + 1.6); c.lineTo(cx + 0.9, ty + 2.2); c.closePath(); c.fill();
+        c.fillStyle = 'rgba(255,255,255,.7)'; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(cx, ty + 3 + k * 2, 0.32, 0, 7); c.fill(); }
+      }
+    }
+    c.restore();
+    c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.5; shirt(); c.stroke();
+    if (p.id === 'vet' && !sitting && !bean) {      // the skirt of her dress over the legs
+      c.fillStyle = sh(p.shirt, 0.92); c.beginPath(); c.moveTo(cx - wW, bot - 0.4); c.lineTo(cx + wW, bot - 0.4); c.lineTo(cx + wW + 1.2, hip + 3.6); c.lineTo(cx - wW - 1.2, hip + 3.6); c.closePath(); c.fill(); c.strokeStyle = 'rgba(70,40,25,.6)'; c.stroke();
+    }
+  }
+  if (!INK && p.tie && front) { c.fillStyle = '#f4f4f2'; c.beginPath(); c.moveTo(-1.6, ty); c.lineTo(1.6, ty); c.lineTo(0, ty + 3); c.fill(); c.fillStyle = '#c0392b'; c.fillRect(-0.6, ty + 1.5, 1.3, 5); }
+  if (!INK && p.id === 'jaga' && front) { c.fillStyle = '#f2c230'; c.fillRect(-3, ty + 2, 1.6, 1.8); }
   const arm = (side: number, back: boolean) => {
     c.strokeStyle = back ? shirtD : p.shirt; c.lineWidth = 2.4;
     const sxh = side * 4.4 + lean * 0.5, syh = ty + 1.6;
@@ -1306,7 +1341,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     else if (anim && a.carry && side < 0) { const f = ph + Math.PI; ex = sxh + Math.cos(f) * 2.6 * am; ey = syh + 6.3 - Math.abs(Math.cos(f)) * 1.1 * am; }
     else if (anim && a.carry && side > 0) { ex = sxh + 2.2; ey = syh + 3.6; }
     limb(c, sxh + twist * side * 0.3, syh, ex, ey, 3.4, 3.4, ey < syh ? -0.6 : -0.8, 2.4, back ? shirtD : p.shirt);
-    c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill();
+    c.fillStyle = p.skin; c.beginPath(); c.arc(ex, ey + 0.6, 1.35, 0, 7); c.fill(); if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.4; c.stroke(); }
     if (!walking && prop === 'dumbbell' && !shaking) { c.fillStyle = '#26272c'; c.fillRect(ex - 2.4, ey - 0.4, 4.8, 1.4); c.fillRect(ex - 3, ey - 1.2, 1.4, 3); c.fillRect(ex + 1.6, ey - 1.2, 1.4, 3); }
     if (side > 0) {
       if ((prop === 'cup' || prop === 'can') && pose === 'stand' && a.act.id !== 'plant') { c.fillStyle = prop === 'can' ? '#e5484d' : '#ffffff'; c.fillRect(ex - 0.5, ey - 2.2, 2.6, 3.4); if (prop === 'cup') { c.fillStyle = '#6b4a2b'; c.fillRect(ex - 0.5, ey - 2.2, 2.6, 0.8); } }
@@ -1363,7 +1398,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   if (bean && !walking && prop === 'laptop') { c.fillStyle = '#c9cbd1'; c.beginPath(); c.moveTo(1, hip - 1.5); c.lineTo(8, hip - 0.5); c.lineTo(8, hip + 1); c.lineTo(1, hip); c.fill(); c.fillStyle = '#9fd3f2'; c.fillRect(2.5, hip - 6, 5, 4.5); }
   if (sitting && !walking && prop === 'laptop') { c.fillStyle = '#c9cbd1'; c.fillRect(3, hip - 5.5, 5.5, 4); }
   headOn();
-  c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx - 1.4, hy + R - 2.2, 2.8, 3);
+  if (!INK) { c.fillStyle = sh(p.skin, 0.9); c.fillRect(hx - 1.4, hy + R - 2.2, 2.8, 3); }
   const hg = c.createRadialGradient(hx + 1.5, hy - 2, 1, hx, hy, R + 1); hg.addColorStop(0, sh(p.skin, 1.08)); hg.addColorStop(1, sh(p.skin, 0.9));
   c.fillStyle = hg; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill();
   if (INK) { c.strokeStyle = 'rgba(70,40,25,.6)'; c.lineWidth = 0.55; c.stroke(); }
@@ -1538,7 +1573,7 @@ const liftSpot = (room: number, id: string, up: boolean): Spot => ({ id: `lift-$
 
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
-  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.paint ? 'rgba(80,45,25,.42)' : null;
+  THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.paint ? 'rgba(80,45,25,.42)' : null; PSV = THEME.paint ? 1.26 : PS;
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
@@ -2017,7 +2052,7 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     if (wall < a.hiddenUntil) continue;                     // inside the lift
     const [ix, iy] = iso(a.x, a.y), [ax, ay0] = toScreen(ix, iy, a.room);
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
-    const ay = hidden ? ay0 - 4 : ay0 - ((seated ? 27 : 32) + (p.id === 'vet' ? 7 : 0)) * PS * unit;
+    const ay = hidden ? ay0 - 4 : ay0 - ((seated ? 27 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
     c.font = nameF; const nw = c.measureText(p.name).width;
     c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = c.measureText(label + extraTxt).width + 6 * ts;
     const w = Math.max(nw, lw) + 7 * ts, h = 17 * ts;
