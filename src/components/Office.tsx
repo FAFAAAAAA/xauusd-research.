@@ -26,7 +26,7 @@ const NX = 15, NY = 12, TW = 15, TH = 7.5, WALL = 82;
 const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
-const TV = { x0: 4.4, x1: 10.3, z0: 42, z1: 96 };
+const TV = { x0: 4.4, x1: 10.3, z0: 34, z1: 92 };
 const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
@@ -69,6 +69,7 @@ const PEOPLE: Person[] = [
   { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 4.5, 1.85, 'ny', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
   { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 11.75, 2.0, 'py', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
   { id: 'ob', name: 'Udin', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
+  { id: 'kantin', name: 'Bu Imah', role: 'KANTIN', seat: { ...seat('kantin', 2, 10.5, 3.85, 'py', 'JUALAN'), pose: 'stand' }, hair: '#2a1a12', skin: '#d9a477', shirt: '#d9734a', pants: '#4a3a30', style: 'bun' },
   { id: 'kurir', name: 'Kurir', role: 'KURIR', seat: { ...seat('kurir', 2, 11.65, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#222', skin: '#e2b48a', shirt: '#e5484d', pants: '#2a2b30', style: 'cap', cap: '#c0392b' },
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
@@ -113,6 +114,8 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
   { id: 'vend', x: 1.05, y: 1.3, face: 'ny', pose: 'stand', label: 'BELI MINUM', prop: 'can', zone: 'break', alt: [{ label: 'BELI SNACK', prop: 'food' }] },
   { id: 'rest1', x: 13.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'nap1', x: 10.5, y: 7.0, face: 'py', pose: 'bean', label: 'TIDUR SIANG', zone: 'lounge' },
+  { id: 'nap2', x: 11.8, y: 7.0, face: 'py', pose: 'bean', label: 'TIDUR SIANG', zone: 'lounge', alt: [{ label: 'REBAHAN', prop: 'hp' }] },
   { id: 'rest2', x: 14.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'BACA BUKU', prop: 'book' }] },
 ];
 const S2: Array<Omit<Spot, 'room'>> = [
@@ -136,6 +139,9 @@ const S2: Array<Omit<Spot, 'room'>> = [
   { id: 'hp', x: 6.9, y: 9.4, face: 'py', pose: 'stand', label: 'MAIN HP', prop: 'hp' },
   { id: 'win4', x: 0.95, y: 7.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
   { id: 'arcade', x: 13.55, y: 1.35, face: 'ny', pose: 'stand', label: 'MAIN ARCADE', zone: 'lounge' },
+  { id: 'jajan', x: 10.5, y: 5.3, face: 'ny', pose: 'stand', label: 'BELI GORENGAN', prop: 'food', zone: 'eat', alt: [{ label: 'PESAN MIE AYAM' }, { label: 'BELI ES TEH', prop: 'cup' }] },
+  { id: 'kan1', x: 9.9, y: 6.15, face: 'py', pose: 'sit', label: 'MAKAN', prop: 'food', zone: 'eat', alt: [{ label: 'NGOPI', prop: 'cup' }] },
+  { id: 'kan2', x: 11.5, y: 7.75, face: 'ny', pose: 'sit', label: 'MAKAN', prop: 'food', zone: 'eat', alt: [{ label: 'NGOBROL' }] },
   { id: 'pijat', x: 13.9, y: 5.2, face: 'nx', pose: 'sit', label: 'KURSI PIJAT', zone: 'lounge', alt: [{ label: 'PIJAT SANTAI', pose: 'nap' }] },
   { id: 'bench', x: 11.0, y: 11.0, face: 'ny', pose: 'sit', label: 'NUNGGU TAMU', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
 ];
@@ -291,6 +297,52 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     if (freeFor(ctx, 'bos')) plans.bos = [{ act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'RAPAT DARURAT', { say: ['KENAPA SL TERUS?!', '#e5242b'] }), dwell: S(22) }, { act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'EVALUASI', { say: ['Cek lagi aturannya!', '#e5242b'] }), dwell: S(26) }];
     return ev(plans, 52, { random: false });
   }
+  if (kind === 'makan') {
+    // lunch: everybody queues at the canteen counter, then eats together at the long table
+    const who = [...workers(true), ...['ob', 'jaga'].filter((id) => freeFor(ctx, id))]; if (who.length < 2) return null;
+    const seats: Array<[number, number, Face]> = [[9.9, 6.15, 'py'], [10.9, 6.15, 'py'], [11.9, 6.15, 'py'], [9.9, 7.75, 'ny'], [10.9, 7.75, 'ny'], [11.9, 7.75, 'ny']];
+    const menu = ['Nasi goreng satu, bu!', 'Mie ayam ya bu', 'Gorengan lima, bu', 'Nasi padang, bu!', 'Soto satu ya bu', 'Es teh manis, bu'];
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, seats.length).forEach((id, i) => {
+      const [x, y, f] = seats[i];
+      plans[id] = [
+        { act: sp(`ev-makan-q-${id}`, 2, 9.7 + (i % 4) * 0.55, 5.35, 'ny', 'ANTRE MAKAN', { say: i < 3 ? [menu[i % menu.length], '#1e1f23'] : undefined }), dwell: S(5 + i * 3) },
+        { act: sp(`ev-makan-${id}`, 2, x, y, f, 'MAKAN SIANG', { pose: 'sit', prop: 'food', say: i === 0 ? ['Enak banget!', '#2e9e5b'] : undefined }), dwell: S(150) },
+      ];
+    });
+    if (ctx.agents.kantin && ctx.S.kantin) plans.kantin = [{ act: { ...PEOPLE.find((q) => q.id === 'kantin')!.seat, id: 'ev-makan-kantin', label: 'MELAYANI', say: ['Silakan, silakan, antre ya!', '#c0392b'] }, dwell: S(60) }, { act: { ...PEOPLE.find((q) => q.id === 'kantin')!.seat, id: 'ev-makan-kantin', label: 'MELAYANI', prop: 'food' }, dwell: S(120) }];
+    return ev(plans, 210, { random: false });
+  }
+  if (kind === 'salat') {
+    // prayer time: a few people take turns on the prayer mats (standing, bowing down, standing)
+    const who = [...workers(), ...['ob'].filter((id) => freeFor(ctx, id))].slice(0, 3); if (!who.length) return null;
+    const plans: Record<string, Step[]> = {};
+    who.forEach((id, i) => {
+      const at = (label: string, pose: Pose) => sp(`ev-salat-${id}`, 0, 5.25, 9.47 + i * 0.75, 'nx', label, { pose });
+      plans[id] = [{ act: at('SALAT', 'stand'), dwell: S(24) }, { act: at('SALAT', 'squat'), dwell: S(7) }, { act: at('SALAT', 'stand'), dwell: S(16) }, { act: at('SALAT', 'squat'), dwell: S(7) }, { act: at('BERDOA', 'stand'), dwell: S(12) }];
+    });
+    return ev(plans, 100, { random: false });
+  }
+  if (kind === 'rapat') {
+    // Monday morning: weekly meeting in the boss office, Marcel reads last week's result (Binance, same as the TV)
+    if (!freeFor(ctx, 'bos')) return null;
+    const who = workers(true); if (!who.length) return null;
+    const wk = wall - 7 * 86_400_000;
+    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= wk && t.strategy !== 'v2' && t.strategy !== 'nas');
+    const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
+    const seats = [sp('', 0, 2.1, 7.6, 'px', '', { pose: 'sit' }), sp('', 0, 3.9, 7.6, 'nx', '', { pose: 'sit' }), sp('', 0, 3.0, 8.5, 'ny', '', { pose: 'sit' }), sp('', 0, 3.0, 6.7, 'py', '', { pose: 'sit' }), sp('', 0, 1.3, 7.0, 'px', '')];
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, seats.length).forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-rapat-${id}`, label: 'RAPAT MINGGUAN' }, dwell: S(110) }]; });
+    const at = (label: string, say?: [string, string]) => sp('ev-rapat-bos', 0, 3.0, 5.8, 'py', label, { say });
+    plans.bos = [
+      { act: at('RAPAT MINGGUAN', ['Rapat mingguan, mulai!', '#1e1f23']), dwell: S(6) },
+      { act: at('EVALUASI', [done.length ? `Minggu lalu ${amt}, ${done.length} trade` : 'Minggu lalu belum ada trade selesai', pnl >= 0 ? '#2e9e5b' : '#e5242b']), dwell: S(8) },
+      { act: at('EVALUASI', [pnl >= 0 ? 'Bagus, pertahankan!' : 'Evaluasi, jangan diulang!', '#1e1f23']), dwell: S(8) },
+      { act: at('EVALUASI', ['Ingat: RR 1:2, keluar cuma di TP/SL!', '#1e1f23']), dwell: S(10) },
+      { act: at('RAPAT MINGGUAN', ['Oke, kembali kerja!', '#1e1f23']), dwell: S(60) },
+    ];
+    return ev(plans, 115, { random: false });
+  }
   if (kind === 'pasar') {
     // gold or BTC moved 1% or more in 15 minutes: everybody stands in front of the TVs, warning lights flash
     const m = (ctx.data.market ?? []).filter((x) => Math.abs(x.move) >= 1).sort((a, b) => Math.abs(b.move) - Math.abs(a.move))[0]; if (!m) return null;
@@ -364,6 +416,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   return null;
 }
+let SALAT_SLOT = '';
 const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6]];
 /** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
 function scheduleEvents(ctx: EvCtx) {
@@ -386,6 +439,10 @@ function scheduleEvents(ctx: EvCtx) {
   // gold / BTC moving 1% or more in 15 minutes (at most once every 30 minutes)
   if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
   if (h === 23 && m < 4 && EV.done.rekap !== day) want.unshift('rekap');
+  if (h === 12 && m < 20 && EV.done.makan !== day) want.push('makan');                                  // lunch at the canteen
+  if (d.getDay() === 1 && h === 9 && m >= 30 && EV.done.rapat !== day) want.push('rapat');              // Monday weekly meeting
+  // prayer times (fixed, roughly Seoul): Zuhur 12:25, Asar 15:20, Maghrib 17:35, Isya 19:05 — each once, in the 25 minutes after
+  for (const [ph, pm] of [[12, 25], [15, 20], [17, 35], [19, 5]]) { const mins = h * 60 + m - (ph * 60 + pm); if (mins >= 0 && mins < 25 && EV.done.salat !== `${day}-${ph}`) { want.push('salat'); SALAT_SLOT = `${day}-${ph}`; } }
   if (h === 9 && m < 12 && d.getDay() > 0 && d.getDay() < 6 && EV.done.senam !== day) want.push('senam');
   for (const kind of want) {
     if (EV.cur && (!EV.cur.random || EV.cur.kind === kind)) break;
@@ -393,7 +450,7 @@ function scheduleEvents(ctx: EvCtx) {
     if (kind !== 'senam') e.random = false;
     if (EV.cur) kick(EV.cur.ids);
     EV.cur = e; kick(e.ids);
-    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : day;
+    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : kind === 'salat' ? SALAT_SLOT : day;
     return;
   }
   if (!EV.cur && wall >= EV.next) {
@@ -446,6 +503,7 @@ function statuses(data: OfficeData, now: number): Record<string, Status> {
     bos: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
     vet: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
     ob: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
+    kantin: { label: 'JUALAN', color: '#f2c230', sleep: false, tag: null },
   };
 }
 
@@ -898,6 +956,27 @@ const CARS = [
   { road: 'x', lane: NY + 4.85, speed: -2.1, off: 5, col: '#f2c230' }, { road: 'y', lane: NX + 3.55, speed: -2.3, off: 3, col: '#4c7dff' },
   { road: 'y', lane: NX + 4.85, speed: 2.8, off: 11, col: '#2a2b30' }, { road: 'y', lane: NX + 4.85, speed: 2.8, off: 22, col: '#2fb67c' },
 ] as const;
+/** the car park beside the lobby: Marcel's and Ny. Vetrycia's cars while they are at the office, the staff's motorbikes (the bots work overtime, so those stay) */
+function drawParking(c: C, wall: number, night: boolean) {
+  const h = new Date(wall).getHours(), bossIn = !(h >= 23 || h < 7), imahIn = h >= 7 && h < 21;
+  for (const y of [2.3, 3.2, 4.1]) poly(c, [iso(NX + 0.4, y, -7.9), iso(NX + 2.3, y, -7.9), iso(NX + 2.3, y + 0.05, -7.9), iso(NX + 0.4, y + 0.05, -7.9)], 'rgba(255,255,255,.7)');
+  const car = (y: number, col: string) => {
+    const x = NX + 0.55, w = 1.5, d = 0.7;
+    poly(c, [iso(x - 0.1, y - 0.1, -8), iso(x + w + 0.2, y - 0.1, -8), iso(x + w + 0.2, y + d + 0.2, -8), iso(x - 0.1, y + d + 0.2, -8)], 'rgba(0,0,0,.22)');
+    for (const wx of [x + 0.25, x + w - 0.25]) { const [a0, a1] = iso(wx, y + d, -6.5); c.fillStyle = '#141518'; c.beginPath(); c.ellipse(a0, a1, 1.6, 1.3, 0, 0, 7); c.fill(); }
+    box(c, x, y, w, d, -6, 5.5, col); box(c, x + 0.3, y + 0.06, w - 0.62, d - 0.12, -0.5, 4.5, '#9cc6e6', '#5d86a8', '#7aa5c7'); box(c, x + 0.3, y + 0.06, w - 0.62, d - 0.12, 4, 0.8, sh(col, 0.92));
+  };
+  if (bossIn) { car(2.4, '#1e1f23'); car(3.3, '#d0568a'); }
+  const bikes: Array<[number, string]> = [[7.9, '#e5484d'], [8.4, '#2fb67c'], [8.9, '#f2c230'], [9.4, '#4c7dff'], [10.6, '#229ed9']];
+  if (imahIn) bikes.push([11.1, '#d9734a']);
+  for (const [y, col] of bikes) {
+    const x = NX + 0.6; poly(c, [iso(x, y - 0.05, -8), iso(x + 1.0, y - 0.05, -8), iso(x + 1.0, y + 0.2, -8), iso(x, y + 0.2, -8)], 'rgba(0,0,0,.2)');
+    for (const wx of [x + 0.12, x + 0.88]) { const [a0, a1] = iso(wx, y + 0.08, -6.8); c.fillStyle = '#141518'; c.beginPath(); c.ellipse(a0, a1, 1.3, 1.2, 0, 0, 7); c.fill(); }
+    box(c, x + 0.15, y, 0.7, 0.16, -6.6, 2.6, col); box(c, x + 0.35, y + 0.01, 0.35, 0.14, -4, 0.9, '#1e1f23');
+    const [hx, hy] = iso(x + 0.86, y + 0.08, -2.2); c.strokeStyle = '#2a2b30'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx + 1.5, hy - 2.5); c.stroke();
+  }
+  void night;
+}
 function drawCars(c: C, t: number, night: boolean) {
   const span = 34;                                       // tiles before a car loops around
   const list = CARS.map((car) => { const along = (((t * car.speed + car.off) % span) + span) % span - 10; return { car, along }; })
@@ -976,7 +1055,7 @@ function armchair(c: C, x: number, y: number, col: string, dark: string, massage
 function baseItems(): Item[] {
   const it: Item[] = [];
   it.push(clusterDesk(2.5, 'alt', 'big'), clusterDesk(7.0, 'xau', 'nas'));
-  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
+  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(11.75, 2.0, 'py', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
@@ -1225,6 +1304,42 @@ function furniture(theme = 'modern'): Item[][] {
     box(c, 10.3, 11.25, 1.4, 0.38, 7, 1.6, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
     box(c, 10.3, 11.55, 1.4, 0.07, 8.6, 9, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
   } });
+  // lobby canteen: food counter with a glass display (Bu Imah behind it), a long table with two benches
+  R[2].push({ x0: 9.4, y0: 4.3, x1: 11.6, y1: 4.9, draw: (c, t) => {
+    shadow(c, 9.4, 4.3, 2.2, 0.6); box(c, 9.4, 4.3, 2.2, 0.6, 0, 13, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
+    box(c, 9.45, 4.35, 2.1, 0.5, 13, 9, 'rgba(200,230,245,.35)', 'rgba(150,200,230,.5)', 'rgba(170,215,240,.45)');
+    const food: Array<[number, string]> = [[9.65, '#e0a040'], [9.95, '#c8642c'], [10.25, '#f2d27a'], [10.55, '#8b4a2a'], [10.85, '#e9c46a'], [11.15, '#d9733f']];
+    for (const [fx, col] of food) { ell(c, fx, 4.6, 14, 0.12, '#f4f4f2'); ell(c, fx, 4.6, 14.6, 0.09, col); }
+    box(c, 9.4, 4.3, 2.2, 0.6, 22, 1, THEME.paint ? '#8a5a36' : '#3a3b42');
+    for (let k = 0; k < 3; k++) { const ph = (t * 0.5 + k / 3) % 1, [sx, sy] = iso(10.0 + k * 0.5, 4.6, 24 + ph * 10); c.fillStyle = `rgba(255,255,255,${0.4 * (1 - ph)})`; c.beginPath(); c.arc(sx, sy, 1.1, 0, 7); c.fill(); }
+    const [bx, by] = iso(10.5, 4.3, 40); c.save(); c.translate(bx, by); c.transform(1, 0.5, 0, 1, 0, 0);
+    c.fillStyle = '#c0392b'; c.fillRect(-13, -4.5, 26, 9); c.fillStyle = '#ffffff'; c.font = '800 5.4px ui-monospace, Menlo, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('KANTIN', 0, 0.3); c.restore();
+    const [p0, p1] = iso(10.5, 4.3, 22), [q0, q1] = iso(10.5, 4.3, 35.5); c.strokeStyle = '#3a3b42'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(p0, p1); c.lineTo(q0, q1); c.stroke();
+  } });
+  R[2].push({ x0: 9.4, y0: 6.5, x1: 12.4, y1: 7.3, draw: (c) => {
+    shadow(c, 9.4, 6.5, 3.0, 0.8); for (const [x, y] of [[9.5, 6.6], [12.25, 6.6], [9.5, 7.15], [12.25, 7.15]]) box(c, x, y, 0.07, 0.07, 0, 13, '#1e1f23');
+    box(c, 9.4, 6.5, 3.0, 0.8, 13, 1.8, THEME.paint ? '#d9ac7a' : '#f4f4f2', THEME.paint ? '#a8774c' : '#d4d3cf', THEME.paint ? '#bf8d5f' : '#e6e5e1');
+    for (const x of [9.9, 10.9, 11.9]) { ell(c, x, 6.75, 14.9, 0.16, '#ffffff'); ell(c, x + 0.1, 7.05, 14.9, 0.1, '#f2c230'); }
+  } });
+  for (const by of [5.95, 7.55]) R[2].push({ x0: 9.4, y0: by, x1: 12.4, y1: by + 0.35, draw: (c) => {
+    for (const x of [9.5, 12.25]) box(c, x, by + 0.1, 0.07, 0.15, 0, 7, '#1e1f23');
+    box(c, 9.4, by, 3.0, 0.35, 7, 1.6, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
+  } });
+  // trading floor: nap corner (two floor mattresses with pillows)
+  for (const mx of [10.0, 11.3]) R[1].push({ x0: mx, y0: 6.3, x1: mx + 1.0, y1: 7.7, draw: (c) => {
+    shadow(c, mx, 6.3, 1.0, 1.4, 0.1); box(c, mx, 6.3, 1.0, 1.4, 0, 2.6, '#e9eef5', '#c9d1db', '#d9e0e8');
+    box(c, mx + 0.08, 6.38, 0.84, 0.36, 2.6, 1.6, '#ffffff', '#e5e5e5', '#f0f0f0');
+    box(c, mx + 0.05, 6.95, 0.9, 0.7, 2.62, 0.6, mx < 11 ? '#8fb3e0' : '#e0a0b8');
+  } });
+  // boss floor: a small prayer room corner (three prayer mats + a shelf with prayer clothes)
+  for (const [k, col] of [[0, '#2e7d4f'], [1, '#9c3b2c'], [2, '#2c5d8f']] as Array<[number, string]>) R[0].push({ x0: 4.4, y0: 9.2 + k * 0.75, x1: 4.45, y1: 9.25 + k * 0.75, draw: (c) => {
+    const y = 9.2 + k * 0.75; poly(c, [iso(4.4, y, 0.3), iso(5.7, y, 0.3), iso(5.7, y + 0.55, 0.3), iso(4.4, y + 0.55, 0.3)], col);
+    poly(c, [iso(4.48, y + 0.06, 0.35), iso(4.75, y + 0.06, 0.35), iso(4.75, y + 0.49, 0.35), iso(4.48, y + 0.49, 0.35)], 'rgba(242,194,48,.55)');
+  } });
+  R[0].push({ x0: 6.1, y0: 9.4, x1: 6.5, y1: 10.6, draw: (c) => {
+    shadow(c, 6.1, 9.4, 0.4, 1.2); box(c, 6.1, 9.4, 0.4, 1.2, 0, 16, THEME.paint ? '#c99a68' : '#8b8f99', THEME.paint ? '#8f6a48' : '#6b6f78', THEME.paint ? '#a87b52' : '#7b7f88');
+    for (const [y, col] of [[9.55, '#f4f4f2'], [9.85, '#2e7d4f'], [10.15, '#f4f4f2']] as Array<[number, string]>) box(c, 6.13, y, 0.34, 0.25, 16, 2.4, col);
+  } });
   if (theme === 'hangat' || theme === 'lukis') {
     // glass partitions (blocking, with a door gap)
     const glassX = (r: number, x: number, ya: number, yb: number) => R[r].push({ x0: x - 0.06, y0: ya, x1: x + 0.12, y1: yb, draw: (c) => {
@@ -1420,7 +1535,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       } else if (p.id === 'jaga') {   // security uniform: epaulettes, badge, pocket
         c.fillStyle = '#1b2233'; c.fillRect(cx - shW, ty + 0.4, 2.2, 0.9); c.fillRect(cx + shW - 2.2, ty + 0.4, 2.2, 0.9);
         c.fillStyle = '#f2c230'; c.beginPath(); c.arc(cx - 2.2, ty + 3, 0.8, 0, 7); c.fill(); c.strokeStyle = 'rgba(0,0,0,.3)'; c.lineWidth = 0.35; c.strokeRect(cx + 0.8, ty + 2.4, 2, 1.6);
-      } else if (p.id === 'ob') {     // office boy: apron + name patch
+      } else if (p.id === 'ob' || p.id === 'kantin') {     // office boy / canteen lady: apron + name patch
         c.fillStyle = '#e9e2d3'; c.beginPath(); c.moveTo(cx - 3, ty + 3.2); c.lineTo(cx + 3, ty + 3.2); c.lineTo(cx + 3.4, bot); c.lineTo(cx - 3.4, bot); c.closePath(); c.fill();
         c.fillStyle = '#ffffff'; c.fillRect(cx - 2.6, ty + 1.2, 1.8, 0.9);
       } else if (p.id === 'vet') {    // a dress with a soft V neck and a belt
@@ -1685,6 +1800,14 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
     if (job < 0.84) return { act: { ...SPOTS.find((q) => q.id === (Math.random() < 0.5 ? 'plant' : 'bplant'))!, id: 'ob-plant' }, dwell: rnd(5, 8) };
     if (job < 0.92) return { act: { ...SPOTS.find((q) => q.id === 'eat3')!, id: 'ob-rest', label: 'ISTIRAHAT', prop: 'cup' }, dwell: rnd(10, 18) };
     return { act: { ...SPOTS.find((q) => q.id === 'sink')!, id: 'ob-sink', label: 'CUCI PIRING' }, dwell: rnd(6, 10) };
+  }
+  if (p.id === 'kantin') {
+    const h = new Date(now).getHours();
+    if (h >= 21 || h < 7) return { act: sp('pulang-kantin', 2, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 120_000 };
+    if (r < 0.5) return { act: { ...p.seat, label: 'JUALAN', say: Math.random() < 0.45 ? [['Gorengan, gorengan!', 'Nasi goreng ada!', 'Es teh manis, es teh!', 'Mie ayam, mie ayam!', 'Kopi susu hangat!'][Math.floor(Math.random() * 5)], '#c0392b'] : undefined }, dwell: rnd(12, 22) };
+    if (r < 0.72) return { act: { ...SPOTS.find((q) => q.id === 'coffee')!, id: 'kantin-masak', label: 'MASAK', prop: undefined }, dwell: rnd(8, 14) };
+    if (r < 0.88) return { act: sp('kantin-lap', 2, 10.9, 6.15, 'py', 'LAP MEJA', { prop: 'rag' }), dwell: rnd(5, 8) };
+    return { act: { ...p.seat, label: 'HITUNG UANG' }, dwell: rnd(8, 14) };
   }
   if (p.id === 'jaga') {
     if (s.label === 'ALARM') return { act: { ...p.seat, label: 'ALARM' }, dwell: 4000 };
@@ -2068,7 +2191,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const drawRiders = (cc: C, tt: number, rm: number) => { if (rider && rider.inCab) drawPerson(cc, rider.p, ghostOf(rider, rm), tt, S[rider.p.id] ?? { label: '', color: '#58a6ff', sleep: false, tag: null }, null); };
       for (const r of ORDER()) {
         c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
-        if (r === 2) drawCars(c, t, nightNow);
+        if (r === 2) { drawParking(c, wall, nightNow); drawCars(c, t, nightNow); }
         if (r <= 1) drawWallText(c, scrRef.current, r, t);
         if (r === 1) drawPositions(c, posRef.current, t);
         drawBoards(c, r, wall, t);
@@ -2155,16 +2278,16 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
     const live = Math.floor(t * 2) % 2 === 0;
     c.fillStyle = live ? '#ff4d4f' : '#7a2a2a'; c.beginPath(); c.arc(4, 3.9, 1.4, 0, 7); c.fill();
     c.textBaseline = 'middle';
-    c.font = '800 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('LIVE', 7, 4);
+    c.font = '800 6px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText('LIVE', 7, 4.2);
     // 2 × 2 tiles: small label on top, big number below (shrunk to fit its tile, never outside it)
     const rows = lines.slice(0, 4), top = 9, cw = tw / 2, ch = (th - top) / 2;
     rows.forEach((l, i) => {
       const cx = (i % 2) * cw, cy = top + Math.floor(i / 2) * ch;
       c.save(); c.beginPath(); c.rect(cx, cy, cw, ch); c.clip();
-      c.font = '700 5px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText(l.k, cx + 4, cy + ch * 0.28);
-      let fs = 10; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
+      { let lf = 6.2; c.font = `800 ${lf}px ui-monospace, Menlo, monospace`; while (lf > 4 && c.measureText(l.k).width > cw - 8) { lf -= 0.2; c.font = `800 ${lf}px ui-monospace, Menlo, monospace`; } } c.fillStyle = '#9cc3ea'; c.fillText(l.k, cx + 4, cy + ch * 0.27);
+      let fs = 13; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`;
       while (fs > 3.5 && c.measureText(l.v).width > cw - 9) { fs -= 0.25; c.font = `800 ${fs}px ui-monospace, Menlo, monospace`; }
-      c.fillStyle = l.color ?? '#ffffff'; c.fillText(l.v, cx + 4, cy + ch * 0.66);
+      c.fillStyle = l.color ?? '#ffffff'; c.fillText(l.v, cx + 4, cy + ch * 0.68);
       c.restore();
     });
     c.fillStyle = 'rgba(255,255,255,.1)'; c.fillRect(cw - 0.2, top + 2, 0.4, th - top - 4); c.fillRect(3, top + ch - 0.2, tw - 6, 0.4);
@@ -2192,7 +2315,7 @@ function openPositions(data: OfficeData): Pos[] {
   const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
   const who: Record<string, string> = { snr: 'Na', btc: 'Ni', v2: 'Nu', nas: 'Ne' };
   return data.trades.filter((t) => t.result === 'open').map((t) => {
-    const mt5 = t.strategy === 'v2' || t.strategy === 'nas', name = mt5 ? (t.strategy === 'nas' ? 'NASDAQ' : 'XAUUSD') : coin(t) || '—';
+    const mt5 = t.strategy === 'v2' || t.strategy === 'nas', name = mt5 ? (t.strategy === 'nas' ? 'NAS' : 'XAU') : coin(t) || '—';
     const live = mt5 ? data.mt5 : data.binance, key = mt5 ? (t.strategy === 'nas' ? 'nas' : 'xau') : `${coin(t)}USDT`;
     const v = live?.pos?.[key];
     return { name, side: t.side === 'BUY' ? 'BUY' : 'SELL', who: who[t.strategy] ?? '', pnl: Number.isFinite(v) ? Number(v) : null };
@@ -2200,7 +2323,7 @@ function openPositions(data: OfficeData): Pos[] {
 }
 function drawPositions(c: C, list: Pos[], t: number) {
   const usd = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-  const x0 = 6.2, x1 = TV.x1, z0 = TV.z1 + 6, z1 = TV.z1 + 48;      // right above the LIVE TV, kept under the floor above
+  const x0 = 6.2, x1 = TV.x1, z0 = TV.z1 + 6, z1 = TV.z1 + 52;      // right above the LIVE TV, kept under the floor above
   const [ox, oy] = iso(x0, 0, z1), w = (x1 - x0) * TW, h = z1 - z0;
   const mono = (wt: number, px: number) => `${wt} ${px}px ui-monospace, Menlo, monospace`;
   c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
@@ -2209,21 +2332,22 @@ function drawPositions(c: C, list: Pos[], t: number) {
   c.textBaseline = 'middle';
   // header: dot + title + count, then a thin rule
   c.fillStyle = list.length ? (Math.floor(t * 2) % 2 ? '#2ee59d' : '#1d6b4c') : '#4a5566'; c.beginPath(); c.arc(6, 7, 1.5, 0, 7); c.fill();
-  { let hf = 5.6; c.font = mono(800, hf); while (hf > 3.5 && c.measureText('POSISI SEKARANG').width > w - 14) { hf -= 0.2; c.font = mono(800, hf); } } c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
+  { let hf = 6.8; c.font = mono(800, hf); while (hf > 3.5 && c.measureText('POSISI SEKARANG').width > w - 14) { hf -= 0.2; c.font = mono(800, hf); } } c.fillStyle = '#ffffff'; c.fillText('POSISI SEKARANG', 10, 7.2);
   c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(4, 13, w - 8, 0.6);
   if (!list.length) {
-    c.font = mono(600, 5.6); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
+    { let nf = 6.6; c.font = mono(700, nf); while (nf > 4 && c.measureText('tidak ada posisi').width > w - 8) { nf -= 0.2; c.font = mono(700, nf); } } c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
   } else {
     // one line per position: side, name, floating P&L
-    const top = 15, max = list.length * 8 <= h - top - 2 ? list.length : Math.max(1, Math.floor((h - top - 7) / 7.6)), rows = list.slice(0, max), rh = Math.min(10, (h - top - (list.length > max ? 8 : 2)) / rows.length);
+    const top = 15, max = list.length * 8 <= h - top - 2 ? list.length : Math.max(1, Math.floor((h - top - 7) / 7.8)), rows = list.slice(0, max), rh = Math.min(11, (h - top - (list.length > max ? 8 : 2)) / rows.length);
     rows.forEach((p, i) => {
       const y = top + rh * (i + 0.5);
       if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(3, y - rh / 2, w - 6, rh); }
-      c.font = mono(800, 5.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 5, y);
-      c.font = mono(800, 6); c.fillStyle = '#ffffff';
-      let name = p.name; while (name.length > 3 && c.measureText(name).width > w - 34) name = name.slice(0, -1);
+      c.font = mono(800, 6.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 4, y);
+      const pnlTxt = p.pnl == null ? '—' : usd(p.pnl); c.font = mono(800, 6.2); const pw = c.measureText(pnlTxt).width;
+      c.font = mono(800, 6.4); c.fillStyle = '#ffffff';
+      let name = p.name; while (name.length > 2 && c.measureText(name).width > w - 10 - pw - 6) name = name.slice(0, -1);
       c.fillText(name, 10, y);
-      c.textAlign = 'right'; c.font = mono(800, 5.2); c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 4, y); c.textAlign = 'left';
+      c.textAlign = 'right'; c.font = mono(800, 6.2); c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 4, y); c.textAlign = 'left';
     });
     if (list.length > max) { c.font = mono(600, 4.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText(`+${list.length - max} lagi`, w / 2, h - 4); c.textAlign = 'left'; }
   }
@@ -2284,7 +2408,7 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     if (p.id === 'vet' && !walking && a.act.label === 'NONTON DRAKOR') what = `DRAKOR · ${vetMood(wall / 1000)}`;
     let label = s.label, color = s.color;
     if (busy) { label = what; color = '#ff6b6b'; }
-    else if (s.label === 'MEMANTAU' || p.id === 'bos' || p.id === 'vet' || p.id === 'ob' || p.id === 'kurir' || (p.id === 'jaga' && s.label === 'AMAN')) {
+    else if (s.label === 'MEMANTAU' || p.id === 'bos' || p.id === 'vet' || p.id === 'ob' || p.id === 'kantin' || p.id === 'kurir' || (p.id === 'jaga' && s.label === 'AMAN')) {
       label = what; color = what === 'MEMANTAU' || what === 'BALAS CHAT' ? s.color : what.startsWith('MARAH') || what === 'NGEJAR' ? '#ff6b6b' : what.startsWith('MELERAI') || what === 'MAU MELERAI' ? '#2ee59d' : what.startsWith('NGOMEL') ? '#ff6b6b' : ['JAGA', 'PATROLI', 'CEK CCTV', 'CEK PINTU'].includes(what) ? '#2ee59d' : '#f5b83d';
     } else if (s.label === 'LIBUR') label = `LIBUR · ${what}`;
     else if (s.label.startsWith('POSISI') && what === 'SELEBRASI TP') label = what;
