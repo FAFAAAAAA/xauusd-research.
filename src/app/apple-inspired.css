@@ -986,3 +986,7 @@ body:has(.office-home)::after { display: none; }
 /* which build is on the screen (tiny, bottom left of the office) */
 .build-tag { position: fixed; left: 8px; bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); z-index: 5; font: 600 9px ui-monospace, Menlo, monospace; color: rgba(255,255,255,.55); text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; }
 
+
+/* "Rapat" button on the full-screen office: everybody to the meeting table */
+.office-meet { position: absolute; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 6; border: 0; border-radius: 999px; background: rgba(18,19,23,.72); color: #fff; font: 700 12px system-ui, sans-serif; padding: 7px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.office-meet:active { transform: scale(.95); }

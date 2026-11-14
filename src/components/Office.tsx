@@ -309,6 +309,29 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     ];
     return ev(plans, 115, { random: false });
   }
+  if (kind === 'dadakan') {
+    // the owner tapped "Rapat": everybody comes to the meeting table in the boss office right now
+    const lead = freeFor(ctx, 'bos', true) ? 'bos' : freeFor(ctx, 'vet', true) ? 'vet' : freeFor(ctx, 'jaga', true) ? 'jaga' : null; if (!lead) return null;   // at night the security guard leads
+    const who = [...W5.filter((id) => freeFor(ctx, id, true)), ...['ob', 'jaga', 'vet'].filter((id) => id !== lead && freeFor(ctx, id, true))];
+    if (!who.length) return null;
+    const day0 = new Date(wall); day0.setHours(0, 0, 0, 0);
+    const fin = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'nas');
+    const pnl = fin.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
+    const openN = ctx.data.trades.filter((t) => t.result === 'open').length;
+    const seats: Spot[] = [sp('', 0, 2.1, 7.6, 'px', '', { pose: 'sit' }), sp('', 0, 3.9, 7.6, 'nx', '', { pose: 'sit' }), sp('', 0, 3.0, 8.5, 'ny', '', { pose: 'sit' }), sp('', 0, 3.0, 6.7, 'py', '', { pose: 'sit' }),
+      sp('', 0, 1.2, 6.9, 'px', ''), sp('', 0, 1.2, 8.3, 'px', ''), sp('', 0, 4.8, 6.9, 'nx', ''), sp('', 0, 4.8, 8.3, 'nx', ''), sp('', 0, 2.2, 9.5, 'ny', ''), sp('', 0, 3.8, 9.5, 'ny', '')];
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, seats.length).forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-dadakan-${id}`, label: 'RAPAT DADAKAN' }, dwell: S(75) }]; });
+    const at = (label: string, say?: [string, string]) => sp(`ev-dadakan-${lead}`, 0, 3.0, 5.8, 'py', label, { say });
+    plans[lead] = [
+      { act: at('PIMPIN RAPAT', ['Semua kumpul! Rapat dadakan!', '#1e1f23']), dwell: S(10) },
+      { act: at('PIMPIN RAPAT', [fin.length ? `Hari ini ${amt} dari ${fin.length} trade` : 'Hari ini belum ada trade selesai', pnl >= 0 ? '#2e9e5b' : '#e5242b']), dwell: S(8) },
+      { act: at('PIMPIN RAPAT', [openN ? `Posisi terbuka: ${openN}. Pantau terus!` : 'Belum ada posisi. Sabar tunggu setup!', '#1e1f23']), dwell: S(8) },
+      { act: at('PIMPIN RAPAT', ['Ingat: RR 1:2, keluar cuma di TP/SL!', '#1e1f23']), dwell: S(8) },
+      { act: at('PIMPIN RAPAT', ['Oke, bubar! Kembali kerja!', '#1e1f23']), dwell: S(40) },
+    ];
+    return ev(plans, 80, { random: false });
+  }
   if (kind === 'pasar') {
     // gold or BTC moved 1% or more in 15 minutes: everybody stands in front of the TVs, warning lights flash
     const m = (ctx.data.market ?? []).filter((x) => Math.abs(x.move) >= 1).sort((a, b) => Math.abs(b.move) - Math.abs(a.move))[0]; if (!m) return null;
@@ -415,6 +438,8 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   return null;
 }
+/** the "Rapat" button: asks scheduleEvents for an instant meeting */
+const MEETCALL = { at: 0 };
 const any1 = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
 const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6], ['kopi', 1.1], ['tos', 0.9], ['debat', 1], ['lucu', 1]];
 /** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
@@ -438,14 +463,16 @@ function scheduleEvents(ctx: EvCtx) {
   // gold / BTC moving 1% or more in 15 minutes (at most once every 30 minutes)
   if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
   if (h === 23 && m < 4 && EV.done.rekap !== day) want.unshift('rekap');
+  if (MEETCALL.at && wall - MEETCALL.at < 8000) { MEETCALL.at = 0; want.unshift('dadakan'); } else MEETCALL.at = 0;
   if (d.getDay() === 1 && h === 9 && m >= 30 && EV.done.rapat !== day) want.push('rapat');              // Monday weekly meeting
   if (h === 9 && m < 12 && d.getDay() > 0 && d.getDay() < 6 && EV.done.senam !== day) want.push('senam');
   for (const kind of want) {
-    if (EV.cur && (!EV.cur.random || EV.cur.kind === kind)) break;
+    if (EV.cur && kind !== 'dadakan' && (!EV.cur.random || EV.cur.kind === kind)) break;
     const e = makeEvent(kind, ctx); if (!e) continue;
     if (kind !== 'senam') e.random = false;
     if (EV.cur) kick(EV.cur.ids);
     EV.cur = e; kick(e.ids);
+    if (kind === 'dadakan') return;
     EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : day;
     return;
   }
@@ -1521,7 +1548,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const hy = hip - torso - 5.6 + breathe * 0.5 + (typing ? Math.sin(t * 1.7 + hash(p.id) * 9) * 0.22 : 0) + (gesture === 'stretch' ? -0.6 : 0) + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
-  const big = p.id === 'vet', HS = INK ? (big ? 1.32 : 1.08) : big ? 1.45 : 1, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
+  const big = p.id === 'vet', HS = INK ? (big ? 1.5 : 1.3) : big ? 1.6 : 1.2, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
   const headOn = () => { c.save(); c.translate(hx, hy + 5 - NECK); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
   if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); if (INK) { c.moveTo(hx - 5.9, hy - 1.2); c.bezierCurveTo(hx - 7.2, hy + 9, hx - 4.2, hy + 10.5, hx, hy + 10.5); c.bezierCurveTo(hx + 4.2, hy + 10.5, hx + 7.2, hy + 9, hx + 5.9, hy - 1.2); c.closePath(); } else c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
@@ -2286,6 +2313,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div></>}
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
+      {full ? <button type="button" className="office-meet" onClick={() => { MEETCALL.at = Date.now(); }} aria-label="Panggil rapat">📢 Rapat</button> : null}
       {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, homeRef.current); driftRef.current = fullRef.current; setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
         : null}
     </div>
