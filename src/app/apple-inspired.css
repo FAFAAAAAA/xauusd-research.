@@ -985,3 +985,32 @@ body:has(.office-home)::after { display: none; }
 
 /* which build is on the screen (tiny, bottom left of the office) */
 .build-tag { position: fixed; left: 8px; bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); z-index: 5; font: 600 9px ui-monospace, Menlo, monospace; color: rgba(255,255,255,.55); text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; }
+
+/* ---------- Kantor, gaya Claude-Office (OfficeTower) ---------- */
+.tower-root { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.tower { position: absolute; }
+.tower-floor { position: absolute; left: 0; }
+.tower-room { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.tower-it, .tower-ch { position: absolute; transform: translate(-50%, -100%); pointer-events: none; }
+.tower-it img, .tower-ch img { display: block; width: 100%; height: auto; -webkit-user-drag: none; }
+.tower-label { position: absolute; left: calc(var(--cx, 0px) + 8px); top: 64%; font: 800 calc(var(--u) * 6px) ui-monospace, Menlo, monospace; color: #fff; background: rgba(20, 24, 40, .75); padding: 2px 5px; border-radius: 4px; }
+.tower-wall { position: absolute; transform-origin: 0 0; background: #0d1424; border: 2px solid #1d2235; border-radius: 2px; color: #d8e2ff; font: 700 calc(var(--u) * 4px)/1.2 ui-monospace, Menlo, monospace; padding: calc(var(--u) * 2px); overflow: hidden; box-shadow: 0 0 6px rgba(80, 140, 255, .35); }
+.tower-wall h4 { margin: 0 0 2px; font-size: calc(var(--u) * 4.2px); letter-spacing: .06em; color: #9fb2e6; display: flex; gap: 3px; align-items: center; white-space: nowrap; }
+.tower-wall > div { white-space: nowrap; }
+.tower-dot { width: calc(var(--u) * 3px); height: calc(var(--u) * 3px); border-radius: 50%; background: #ff4d4f; box-shadow: 0 0 4px #ff4d4f; display: inline-block; animation: tower-blink 1.2s steps(2) infinite; }
+@keyframes tower-blink { 50% { opacity: .3; } }
+.tower-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.tower-tiles div { background: #152038; padding: calc(var(--u) * 1.2px); border-radius: 1px; color: #8fa0c8; overflow: hidden; }
+.tower-tiles b { display: block; color: #fff; font-size: calc(var(--u) * 4.4px); }
+.tower-clock { text-align: center; color: #ffd36b; }
+.tower-clock b { display: block; font-size: calc(var(--u) * 8px); color: #fff; letter-spacing: .04em; }
+.tower-tags { position: absolute; inset: 0; z-index: 10000; pointer-events: none; }
+.tower-tag { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; text-align: center; font: 700 calc(var(--u) * 5.6px)/1.15 ui-monospace, Menlo, monospace; background: rgba(255, 250, 240, .94); color: #2a2320; border-radius: 5px; padding: 1.5px 4px; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
+.tower-tag small { display: block; font-weight: 600; font-size: calc(var(--u) * 4.9px); }
+.tower-road { position: absolute; left: 0; right: 0; bottom: 4px; height: 22px; background: #3a3f47; }
+.tower-road::after { content: ''; position: absolute; left: 0; right: 0; top: 10px; border-top: 2px dashed #e8c84a; opacity: .8; }
+.tower-cloud { position: absolute; width: 70px; height: 22px; background: #fff; border-radius: 20px; opacity: .85; animation: tower-drift 70s linear infinite; }
+.tower-cloud::before { content: ''; position: absolute; width: 34px; height: 28px; background: #fff; border-radius: 50%; left: 14px; top: -12px; }
+@keyframes tower-drift { from { transform: translateX(-120px); } to { transform: translateX(110vw); } }
+.tower-stars { position: absolute; inset: 0 0 50% 0; background-image: radial-gradient(1px 1px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 36% 8%, #fff, transparent), radial-gradient(1px 1px at 58% 22%, #fff, transparent), radial-gradient(1px 1px at 78% 12%, #fff, transparent), radial-gradient(1px 1px at 90% 30%, #fff, transparent), radial-gradient(1px 1px at 24% 34%, #fff, transparent); opacity: .8; }
+@media (prefers-reduced-motion: reduce) { .tower-cloud, .tower-dot { animation: none; } }

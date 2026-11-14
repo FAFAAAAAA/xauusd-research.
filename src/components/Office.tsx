@@ -178,7 +178,7 @@ type Step = { act: Spot; dwell: number };
 type Ev = { kind: string; start: number; until: number; plans: Record<string, Step[]>; ids: string[]; random: boolean; courier?: boolean; items?: (room: number, wall: number) => Item[] };
 const EV: { cur: Ev | null; next: number; done: Record<string, string> } = { cur: null, next: 0, done: {} };
 const inEvent = (id: string, wall: number) => !!EV.cur && wall < EV.cur.until && EV.cur.ids.includes(id);
-const awayHours = (now: number) => { const h = new Date(now).getHours(); return h >= 23 || h < 7; };       // Marcel and Ny. Vetrycia go home
+export const awayHours = (now: number) => { const h = new Date(now).getHours(); return h >= 23 || h < 7; };       // Marcel and Ny. Vetrycia go home
 const sp = (id: string, room: number, x: number, y: number, face: Face, label: string, more: Partial<Spot> = {}): Spot => ({ id, room, x, y, face, pose: 'stand', label, ...more });
 const shuffle = <T,>(a: T[]) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 type EvCtx = { agents: Record<string, Agent>; S: Record<string, Status>; wall: number; data: OfficeData };
@@ -428,10 +428,10 @@ function scheduleEvents(ctx: EvCtx) {
 }
 
 /* ---------- status from real data ---------- */
-type Status = { label: string; color: string; sleep: boolean; tag?: { text: string; color: string } | null; tp?: boolean; sl?: boolean };
+export type Status = { label: string; color: string; sleep: boolean; tag?: { text: string; color: string } | null; tp?: boolean; sl?: boolean };
 const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
 const weekendMt5 = (t: number) => { const d = new Date(t), wd = d.getUTCDay(), h = d.getUTCHours(); return wd === 6 || (wd === 0 && h < 22) || (wd === 5 && h >= 21); };
-function statuses(data: OfficeData, now: number): Record<string, Status> {
+export function statuses(data: OfficeData, now: number): Record<string, Status> {
   const open = data.trades.filter((t) => t.result === 'open');
   const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
   const bOn = !!data.binance && now - data.binance.at < SILENT, mOn = !!data.mt5 && now - data.mt5.at < SILENT;
@@ -1408,8 +1408,8 @@ const faceTo = (dx: number, dy: number): Face => (Math.abs(dx) > Math.abs(dy) ? 
  * Turned on with ?karakter=pixel (remembered on this device), off again with ?karakter=lama. */
 let PIXEL = false;
 const SPRITE_OF: Record<string, string> = {
-  vet: 'Frontend-dev-1', bos: 'employee-3', alt: 'explore-1', big: 'dev-1', xau: 'dev-2', nas: 'employee-2',
-  tg: 'Claude-1', jaga: 'security-audit-1', ob: 'employee-1', kurir: 'Me-1',
+  vet: 'Frontend-dev-1', bos: 'Marcel', alt: 'explore-1', big: 'dev-1', xau: 'dev-2', nas: 'employee-2',
+  tg: 'Claude-1', jaga: 'security-audit-1', ob: 'employee-1', kurir: 'employee-3',
 };
 const SPR: Record<string, HTMLImageElement> = {};
 function spr(name: string): HTMLImageElement | null {
@@ -2351,8 +2351,8 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
 }
 
 /* ---------- the open positions, on a screen high on the trading-floor wall ---------- */
-type Pos = { name: string; side: string; who: string; pnl: number | null };
-function openPositions(data: OfficeData): Pos[] {
+export type Pos = { name: string; side: string; who: string; pnl: number | null };
+export function openPositions(data: OfficeData): Pos[] {
   const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
   const who: Record<string, string> = { snr: 'Na', btc: 'Ni', v2: 'Nu', nas: 'Ne' };
   return data.trades.filter((t) => t.result === 'open').map((t) => {

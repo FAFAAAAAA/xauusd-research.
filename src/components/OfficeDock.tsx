@@ -2,6 +2,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { call, peek } from '@/components/client';
 import Office, { type OfficeData, type ScreenLine } from '@/components/Office';
+import OfficeTower from '@/components/OfficeTower';
+
+/** The office style: the Claude-Office tower (default) or the old drawn one (?kantor=lama; back with ?kantor=baru). Remembered per device. */
+function useTowerStyle() {
+  const [tower, setTower] = useState(true);
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(location.search).get('kantor');
+      if (q === 'lama' || q === 'baru') localStorage.setItem('office-gaya', q);
+      setTower((q ?? localStorage.getItem('office-gaya')) !== 'lama');
+    } catch { /* private mode: keep the default */ }
+  }, []);
+  return tower;
+}
 
 const usd = (n: number, sign = false) => `${n < 0 ? '−' : sign && n > 0 ? '+' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const coinOf = (t: { note?: string | null }) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
@@ -9,6 +23,7 @@ const coinOf = (t: { note?: string | null }) => (/Bot Binance ([0-9A-Z]+)/.exec(
 /** The virtual office on top of every page (stays mounted while switching pages).
  *  Journal every 30 s + Binance mark price every 3 s, so the wall TV and the floating P&L are realtime. */
 export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; onSwipe?: () => void } = {}) {
+  const tower = useTowerStyle();
   const [j, setJ] = useState<OfficeData | null>(() => peek<OfficeData>('/api/journal'));
   const [now, setNow] = useState(() => Date.now());
   const [mark, setMark] = useState<Record<string, number>>({});
@@ -84,7 +99,10 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
     return () => { window.removeEventListener('resize', set); root.classList.remove('app-tall'); root.style.removeProperty('--app-h'); };
   }, [full]);
   const cls = full ? 'office-home' : 'office-dock';
-  if (!j) return <div className={cls}><Office data={{ trades: [], market, cal }} now={now} screen={[]} full={full} onSwipe={onSwipe} /></div>;   // the building shows at once, people appear when the data arrives
+  const View = (p: { data: OfficeData; screen: ScreenLine[] }) => (tower && full
+    ? <OfficeTower data={p.data} now={now} screen={p.screen} onSwipe={onSwipe} />
+    : <Office data={p.data} now={now} screen={p.screen} full={full} onSwipe={onSwipe} />);
+  if (!j) return <div className={cls}>{View({ data: { trades: [], market, cal }, screen: [] })}</div>;   // the building shows at once, people appear when the data arrives
   // realtime floating P&L per crypto position from the mark price (falls back to the bot report)
   const posB: Record<string, number> = { ...(j.binance?.pos ?? {}) };
   let floatB = 0, liveB = false;
@@ -112,5 +130,5 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
     { k: 'PNL HARI INI', v: usd(todayB, true), color: tone(todayB) },
     { k: 'FLOATING', v: open.length ? `${open.length}× ${usd(fl, true)}` : 'tidak ada', color: open.length ? tone(fl) : undefined },
   ];
-  return <div className={cls}><Office data={data} now={now} screen={screen} full={full} onSwipe={onSwipe} /></div>;
+  return <div className={cls}>{View({ data, screen })}</div>;
 }
