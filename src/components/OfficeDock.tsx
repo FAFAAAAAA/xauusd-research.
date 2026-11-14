@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { call, peek } from '@/components/client';
 import Office, { type OfficeData, type ScreenLine } from '@/components/Office';
+import { useBtcDay } from '@/components/btcDay';
 
 
 const usd = (n: number, sign = false) => `${n < 0 ? '−' : sign && n > 0 ? '+' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -13,6 +14,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   const [j, setJ] = useState<OfficeData | null>(() => peek<OfficeData>('/api/journal'));
   const [now, setNow] = useState(() => Date.now());
   const [mark, setMark] = useState<Record<string, number>>({});
+  const btc = useBtcDay()?.pct ?? null;      // Bitcoin % today, for the board next to the H4 countdown
   useEffect(() => {
     const load = () => call<OfficeData>('/api/journal').then(setJ).catch(() => {});
     load();
@@ -93,7 +95,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   }, [full]);
   const cls = full ? 'office-home' : 'office-dock';
   const View = (p: { data: OfficeData; screen: ScreenLine[] }) => <Office data={p.data} now={now} screen={p.screen} full={full} onSwipe={onSwipe} />;
-  if (!j) return <div className={cls}>{View({ data: { trades: [], market, cal }, screen: [] })}</div>;   // the building shows at once, people appear when the data arrives
+  if (!j) return <div className={cls}>{View({ data: { trades: [], market, cal, btc }, screen: [] })}</div>;   // the building shows at once, people appear when the data arrives
   // realtime floating P&L per crypto position from the mark price (falls back to the bot report)
   const posB: Record<string, number> = { ...(j.binance?.pos ?? {}) };
   let floatB = 0, liveB = false;
@@ -108,7 +110,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   for (const v of Object.values(posB)) floatB += v;
   if (!liveB && j.binance) floatB = j.binance.upnl ?? floatB;
   const floatM = j.mt5?.upnl ?? 0;
-  const data: OfficeData = { ...j, market, cal, binance: j.binance ? { ...j.binance, pos: posB } : j.binance };
+  const data: OfficeData = { ...j, market, cal, btc, binance: j.binance ? { ...j.binance, pos: posB } : j.binance };
   const today = new Date(now); today.setHours(0, 0, 0, 0);
   const closedToday = j.trades.filter((t) => t.result !== 'open' && t.closedAt && t.closedAt >= today.getTime());
   const isMt5 = (t: { strategy: string }) => t.strategy === 'v2' || t.strategy === 'nas';

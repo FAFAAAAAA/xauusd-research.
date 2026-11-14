@@ -1046,3 +1046,6 @@ body:has(.office-home)::after { display: none; }
 .oc-stats small { display: block; font: 600 11px system-ui, sans-serif; color: #8a8178; }
 .oc-stats b { display: block; font: 800 16px system-ui, sans-serif; margin-top: 2px; }
 .oc-stats .up { color: #1f9d57; } .oc-stats .dn { color: #d63a3f; }
+
+/* Trade: Bitcoin today row (above the open positions) */
+.opencard .btc-badge { background: #f7931a; color: #fff; font-weight: 800; }

@@ -8,6 +8,8 @@ import { JOURNAL_KEYS, marketOfJournal } from '@/lib/core/markets';
 import { liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/lib/core/journal';
 import TradeDashboard, { type CashFlow } from '@/components/TradeDashboard';
 import LiveTradeChart from '@/components/LiveTradeChart';
+import BtcChart from '@/components/BtcChart';
+import { useBtcDay, pctText } from '@/components/btcDay';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const money = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '—' : `${n < 0 ? '−' : n > 0 ? '+' : ''}$${Math.abs(n).toFixed(2)}`);
@@ -42,6 +44,8 @@ export default function TradePage() {
   const [showHist, setShowHist] = useState(false);
   const [histLimit, setHistLimit] = useState(10);
   const [detail, setDetail] = useState<JournalTrade | null>(null);
+  const btc = useBtcDay();                         // Bitcoin today (realtime, every 3 s)
+  const [btcOpen, setBtcOpen] = useState(false);   // tap the Bitcoin row: chart only
   const load = useCallback(() => {
     setErr(null);
     call<any>('/api/live').then(setD).catch((e) => setErr(e.message));
@@ -219,7 +223,22 @@ export default function TradePage() {
 
       <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz} live={market === 'crypto' ? j.binance ?? null : j.mt5 ?? null}
         cashflow={(market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? []}
-        openSlot={openSection}
+        openSlot={<>
+          {/* Bitcoin today, above the open positions: % from today's daily open (00:00 UTC), tap for the chart */}
+          <section className="group">
+            <div className="hcards">
+              <button className="hcard opencard btcday" onClick={() => setBtcOpen(true)}>
+                <span className="hc-side op-badge btc-badge">₿</span>
+                <span className="op-left">
+                  <strong className="hc-name">Bitcoin</strong>
+                  <span className="op-strat">{btc ? `$${btc.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · hari ini` : 'memuat…'}</span>
+                </span>
+                <span className={`op-pnl ${!btc ? 'mute' : btc.pct > 0 ? 'pos' : btc.pct < 0 ? 'neg' : ''}`}>{btc ? pctText(btc.pct) : '—'}</span>
+              </button>
+            </div>
+          </section>
+          {openSection}
+        </>}
         openPnl={openTotal}
         fallbackStart={market === 'crypto' ? 199.02 : 10000}
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
@@ -312,6 +331,7 @@ export default function TradePage() {
             <div className="hcards">{histItems.map((x) => x.el)}</div>
           </div> : null}
         </> : <p className="empty-inline">Belum ada trade.</p>}
+        {btcOpen ? <Sheet title="Bitcoin" onClose={() => setBtcOpen(false)}><BtcChart tz={tz} /></Sheet> : null}
         {detail ? (
           <Sheet title={coinOf(detail) || (NAME[detail.strategy] ?? detail.strategy)} onClose={() => setDetail(null)}>
             <div className="stack dt-sheet">

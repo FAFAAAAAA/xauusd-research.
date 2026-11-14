@@ -17,6 +17,7 @@ export interface OfficeData {
   trades: JournalTrade[]; binance?: Live; mt5?: Live;
   market?: Array<{ name: string; move: number }>;          // % change of gold / BTC over the last 15 minutes
   cal?: Array<{ title: string; at: number }>;               // big US news coming up (CPI, FOMC, NFP…)
+  btc?: number | null;                                       // Bitcoin % change today (from the 00:00 UTC daily open), realtime
 }
 export type ScreenLine = { k: string; v: string; color?: string; sub?: string; subColor?: string };
 
@@ -2617,7 +2618,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       { const v = view.current, vk = `${v.z}:${v.tx}:${v.ty}:${k}`; if (vk !== sprView) { sprView = vk; SPR.moving = Date.now(); } }
       const t = tm / 1000, wall = Date.now(), S0 = stRef.current;
       const S: Record<string, Status> = { ...S0, ...(EV.cur?.courier && wall < EV.cur.until ? { kurir: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}), ...(EV.cur?.guest && wall < EV.cur.until ? { tamu: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}) };
-      CAL = dataRef.current.cal ?? [];
+      CAL = dataRef.current.cal ?? []; BTCP = dataRef.current.btc ?? null;
       if (wall - evAt > 500) { evAt = wall; scheduleEvents({ agents, S, wall, data: dataRef.current }); runScenes({ agents, S, wall, data: dataRef.current }); }
       for (const id of WORKERS) { const s = S[id]; MODES[id] = !s || s.label === 'BELUM AKTIF' || s.sleep ? 'off' : s.label.startsWith('POSISI') ? 'pos' : 'idle'; }
       MODES.tgSend = S.tg?.label === 'KIRIM PESAN' ? 'pos' : 'off';
@@ -3086,6 +3087,7 @@ function drawPositions(c: C, list: Pos[], t: number) {
 
 /* small wall boards: the H4 candle countdown (trading floor) and the clock + date (lobby) */
 let CAL: Array<{ title: string; at: number }> = [];
+let BTCP: number | null = null;
 const inTime = (ms: number) => { const mn = Math.ceil(ms / 60_000); if (mn < 60) return `${mn} MENIT LAGI`; const hr = Math.floor(mn / 60); if (hr < 48) return `${hr} JAM LAGI`; return `${Math.floor(hr / 24)} HARI LAGI`; };
 function drawBoards(c: C, room: number, wall: number, t: number) {
   const board = (x0: number, x1: number, z0: number, z1: number, fn: (w: number, h: number) => void) => {
@@ -3113,8 +3115,11 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
       c.font = '800 17px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(hm, w / 2, h * 0.3);
       c.font = '700 5.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#f2c230'; c.fillText(`${day}, ${d.getDate()} ${mon} ${d.getFullYear()}`, w / 2, h * 0.58);
       c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(6, h * 0.7, w - 12, 0.6);
-      c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('H4', w * 0.24, h * 0.84);
-      c.font = '800 7px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 && Math.floor(t * 4) % 2 ? '#ffffff' : '#f2c230'; c.fillText(h4, w * 0.62, h * 0.84);
+      // bottom row: Bitcoin's % today on the left (green up, red down), then the H4 countdown
+      if (BTCP != null) { c.font = '800 6.4px ui-monospace, Menlo, monospace'; c.fillStyle = BTCP > 0 ? '#2ee59d' : BTCP < 0 ? '#ff5a5a' : '#ffffff'; c.fillText(`${BTCP > 0 ? '+' : BTCP < 0 ? '−' : ''}${Math.abs(BTCP).toFixed(2)}%`, w * 0.2, h * 0.84); }
+      c.fillStyle = 'rgba(255,255,255,.14)'; if (BTCP != null) c.fillRect(w * 0.4, h * 0.77, 0.6, h * 0.14);
+      c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('H4', BTCP != null ? w * 0.5 : w * 0.24, h * 0.84);
+      c.font = '800 7px ui-monospace, Menlo, monospace'; c.fillStyle = left < 60_000 && Math.floor(t * 4) % 2 ? '#ffffff' : '#f2c230'; c.fillText(h4, BTCP != null ? w * 0.75 : w * 0.62, h * 0.84);
     });
   }
 }
