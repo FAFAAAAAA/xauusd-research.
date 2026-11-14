@@ -988,5 +988,19 @@ body:has(.office-home)::after { display: none; }
 
 
 /* "Rapat" button on the full-screen office: everybody to the meeting table */
-.office-meet { position: absolute; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 6; border: 0; border-radius: 999px; background: rgba(18,19,23,.72); color: #fff; font: 700 12px system-ui, sans-serif; padding: 7px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.office-btns { position: absolute; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 6; display: flex; gap: 6px; }
+.office-meet { border: 0; border-radius: 999px; background: rgba(18,19,23,.72); color: #fff; font: 700 12px system-ui, sans-serif; padding: 7px 12px; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
 .office-meet:active { transform: scale(.95); }
+
+/* gallery of moments */
+.office-gallery { position: absolute; inset: 0; z-index: 30; background: rgba(8,10,16,.55); display: flex; align-items: flex-end; justify-content: center; padding: 16px 12px calc(env(safe-area-inset-bottom, 0px) + 16px); }
+.og-box { width: 100%; max-width: 520px; max-height: 78%; overflow: auto; background: #fffaf2; border-radius: 16px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.35); color: #2a2320; }
+.og-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.og-head b { flex: 1; font-size: 15px; }
+.og-head button { border: 0; border-radius: 999px; background: #2a2b30; color: #fff; font: 700 12px system-ui, sans-serif; padding: 6px 10px; }
+.og-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.og-grid button { border: 0; padding: 0; background: none; text-align: left; }
+.og-grid img, .og-big img { width: 100%; display: block; border-radius: 10px; }
+.og-grid span { display: block; font: 700 11px system-ui, sans-serif; margin-top: 3px; }
+.og-big span { display: block; font: 700 13px system-ui, sans-serif; margin-top: 6px; text-align: center; }
+.og-empty { font: 500 13px/1.4 system-ui, sans-serif; color: #6a625b; text-align: center; padding: 18px 6px; margin: 0; }

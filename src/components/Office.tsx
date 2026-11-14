@@ -69,6 +69,7 @@ const PEOPLE: Person[] = [
   { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 2.35, 10.35, 'nx', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
   { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 13.65, 3.2, 'px', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
   { id: 'ob', name: 'Udin', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
+  { id: 'tamu', name: 'Tamu', role: 'KLIEN', seat: { ...seat('tamu', 2, 13.5, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#3a2a20', skin: '#efc9a4', shirt: '#3b4a6b', pants: '#2a2f3a', style: 'slick', tie: true, glasses: true },
   { id: 'kurir', name: 'Kurir', role: 'KURIR', seat: { ...seat('kurir', 2, 11.65, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#222', skin: '#e2b48a', shirt: '#e5484d', pants: '#2a2b30', style: 'cap', cap: '#c0392b' },
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
@@ -175,7 +176,7 @@ const CHAT: Record<string, string[]> = {
 };
 /* ---------- office events: several people do one thing together for a while ---------- */
 type Step = { act: Spot; dwell: number };
-type Ev = { kind: string; start: number; until: number; plans: Record<string, Step[]>; ids: string[]; random: boolean; courier?: boolean; items?: (room: number, wall: number) => Item[] };
+type Ev = { kind: string; start: number; until: number; plans: Record<string, Step[]>; ids: string[]; random: boolean; courier?: boolean; guest?: boolean; items?: (room: number, wall: number) => Item[] };
 const EV: { cur: Ev | null; next: number; done: Record<string, string> } = { cur: null, next: 0, done: {} };
 const inEvent = (id: string, wall: number) => !!EV.cur && wall < EV.cur.until && EV.cur.ids.includes(id);
 export const awayHours = (now: number) => { const h = new Date(now).getHours(); return h >= 23 || h < 7; };       // Marcel and Ny. Vetrycia go home
@@ -248,6 +249,31 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
         c.fillStyle = '#d9473b'; for (let k = 0; k < 6; k++) { c.beginPath(); c.arc(sx + Math.cos(k) * 3, sy - 1 + Math.sin(k * 1.7) * 1.3, 0.7, 0, 7); c.fill(); }
       }
     })];
+    return e;
+  }
+  if (kind === 'tamu') {
+    // a client walks in through the exit door, signs in with Pentoel, takes the lift up and meets Marcel at the meeting table
+    if (!freeFor(ctx, 'bos') || !freeFor(ctx, 'jaga')) return null;
+    const gs = PEOPLE.find((q) => q.id === 'jaga')!.seat;
+    const plans: Record<string, Step[]> = {
+      tamu: [
+        { act: sp('ev-tamu-in', 2, 13.6, 4.55, 'ny', 'LAPOR SATPAM', { say: ['Permisi, mau ketemu Pak Marcel', '#1e1f23'] }), dwell: S(7) },
+        { act: sp('ev-tamu-meet', 0, 2.0, 6.7, 'px', 'MEETING KLIEN', { pose: 'sit' }), dwell: S(8) },
+        { act: sp('ev-tamu-meet', 0, 2.0, 6.7, 'px', 'MEETING KLIEN', { pose: 'sit', say: ['Saya tertarik sama sistemnya!', '#1e1f23'] }), dwell: S(12) },
+        { act: sp('ev-tamu-meet', 0, 2.0, 6.7, 'px', 'MEETING KLIEN', { pose: 'sit' }), dwell: S(12) },
+        { act: sp('ev-tamu-meet', 0, 2.0, 6.7, 'px', 'SALAMAN', { say: ['Terima kasih, Pak!', '#2e9e5b'] }), dwell: S(5) },
+        { act: sp('ev-tamu-out', 2, 13.5, 0.7, 'ny', 'PULANG', { prop: 'vanish' }), dwell: S(60) },
+      ],
+      jaga: [{ act: { ...gs, id: 'ev-tamu-jaga', label: 'TERIMA TAMU', say: ['Selamat datang! Silakan naik ke lantai 3', '#1e1f23'] }, dwell: S(14) }, { act: { ...gs, id: 'ev-tamu-jaga', label: 'CATAT TAMU', prop: 'paper' }, dwell: S(20) }],
+      bos: [
+        { act: sp('ev-tamu-bos', 0, 4.0, 6.7, 'nx', 'NUNGGU TAMU', { pose: 'sit' }), dwell: S(22) },
+        { act: sp('ev-tamu-bos', 0, 4.0, 6.7, 'nx', 'MEETING KLIEN', { pose: 'sit', say: ['Selamat datang, silakan duduk!', '#1e1f23'] }), dwell: S(10) },
+        { act: sp('ev-tamu-bos', 0, 4.0, 6.7, 'nx', 'PRESENTASI', { pose: 'sit', say: ['Kami disiplin: RR 1:2, keluar di TP/SL', '#1e1f23'] }), dwell: S(12) },
+        { act: sp('ev-tamu-bos', 0, 4.0, 6.7, 'nx', 'PRESENTASI', { pose: 'sit', say: ['Semua tercatat di jurnal, transparan', '#1e1f23'] }), dwell: S(12) },
+        { act: sp('ev-tamu-bos', 0, 4.0, 6.7, 'nx', 'SALAMAN', { say: ['Sama-sama, ditunggu kabarnya!', '#2e9e5b'] }), dwell: S(6) },
+      ],
+    };
+    const e = ev(plans, 110, { random: false }); e.guest = true;
     return e;
   }
   if (kind === 'paket') {
@@ -440,7 +466,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
 /** the "Rapat" button: asks scheduleEvents for an instant meeting */
 const MEETCALL = { at: 0 };
 const any1 = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
-const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6], ['kopi', 1.1], ['tos', 0.9], ['debat', 1], ['lucu', 1]];
+const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6], ['kopi', 1.1], ['tos', 0.9], ['debat', 1], ['lucu', 1], ['tamu', 0.9]];
 /** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
 function scheduleEvents(ctx: EvCtx) {
   const { wall, data, agents } = ctx;
@@ -1103,7 +1129,7 @@ function armchair(c: C, x: number, y: number, col: string, dark: string, massage
 function baseItems(): Item[] {
   const it: Item[] = [];
   for (const [y0, id] of [[0.9, 'alt'], [3.1, 'big'], [5.3, 'xau'], [7.5, 'nas'], [9.7, 'tg']] as Array<[number, string]>) it.push(windowDesk(y0, id));
-  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
+  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin' || p.id === 'tamu') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(13.65, 3.2, 'px', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
@@ -1849,6 +1875,7 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   const ev = EV.cur;
   if (ev && now < ev.until && ev.plans[p.id]?.length) return ev.plans[p.id].shift()!;
   if (a.queue?.length) return a.queue.shift()!;
+  if (p.id === 'tamu') return { act: sp('ev-tamu-out', 2, 13.5, 0.7, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 60_000 };
   if (p.id === 'kurir') return { act: sp('ev-kurir-out', FLAT ? 2 : a.room, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 60_000 };
   // Marcel and Ny. Vetrycia go home at night (the bots keep working overtime), and clock in again in the morning
   if ((p.id === 'bos' || p.id === 'vet') && awayHours(now)) return { act: sp(`pulang-${p.id}`, 2, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 120_000 };
@@ -1954,6 +1981,49 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const fullRef = useRef(full); fullRef.current = full;
   const driftRef = useRef(false);
   const [zoomed, setZoomed] = useState(false);
+  // ---- gallery of moments: a photo of the office at every take-profit (and on demand), kept on this device ----
+  type Shot = { id: string; at: number; text: string; img: string };
+  const [shots, setShots] = useState<Shot[]>([]);
+  const [gallery, setGallery] = useState(false);
+  const [big, setBig] = useState<Shot | null>(null);
+  const GKEY = 'office-galeri';
+  useEffect(() => { try { setShots(JSON.parse(localStorage.getItem(GKEY) ?? '[]')); } catch { /* storage off */ } }, []);
+  const snap = (id: string, text: string) => {
+    const cv = ref.current; if (!cv) return;
+    try {
+      const w = 420, h = Math.round((cv.height / cv.width) * w), o = document.createElement('canvas'); o.width = w; o.height = h;
+      const oc = o.getContext('2d')!; oc.drawImage(cv, 0, 0, w, h);
+      oc.fillStyle = 'rgba(0,0,0,.55)'; oc.fillRect(0, h - 34, w, 34); oc.fillStyle = '#fff'; oc.font = '700 15px system-ui, sans-serif'; oc.textBaseline = 'middle';
+      oc.fillText(text, 12, h - 17);
+      const d = new Date(); oc.textAlign = 'right'; oc.font = '600 12px system-ui, sans-serif';
+      oc.fillText(`${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, w - 12, h - 17);
+      const shot: Shot = { id, at: Date.now(), text, img: o.toDataURL('image/jpeg', 0.72) };
+      setShots((prev) => {
+        if (prev.some((x) => x.id === id)) return prev;
+        const next = [shot, ...prev].slice(0, 24);
+        for (let n = next.length; n > 0; n--) { try { localStorage.setItem(GKEY, JSON.stringify(next.slice(0, n))); break; } catch { /* full: keep fewer */ } }
+        return next;
+      });
+    } catch { /* drawing not allowed: skip */ }
+  };
+  const snapRef = useRef(snap); snapRef.current = snap;
+  useEffect(() => {
+    // new take-profits (closed after the page opened, or in the last 15 minutes) get a photo a few seconds later, during the celebration
+    const t0 = Date.now() - 15 * 60_000;
+    const id = window.setInterval(() => {
+      const known = new Set<string>((() => { try { return (JSON.parse(localStorage.getItem(GKEY) ?? '[]') as Shot[]).map((x) => x.id); } catch { return []; } })());
+      const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
+      for (const t of dataRef.current.trades) {
+        if (t.result !== 'tp' || !t.closedAt || t.closedAt < t0 || known.has(`tp-${t.id}`)) continue;
+        if (Date.now() - t.closedAt < 6000) continue;
+        const name = t.strategy === 'v2' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
+        const pnl = Number(t.pnl ?? 0);
+        snapRef.current(`tp-${t.id}`, `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`);
+        break;
+      }
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
   useEffect(() => {
     let off = false;
     const load = () => fetch('https://api.open-meteo.com/v1/forecast?latitude=37.57&longitude=126.98&current=weather_code').then((r) => (r.ok ? r.json() : null)).then((j) => {
@@ -2064,7 +2134,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       if (document.visibilityState !== 'visible') { last = tm; return; }
       const dt = Math.min(0.05, (tm - last) / 1000); last = tm;
       const t = tm / 1000, wall = Date.now(), S0 = stRef.current;
-      const S: Record<string, Status> = EV.cur?.courier && wall < EV.cur.until ? { ...S0, kurir: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : S0;
+      const S: Record<string, Status> = { ...S0, ...(EV.cur?.courier && wall < EV.cur.until ? { kurir: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}), ...(EV.cur?.guest && wall < EV.cur.until ? { tamu: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}) };
       CAL = dataRef.current.cal ?? [];
       if (wall - evAt > 500) { evAt = wall; scheduleEvents({ agents, S, wall, data: dataRef.current }); }
       for (const id of WORKERS) { const s = S[id]; MODES[id] = !s || s.label === 'BELUM AKTIF' || s.sleep ? 'off' : s.label.startsWith('POSISI') ? 'pos' : 'idle'; }
@@ -2076,8 +2146,10 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         const s = S[p.id];
         if (!s || s.label === 'BELUM AKTIF') { delete agents[p.id]; continue; }
         let a = agents[p.id];
+        const fresh = !a;
         if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.id === 'vet' ? { ...p.seat, prop: 'tablet' } : p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
-        if (p.id === 'kurir' && !a.act.id.startsWith('ev-')) { a.hiddenUntil = wall + 1200; a.carry = 'box'; a.carryUntil = wall + 14_000; a.until = 0; a.face = 'py'; }
+        if (fresh && p.id === 'tamu') { a.hiddenUntil = wall + 1200; a.until = 0; a.face = 'py'; }
+        if (fresh && p.id === 'kurir') { a.hiddenUntil = wall + 1200; a.carry = 'box'; a.carryUntil = wall + 14_000; a.until = 0; a.face = 'py'; }
         if (wall < a.hiddenUntil) continue;                                          // riding the lift
         if (wall < a.scoldUntil) { a.path = []; a.vx = a.vy = 0; continue; }          // frozen while being yelled at
         // arrived at the lift with somewhere to go: ride to the other floor, step out, walk on
@@ -2321,7 +2393,22 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div></>}
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
-      {full ? <button type="button" className="office-meet" onClick={() => { MEETCALL.at = Date.now(); }} aria-label="Panggil rapat">📢 Rapat</button> : null}
+      {full ? <div className="office-btns">
+        <button type="button" className="office-meet" onClick={() => setGallery(true)} aria-label="Galeri momen">🖼️ {shots.length || ''}</button>
+        <button type="button" className="office-meet" onClick={() => { MEETCALL.at = Date.now(); }} aria-label="Panggil rapat">📢 Rapat</button>
+      </div> : null}
+      {gallery ? (
+        <div className="office-gallery" onClick={() => { setGallery(false); setBig(null); }} data-noswipe>
+          <div className="og-box" onClick={(e) => e.stopPropagation()}>
+            <div className="og-head"><b>Galeri momen</b>
+              <button type="button" onClick={() => { setGallery(false); setTimeout(() => { snapRef.current(`foto-${Date.now()}`, 'Foto kantor'); setGallery(true); }, 350); }}>📷 Foto sekarang</button>
+              <button type="button" onClick={() => { setGallery(false); setBig(null); }} aria-label="Tutup">✕</button></div>
+            {big ? <div className="og-big" onClick={() => setBig(null)}><img src={big.img} alt={big.text} /><span>{big.text}</span></div>
+              : shots.length ? <div className="og-grid">{shots.map((x) => <button type="button" key={x.id} onClick={() => setBig(x)}><img src={x.img} alt={x.text} /><span>{x.text}</span></button>)}</div>
+              : <p className="og-empty">Belum ada foto. Setiap kali kena TP, kantor otomatis mengambil foto di sini.</p>}
+          </div>
+        </div>
+      ) : null}
       {zoomed ? <button type="button" className="office-reset" onClick={() => { Object.assign(view.current, homeRef.current); driftRef.current = fullRef.current; setZoomed(false); if (ref.current) ref.current.style.touchAction = 'pan-y'; }}>1×</button>
         : null}
     </div>
@@ -2358,7 +2445,7 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
   if (room === 0) onWall(ROSTER.x0, ROSTER.z1, () => {
     c.textBaseline = 'middle';
     c.font = '900 6px system-ui, sans-serif'; c.fillStyle = '#b8901a'; c.textAlign = 'center'; c.fillText('T I M', rw / 2, 5); c.textAlign = 'left';
-    const team = PEOPLE.filter((p) => p.id !== 'kurir'), lh = (rh2 - 10) / team.length;
+    const team = PEOPLE.filter((p) => p.id !== 'kurir' && p.id !== 'tamu'), lh = (rh2 - 10) / team.length;
     team.forEach((p, i) => {
       const y = 10 + lh * (i + 0.5);
       c.font = '600 4px ui-monospace, Menlo, monospace'; const roleW = c.measureText(p.role).width;
