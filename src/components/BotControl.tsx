@@ -13,6 +13,15 @@ function ago(ms: number) {
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const nf = (x: number) => String(x).replace('.', ',');
 
+/** backtest 2020–2026, 12-month windows, 4 SELL + 2 BUY: balance multiple (median / worst 10%) and usual deepest drop, by risk % per trade */
+const EXP: Array<[number, number, number, number]> = [[0, 1, 1, 0], [1, 2.31, 1.68, 21], [1.5, 3.36, 2.1, 30], [2, 4.74, 2.59, 39], [2.5, 6.51, 3.12, 46], [3, 8.66, 3.65, 53], [4, 13.64, 3.53, 65], [5, 19.44, 2.21, 73]];
+function expect(r: number) {
+  const x = Math.max(0, Math.min(5, r));
+  const i = Math.max(1, EXP.findIndex((p) => p[0] >= x)), a = EXP[i - 1], b = EXP[i], t = (x - a[0]) / (b[0] - a[0] || 1);
+  const l = (k: 1 | 2 | 3) => a[k] + (b[k] - a[k]) * t;
+  return { mid: l(1), bad: l(2), dd: l(3) };
+}
+
 /**
  * Remote settings for the Binance bot. The bot fetches them every ~60 s and applies them itself (no order is ever sent from here).
  * A setting that was never changed here keeps the value from snr_bot_config.json on the VPS ("config VPS").
@@ -67,15 +76,7 @@ export function BotControlCard() {
       </button>
     );
   };
-  const Sec = ({ id, title, sum, children }: { id: string; title: string; sum: string; children: React.ReactNode }) => (
-    <div className={`bc-sec ${open === id ? 'open' : ''}`}>
-      <button type="button" className="bc-sh" onClick={() => setOpen(open === id ? null : id)}><b>{title}</b><span>{sum}</span><em>›</em></button>
-      {open === id ? <div className="bc-card">{children}</div> : null}
-    </div>
-  );
-
   const mode = v<string>('risk_mode', 'percent');
-  const riskSum = mode === 'usdt' ? `$${nf(v<number>('risk_usdt', 5))} per trade` : `${nf(v<number>('risk_percent', 1))}% saldo per trade`;
   const stopBal = v<number>('stop_balance_usdt', 0), streak = v<number>('max_loss_streak', 7), ls = ap?.lossStreak ?? 0;
   const lev = v<boolean>('leverage_auto', true);
   const hours = v<number[]>('summary_hours_kst', [8, 23]);
@@ -86,84 +87,124 @@ export function BotControlCard() {
     setErr(null); put('exclude', [...new Set([...excl, s])]); setSym('');
   };
 
-  return (
-    <div className="bc">
-      <div className="bc-top">
-        <b>Kontrol bot</b>
-        <span className={`bc-dot ${online ? (ap?.paused ? 'pause' : 'on') : 'off'}`}>{online ? (ap?.paused ? 'Jeda' : 'Aktif') : seen ? 'Tidak ada kabar' : 'Belum terhubung'}</span>
-      </div>
-      <p className="bc-sub">{seen ? `Bot cek ${ago(now - seen.at)}${ap?.version ? ` · versi ${ap.version}` : ''}` : 'Ganti snr_bot.py di VPS dengan versi terbaru agar bot bisa diatur dari sini.'}</p>
+  const bal = typeof d.balance === 'number' && d.balance > 0 ? d.balance : null;
+  const riskPct = mode === 'usdt' ? (bal ? (v<number>('risk_usdt', 5) / bal) * 100 : 0) : v<number>('risk_percent', 1);
+  const riskUsd = mode === 'usdt' ? v<number>('risk_usdt', 5) : bal ? (bal * riskPct) / 100 : 0;
+  const ex = expect(riskPct);
+  const tier = bal == null ? null : bal < 200 ? { risk: 2, sell: 3, buy: 1, keep: 0.5 } : bal < 1000 ? { risk: 2, sell: 4, buy: 2, keep: 0.5 }
+    : bal < 5000 ? { risk: 1.5, sell: 4, buy: 2, keep: 0.6 } : { risk: 1, sell: 4, buy: 2, keep: 0.7 };
+  const safe: Partial<Record<BotKey, BotVal>> | null = tier && bal ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy,
+    stop_balance_usdt: Math.max(10, Math.floor((bal * tier.keep) / 10) * 10), max_loss_streak: 7, leverage_auto: true, margin_isolated: true } : null;
+  const isSafe = !!safe && Object.entries(safe).every(([k, x]) => same(v(k as BotKey, null as unknown as BotVal), x));
+  const zone = riskPct <= 1.5 ? 'Aman' : riskPct <= 3 ? 'Seimbang' : 'Agresif';
+  const fmtUsd = (x: number) => `$${Math.round(x).toLocaleString('id-ID')}`;
+  const LABEL: Partial<Record<BotKey, string>> = { risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko', max_positions: 'SELL', max_buy_positions: 'BUY', buy_enabled: 'BUY',
+    stop_balance_usdt: 'Rem saldo', max_loss_streak: 'Rem beruntun', leverage_auto: 'Leverage', leverage: 'Leverage', margin_isolated: 'Margin', daily_summary: 'Ringkasan', summary_hours_kst: 'Jam ringkasan', exclude: 'Koin' };
+  const show = (k: BotKey, x: unknown) => (x == null ? '—' : typeof x === 'boolean' ? (x ? 'nyala' : 'mati') : Array.isArray(x) ? (x.length ? x.join(', ').replace(/USDT/g, '') : '—')
+    : k === 'risk_percent' ? `${nf(x as number)}%` : k === 'risk_usdt' || k === 'stop_balance_usdt' ? `$${nf(x as number)}` : k === 'risk_mode' ? (x === 'usdt' ? 'USD' : '%') : String(x));
+  const changed = BOT_KEYS.filter((k) => !same(set[k], c.set[k]) && !same(v(k, null as unknown as BotVal), ap?.cfg?.[k]));
+  const tiles: Array<[string, string, string, string, string]> = [
+    ['pos', '⇅', 'Posisi', `${v<number>('max_positions', 3)} + ${v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 2) : 0}`, 'SELL · BUY'],
+    ['brake', '⛨', 'Rem', stopBal > 0 ? fmtUsd(stopBal) : 'Mati', streak > 0 ? `${streak} SL beruntun` : 'beruntun mati'],
+    ['lev', '⚡', 'Leverage', lev ? 'Otomatis' : `${v<number>('leverage', 5)}x`, v<boolean>('margin_isolated', true) ? 'Isolated' : 'Cross'],
+    ['sum', '✈', 'Ringkasan', v<boolean>('daily_summary', true) ? hours.map((h) => String(h).padStart(2, '0')).join(' & ') : 'Mati', 'Telegram'],
+  ];
 
-      <button type="button" className={`bc-pause ${c.paused ? 'is' : ''}`} role="switch" aria-checked={!c.paused} disabled={busy} onClick={() => send({ ...c, paused: !c.paused }, c.paused ? 'Trading dilanjutkan' : 'Trading dijeda')}>
-        <span><b>{c.paused ? 'Trading dijeda' : 'Trading berjalan'}</b><small>{c.paused ? 'Tidak buka posisi baru. Posisi terbuka tetap jalan dengan SL/TP.' : 'Bot boleh membuka posisi baru.'}</small></span>
+  return (
+    <div className="bx">
+      <div className="bx-top">
+        <b>Kontrol bot</b>
+        <span className={`bc-dot ${online ? (ap?.paused ? 'pause' : 'on') : 'off'}`}>{online ? `${ap?.paused ? 'Jeda' : 'Aktif'} · ${ago(now - seen.at).replace(' lalu', '')}` : seen ? 'Tidak ada kabar' : 'Belum terhubung'}</span>
+      </div>
+      {!seen ? <p className="bc-sub">Ganti snr_bot.py di VPS dengan versi terbaru agar bot bisa diatur dari sini.</p> : null}
+
+      <button type="button" className={`bx-run ${c.paused ? 'is' : ''}`} role="switch" aria-checked={!c.paused} disabled={busy} onClick={() => send({ ...c, paused: !c.paused }, c.paused ? 'Trading dilanjutkan' : 'Trading dijeda')}>
+        <span><b>{c.paused ? 'Trading dijeda' : 'Trading berjalan'}</b><small>{c.paused ? 'Tidak buka posisi baru · posisi terbuka tetap jalan' : 'Bot boleh membuka posisi baru'}</small></span>
         <i className={`co-tg ${c.paused ? '' : 'on'}`} />
       </button>
 
-      {(() => {
-        const bal = typeof d.balance === 'number' ? d.balance : null;
-        // tiers by balance: the smaller the account, the fewer positions at once; the bigger, the lower the % (same dollars at stake grow anyway)
-        const tier = bal == null ? null : bal < 200 ? { risk: 2, sell: 3, buy: 1, keep: 0.5 } : bal < 1000 ? { risk: 2, sell: 4, buy: 2, keep: 0.5 }
-          : bal < 5000 ? { risk: 1.5, sell: 4, buy: 2, keep: 0.6 } : { risk: 1, sell: 4, buy: 2, keep: 0.7 };
-        const brake = bal && tier ? Math.max(10, Math.floor((bal * tier.keep) / 10) * 10) : 0;
-        const safe: Partial<Record<BotKey, BotVal>> = tier ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy,
-          stop_balance_usdt: brake, max_loss_streak: 7, leverage_auto: true, margin_isolated: true } : {};
-        if (!tier) return null;
-        return (
-          <button type="button" className="bc-safe" onClick={() => { setSet({ ...set, ...safe }); setOpen(null); }}>
-            <span className="bc-safe-ic">✓</span>
-            <span><b>Setelan aman untuk saldo ${Math.round(bal!)}</b><small>Risiko {nf(tier.risk)}% (± ${nf(Math.round(bal! * tier.risk) / 100)}/trade) · {tier.sell} SELL + {tier.buy} BUY · rem saldo ${brake} · leverage otomatis · Isolated</small></span>
-          </button>
-        );
-      })()}
-
-      <Sec id="risk" title="Risiko" sum={riskSum}>
-        <div className="bc-row"><span className="bc-l">Cara hitung<Hint k="risk_mode" /></span>
-          <span className="bc-seg">{(['percent', 'usdt'] as const).map((m) => <button key={m} type="button" className={mode === m ? 'on' : ''} onClick={() => put('risk_mode', m)}>{m === 'percent' ? '% saldo' : 'USD tetap'}</button>)}</span></div>
-        {mode === 'percent'
-          ? <Step k="risk_percent" label="Risiko per trade" unit="%" by={0.5} lo={0.5} hi={5} dp={1} dflt={1} />
-          : <Step k="risk_usdt" label="Risiko per trade" unit="$" by={1} lo={1} hi={500} dflt={5} />}
-      </Sec>
-
-      <Sec id="pos" title="Posisi" sum={`${v<number>('max_positions', 3)} SELL · ${v<boolean>('buy_enabled', true) ? `${v<number>('max_buy_positions', 2)} BUY` : 'BUY mati'}`}>
-        <Step k="max_positions" label="Maks posisi SELL" by={1} lo={1} hi={6} dflt={3} />
-        <Toggle k="buy_enabled" label="BUY (BTC, ETH, SOL, …)" dflt />
-        {v<boolean>('buy_enabled', true) ? <Step k="max_buy_positions" label="Maks posisi BUY" by={1} lo={0} hi={4} dflt={2} /> : null}
-      </Sec>
-
-      <Sec id="brake" title="Rem" sum={`${stopBal > 0 ? `saldo < $${stopBal}` : 'saldo mati'} · ${streak > 0 ? `${streak} SL beruntun` : 'beruntun mati'}`}>
-        <Step k="stop_balance_usdt" label="Rem saldo" unit="$" by={10} lo={0} hi={100000} dflt={0} />
-        <Step k="max_loss_streak" label="Rem beruntun" unit=" SL" by={1} lo={0} hi={30} dflt={7} />
-        <div className="bc-row"><span className="bc-l">Kalah beruntun<small>{streak > 0 && ls >= streak ? 'REM AKTIF — bot tidak buka posisi baru' : `dari ${streak || '—'}`}</small></span>
-          <span className="bc-step"><b className={streak > 0 && ls >= streak ? 'dn' : ''}>{ls}</b>
-            <button type="button" className="bc-mini" disabled={busy || !ls} onClick={() => send({ ...c, reset: true }, 'Hitungan kalah beruntun di-nol-kan')}>Nol-kan</button></span></div>
-      </Sec>
-
-      <Sec id="lev" title="Leverage & margin" sum={`${lev ? 'otomatis' : `${v<number>('leverage', 5)}x`} · ${v<boolean>('margin_isolated', true) ? 'Isolated' : 'Cross'}`}>
-        <Toggle k="leverage_auto" label="Leverage otomatis" sub={mine('leverage_auto') ? '0,5 / jarak SL, maks 20x' : 'config VPS'} dflt />
-        {!lev ? <Step k="leverage" label="Leverage tetap" unit="x" by={1} lo={1} hi={20} dflt={5} /> : null}
-        <Toggle k="margin_isolated" label="Margin Isolated" sub={mine('margin_isolated') ? 'mati = Cross' : 'config VPS'} dflt />
-      </Sec>
-
-      <Sec id="sum" title="Ringkasan Telegram" sum={v<boolean>('daily_summary', true) ? hours.map((h) => `${String(h).padStart(2, '0')}:00`).join(' & ') : 'mati'}>
-        <Toggle k="daily_summary" label="Ringkasan saldo & trade" dflt />
-        {v<boolean>('daily_summary', true) ? (
-          <div className="bc-row bc-col"><span className="bc-l">Jam (waktu Korea)<Hint k="summary_hours_kst" /></span>
-            <div className="bc-hours">{Array.from({ length: 24 }, (_, h) => <button key={h} type="button" className={hours.includes(h) ? 'on' : ''} onClick={() => put('summary_hours_kst', hours.includes(h) ? hours.filter((x) => x !== h) : [...hours, h].sort((a, b) => a - b).slice(0, 6))}>{String(h).padStart(2, '0')}</button>)}</div></div>
-        ) : null}
-      </Sec>
-
-      <Sec id="ex" title="Koin dikecualikan" sum={excl.length ? excl.map((x) => x.replace(/USDT$/, '')).join(', ') : 'tidak ada'}>
-        <div className="bc-row bc-col">
-          <div className="bc-chips">{excl.length ? excl.map((x) => <button key={x} type="button" onClick={() => put('exclude', excl.filter((y) => y !== x))}>{x.replace(/USDT$/, '')} <i>×</i></button>) : <span className="bc-l"><small>Semua koin dipakai.<Hint k="exclude" /></small></span>}</div>
-          <div className="bc-add"><input value={sym} placeholder="mis. ARB" autoCapitalize="characters" onChange={(e) => setSym(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addSym(); }} /><button type="button" onClick={addSym}>Tambah</button></div>
+      {bal ? (
+        <div className="bx-hero">
+          <small>Perkiraan 12 bulan · dari {fmtUsd(bal)}</small>
+          <div className="bx-big"><b>{fmtUsd(bal * ex.mid)}</b><span>biasa</span></div>
+          <div className="bx-rng"><i style={{ left: `${(ex.bad / (ex.mid * 1.15)) * 100}%`, right: `${100 - 100 / 1.15}%` }} /><em style={{ left: `${100 / 1.15}%` }} /></div>
+          <div className="bx-rl"><span>periode buruk <b>{fmtUsd(bal * ex.bad)}</b></span><span>backtest 2020–2026</span></div>
+          <div className="bx-stats">
+            <div><small>Rugi / SL</small><b className="dn">−${nf(Math.round(riskUsd * 100) / 100)}</b></div>
+            <div><small>Untung / TP</small><b className="up">+${nf(Math.round(riskUsd * 200) / 100)}</b></div>
+            <div><small>Turun maks</small><b className="yl">−{Math.round(ex.dd)}%</b></div>
+          </div>
         </div>
-      </Sec>
+      ) : null}
 
-      {pending ? <p className="bc-now">Menunggu bot memakai setelan baru…</p> : null}
+      <div className="bx-risk">
+        <div className="bx-rh"><small>Risiko per trade</small>
+          <span className="bc-seg">{(['percent', 'usdt'] as const).map((m) => <button key={m} type="button" className={mode === m ? 'on' : ''} onClick={() => put('risk_mode', m)}>{m === 'percent' ? '%' : 'USD'}</button>)}</span></div>
+        <div className="bx-pct">{mode === 'percent' ? <>{nf(riskPct)}%<span>± ${nf(Math.round(riskUsd * 100) / 100)}</span></> : <>${nf(v<number>('risk_usdt', 5))}<span>{bal ? `± ${nf(Math.round(riskPct * 10) / 10)}% saldo` : ''}</span></>}<em className={`z-${zone}`}>{zone}</em></div>
+        {mode === 'percent'
+          ? <input className="bx-slider" type="range" min={0.5} max={5} step={0.5} value={riskPct} onChange={(e) => put('risk_percent', Number(e.target.value))} aria-label="Risiko per trade (%)" />
+          : <input className="bx-slider" type="range" min={1} max={bal ? Math.max(5, Math.round(bal * 0.05)) : 50} step={1} value={v<number>('risk_usdt', 5)} onChange={(e) => put('risk_usdt', Number(e.target.value))} aria-label="Risiko per trade (USD)" />}
+        <div className="bx-zones"><span>Aman</span><span>Seimbang</span><span>Agresif</span></div>
+        {safe ? <button type="button" className={`bx-safe ${isSafe ? 'on' : ''}`} onClick={() => setSet({ ...set, ...safe })}>{isSafe ? '✓ Sudah setelan aman' : `✓ Setelan aman untuk ${fmtUsd(bal!)}`}</button> : null}
+      </div>
+
+      <div className="bx-grid">
+        {tiles.map(([id, ic, t, b, i]) => (
+          <button key={id} type="button" className={`bx-t ${open === id ? 'open' : ''}`} onClick={() => setOpen(open === id ? null : id)}>
+            <span className="bx-ic">{ic}</span><small>{t}</small><b>{b}</b><i>{i}</i>
+          </button>
+        ))}
+        <button type="button" className={`bx-t wide ${open === 'ex' ? 'open' : ''}`} onClick={() => setOpen(open === 'ex' ? null : 'ex')}>
+          <small>Koin dikecualikan</small><i>{excl.length ? excl.map((x) => x.replace(/USDT$/, '')).join(', ') : 'tidak ada'} ›</i>
+        </button>
+      </div>
+
+      {open ? (
+        <div className="bc-card bx-detail">
+          {open === 'pos' ? <>
+            <Step k="max_positions" label="Maks posisi SELL" by={1} lo={1} hi={6} dflt={3} />
+            <Toggle k="buy_enabled" label="BUY (BTC, ETH, SOL, …)" dflt />
+            {v<boolean>('buy_enabled', true) ? <Step k="max_buy_positions" label="Maks posisi BUY" by={1} lo={0} hi={4} dflt={2} /> : null}
+          </> : null}
+          {open === 'brake' ? <>
+            <Step k="stop_balance_usdt" label="Rem saldo" unit="$" by={10} lo={0} hi={100000} dflt={0} />
+            <Step k="max_loss_streak" label="Rem beruntun" unit=" SL" by={1} lo={0} hi={30} dflt={7} />
+            <div className="bc-row"><span className="bc-l">Kalah beruntun<small>{streak > 0 && ls >= streak ? 'REM AKTIF — bot tidak buka posisi baru' : `dari ${streak || '—'}`}</small></span>
+              <span className="bc-step"><b className={streak > 0 && ls >= streak ? 'dn' : ''}>{ls}</b>
+                <button type="button" className="bc-mini" disabled={busy || !ls} onClick={() => send({ ...c, reset: true }, 'Hitungan kalah beruntun di-nol-kan')}>Nol-kan</button></span></div>
+          </> : null}
+          {open === 'lev' ? <>
+            <Toggle k="leverage_auto" label="Leverage otomatis" sub="0,5 / jarak SL, maks 20x" dflt />
+            {!lev ? <Step k="leverage" label="Leverage tetap" unit="x" by={1} lo={1} hi={20} dflt={5} /> : null}
+            <Toggle k="margin_isolated" label="Margin Isolated" sub="mati = Cross" dflt />
+          </> : null}
+          {open === 'sum' ? <>
+            <Toggle k="daily_summary" label="Ringkasan saldo & trade" dflt />
+            {v<boolean>('daily_summary', true) ? (
+              <div className="bc-row bc-col"><span className="bc-l">Jam (waktu Korea)</span>
+                <div className="bc-hours">{Array.from({ length: 24 }, (_, h) => <button key={h} type="button" className={hours.includes(h) ? 'on' : ''} onClick={() => put('summary_hours_kst', hours.includes(h) ? hours.filter((x) => x !== h) : [...hours, h].sort((a, b) => a - b).slice(0, 6))}>{String(h).padStart(2, '0')}</button>)}</div></div>
+            ) : null}
+          </> : null}
+          {open === 'ex' ? (
+            <div className="bc-row bc-col">
+              <div className="bc-chips">{excl.length ? excl.map((x) => <button key={x} type="button" onClick={() => put('exclude', excl.filter((y) => y !== x))}>{x.replace(/USDT$/, '')} <i>×</i></button>) : <span className="bc-l"><small>Semua koin dipakai.</small></span>}</div>
+              <div className="bc-add"><input value={sym} placeholder="mis. ARB" autoCapitalize="characters" onChange={(e) => setSym(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addSym(); }} /><button type="button" onClick={addSym}>Tambah</button></div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {err ? <div className="error">{err}</div> : null}
-      {dirty ? <div className="row"><button className="btn primary" disabled={busy} onClick={save}>{busy ? <><Spinner />Mengirim…</> : 'Kirim ke bot'}</button><button className="btn" onClick={() => setSet({ ...c.set })}>Batal</button></div> : null}
+      {pending ? <p className="bc-now">Menunggu bot memakai setelan baru…</p> : null}
+      {dirty ? (
+        <div className="bx-bar">
+          <span><b>{changed.length || 1} perubahan</b><small>{(changed.length ? changed : BOT_KEYS.filter((k) => !same(set[k], c.set[k]))).slice(0, 3).map((k) => `${LABEL[k]} ${show(k, ap?.cfg?.[k])} → ${show(k, v(k, null as unknown as BotVal))}`).join(' · ')}</small></span>
+          <button type="button" className="ghost" onClick={() => setSet({ ...c.set })} aria-label="Batal">✕</button>
+          <button type="button" disabled={busy} onClick={save}>{busy ? <Spinner /> : 'Kirim ke bot'}</button>
+        </div>
+      ) : null}
       {!dirty && Object.keys(c.set).length ? <button type="button" className="bc-reset" disabled={busy} onClick={async () => { const r = await send({ ...c, set: {} }, 'Semua setelan kembali ke config VPS'); if (r) setSet({}); }}>Kembalikan semua ke config VPS</button> : null}
-      <p className="bc-foot">API key, akun asli/testnet dan mode uji tetap hanya bisa diubah di VPS.</p>
+      <p className="bc-foot">Perkiraan dari backtest untuk 4 SELL + 2 BUY; hasil nyata biasanya lebih kecil. API key & akun hanya bisa diubah di VPS.</p>
     </div>
   );
 }
