@@ -101,13 +101,17 @@ export function BotControlCard() {
 
       {(() => {
         const bal = typeof d.balance === 'number' ? d.balance : null;
-        const brake = bal ? Math.max(10, Math.floor((bal * 0.5) / 10) * 10) : 0;
-        const safe: Partial<Record<BotKey, BotVal>> = { risk_mode: 'percent', risk_percent: 2, max_positions: 4, buy_enabled: true, max_buy_positions: 2,
-          stop_balance_usdt: brake, max_loss_streak: 7, leverage_auto: true, margin_isolated: true };
+        // tiers by balance: the smaller the account, the fewer positions at once; the bigger, the lower the % (same dollars at stake grow anyway)
+        const tier = bal == null ? null : bal < 200 ? { risk: 2, sell: 3, buy: 1, keep: 0.5 } : bal < 1000 ? { risk: 2, sell: 4, buy: 2, keep: 0.5 }
+          : bal < 5000 ? { risk: 1.5, sell: 4, buy: 2, keep: 0.6 } : { risk: 1, sell: 4, buy: 2, keep: 0.7 };
+        const brake = bal && tier ? Math.max(10, Math.floor((bal * tier.keep) / 10) * 10) : 0;
+        const safe: Partial<Record<BotKey, BotVal>> = tier ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy,
+          stop_balance_usdt: brake, max_loss_streak: 7, leverage_auto: true, margin_isolated: true } : {};
+        if (!tier) return null;
         return (
           <button type="button" className="bc-safe" onClick={() => { setSet({ ...set, ...safe }); setOpen(null); }}>
             <span className="bc-safe-ic">✓</span>
-            <span><b>Pakai setelan aman</b><small>Risiko 2% saldo · 4 SELL + 2 BUY{brake ? ` · rem saldo $${brake} (50% dari $${Math.round(bal!)})` : ''} · leverage otomatis · Isolated</small></span>
+            <span><b>Setelan aman untuk saldo ${Math.round(bal!)}</b><small>Risiko {nf(tier.risk)}% (± ${nf(Math.round(bal! * tier.risk) / 100)}/trade) · {tier.sell} SELL + {tier.buy} BUY · rem saldo ${brake} · leverage otomatis · Isolated</small></span>
           </button>
         );
       })()}
