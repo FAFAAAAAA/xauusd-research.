@@ -509,11 +509,151 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
 const CALL = { kind: '', at: 0, res: '' };
 const any1 = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
 const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6], ['kopi', 1.1], ['tos', 0.9], ['debat', 1], ['lucu', 1], ['tamu', 0.9], ['tebak', 1], ['pushup', 0.8], ['jajan', 0.9]];
+/* ---------- little scenes: two or three people talk to each other (fights, gossip, crushes, pranks, making up…) ----------
+ * They run next to the big office events, a new one every half minute or so, wherever people are free. */
+type Line = [number, string, string?, Partial<{ label: string; pose: Pose }>?];     // who speaks, what, bubble colour, how they change
+type Script = { key: string; roles: string[]; label: string; lines: Line[]; fight?: boolean; exit?: Array<string | null>; hours?: [number, number] };
+const RD = '#e5242b', GR = '#2e9e5b', BK = '#1e1f23', PK = '#d6336c';
+const SCRIPTS: Script[] = [
+  { key: 'ac', roles: ['w', 'w'], label: 'BERANTEM', fight: true, exit: ['NGAMBEK', null], lines: [
+    [0, 'Siapa yang nyetel AC 16 derajat?!', RD], [1, 'Aku. Gerah tau!', BK], [0, 'Aku menggigil nih!', RD], [1, 'Pakai jaket lah, {0}!', BK], [0, 'Ih, nyebelin!', RD, { label: 'NGAMBEK' }]] },
+  { key: 'puding', roles: ['w', 'w'], label: 'BERANTEM', fight: true, lines: [
+    [0, 'Puding aku di kulkas mana?!', RD], [1, '…nggak tau', BK, { label: 'GUGUP' }], [0, 'Mulutmu belepotan, {1}!', RD], [1, 'Hehe… maaf, laper', BK, { label: 'MALU' }], [0, 'Ganti DUA!', RD], [1, 'Iya, iya…', BK]] },
+  { key: 'charger', roles: ['w', 'w'], label: 'BERANTEM', fight: true, lines: [
+    [0, 'Charger aku mana, {1}?', BK], [1, 'Pinjem bentar…', BK], [0, 'Bentar apanya, udah 3 hari!', RD], [1, 'Nih, nih. Galak amat', BK, { label: 'KESAL' }]] },
+  { key: 'nyontek', roles: ['w', 'w'], label: 'DEBAT', fight: true, exit: [null, 'NGAMBEK'], lines: [
+    [0, 'Kamu nyontek entry aku ya?', RD, { label: 'BERANTEM' }], [1, 'Enak aja! Analisa sendiri!', RD, { label: 'BERANTEM' }], [0, 'Kok SL-nya sama persis?', RD], [1, 'Namanya juga jodoh', BK], [0, 'Hiiih!', RD]] },
+  { key: 'utang', roles: ['w', 'w'], label: 'BERANTEM', fight: true, exit: ['NGAMBEK', null], lines: [
+    [0, 'Pinjem dulu seratus dong', BK, { label: 'MINTA TOLONG' }], [1, 'Yang kemarin aja belum balik!', RD, { label: 'BERANTEM' }], [0, 'Itu kan beda…', BK], [1, 'Beda apanya?!', RD], [0, 'Yaudah, pelit!', RD, { label: 'NGAMBEK' }]] },
+  { key: 'kursi', roles: ['w', 'w'], label: 'REBUTAN KURSI', lines: [
+    [0, 'Itu kursi aku!', RD, { label: 'BERANTEM' }], [1, 'Nggak ada namanya', BK], [0, 'Ada! Liat bawahnya!', RD], [1, '…oh iya. Ada', BK, { label: 'MALU' }], [0, 'Wkwkwk', BK, { label: 'KETAWA' }]] },
+  { key: 'curhat', roles: ['w', 'w'], label: 'CURHAT', lines: [
+    [0, '{1}, aku lagi galau…', BK], [1, 'Kenapa? Cerita dong', BK, { label: 'DENGERIN' }], [0, 'Chat aku cuma di-read doang', BK], [1, 'Sabar… fokus cuan dulu', GR], [0, 'Iya juga ya. Makasih!', GR, { label: 'SENANG' }]] },
+  { key: 'naksir', roles: ['w', 'w', 'w'], label: 'NGOBROL', lines: [
+    [0, '{1}, kamu beda deh hari ini', BK, { label: 'NAKSIR' }], [1, 'Ih, apaan sih…', PK, { label: 'MALU' }], [2, 'Ciee~ ciee~', BK, { label: 'KETAWA', pose: 'jump' }], [0, 'Apa sih kamu, {2}!', RD, { label: 'MALU' }], [2, 'Wkwkwk!', BK, { label: 'KETAWA' }]] },
+  { key: 'pamer', roles: ['w', 'w'], label: 'NGOBROL', lines: [
+    [0, 'Liat nih, cuan aku hari ini!', GR, { label: 'PAMER' }], [1, 'Wih! Traktir dong!', BK, { label: 'SENANG' }], [0, 'Nanti ya… nanti', BK], [1, 'Pelit!', RD, { label: 'KESAL' }], [0, 'Hehe', BK, { label: 'KETAWA' }]] },
+  { key: 'gendut', roles: ['w', 'w'], label: 'SALAH PAHAM', lines: [
+    [0, 'Kamu bilang aku gendut?!', RD, { label: 'KESAL' }], [1, 'Bukan! Aku bilang… dompetmu gendut', BK, { label: 'GUGUP' }], [0, 'Ooh… hehe', BK, { label: 'MALU' }], [1, 'Makanya dengerin dulu!', BK, { label: 'KETAWA' }]] },
+  { key: 'prank', roles: ['w', 'w'], label: 'NGOBROL', fight: true, lines: [
+    [0, '(pelan-pelan…)', BK, { label: 'MAU NGAGETIN' }], [0, 'DOR!!', RD, { label: 'NGAGETIN', pose: 'jump' }], [1, 'ASTAGA! Jantungku!', RD, { label: 'KAGET', pose: 'jump' }], [0, 'Wkwkwk!', BK, { label: 'KETAWA', pose: 'stand' }], [1, 'Awas kamu ya, {0}!', RD, { label: 'KESAL', pose: 'stand' }]] },
+  { key: 'taruhan', roles: ['w', 'w'], label: 'TARUHAN', lines: [
+    [0, 'Taruhan, emas tembus atas?', BK], [1, 'Gorengan sebungkus?', BK], [0, 'Deal!', GR, { label: 'SALAMAN' }], [1, 'Siap-siap traktir ya!', BK, { label: 'KETAWA' }]] },
+  { key: 'makan', roles: ['w', 'w', 'w'], label: 'NGOBROL', hours: [11, 14], lines: [
+    [0, 'Makan siang di mana?', BK], [1, 'Padang!', GR], [2, 'Kemarin padang!', RD, { label: 'KESAL' }], [0, 'Mie ayam?', BK], [1, 'Gas!', GR, { label: 'SENANG', pose: 'jump' }], [2, 'Oke deh', BK, { label: 'SENANG', pose: 'stand' }]] },
+  { key: 'gosipbos', roles: ['w', 'w'], label: 'GOSIP', lines: [
+    [0, 'Sstt… Marcel lagi bad mood', BK], [1, 'Kenapa lagi?', BK], [0, 'Golfnya meleset terus', BK], [1, 'Pantes marah-marah', BK, { label: 'KETAWA' }], [0, 'Jangan keras-keras!', RD, { label: 'GUGUP' }]] },
+  { key: 'gaji', roles: ['w', 'bos'], label: 'NGOBROL', lines: [
+    [0, 'Bos… boleh naik gaji?', BK, { label: 'MINTA NAIK GAJI' }], [1, 'Naik gaji?! Profit dulu!', RD, { label: 'KESAL' }], [0, 'Kemarin TP loh bos…', BK, { label: 'GUGUP' }], [1, '…hmm. Nanti kita lihat', BK, { label: 'MIKIR' }], [0, 'Asik!', GR, { label: 'SENANG', pose: 'jump' }]] },
+  { key: 'nasehat', roles: ['vet', 'bos'], label: 'NGOBROL', lines: [
+    [0, 'Marcel, jangan galak-galak sama anak-anak', GR, { label: 'NASEHATI' }], [1, 'Mereka santai terus bu!', BK, { label: 'MEMBELA DIRI' }], [0, 'Tapi mereka disiplin RR 1:2 kan?', GR], [1, '…iya sih', BK, { label: 'MALU' }], [0, 'Nah. Senyum dikit dong', GR, { label: 'SENANG' }], [1, 'Iya bu…', BK, { label: 'MALU' }]] },
+  { key: 'drakor', roles: ['vet', 'w'], label: 'NGOBROL', lines: [
+    [0, 'Kamu udah nonton drakor yang baru?', BK, { label: 'SENANG' }], [1, 'Yang mana bu?', BK], [0, 'Yang CEO-nya galak tapi baik', BK], [1, 'Kayak pak Marcel dong bu', BK, { label: 'KETAWA' }], [0, 'Hush! Hihi', PK, { label: 'KETAWA' }]] },
+  { key: 'kopi', roles: ['w', 'ob'], label: 'NGOBROL', lines: [
+    [0, 'Din, kopi aku mana?', BK], [1, 'Waduh, lupa mas, hehe', BK, { label: 'GARUK KEPALA' }], [0, 'UDIIIN!', RD, { label: 'KESAL' }], [1, 'Siap, bikin sekarang!', BK, { label: 'GUGUP' }]] },
+  { key: 'pahit', roles: ['ob', 'jaga'], label: 'NGOBROL', lines: [
+    [0, 'Toel, ngopi?', BK], [1, 'Boleh, gulanya dikit', BK], [0, 'Gula habis…', BK, { label: 'GARUK KEPALA' }], [1, 'Yaudah pahit. Kayak hidup', BK, { label: 'CURHAT' }], [0, 'Wkwkwk', BK, { label: 'KETAWA' }]] },
+  { key: 'tidur', roles: ['bos', 'jaga'], label: 'NGOBROL', lines: [
+    [0, 'Toel! Tadi tidur ya?!', RD, { label: 'KESAL' }], [1, 'Nggak pak! Merem doang…', BK, { label: 'GUGUP' }], [0, 'SAMA AJA!', RD], [1, 'Siap salah pak!', BK, { label: 'MALU' }]] },
+  { key: 'bola', roles: ['w', 'jaga'], label: 'NGOBROL', lines: [
+    [0, 'Pak Toel, semalam nonton bola?', BK], [1, 'Nonton! Gol menit terakhir!', GR, { label: 'SENANG', pose: 'jump' }], [0, 'Gila sih itu!', GR, { label: 'KETAWA' }], [1, 'Kayak TP pas mau SL', BK, { label: 'KETAWA', pose: 'stand' }]] },
+  { key: 'telpon', roles: ['w'], label: 'TELPON MAMA', lines: [
+    [0, 'Halo ma… iya udah makan', BK], [0, 'Iya, kerjanya lancar kok', BK], [0, 'Nanti pulang ma. Dah!', GR, { label: 'SENANG' }]] },
+];
+const BAIKAN: Script = { key: 'baikan', roles: ['w', 'w'], label: 'BAIKAN', lines: [
+  [0, 'Eh… soal tadi, maaf ya', BK, { label: 'MALU' }], [1, 'Iya, aku juga salah', BK, { label: 'MALU' }], [0, 'Baikan?', BK], [1, 'Baikan! Tos!', GR, { label: 'BAIKAN', pose: 'jump' }], [0, 'Tos!', GR, { label: 'BAIKAN', pose: 'jump' }]] };
+/** where people stand to talk, per room: two facing each other and a third looking on */
+const MEET: Record<number, Array<Array<[number, number, Face]>>> = {
+  0: [[[6.10, 7.0, 'px'], [7.20, 7.0, 'nx'], [6.65, 7.8, 'ny']], [[8.50, 2.4, 'px'], [9.60, 2.4, 'nx'], [9.05, 3.2, 'ny']]],
+  1: [[[8.50, 3.0, 'px'], [9.60, 3.0, 'nx'], [9.05, 3.8, 'ny']], [[4.10, 7.4, 'px'], [5.20, 7.4, 'nx'], [4.65, 8.2, 'ny']], [[10.50, 6.6, 'px'], [11.60, 6.6, 'nx'], [11.05, 7.4, 'ny']]],
+  2: [[[6.15, 2.35, 'px'], [7.15, 2.35, 'nx'], [6.65, 3.1, 'ny']], [[10.30, 6.4, 'px'], [11.40, 6.4, 'nx'], [10.85, 7.2, 'ny']], [[1.80, 4.2, 'px'], [2.90, 4.2, 'nx'], [2.35, 5.0, 'ny']]],
+};
+type Scene = { s: Script; who: string[]; spots: Spot[]; t0: number; talking: boolean; i: number; next: number; meet: string };
+const SC: { list: Scene[]; next: number; grudge: Record<string, number> } = { list: [], next: 0, grudge: {} };
+const shortName = (id: string) => ({ ob: 'Din', jaga: 'Toel', bos: 'Marcel', vet: 'Bu' } as Record<string, string>)[id] ?? PEOPLE.find((p) => p.id === id)?.name ?? '';
+const pairKey = (a: string, b: string) => [a, b].sort().join('|');
+function sceneFree(ctx: EvCtx, id: string) {
+  const a = ctx.agents[id]; if (!a || !freeFor(ctx, id)) return false;
+  if (inEvent(id, ctx.wall) || SC.list.some((x) => x.who.includes(id))) return false;
+  if (ctx.wall < a.hiddenUntil || a.pending || a.act.whip || a.act.prop === 'vanish' || a.act.id.startsWith('pulang') || a.act.id.startsWith('whip') || a.queue?.length) return false;
+  if (id === 'tg' && ctx.S.tg?.label === 'KIRIM PESAN') return false;
+  return !(ctx.S[id]?.sl && !(ctx.wall - (CHEERED[id] ?? -1e15) >= 0));           // just hit a stop loss: leave them be
+}
+function startScene(ctx: EvCtx): boolean {
+  const { wall, agents } = ctx, h = new Date(wall).getHours();
+  const free = (role: string) => shuffle((role === 'w' ? WORKERS : [role]).filter((id) => sceneFree(ctx, id)));
+  // two people who fought a while ago make up first
+  const old = Object.entries(SC.grudge).find(([k, at]) => wall - at > 90_000 && k.split('|').every((id) => sceneFree(ctx, id)));
+  let s: Script | null = null, who: string[] = [];
+  if (old && Math.random() < 0.7) { s = BAIKAN; who = old[0].split('|'); delete SC.grudge[old[0]]; }
+  else for (let tries = 0; tries < 6 && !s; tries++) {
+    const c = any1(SCRIPTS);
+    if (c.hours && (h < c.hours[0] || h >= c.hours[1])) continue;
+    const pick: string[] = [];
+    for (const role of c.roles) {
+      const f = free(role).filter((id) => !pick.includes(id)); if (!f.length) break;
+      const r0 = pick.length ? agents[pick[0]].room : -1;
+      pick.push(f.find((id) => agents[id].room === r0) ?? f[0]);          // someone from the same floor first: no lift trips
+    }
+    if (pick.length === c.roles.length && !pick.some((x, i) => pick.some((y, j) => i < j && SC.grudge[pairKey(x, y)]))) { s = c; who = pick; }
+  }
+  if (!s) return false;
+  // where: the boss's floor when a boss is in it, the lobby for Udin / Pentoel, otherwise the trading floor or the lobby
+  // where: the floor most of them are on already
+  const cnt = [0, 1, 2].map((r) => who.filter((id) => agents[id].room === r).length);
+  const room = cnt.indexOf(Math.max(...cnt));
+  const opts = MEET[room].map((m, k) => ({ m, key: `${room}:${k}` })).filter((o) => !SC.list.some((x) => x.meet === o.key));
+  if (!opts.length) return false;
+  const { m, key } = any1(opts);
+  const spots = who.map((id, i) => sp(`sc-${s!.key}-${id}`, room, m[i][0], m[i][1], m[i][2], s!.label));
+  who.forEach((id, i) => { const a = agents[id]; a.queue = [{ act: spots[i], dwell: 180_000 }]; a.kick = true; });
+  SC.list.push({ s, who, spots, t0: wall, talking: false, i: 0, next: 0, meet: key });
+  return true;
+}
+function runScenes(ctx: EvCtx) {
+  const { wall, agents } = ctx;
+  const release = (sc: Scene, done: boolean) => {
+    sc.who.forEach((id, i) => {
+      const a = agents[id]; if (!a) return;
+      if (a.pending?.id === sc.spots[i].id) { a.pending = null; a.kick = true; return; }      // still on the way (in the lift): just go on with the day
+      if (a.act.id !== sc.spots[i].id) return;
+      const ex = done ? sc.s.exit?.[i] : null;
+      if (ex === 'NGAMBEK') {          // storms off to the window and sulks there
+        const w = SPOTS.find((q) => q.room === a.room && q.label === 'LIHAT LUAR') ?? SPOTS.find((q) => q.label === 'LIHAT LUAR')!;
+        a.queue = [{ act: { ...w, id: `ngambek-${id}`, label: 'NGAMBEK', alt: undefined, say: ['Hmph!', RD] }, dwell: 16_000 }];
+        a.run = false; a.until = wall;
+      } else a.until = wall + 1200 + Math.random() * 1500;
+    });
+    if (done && sc.s.fight && sc.who.length >= 2) SC.grudge[pairKey(sc.who[0], sc.who[1])] = wall;
+  };
+  SC.list = SC.list.filter((sc) => {
+    const as = sc.who.map((id) => agents[id]);
+    const onSpot = as.map((a, i) => !!a && (a.act.id === sc.spots[i].id || a.pending?.id === sc.spots[i].id));
+    if (onSpot.some((x) => !x)) { release(sc, false); return false; }          // someone was called away (boss, an event…)
+    if (!sc.talking) {
+      if (as.every((a) => !a.path.length && wall >= a.hiddenUntil && !a.pending)) { sc.talking = true; sc.next = wall + 400; }
+      else if (wall - sc.t0 > 45_000) { release(sc, false); return false; }
+      return true;
+    }
+    if (wall < sc.next) return true;
+    if (sc.i >= sc.s.lines.length) { release(sc, true); return false; }
+    const [k, text0, color = BK, ch] = sc.s.lines[sc.i++];
+    const a = as[k]; if (!a) return true;
+    const text = text0.replace(/\{(\d)\}/g, (_, n) => shortName(sc.who[Number(n)] ?? ''));
+    const dur = 2300 + text.length * 55;
+    a.bubble = { text, until: wall + dur, color };
+    if (ch) a.act = { ...a.act, ...(ch.label ? { label: ch.label } : {}), ...(ch.pose ? { pose: ch.pose } : {}) };
+    sc.next = wall + dur + 250;
+    return true;
+  });
+  if (!SC.next) SC.next = wall + 12_000;
+  if (wall >= SC.next && SC.list.length < 2) { const ok = startScene(ctx); SC.next = wall + (ok ? 16_000 + Math.random() * 18_000 : 8_000); }
+}
 /** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
 function scheduleEvents(ctx: EvCtx) {
   const { wall, data, agents } = ctx;
   const kick = (ids: string[]) => { for (const id of ids) { const a = agents[id]; if (a) { a.kick = true; a.queue = []; a.run = false; } } };
-  if (EV.cur && wall >= EV.cur.until) { kick(EV.cur.ids); EV.cur = null; EV.next = wall + (150 + Math.random() * 120) * 1000; }
+  if (EV.cur && wall >= EV.cur.until) { kick(EV.cur.ids); EV.cur = null; EV.next = wall + (90 + Math.random() * 90) * 1000; }
   if (!EV.next) EV.next = wall + 40_000;
   const d = new Date(wall), day = d.toDateString(), h = d.getHours(), m = d.getMinutes();
   const want: string[] = [];
@@ -1562,7 +1702,7 @@ interface Agent {
   room: number; pending: Spot | null; hiddenUntil: number; fx?: number; sit?: number; lt?: number; fidget?: number; arms?: Record<string, [number, number]>;
   x: number; y: number; vx: number; vy: number; face: Face; path: Array<[number, number]>; act: Spot; until: number; dist: number; speed: number;
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
-  scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number; sadFor?: string;
+  scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number; sadFor?: string; whipKey?: string; whipT?: number;
   queue?: Array<{ act: Spot; dwell: number }>; kick?: boolean; talkAt?: number;
   ride?: Ride;      // riding the glass lift
 }
@@ -1598,6 +1738,13 @@ const faceTo = (dx: number, dy: number): Face => (Math.abs(dx) > Math.abs(dy) ? 
 type Expr = 'senang' | 'ketawa' | 'sedih' | 'cemas' | 'fokus' | 'kaget' | 'ngantuk' | 'ngomong' | 'cinta' | 'bingung' | 'malu' | 'kesal' | 'biasa';
 function exprOf(p: Person, a: Agent, st: Status, t: number): Expr {
   const L = a.act.label ?? '', walking = a.path.length > 0;
+  if (/BERANTEM|NGAMBEK|KESAL/.test(L)) return 'kesal';
+  if (/MALU|GUGUP|GARUK KEPALA/.test(L)) return 'malu';
+  if (/NAKSIR/.test(L)) return 'cinta';
+  if (/CURHAT|GALAU/.test(L)) return 'sedih';
+  if (/^KAGET$/.test(L)) return 'kaget';
+  if (/MIKIR|MEMBELA DIRI|SALAH PAHAM|DENGERIN/.test(L)) return 'bingung';
+  if (/KETAWA|NGAGETIN|BAIKAN|PAMER|^SENANG$|SALAMAN|TARUHAN/.test(L)) return 'ketawa';
   if (a.act.pose === 'jump' || /SELEBRASI|BONUS|GAJIAN|ULTAH|TIUP LILIN|FOTO/.test(L) || st.tp) return 'ketawa';
   if (/DIMARAHI|SL!|LESU/.test(L) || (st.sl && !((Date.now() - (CHEERED[p.id] ?? -1e15)) >= 0 && Date.now() - (CHEERED[p.id] ?? 0) < 15 * 60_000))) return 'sedih';
   if (/MENGHIBUR|DIHIBUR/.test(L)) return 'senang';
@@ -2455,7 +2602,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const t = tm / 1000, wall = Date.now(), S0 = stRef.current;
       const S: Record<string, Status> = { ...S0, ...(EV.cur?.courier && wall < EV.cur.until ? { kurir: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}), ...(EV.cur?.guest && wall < EV.cur.until ? { tamu: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}) };
       CAL = dataRef.current.cal ?? [];
-      if (wall - evAt > 500) { evAt = wall; scheduleEvents({ agents, S, wall, data: dataRef.current }); }
+      if (wall - evAt > 500) { evAt = wall; scheduleEvents({ agents, S, wall, data: dataRef.current }); runScenes({ agents, S, wall, data: dataRef.current }); }
       for (const id of WORKERS) { const s = S[id]; MODES[id] = !s || s.label === 'BELUM AKTIF' || s.sleep ? 'off' : s.label.startsWith('POSISI') ? 'pos' : 'idle'; }
       MODES.tgSend = S.tg?.label === 'KIRIM PESAN' ? 'pos' : 'off';
       MODES.alarm = S.jaga?.label === 'ALARM' ? 'pos' : 'off';
@@ -2509,7 +2656,9 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         // the boss chases his victim, then yells and cracks the whip
         if ((p.id === 'bos' || p.id === 'vet') && a.act.whip) {
           const v = agents[a.act.whip];
+          if (a.whipKey !== a.act.id) { a.whipKey = a.act.id; a.whipT = wall; }
           if (!v) a.until = 0;
+          else if (wall - (a.whipT ?? wall) > 25_000 && !(a.bubble && wall < a.bubble.until)) { a.act = { ...a.act, whip: undefined }; a.until = 0; a.whipKey = ''; }      // gave up the chase
           else if (v.room !== a.room || wall < v.hiddenUntil) {
             if (wall - a.chase > 800) { a.chase = wall; const target = { ...a.act, room: v.room, x: v.x, y: v.y }; a.pending = target; a.act = liftSpot(a.room, p.id, v.room < a.room); a.path = findPath(grids[a.room], a.x, a.y, a.act.x, a.act.y); a.until = Math.max(a.until, wall + 4000); }
           } else {
