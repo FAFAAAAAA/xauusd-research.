@@ -97,8 +97,8 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
             const parts: Array<[string, number]> = [['Operasional', ops], ['Biaya penarikan', opsFee], ['Kasbon', r.owed.advance], ['Rugi belum ketutup', m.deficit]];
             const target = parts.reduce((a, [, v]) => a + v, 0), rev = m.revenue;
             const done = rev >= target && target > 0;
-            const max = Math.max(rev, target * 1.25, 1) * 1.06;
-            const tx = Math.min(94, Math.max(6, (target / max) * 100)), rx = Math.min(96, Math.max(3, (Math.max(0, rev) / max) * 100));
+            const max = Math.max(done ? rev : target, 0.01);                       // passed: the bar is full and the yellow line marks where the target was
+            const tx = Math.min(100, Math.max(0, (target / max) * 100)), rx = Math.min(100, Math.max(0, (Math.max(0, rev) / max) * 100));
             return (
               <button type="button" className="trk-card" onClick={() => setInfo(true)} aria-label="Kenapa targetnya segini">
                 <div className="trk-h"><small>Target bulan ini</small><b>{usdT(target)}</b></div>
