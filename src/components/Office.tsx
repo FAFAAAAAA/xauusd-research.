@@ -1403,7 +1403,102 @@ function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, 
   return [x1, y1] as const;
 }
 const faceTo = (dx: number, dy: number): Face => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'px' : 'nx') : (dy > 0 ? 'py' : 'ny'));
+
+/* ---------- pixel characters (art from Claude-Office, MIT: public/office/chars/LICENSE-Claude-Office.txt) ----------
+ * Turned on with ?karakter=pixel (remembered on this device), off again with ?karakter=lama. */
+let PIXEL = false;
+const SPRITE_OF: Record<string, string> = {
+  vet: 'Frontend-dev-1', bos: 'employee-3', alt: 'explore-1', big: 'dev-1', xau: 'dev-2', nas: 'employee-2',
+  tg: 'Claude-1', jaga: 'security-audit-1', ob: 'employee-1', kurir: 'Me-1',
+};
+const SPR: Record<string, HTMLImageElement> = {};
+function spr(name: string): HTMLImageElement | null {
+  let im = SPR[name];
+  if (!im) { im = new Image(); im.decoding = 'async'; im.src = `/office/chars/${name}.webp`; SPR[name] = im; }
+  return im.complete && im.naturalWidth ? im : null;
+}
+function pixelSetting(): boolean {
+  try {
+    const q = new URLSearchParams(location.search).get('karakter');
+    if (q === 'pixel' || q === 'lama') localStorage.setItem('office-karakter', q);
+    return (q ?? localStorage.getItem('office-karakter')) === 'pixel';
+  } catch { return false; }
+}
+/** iso facing → sprite direction (+x runs to the lower right of the screen, +y to the lower left) */
+const DIR: Record<Face, string> = { px: 'front-right', py: 'front-left', nx: 'rear-left', ny: 'rear-right' };
+function drawPixelPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: number | null): boolean {
+  const name = SPRITE_OF[p.id];
+  if (!name) return false;
+  const walking = a.path.length > 0;
+  const running = !walking && a.act.pose === 'run';
+  const shaking = Date.now() < a.scoldUntil;
+  const face: Face = walking || shaking || whipT != null ? a.face : a.act.face;
+  const pose: Pose = walking ? 'stand' : st.sleep && a.act.id.startsWith('seat-') ? 'sleep' : a.act.pose;
+  const seated = pose === 'sit' || pose === 'sleep' || pose === 'nap' || pose === 'bean';
+  // sitting down / standing up eases in and out instead of snapping
+  const dtp = Math.min(0.05, Math.max(0, t - (a.lt ?? t))); a.lt = t;
+  a.sit = (a.sit ?? (seated ? 1 : 0)) + ((seated ? 1 : 0) - (a.sit ?? (seated ? 1 : 0))) * Math.min(1, dtp * 6);
+  // walk cycle: the frame follows the distance walked, so the feet don't slide over the floor
+  let dir = DIR[face], mirror = false;
+  const moving = walking || running;
+  let frame = '';
+  if (moving) {
+    const k = Math.floor((running ? t * 9 : a.dist * 2.6) % 4) + 1;
+    if (dir === 'rear-right') { dir = 'rear-left'; mirror = true; }       // no rear-right walk art: mirror the rear-left one
+    frame = `-walk${k}`;
+  }
+  const im = spr(`${name}-${dir}${frame}`) ?? spr(`${name}-${DIR[face]}`);
+  if (!im) return false;
+  if (moving) for (let k = 1; k <= 4; k++) spr(`${name}-${dir}-walk${k}`);     // pre-load the rest of the cycle
+
+  const [sx, sy] = iso(a.x, a.y);
+  const Hs = (INK ? 35 : 30) * (p.id === 'vet' ? 1.06 : 1);          // standing height in scene units (head to feet)
+  const Ws = (Hs * im.naturalWidth) / im.naturalHeight;
+  const sit = a.sit ?? 0;
+  const phase = moving ? (running ? t * 9 : a.dist * 2.6) * Math.PI * 0.5 : 0;
+  const bob = moving ? Math.abs(Math.sin(phase)) * (running ? 1.4 : 0.8) : 0;
+  const breathe = !moving ? Math.sin(t * 2 + hash(p.id) * 6) * 0.012 : 0;   // the chest rises and falls when still
+  const sway = !moving && !seated && !shaking ? Math.sin(t * 0.9 + hash(p.id) * 7) * 0.35 : 0;  // weight shifts from foot to foot
+  const jump = !walking && pose === 'jump' ? Math.abs(Math.sin(t * 6)) * 5 : 0;
+  const shakeX = shaking ? Math.sin(t * 60) * 0.5 : 0;
+
+  c.save();
+  c.translate(sx + shakeX, sy);
+  c.scale(PSV, PSV);
+  const sg = c.createRadialGradient(0, 0, 0.5, 0, 0, 7); sg.addColorStop(0, 'rgba(0,0,0,.3)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+  c.save(); c.scale(1, 0.42); c.fillStyle = sg; c.beginPath(); c.arc(0, 0, (7 - jump * 0.4) * (1 - sit * 0.4), 0, 7); c.fill(); c.restore();
+  if (mirror) c.scale(-1, 1);
+  c.imageSmoothingEnabled = true;
+  const iw = im.naturalWidth, ih = im.naturalHeight;
+  const HIP = 0.6;                                // where the hips are in the picture (fraction of its height)
+  const lift = -bob - jump;
+  if (sit < 0.02) {
+    const h = Hs * (1 + breathe);
+    c.drawImage(im, -Ws / 2 + sway, -h + lift, Ws, h);
+  } else {
+    // seated: the upper body keeps its size, the legs fold up under the desk
+    const legs = Hs * (1 - HIP) * (1 - sit * 0.62);
+    const up = Hs * HIP * (1 + breathe);
+    const slump = pose === 'sleep' ? 2.2 : pose === 'nap' ? 1.2 : 0;
+    c.drawImage(im, 0, ih * HIP, iw, ih * (1 - HIP), -Ws / 2, -legs + lift, Ws, legs);
+    c.save();
+    if (slump) { c.translate(0, -legs); c.rotate((face === 'px' || face === 'ny' ? 1 : -1) * 0.12 * (slump / 2.2)); c.translate(0, legs); }
+    c.drawImage(im, 0, 0, iw, ih * HIP, -Ws / 2, -legs - up + lift + slump, Ws, up + 0.3);
+    c.restore();
+  }
+  if (pose === 'sleep') {                          // Zzz
+    for (let k = 0; k < 3; k++) {
+      const w = (t * 0.5 + k / 3) % 1;
+      c.fillStyle = `rgba(255,255,255,${0.9 - w * 0.9})`; c.font = `bold ${3 + k}px monospace`;
+      c.fillText('z', 3 + w * 4 + k, -Hs * 0.75 - w * 8);
+    }
+  }
+  c.restore();
+  return true;
+}
+
 function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: number | null) {
+  if (PIXEL && drawPixelPerson(c, p, a, t, st, whipT)) return;
   const walking = a.path.length > 0;
   const [sx, sy] = iso(a.x, a.y);
   const shaking = Date.now() < a.scoldUntil;
@@ -1820,6 +1915,7 @@ const liftSpot = (room: number, id: string, up: boolean): Spot => (FLAT
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
   THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.ink ?? (THEME.paint ? 'rgba(80,45,25,.42)' : null); OL = THEME.pixel ? 'rgba(10,10,18,.9)' : OL; PSV = INK ? 1.62 : PS;
+  if (typeof window !== 'undefined') PIXEL = pixelSetting();
   const themeRef = useRef(theme); themeRef.current = theme;
   const lhRef = useRef(H), homeRef = useRef({ ...HOME });
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
