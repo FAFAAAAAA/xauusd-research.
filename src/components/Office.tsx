@@ -30,7 +30,6 @@ const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
 const TV = { x0: 4.4, x1: 10.3, z0: 34, z1: 92 };
-const ROSTER = { x0: 0.8, x1: 4.0, z0: 18, z1: 76 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
 /* building shape: 'tower' (3 floors in one glass tower), 'zigzag' (cantilevered floors around a glass lift tube), 'rooftop' (tower + roof deck) */
@@ -1262,8 +1261,6 @@ function drawStatic(c: C, night: boolean, room: number) {
       c.drawImage(img, (img.width - sz) / 2, (img.height - szh) / 2, sz, szh, 0, 0, pw, ph);
       c.restore();
     }
-    poly(c, wallB(ROSTER.x0 - 0.08, ROSTER.x1 + 0.08, ROSTER.z0 - 3, ROSTER.z1 + 3), '#b8901a');
-    poly(c, wallB(ROSTER.x0, ROSTER.x1, ROSTER.z0, ROSTER.z1), '#fbfaf6');
     const [cx, cy] = iso(10.6, 0, 64); c.save(); c.translate(cx, cy); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 5.5, 0, 7); c.fillStyle = '#1e1f23'; c.fill(); c.beginPath(); c.arc(0, 0, 4.6, 0, 7); c.fillStyle = '#fff'; c.fill();
     c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -3.2); c.moveTo(0, 0); c.lineTo(2.4, 0.6); c.stroke(); c.restore();
   }
@@ -3195,20 +3192,6 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
       c.restore();
     });
     c.fillStyle = 'rgba(255,255,255,.1)'; c.fillRect(cw - 0.2, top + 2, 0.4, th - top - 4); c.fillRect(3, top + ch - 0.2, tw - 6, 0.4);
-    c.textBaseline = 'alphabetic';
-  });
-  const rw = (ROSTER.x1 - ROSTER.x0) * TW, rh2 = ROSTER.z1 - ROSTER.z0;
-  if (room === 0) onWall(ROSTER.x0, ROSTER.z1, () => {
-    c.textBaseline = 'middle';
-    c.font = '900 6px system-ui, sans-serif'; c.fillStyle = '#b8901a'; c.textAlign = 'center'; c.fillText('T I M', rw / 2, 5); c.textAlign = 'left';
-    const team = PEOPLE.filter((p) => p.id !== 'kurir' && p.id !== 'tamu'), lh = (rh2 - 10) / team.length;
-    team.forEach((p, i) => {
-      const y = 10 + lh * (i + 0.5);
-      const boss = p.id === 'bos' || p.id === 'vet'; c.font = '600 4px ui-monospace, Menlo, monospace'; const roleW = boss ? c.measureText(p.role).width : 0;
-      let fs = 5; c.font = `800 ${fs}px system-ui, sans-serif`; while (fs > 3 && c.measureText(p.name).width + roleW + 9 > rw) { fs -= 0.25; c.font = `800 ${fs}px system-ui, sans-serif`; }
-      c.fillStyle = '#1e1f23'; c.fillText(p.name, 3, y);
-      c.font = '600 4px ui-monospace, Menlo, monospace'; if (boss) { c.fillStyle = '#c0392b'; c.textAlign = 'right'; c.fillText(p.role, rw - 3, y); c.textAlign = 'left'; }
-    });
     c.textBaseline = 'alphabetic';
   });
 }
