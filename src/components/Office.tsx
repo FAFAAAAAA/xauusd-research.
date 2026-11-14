@@ -1261,8 +1261,6 @@ function drawStatic(c: C, night: boolean, room: number) {
       c.drawImage(img, (img.width - sz) / 2, (img.height - szh) / 2, sz, szh, 0, 0, pw, ph);
       c.restore();
     }
-    const [cx, cy] = iso(10.6, 0, 64); c.save(); c.translate(cx, cy); c.transform(1, 0.5, 0, 1, 0, 0); c.beginPath(); c.arc(0, 0, 5.5, 0, 7); c.fillStyle = '#1e1f23'; c.fill(); c.beginPath(); c.arc(0, 0, 4.6, 0, 7); c.fillStyle = '#fff'; c.fill();
-    c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -3.2); c.moveTo(0, 0); c.lineTo(2.4, 0.6); c.stroke(); c.restore();
   }
   if (room === 2) {     // toilet door with a sign, menu board above the kitchen
     poly(c, wallB(4.15, 5.25, 0, 52), '#1e1f23'); poly(c, wallB(4.25, 5.15, 0, 49), night ? '#5a4634' : '#7a5a3f');
