@@ -988,7 +988,7 @@ body:has(.office-home)::after { display: none; }
 
 
 /* "Rapat" button on the full-screen office: everybody to the meeting table */
-.office-cat { position: absolute; right: 8px; top: calc(env(safe-area-inset-top, 0px) + 4px); z-index: 25; width: 56px; height: 56px; border: 0; background: none; padding: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); animation: cat-bob 3.2s ease-in-out infinite; }
+.office-cat { position: absolute; right: 10px; top: calc(env(safe-area-inset-top, 0px) + 6px); z-index: 25; width: 40px; height: 40px; border: 0; background: none; padding: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); animation: cat-bob 3.2s ease-in-out infinite; }
 .office-cat svg { display: block; margin: 2px; }
 .office-cat:active { transform: scale(.9); }
 .office-cat.on { animation: none; transform: rotate(-8deg); }
@@ -996,7 +996,7 @@ body:has(.office-home)::after { display: none; }
 .office-cat .cat-eye { transform-box: fill-box; transform-origin: center; animation: cat-blink 4.5s infinite; }
 @keyframes cat-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
 @media (prefers-reduced-motion: reduce) { .office-cat, .office-cat .cat-eye { animation: none; } }
-.office-menu { position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 25; background: rgba(255,250,240,.97); border-radius: 14px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.3); display: flex; flex-direction: column; min-width: 190px; animation: om-in .16s ease-out; }
+.office-menu { position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 50px); z-index: 25; background: rgba(255,250,240,.97); border-radius: 14px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.3); display: flex; flex-direction: column; min-width: 190px; animation: om-in .16s ease-out; }
 @keyframes om-in { from { opacity: 0; transform: translateY(-6px) scale(.98); } }
 .office-menu button { display: flex; align-items: center; gap: 10px; border: 0; background: none; text-align: left; font: 650 14px system-ui, sans-serif; color: #2a2320; padding: 9px 10px; border-radius: 9px; }
 .office-menu button:active { background: rgba(0,0,0,.07); }
@@ -1018,8 +1018,9 @@ body:has(.office-home)::after { display: none; }
 .og-empty { font: 500 13px/1.4 system-ui, sans-serif; color: #6a625b; text-align: center; padding: 18px 6px; margin: 0; }
 .og-sum { margin: 0 0 8px; font: 650 12px system-ui, sans-serif; color: #2e9e5b; }
 .og-grid small { display: block; font: 500 10px system-ui, sans-serif; color: #8a8178; }
-.og-card { background: linear-gradient(160deg, #e9f8ef, #d3f0de); border: 1px solid #b9e3c8; border-radius: 10px; padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; min-height: 92px; justify-content: center; text-align: center; }
+.og-grid .og-card { background: linear-gradient(160deg, #e9f8ef, #d3f0de); border: 1px solid #b9e3c8; border-radius: 10px; padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; min-height: 92px; justify-content: center; text-align: center; }
 .og-card b { font-size: 22px; }
+.og-card i { font: 700 10px system-ui, sans-serif; font-style: normal; color: #1f7a45; margin-top: 3px; }
 .og-card img.og-face { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 4px; display: block; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.18); object-fit: cover; }
 .og-card strong { font: 800 13px system-ui, sans-serif; color: #1f7a45; }
 .og-card span { font: 600 11px system-ui, sans-serif; color: #4a6656; }

@@ -2002,6 +2002,65 @@ function portrait(id: string): string {
   } catch { PORTRAIT[id] = ''; }
   return PORTRAIT[id];
 }
+/** a group selfie for one TP: the trader in front holding the phone, the team crowding in behind.
+ *  Every TP gets its own picture (scene, who stands where, poses) from its id, so they all look different. */
+const SELFIE: Record<string, string> = {};
+function selfie(key: string, title: string, when: string, pid: string): string {
+  if (SELFIE[key]) return SELFIE[key];
+  if (typeof document === 'undefined') return '';
+  try {
+    const R = (k: string) => hash(`${key}:${k}`);
+    const Wd = 560, Hd = 420, cv = document.createElement('canvas'); cv.width = Wd; cv.height = Hd;
+    const c = cv.getContext('2d')!;
+    // the scene behind them
+    const scene = Math.floor(R('scene') * 4);
+    if (scene === 0) {            // office wall with wood panels and the LIVE board
+      c.fillStyle = '#f1e3c8'; c.fillRect(0, 0, Wd, Hd); c.fillStyle = '#a8774c'; c.fillRect(0, Hd * 0.62, Wd, Hd);
+      for (let x = 0; x < Wd; x += 34) { c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(x, Hd * 0.62, 2, Hd); }
+      c.fillStyle = '#0d1424'; c.fillRect(Wd * 0.55, Hd * 0.08, Wd * 0.38, Hd * 0.3); c.fillStyle = '#2ee59d'; c.font = '800 22px ui-monospace, Menlo, monospace'; c.fillText(title, Wd * 0.58, Hd * 0.27);
+      c.fillStyle = '#ff4d4f'; c.beginPath(); c.arc(Wd * 0.585, Hd * 0.14, 5, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = '800 13px ui-monospace, Menlo, monospace'; c.fillText('LIVE', Wd * 0.605, Hd * 0.155);
+    } else if (scene === 1) {     // big window, city in the sky
+      const g = c.createLinearGradient(0, 0, 0, Hd); g.addColorStop(0, '#7fb6e6'); g.addColorStop(1, '#d6ecfb'); c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
+      for (let k = 0; k < 14; k++) { const h = 60 + R(`b${k}`) * 160; c.fillStyle = k % 2 ? '#9fb7cf' : '#b7c9db'; c.fillRect(k * 42 - 10, Hd * 0.75 - h, 36, h + 200); }
+      c.fillStyle = '#4a5160'; for (const x of [0, Wd / 3, (2 * Wd) / 3]) c.fillRect(x - 4, 0, 8, Hd); c.fillRect(0, Hd * 0.45, Wd, 6);
+    } else if (scene === 2) {     // party: confetti and a banner
+      const g = c.createLinearGradient(0, 0, Wd, Hd); g.addColorStop(0, '#ffd2e5'); g.addColorStop(1, '#ffe9a8'); c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
+      const cols = ['#e5484d', '#f2c230', '#2ee59d', '#4c7dff', '#c792ea'];
+      for (let k = 0; k < 90; k++) { c.fillStyle = cols[k % 5]; c.save(); c.translate(R(`cx${k}`) * Wd, R(`cy${k}`) * Hd); c.rotate(R(`cr${k}`) * 6); c.fillRect(-4, -2, 8, 4); c.restore(); }
+      c.strokeStyle = '#a8774c'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, 30); c.quadraticCurveTo(Wd / 2, 70, Wd, 30); c.stroke();
+      for (let k = 0; k < 12; k++) { const x = 20 + k * 45, y = 30 + Math.sin((k / 11) * Math.PI) * 38; c.fillStyle = cols[k % 5]; c.beginPath(); c.moveTo(x - 12, y); c.lineTo(x + 12, y); c.lineTo(x, y + 22); c.closePath(); c.fill(); }
+    } else {                      // night: the city lights behind the glass
+      const g = c.createLinearGradient(0, 0, 0, Hd); g.addColorStop(0, '#0b1430'); g.addColorStop(1, '#25335c'); c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
+      for (let k = 0; k < 14; k++) { const h = 80 + R(`n${k}`) * 180, x = k * 42 - 10; c.fillStyle = '#18213d'; c.fillRect(x, Hd * 0.8 - h, 36, h + 200); for (let w = 0; w < 18; w++) if (R(`w${k}${w}`) > 0.55) { c.fillStyle = '#ffd979'; c.fillRect(x + 5 + (w % 3) * 10, Hd * 0.8 - h + 8 + Math.floor(w / 3) * 16, 5, 7); } }
+    }
+    // who: the trader in front, the rest of the team behind in a random order
+    const others = ['alt', 'big', 'xau', 'nas', 'tg', 'bos', 'vet', 'ob', 'jaga'].filter((id) => id !== pid).sort((a, b) => R(`o${a}`) - R(`o${b}`));
+    const back = others.slice(0, 5), mid = others.slice(5, 8);
+    const draw = (id: string, X: number, Y: number, k: number, face: Face) => {
+      const p = PEOPLE.find((q) => q.id === id); if (!p) return;
+      const pose: Pose = R(`p${id}`) > 0.75 ? 'jump' : 'stand';
+      const spot: Spot = { ...p.seat, id: 'selfie', pose, label: R(`l${id}`) > 0.35 ? 'SELEBRASI' : 'NGOBROL', prop: undefined, face };
+      const a = { room: 0, pending: null, hiddenUntil: 0, x: 5, y: 5, vx: 0, vy: 0, face, path: [], act: spot, until: 0, dist: 0, speed: 1, carry: null, carryUntil: 0, patrol: 0, last: '', run: false,
+        scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: '', angryAt: 0 } as unknown as Agent;
+      const [sx, sy] = iso(5, 5);
+      c.save(); c.setTransform(k, 0, 0, k, X - sx * k, Y - sy * k);
+      drawPerson(c, p, a, 0.4 + R(`t${id}`) * 3, { label: 'SELEBRASI', color: '#2ee59d', sleep: false, tp: true, tag: null }, null);
+      c.restore();
+    };
+    back.forEach((id, i) => draw(id, Wd * (0.1 + i * 0.2) + (R(`bx${id}`) - 0.5) * 20, Hd * 0.82, 3.2, R(`f${id}`) > 0.5 ? 'py' : 'px'));
+    mid.forEach((id, i) => draw(id, Wd * (0.2 + i * 0.3) + (R(`mx${id}`) - 0.5) * 24, Hd * 1.02, 3.9, R(`f${id}`) > 0.5 ? 'py' : 'px'));
+    const fx = Wd * (0.35 + R('front') * 0.3);
+    draw(pid || 'alt', fx, Hd * 1.32, 5.2, 'py');
+    // the selfie arm going to the camera, a flash and the caption
+    c.strokeStyle = '#2a1d14'; c.lineWidth = 3;
+    const fl = c.createRadialGradient(Wd * 0.1, Hd * 0.1, 0, Wd * 0.1, Hd * 0.1, Wd * 0.5); fl.addColorStop(0, 'rgba(255,255,255,.45)'); fl.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = fl; c.fillRect(0, 0, Wd, Hd);
+    c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(0, Hd - 46, Wd, 46);
+    c.fillStyle = '#fff'; c.font = '800 20px system-ui, sans-serif'; c.textBaseline = 'middle'; c.fillText(`🎉 ${title}`, 14, Hd - 23);
+    c.textAlign = 'right'; c.font = '600 13px system-ui, sans-serif'; c.fillText(when, Wd - 14, Hd - 23);
+    SELFIE[key] = cv.toDataURL('image/jpeg', 0.86);
+  } catch { SELFIE[key] = ''; }
+  return SELFIE[key];
+}
 const fmtDay = (t: number) => { const d = new Date(t); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
@@ -2473,7 +2532,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
       {full ? <>
         <button type="button" className={'office-cat' + (menu ? ' on' : '')} onClick={() => setMenu((v) => !v)} aria-label="Menu kantor" aria-expanded={menu}>
-          <svg viewBox="0 0 64 64" width="52" height="52" aria-hidden>
+          <svg viewBox="0 0 64 64" width="36" height="36" aria-hidden>
             <path d="M12 30 L10 8 L26 19 Z" fill="#f29a3a" stroke="#5a3a24" strokeWidth="2" strokeLinejoin="round" /><path d="M15 25 L14 14 L22 20 Z" fill="#ffc9b5" />
             <path d="M52 30 L54 8 L38 19 Z" fill="#f29a3a" stroke="#5a3a24" strokeWidth="2" strokeLinejoin="round" /><path d="M49 25 L50 14 L42 20 Z" fill="#ffc9b5" />
             <ellipse cx="32" cy="37" rx="23" ry="19" fill="#f6a94a" stroke="#5a3a24" strokeWidth="2" />
@@ -2503,7 +2562,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
                 <p className="og-sum">{moments.filter((x) => x.id.startsWith('tp-')).length} TP sejak awal · total {(() => { const v = data.trades.filter((t) => t.result === 'tp').reduce((a, t) => a + Number(t.pnl ?? 0), 0); return `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`; })()}</p>
                 <div className="og-grid">{moments.map((x) => x.img
                   ? <button type="button" key={x.id} onClick={() => setBig(x)}><img src={x.img} alt={x.text} /><span>{x.text}</span><small>{fmtDay(x.at)}</small></button>
-                  : <div key={x.id} className="og-card">{x.pid && portrait(x.pid) ? <img className="og-face" src={portrait(x.pid)} alt={x.who} /> : <b>🎉</b>}<strong>{x.text}</strong><span>{x.who ? `${x.who} · ` : ''}{x.side === 'BUY' ? 'BUY' : x.side === 'SELL' ? 'SELL' : ''}</span><small>{fmtDay(x.at)}</small></div>)}</div>
+                  : <button type="button" key={x.id} className="og-card" onClick={() => setBig({ id: x.id, at: x.at, text: `${x.text} · ${x.who ? `${x.who} & tim` : 'tim'}`, img: selfie(x.id, x.text, fmtDay(x.at), x.pid) })}>{x.pid && portrait(x.pid) ? <img className="og-face" src={portrait(x.pid)} alt={x.who} /> : <b>🎉</b>}<strong>{x.text}</strong><span>{x.who ? `${x.who} · ` : ''}{x.side === 'BUY' ? 'BUY' : x.side === 'SELL' ? 'SELL' : ''}</span><small>{fmtDay(x.at)}</small><i>📸 lihat selfie</i></button>)}</div>
               </> : <p className="og-empty">Belum ada TP. Setiap kali kena TP, kantor otomatis mengambil foto di sini.</p>}
           </div>
         </div>
