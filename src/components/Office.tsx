@@ -55,13 +55,14 @@ type Prop = 'tablet' | 'cup' | 'phone' | 'hp' | 'book' | 'paper' | 'laptop' | 'f
 interface Spot { id: string; room: number; x: number; y: number; face: Face; pose: Pose; label: string; prop?: Prop; zone?: 'break' | 'meet' | 'lounge' | 'eat' | 'gym' | 'boss'; alt?: Array<{ label: string; pose?: Pose; prop?: Prop }>; whip?: string; say?: [string, string] }
 interface Person {
   id: string; name: string; role: string; seat: Spot;
-  hair: string; skin: string; shirt: string; pants: string; style: 'short' | 'long' | 'bun' | 'cap' | 'slick' | 'curly';
+  hair: string; skin: string; shirt: string; pants: string; style: 'short' | 'long' | 'bun' | 'cap' | 'slick' | 'curly' | 'curtain';
   cap?: string; glasses?: boolean; headset?: boolean; tie?: boolean; hijab?: string; mole?: boolean; lips?: string;
 }
 const seat = (id: string, room: number, x: number, y: number, face: Face, label = 'MEMANTAU'): Spot => ({ id: `seat-${id}`, room, x, y, face, pose: 'sit', label });
 const PEOPLE: Person[] = [
   { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'NONTON DRAKOR'), hair: '#3a2418', skin: '#f5d4bf', shirt: '#9a8590', pants: '#6e5a66', style: 'long', hijab: '#d9d3c8', mole: true, lips: '#c9615a' },
-  { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
+  { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#2e221a', skin: '#d6a07a', shirt: '#1e1f23', pants: '#2a2b30', style: 'curtain', lips: '#b97a6c' },
+
   { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.35, 1.55, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
   { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.35, 3.75, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
   { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.35, 5.95, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
@@ -1643,7 +1644,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     c.fillStyle = tg; shirt(); c.fill();
     c.save(); shirt(); c.clip(); c.fillStyle = 'rgba(60,30,30,.15)'; c.fillRect(cx + 1.2, ty, 6, torso + 1); c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(cx - shW, ty, 1.6, torso + 1);
     if (front) {
-      if (p.id === 'bos') {        // dark suit: white shirt, red tie, lapels
+      if (p.id === 'bos' && p.tie) {        // dark suit: white shirt, red tie, lapels
         c.fillStyle = '#f4f2ee'; c.beginPath(); c.moveTo(cx - 1.7, ty); c.lineTo(cx + 1.7, ty); c.lineTo(cx, ty + 5); c.closePath(); c.fill();
         c.fillStyle = '#b8322a'; c.beginPath(); c.moveTo(cx - 0.5, ty + 0.6); c.lineTo(cx + 0.5, ty + 0.6); c.lineTo(cx + 0.7, ty + 4.6); c.lineTo(cx, ty + 5.4); c.lineTo(cx - 0.7, ty + 4.6); c.closePath(); c.fill();
         c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 0.4; c.beginPath(); c.moveTo(cx - 1.9, ty); c.lineTo(cx - 0.4, ty + 5.6); c.moveTo(cx + 1.9, ty); c.lineTo(cx + 0.4, ty + 5.6); c.stroke();
@@ -1823,6 +1824,24 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     const side = p.style === 'long' ? R * 0.55 : R * 0.05, f = front ? 0.6 : 0;
     c.beginPath(); c.moveTo(hx - R * 1.0, hy + side); c.bezierCurveTo(hx - R * 1.18, hy - R * 1.55, hx + R * 1.18, hy - R * 1.55, hx + R * 1.0, hy + side);
     if (!front) c.lineTo(hx + R * 0.98, hy + R * 0.7), c.lineTo(hx - R * 0.98, hy + R * 0.7);
+    else if (p.style === 'curtain') {
+      c.closePath(); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke();
+      // fuller on top and on the sides, the fringe parted in the middle and falling to the eyebrows
+      c.beginPath();
+      c.moveTo(hx - R * 1.12, hy + R * 0.1);
+      c.bezierCurveTo(hx - R * 1.4, hy - R * 1.2, hx - R * 0.6, hy - R * 1.75, hx + R * 0.1, hy - R * 1.62);
+      c.bezierCurveTo(hx + R * 0.9, hy - R * 1.68, hx + R * 1.45, hy - R * 1.1, hx + R * 1.12, hy + R * 0.1);
+      c.bezierCurveTo(hx + R * 1.0, hy - R * 0.2, hx + R * 0.75, hy - R * 0.25, hx + R * 0.55, hy - R * 0.2);
+      c.bezierCurveTo(hx + R * 0.45, hy - R * 0.45, hx + R * 0.25, hy - R * 0.6, hx + R * 0.12, hy - R * 0.72);
+      c.bezierCurveTo(hx - R * 0.05, hy - R * 0.55, hx - R * 0.35, hy - R * 0.35, hx - R * 0.55, hy - R * 0.22);
+      c.bezierCurveTo(hx - R * 0.8, hy - R * 0.28, hx - R * 1.0, hy - R * 0.2, hx - R * 1.12, hy + R * 0.1);
+      c.closePath(); c.fill(); c.stroke();
+      c.strokeStyle = sh(p.hair, 1.45); c.lineWidth = 0.35;          // a few lighter strands and loose flicks
+      for (const k of [-0.75, -0.4, 0.45, 0.8]) { c.beginPath(); c.moveTo(hx + R * k * 0.4, hy - R * 1.45); c.quadraticCurveTo(hx + R * k, hy - R * 1.0, hx + R * k * 1.05, hy - R * 0.32); c.stroke(); }
+      c.strokeStyle = p.hair; c.lineWidth = 0.4;
+      for (const [x0, y0, x1, y1] of [[-0.2, -1.6, -0.45, -1.9], [0.3, -1.62, 0.55, -1.88], [1.05, -0.9, 1.35, -1.05], [-1.05, -0.9, -1.38, -1.0]]) { c.beginPath(); c.moveTo(hx + R * x0, hy + R * y0); c.quadraticCurveTo(hx + R * (x0 + x1) / 2, hy + R * (y1 - 0.08), hx + R * x1, hy + R * y1); c.stroke(); }
+      c.beginPath();
+    }
     else if (p.style === 'slick') { c.bezierCurveTo(hx + R * 0.85, hy - R * 0.45, hx + f, hy - R * 0.55, hx - R * 0.2, hy - R * 0.52); c.bezierCurveTo(hx - R * 0.7, hy - R * 0.5, hx - R * 0.95, hy - R * 0.2, hx - R * 1.0, hy + side); }
     else { c.bezierCurveTo(hx + R * 0.75, hy - R * 0.55, hx + R * 0.5, hy - R * 0.45, hx + R * 0.3 + f, hy - R * 0.28); c.bezierCurveTo(hx + R * 0.08, hy - R * 0.6, hx - R * 0.12, hy - R * 0.48, hx - R * 0.28 + f, hy - R * 0.3); c.bezierCurveTo(hx - R * 0.62, hy - R * 0.6, hx - R * 0.95, hy - R * 0.3, hx - R * 1.0, hy + side); }
     c.closePath(); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke();
