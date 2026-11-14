@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { call, peek } from './client';
 import type { JournalTrade } from '@/lib/core/journal';
 import {
-  DEFAULT_COMPANY, cleanCompany, addYm, companyReport, costIdrIn, dayName, dueAt, idrT, toIdr, usdT, ymName, ymOf,
+  DEFAULT_COMPANY, cleanCompany, wdFeeOf, addYm, companyReport, costIdrIn, dayName, dueAt, idrT, toIdr, usdT, ymName, ymOf,
   type CashMove, type CompanyReport as Report, type CompanySettings, type Cost, type Fx, type MonthBook,
 } from '@/lib/core/company';
 
@@ -48,7 +48,6 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
   const c = useCompany();
   const [tab, setTab] = useState<'w' | 'm'>('m');
   const [info, setInfo] = useState(false);
-  const [bEdit, setBEdit] = useState<string | null>(null), [bBusy, setBBusy] = useState(false);
   if (!r) return <div className="co"><p className="co-empty">Memuat…</p></div>;
   const tz = deviceTz(), S = c?.settings ?? DEFAULT_COMPANY, m = r.cur, rate = r.rate;
   const capPct = Math.round(100 - S.salaryPct);
@@ -75,52 +74,31 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
           <span className="inv-hero-m">{ymName(m.ym, true).toUpperCase()}</span>
           <small>Tarik bulan ini</small>
           <b>{usdT(r.owed.allowed)}</b>
-          {r.owed.fee > 0.005 ? <span className="inv-hero-fee">termasuk biaya penarikan {usdT(r.owed.fee)}</span> : null}
           <div className="inv-hero-sub">
             <div><small>Pendapatan</small><b className="inc">{usdT(m.revenue)}</b></div>
-            <div><small>Pengembangan modal</small><b>{usdT(Math.max(0, m.net - m.salary))}</b><i>{capPct}% dari laba</i></div>
+            <div><small>Pengembangan modal</small><b>{usdT(Math.max(0, m.net - m.salary))}</b></div>
             <div><small>Gaji</small><b className="sal">{usdT(m.salary)}</b><i>{toIdr(m.salary, rate)}</i></div>
-            <div><small>Operasional</small><b>{usdT(ops)}</b><i>{names || '—'}</i></div>
+            <div><small>Operasional</small><b>{usdT(ops)}</b></div>
           </div>
+          {(() => {
+            const opsFee = ops > 0 ? wdFeeOf(S, ops) : 0;
+            const parts: Array<[string, number]> = [['Operasional', ops], ['Biaya penarikan', opsFee], ['Kasbon', r.owed.advance], ['Rugi belum ketutup', m.deficit]];
+            const target = parts.reduce((a, [, v]) => a + v, 0), rev = m.revenue;
+            const pct = target > 0 ? (rev / target) * 100 : rev > 0 ? 100 : 0, done = rev >= target && target > 0;
+            return (
+              <button type="button" className="tgt-card dark" onClick={() => setInfo(true)} aria-label="Kenapa targetnya segini">
+                <div className="tgt-h"><small>Target bulan ini</small><b>{usdT(target)}</b></div>
+                <div className="tgt-bar"><i className={done ? 'ok' : pct > 60 ? 'mid' : 'low'} style={{ width: `${Math.max(4, Math.min(100, pct))}%` }} /></div>
+                <div className="tgt-f"><span>{done ? `Lebih ${usdT(rev - target)}` : `Kurang ${usdT(target - rev)}`}</span><b className={done ? 'up' : ''}>{done ? '✓ ' : ''}{Math.max(0, Math.round(pct))}%</b></div>
+              </button>
+            );
+          })()}
           <div className="inv-hero-foot">
             <span>{r.owed.takenNow > 0.005 ? `Sudah ditarik ${usdT(r.owed.takenNow)}` : 'Belum ada penarikan'}</span>
             <button type="button" className="inv-info" aria-label="Lihat rumus hitungan" onClick={() => setInfo(true)}>i</button>
           </div>
         </div>
 
-        {(() => {
-          const used = r.budget.used, lim = S.budgetIdr, pct = lim > 0 ? Math.min(100, (used / lim) * 100) : 0, over = lim > 0 && used > lim;
-          const R = 34, C = 2 * Math.PI * R;
-          const items = S.costs.map((x) => ({ x, v: costIdrIn(x, m.ym) })).filter((q) => q.v > 0);
-          return (
-            <div className="bud">
-              <div className="bud-h"><div><small>ANGGARAN OPERASIONAL</small><b>{ymName(m.ym, true).split(' ')[0]}</b></div>
-                {bEdit == null ? <button type="button" className="bud-edit" onClick={() => setBEdit(lim ? lim.toLocaleString('id-ID') : '')}>{lim ? 'Ubah' : 'Atur'}</button> : null}</div>
-              {bEdit != null ? (
-                <div className="bud-form">
-                  <span>Rp</span><input inputMode="numeric" autoFocus value={bEdit} placeholder="600.000" onChange={(e) => { const n = Math.round(Number(e.target.value.replace(/[^0-9]/g, '')) || 0); setBEdit(n ? n.toLocaleString('id-ID') : ''); }} />
-                  <button type="button" disabled={bBusy} onClick={async () => { setBBusy(true); try { await saveCompany({ ...S, budgetIdr: Number((bEdit || '0').replace(/[^0-9]/g, '')) }); setBEdit(null); } catch { /* keep the form */ } finally { setBBusy(false); } }}>Simpan</button>
-                  <button type="button" className="ghost" onClick={() => setBEdit(null)}>Batal</button>
-                </div>
-              ) : lim > 0 ? (
-                <div className="bud-main">
-                  <div className="bud-ring">
-                    <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r={R} fill="none" stroke="var(--sunk)" strokeWidth="9" /><circle cx="40" cy="40" r={R} fill="none" stroke={over ? 'var(--co-dn)' : pct > 85 ? '#f2a33a' : 'var(--co-up)'} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${(pct / 100) * C} ${C}`} transform="rotate(-90 40 40)" /></svg>
-                    <b>{Math.round((used / lim) * 100)}%</b>
-                  </div>
-                  <div className="bud-nums">
-                    <div><small>Terpakai</small><b>{idrT(used)}</b></div>
-                    <div><small>{over ? 'Lewat' : 'Sisa'}</small><b className={over ? 'dn' : 'up'}>{idrT(Math.abs(lim - used))}</b></div>
-                    <div className="bud-of">dari {idrT(lim)}</div>
-                  </div>
-                </div>
-              ) : <p className="bud-empty">Belum ada anggaran. Ketuk <b>Atur</b> untuk menentukan batas operasional per bulan.</p>}
-              {items.length && bEdit == null ? <div className="bud-items">{items.map(({ x, v }) => (
-                <div key={x.id}><span className="bud-dot" />{x.name}<b>{idrT(v)}</b></div>
-              ))}</div> : null}
-            </div>
-          );
-        })()}
 
         {info ? (
           <div className="inv-pop-bg" onClick={() => setInfo(false)}>
@@ -137,6 +115,14 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
                 <small>TARIK BULAN INI</small>
                 <div>Gaji <em>+</em> Operasional <em>+</em> Biaya tarik <em>=</em> <b>{usdT(r.owed.allowed)}</b></div>
               </div>
+              <div className="inv-steps" style={{ marginTop: 12 }}>
+                <div className="eq0"><span><b>Target bulan ini</b></span><b>{usdT(ops + (ops > 0 ? wdFeeOf(S, ops) : 0) + r.owed.advance + m.deficit)}</b></div>
+                <div><span><em>·</em>Operasional</span><b>{usdT(ops)}</b></div>
+                <div><span><em>·</em>Biaya penarikan</span><b>{usdT(ops > 0 ? wdFeeOf(S, ops) : 0)}</b></div>
+                {r.owed.advance > 0.005 ? <div><span><em>·</em>Kasbon</span><b>{usdT(r.owed.advance)}</b></div> : null}
+                {m.deficit > 0.005 ? <div><span><em>·</em>Rugi belum ketutup</span><b>{usdT(m.deficit)}</b></div> : null}
+              </div>
+              <p className="inv-where">Target = semua yang harus ditutup bulan ini sebelum ada gaji. Ubah lewat <b>menu kucing → Perusahaan</b>: daftar <b>Operasional</b> (tambah, ubah, hapus) dan <b>Pengaturan lain</b> untuk biaya penarikan.</p>
               <ul className="inv-notes">
                 <li>Pendapatan = untung/rugi semua trade Binance yang selesai bulan ini (fee sudah termasuk).</li>
                 <li>Operasional ditulis dalam Rupiah, diubah ke dolar dengan kurs otomatis{rate ? ` (± ${idrT(rate)} per $1)` : ''}.</li>

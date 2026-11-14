@@ -112,7 +112,7 @@ export function monthBook(inp: CompanyInput, ym: string, withdrawals: Array<{ at
   return { ym, revenue: T.reduce((s, t) => s + Number(t.pnl), 0), costs: rate ? costIdr / rate : 0, fees, costIdr, rate, trades: T.length, tp: T.filter((t) => t.result === 'tp').length, sl: T.filter((t) => t.result === 'sl').length };
 }
 
-export interface MonthRow extends MonthBook { net: number; salary: number; capital: number; closed: boolean; deduct: number; taken: number; unclaimed: number; expired: number }
+export interface MonthRow extends MonthBook { deficit: number; net: number; salary: number; capital: number; closed: boolean; deduct: number; taken: number; unclaimed: number; expired: number }
 export interface Bill { cost: Cost; ym: string; due: number; daysLeft: number; usd: number | null }
 export interface CompanyReport {
   ym: string; months: MonthRow[]; cur: MonthRow;
@@ -171,10 +171,11 @@ export function companyReport(inp0: CompanyInput): CompanyReport {
     const old = ym < cur ? inp.books?.[ym] : undefined, live = monthBook(inp, ym, outs);
     const bk: MonthBook = old ? { ...old, costIdr: live.costIdr, costs: old.rate ? live.costIdr / old.rate : live.costs } : live;
     const net = bk.revenue - bk.costs - bk.fees;
+    const deficit = Math.max(0, peak - cum);              // loss from earlier months still to win back
     cum += net;
     const salary = Math.max(0, cum - peak) * (S.salaryPct / 100);
     peak = Math.max(peak, cum);
-    rows.push({ ...bk, net, salary, capital: net - salary, closed: ym < cur, deduct: 0, taken: 0, unclaimed: 0, expired: 0 });
+    rows.push({ ...bk, deficit, net, salary, capital: net - salary, closed: ym < cur, deduct: 0, taken: 0, unclaimed: 0, expired: 0 });
   }
   // what the company owes the owner: buckets (costs he paid from his pocket + salary), oldest first
   type Bucket = { ym: string; kind: 'cost' | 'salary'; left: number };
