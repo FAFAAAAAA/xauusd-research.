@@ -4,14 +4,14 @@ import { call, peek } from '@/components/client';
 import Office, { type OfficeData, type ScreenLine } from '@/components/Office';
 import OfficeTower from '@/components/OfficeTower';
 
-/** The office style: the Claude-Office tower (default) or the old drawn one (?kantor=lama; back with ?kantor=baru). Remembered per device. */
+/** The office style: our own drawn office (default) or the Claude-Office tower (?kantor=baru; back with ?kantor=lama). Remembered per device. */
 function useTowerStyle() {
-  const [tower, setTower] = useState(true);
+  const [tower, setTower] = useState(false);
   useEffect(() => {
     try {
       const q = new URLSearchParams(location.search).get('kantor');
-      if (q === 'lama' || q === 'baru') localStorage.setItem('office-gaya', q);
-      setTower((q ?? localStorage.getItem('office-gaya')) !== 'lama');
+      if (q === 'lama' || q === 'baru') localStorage.setItem('office-gaya2', q);
+      setTower((q ?? localStorage.getItem('office-gaya2')) === 'baru');
     } catch { /* private mode: keep the default */ }
   }, []);
   return tower;
