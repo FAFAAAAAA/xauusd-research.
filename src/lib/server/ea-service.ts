@@ -6,6 +6,7 @@ import { safeEqual } from '../core/webhook';
 import { cleanTrade, type JournalTrade } from '../core/journal';
 import { escapeHtml } from '../core/telegram-format';
 import { formatInTz } from '../core/time';
+import { cleanApplied, cleanBotControl, DEFAULT_BOT_CONTROL, type BotControl } from '../core/bot-control';
 
 /**
  * Reports from the owner's MetaTrader 5 Expert Advisor (v2). The EA places the orders at the broker itself;
@@ -81,6 +82,12 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     return { status: 200, body: { ok: true, added: fresh.length } };
   }
   // bot status messages (daily summary, warnings): Telegram only, no journal row
+  // Binance bot asks for the remote settings (Atur → Kontrol bot) and tells what it is using now. Read-only for orders.
+  if (b.event === 'control') {
+    await repo.setAppSetting(db, 'bot_control_seen', { at: now, applied: cleanApplied(b.applied) });
+    const c = await repo.getAppSetting<BotControl | null>(db, 'bot_control', null);
+    return { status: 200, body: { ok: true, control: c ? cleanBotControl(c) : DEFAULT_BOT_CONTROL } };
+  }
   if (b.event === 'info') {
     const txt = String(b.text ?? '').slice(0, 800);
     if (!txt.trim()) return { status: 422, body: { ok: false, error: 'text wajib' } };

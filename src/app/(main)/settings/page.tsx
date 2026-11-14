@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { call, fmt, peek } from '@/components/client';
 import { CopyButton, ErrorBox, Loading, PageHead, Seg, Spinner, Status, copyText, toast } from '@/components/Status';
 import { FileText } from '@/components/FileText';
+import { BotControlCard } from '@/components/BotControl';
 import { TIMEFRAMES } from '@/lib/core/types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -18,6 +19,7 @@ export default function Settings() {
   return (
     <div className="stack">
       <PageHead title="Atur" />
+      <BotControlCard />
       <span className="section-title">Sinyal & koneksi</span>
       <Telegram s={s} reload={load} />
       <FeedSetup tz={s.timezone} />

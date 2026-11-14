@@ -14,6 +14,9 @@ BUY part (v1 BTC rules, 9 Nov 2026, on the largest coins: BTC ETH SOL BNB XRP DO
   BUY      = an H4 candle CLOSES above the highest high of the 50 H4 candles before it (first close beyond) and the last completed
              D1 close is above EMA200 (D1).   SL = H4 close - 1.0 x ATR14(D1);  TP = entry + 2 x (entry - SL).   Max 2 BUY positions.
 
+Remote settings (website Atur -> Kontrol bot, checked every ~60 s): risk %, max SELL / BUY positions and Pause (no new positions).
+  The website never sends orders; the bot applies these values itself. Empty on the website = use snr_bot_config.json.
+
 Runs on YOUR computer / VPS. Your API key stays in snr_bot_config.json on that machine (never send it to anyone).
 Start on the Binance Futures TESTNET (demo money). Trading is risky; backtest results are not a promise.
 
@@ -41,6 +44,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
+BOT_VERSION = '2026.11.15'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -224,10 +228,24 @@ def notify(cfg, text, level='info'):
     report(cfg, {'event': 'info', 'text': text, 'level': level})
 
 
+def fetch_control(cfg, applied):
+    """remote settings from the website (Atur -> Kontrol bot). Only risk %, max positions and pause; never orders."""
+    if not cfg['report_url'] or not cfg['report_key']: return None
+    try:
+        r = requests.post(cfg['report_url'], json={'key': cfg['report_key'], 'strategy': 'snr', 'event': 'control', 'applied': applied}, timeout=15)
+        if r.status_code != 200: return None
+        c = r.json().get('control')
+        return c if isinstance(c, dict) else None
+    except (requests.RequestException, ValueError):
+        return None
+
+
 class Bot:
     def __init__(self, cfg):
         self.cfg, self.api, self.st = cfg, Binance(cfg), load_state()
         self.filters = {}
+        self.base = {k: cfg.get(k) for k in ('risk_mode', 'risk_percent', 'max_positions', 'max_buy_positions')}   # values from the config file
+        self.paused = False; self.ctl_at = 0
 
     def load_symbols(self):
         info = self.api.get('/fapi/v1/exchangeInfo')
@@ -486,8 +504,39 @@ class Bot:
         notify(self.cfg, f"Ringkasan {kst.strftime('%H:%M')} (waktu Korea) — bot aktif.\nSaldo Futures: {bal:.2f} USDT\n"
                          f"Sejak ringkasan terakhir: {len(done)} trade selesai (TP {tp}, SL {sl}), hasil {res:+.2f} USDT\nPosisi terbuka: {pos}")
 
+    def applied(self):
+        return {'riskMode': self.cfg['risk_mode'], 'riskPercent': float(self.cfg['risk_percent']), 'riskUsdt': float(self.cfg['risk_usdt']),
+                'maxSell': int(self.cfg['max_positions']), 'maxBuy': int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0,
+                'paused': self.paused, 'version': BOT_VERSION}
+
+    def control(self, quiet=False):
+        """apply the remote settings from the website; anything not set there falls back to snr_bot_config.json"""
+        self.ctl_at = time.time()
+        c = fetch_control(self.cfg, self.applied())
+        if c is None: return
+        def num(x, lo, hi, nd):
+            try: v = float(x)
+            except (TypeError, ValueError): return None
+            return round(min(hi, max(lo, v)), nd) if math.isfinite(v) else None
+        rp, ms, mb = num(c.get('riskPercent'), 0.1, 5, 1), num(c.get('maxSell'), 1, 6, 0), num(c.get('maxBuy'), 0, 4, 0)
+        want = {'risk_mode': 'percent' if rp is not None else self.base['risk_mode'], 'risk_percent': rp if rp is not None else self.base['risk_percent'],
+                'max_positions': int(ms) if ms is not None else self.base['max_positions'], 'max_buy_positions': int(mb) if mb is not None else self.base['max_buy_positions']}
+        paused = c.get('paused') is True
+        changes = []
+        if want['risk_mode'] != self.cfg['risk_mode'] or float(want['risk_percent']) != float(self.cfg['risk_percent']):
+            changes.append(f"risiko {want['risk_percent']}% saldo" if want['risk_mode'] == 'percent' else f"risiko {self.cfg['risk_usdt']} USDT")
+        if int(want['max_positions']) != int(self.cfg['max_positions']): changes.append(f"maks {want['max_positions']} SELL")
+        if int(want['max_buy_positions'] or 0) != int(self.cfg.get('max_buy_positions') or 0): changes.append(f"maks {want['max_buy_positions']} BUY")
+        if paused != self.paused: changes.append('JEDA: tidak buka posisi baru (posisi terbuka tetap jalan dengan SL/TP)' if paused else 'LANJUT: boleh buka posisi baru lagi')
+        self.cfg.update(want); self.paused = paused
+        if changes:
+            log.info('Setelan dari website: %s', ', '.join(changes))
+            if not quiet: notify(self.cfg, 'Setelan dari website dipakai: ' + ', '.join(changes) + '.')
+        fetch_control(self.cfg, self.applied()) if changes else None   # tell the website what is used now
+
     def run(self):
         self.api.sync_time(); self.load_symbols()
+        self.control(quiet=True)
         if self.cfg['api_key']:
             try:
                 log.info('API key OK — saldo USDT di dompet Futures: %.2f', self.balance())
@@ -510,9 +559,10 @@ class Bot:
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'],
                  int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
         last_sync = time.time()
-        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY.")
+        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY{' · JEDA dari website' if self.paused else ''}.")
         self.push_balance()
         while True:
+            if time.time() - self.ctl_at > 60: self.control()
             if time.time() - getattr(self, 'bal_pushed', 0) > (60 if self.st['positions'] else 900): self.push_balance()   # every minute while positions are open, else every 15 min
             if os.path.exists(STOP_FILE):
                 log.info('stop.flag ditemukan — bot berhenti.'); notify(self.cfg, 'Bot dihentikan (perintah --stop). Posisi terbuka tetap punya SL/TP di Binance.'); return
@@ -541,6 +591,8 @@ class Bot:
                         log.error('REM AKTIF: saldo %.2f USDT di bawah batas %.2f — tidak membuka posisi baru. Naikkan modal / ubah stop_balance_usdt bila ingin lanjut.', bal, stop)
                         if not self.st.get('brake_sent'): notify(self.cfg, f'REM AKTIF: saldo {bal:.2f} USDT di bawah batas {stop:.2f}. Bot tidak membuka posisi baru.', 'error'); self.st['brake_sent'] = 1
                         sigs = []
+                if sigs and self.paused:
+                    log.info('JEDA dari website — %d sinyal dilewati.', len(sigs)); sigs = []
                 mx = int(self.cfg.get('max_loss_streak') or 0)
                 if sigs and mx > 0 and self.st.get('loss_streak', 0) >= mx:
                     log.error('REM KALAH BERUNTUN aktif (%d SL berturut-turut) — %d sinyal dilewati. Lanjut lagi: python snr_bot.py --reset', self.st['loss_streak'], len(sigs))

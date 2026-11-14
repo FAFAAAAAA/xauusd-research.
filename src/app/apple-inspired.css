@@ -1490,3 +1490,22 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .wg-ico { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 11px; background: #141416; color: #fff; display: grid; place-items: center; }
 .wg-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .wg + .cs-card { margin-top: 10px; }
+/* bot remote control (Atur) */
+.bc { background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 22px; padding: 16px; display: grid; gap: 10px; }
+.bc-top { display: flex; justify-content: space-between; align-items: center; } .bc-top b { font-size: 17px; font-weight: 800; }
+.bc-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: var(--sunk); color: var(--mute); }
+.bc-dot:before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #a1a1aa; }
+.bc-dot.on { color: #16a35a; background: #e8f6ee; } .bc-dot.on:before { background: #22c26e; box-shadow: 0 0 0 3px rgba(34,194,110,.2); }
+.bc-dot.pause { color: #b45309; background: #fff4e6; } .bc-dot.pause:before { background: #f59e0b; }
+.bc-sub { margin: -4px 0 0; font-size: 12.5px; color: var(--mute); }
+.bc-pause { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; border-radius: 16px; padding: 13px 14px; background: #e8f6ee; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.bc-pause.is { background: #fff4e6; } .bc-pause > span { flex: 1; min-width: 0; } .bc-pause b { display: block; font-size: 15px; } .bc-pause small { display: block; font-size: 12px; color: var(--mute); margin-top: 2px; }
+.bc-card { background: var(--sunk); border-radius: 16px; padding: 2px 12px; }
+.bc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; }
+.bc-row + .bc-row { border-top: 1px solid rgba(0,0,0,.06); }
+.bc-l { font-size: 14.5px; font-weight: 600; } .bc-l small { display: block; font-size: 11.5px; color: var(--mute); font-weight: 500; }
+.bc-step { display: flex; align-items: center; gap: 8px; }
+.bc-step b { min-width: 46px; text-align: center; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bc-step button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--surface, #fff); color: var(--ink); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.bc-now { margin: 0; font-size: 12.5px; color: var(--mute); }
+.bc-reset { justify-self: start; border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; color: var(--mute); text-decoration: underline; cursor: pointer; }

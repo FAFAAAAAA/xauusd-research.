@@ -290,3 +290,10 @@ test('swap triple day is configurable (index CFDs charge Friday 3×) and v1 NAS 
   assert.equal(nyHour(Date.UTC(2026, 10, 6, 15, 0)), 10);   // EST (UTC−5)
   assert.equal(nyHour(Date.UTC(2026, 6, 6, 14, 0)), 10);    // EDT (UTC−4)
 });
+
+test('bot control: values are clamped, empty means "use the VPS config"', async () => {
+  const { cleanBotControl } = await import('../src/lib/core/bot-control');
+  const c = cleanBotControl({ riskPercent: 9, maxSell: 0, maxBuy: 7, paused: 'yes' }, 5);
+  assert.deepEqual(c, { riskPercent: 5, maxSell: 1, maxBuy: 4, paused: false, updatedAt: 5 });
+  assert.deepEqual(cleanBotControl({ riskPercent: '2.04', maxSell: null, paused: true }, 7), { riskPercent: 2, maxSell: null, maxBuy: null, paused: true, updatedAt: 7 });
+});
