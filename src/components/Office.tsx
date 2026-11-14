@@ -1629,7 +1629,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const hy = hip - torso - 5.6 + breathe * 0.5 + (typing ? Math.sin(t * 1.7 + hash(p.id) * 9) * 0.22 : 0) + (gesture === 'stretch' ? -0.6 : 0) + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
-  const big = p.id === 'vet', HS = INK ? (big ? 1.72 : 1.52) : big ? 1.75 : 1.4, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
+  const big = p.id === 'vet', HS = INK ? (big ? 1.5 : 1.3) : big ? 1.6 : 1.2, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
   const headOn = () => { c.save(); c.translate(hx, hy + 5 - NECK); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
   if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); if (INK) { c.moveTo(hx - 5.9, hy - 1.2); c.bezierCurveTo(hx - 7.2, hy + 9, hx - 4.2, hy + 10.5, hx, hy + 10.5); c.bezierCurveTo(hx + 4.2, hy + 10.5, hx + 7.2, hy + 9, hx + 5.9, hy - 1.2); c.closePath(); } else c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
@@ -2132,18 +2132,34 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const [shots, setShots] = useState<Shot[]>([]);
   const [gallery, setGallery] = useState(false);
   const [big, setBig] = useState<Shot | null>(null);
-  // every TP in the journal is in the gallery: a photo when the app was open at that moment, otherwise a card
+  // every TP in the journal is in the gallery as a team selfie (drawn, a different one for every TP)
   const moments = useMemo(() => {
     const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
-    const have = new Set(shots.map((x) => x.id));
-    const cards = data.trades.filter((t) => t.result === 'tp' && t.closedAt && !have.has(`tp-${t.id}`)).map((t) => {
+    return data.trades.filter((t) => t.result === 'tp' && t.closedAt).map((t) => {
       const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
-      const pid = ({ snr: 'alt', btc: 'big', v2: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? '';
+      const pid = ({ snr: 'alt', btc: 'big', v2: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
       const who = PEOPLE.find((q) => q.id === pid)?.name ?? '';
-      return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, img: '', who, side: t.side, pid };
-    });
-    return [...shots.map((x) => ({ ...x, who: '', side: '', pid: '' })), ...cards].sort((a, b) => b.at - a.at);
-  }, [shots, data.trades]);
+      return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, who, side: String(t.side ?? ''), pid };
+    }).sort((a, b) => b.at - a.at);
+  }, [data.trades]);
+  const photos = useMemo(() => shots.filter((x) => !x.id.startsWith('tp-')), [shots]);
+  // selfies are drawn a few at a time while the gallery is open (so it opens at once)
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!gallery) return;
+    let off = false;
+    const todo = moments.filter((m) => !thumbs[m.id]);
+    const step = () => {
+      if (off || !todo.length) return;
+      const m = todo.shift()!, img = selfie(m.id, m.text, fmtDay(m.at), m.pid);
+      setThumbs((t) => ({ ...t, [m.id]: img }));
+      window.setTimeout(step, 30);
+    };
+    step();
+    return () => { off = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gallery, moments]);
+  const [bigI, setBigI] = useState(-1);
   const GKEY = 'office-galeri';
   useEffect(() => { try { setShots(JSON.parse(localStorage.getItem(GKEY) ?? '[]')); } catch { /* storage off */ } }, []);
   const snap = (id: string, text: string) => {
@@ -2187,23 +2203,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       else if (CALL.res === 'no' || n > 10) { window.clearInterval(wait); say('Belum bisa, orangnya sibuk/pulang'); }
     }, 300);
   };
-  useEffect(() => {
-    // new take-profits (closed after the page opened, or in the last 15 minutes) get a photo a few seconds later, during the celebration
-    const t0 = Date.now() - 15 * 60_000;
-    const id = window.setInterval(() => {
-      const known = new Set<string>((() => { try { return (JSON.parse(localStorage.getItem(GKEY) ?? '[]') as Shot[]).map((x) => x.id); } catch { return []; } })());
-      const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
-      for (const t of dataRef.current.trades) {
-        if (t.result !== 'tp' || !t.closedAt || t.closedAt < t0 || known.has(`tp-${t.id}`)) continue;
-        if (Date.now() - t.closedAt < 6000) continue;
-        const name = t.strategy === 'v2' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
-        const pnl = Number(t.pnl ?? 0);
-        snapRef.current(`tp-${t.id}`, `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`);
-        break;
-      }
-    }, 5000);
-    return () => window.clearInterval(id);
-  }, []);
   useEffect(() => {
     let off = false;
     const load = () => fetch('https://api.open-meteo.com/v1/forecast?latitude=37.57&longitude=126.98&current=weather_code').then((r) => (r.ok ? r.json() : null)).then((j) => {
@@ -2596,17 +2595,40 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         {toast ? <div className="office-toast">{toast}</div> : null}
       </> : null}
       {gallery ? (
-        <div className="office-gallery" onClick={() => { setGallery(false); setBig(null); }} data-noswipe>
+        <div className="office-gallery" onClick={() => { setGallery(false); setBig(null); setBigI(-1); }} data-noswipe>
           <div className="og-box" onClick={(e) => e.stopPropagation()}>
-            <div className="og-head"><b>Galeri momen</b>
-              <button type="button" onClick={() => { setGallery(false); setBig(null); }} aria-label="Tutup">✕</button></div>
-            {big ? <div className="og-big" onClick={() => setBig(null)}><img src={big.img} alt={big.text} /><span>{big.text}</span></div>
-              : moments.length ? <>
-                <p className="og-sum">{moments.filter((x) => x.id.startsWith('tp-')).length} TP sejak awal · total {(() => { const v = data.trades.filter((t) => t.result === 'tp').reduce((a, t) => a + Number(t.pnl ?? 0), 0); return `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`; })()}</p>
-                <div className="og-grid">{moments.map((x) => x.img
-                  ? <button type="button" key={x.id} onClick={() => setBig(x)}><img src={x.img} alt={x.text} /><span>{x.text}</span><small>{fmtDay(x.at)}</small></button>
-                  : <button type="button" key={x.id} className="og-card" onClick={() => setBig({ id: x.id, at: x.at, text: `${x.text} · ${x.who ? `${x.who} & tim` : 'tim'}`, img: selfie(x.id, x.text, fmtDay(x.at), x.pid) })}>{x.pid && portrait(x.pid) ? <img className="og-face" src={portrait(x.pid)} alt={x.who} /> : <b>🎉</b>}<strong>{x.text}</strong><span>{x.who ? `${x.who} · ` : ''}{x.side === 'BUY' ? 'BUY' : x.side === 'SELL' ? 'SELL' : ''}</span><small>{fmtDay(x.at)}</small><i>📸 lihat selfie</i></button>)}</div>
-              </> : <p className="og-empty">Belum ada TP. Setiap kali kena TP, kantor otomatis mengambil foto di sini.</p>}
+            <div className="og-head">
+              <div><b>Galeri momen</b><small>{moments.length} TP sejak awal · total {(() => { const v = data.trades.filter((t) => t.result === 'tp').reduce((a, t) => a + Number(t.pnl ?? 0), 0); return `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`; })()}</small></div>
+              <button type="button" onClick={() => { setGallery(false); setBig(null); setBigI(-1); }} aria-label="Tutup">✕</button>
+            </div>
+            {bigI >= 0 && moments[bigI] ? (
+              <div className="og-big">
+                <img src={thumbs[moments[bigI].id] || selfie(moments[bigI].id, moments[bigI].text, fmtDay(moments[bigI].at), moments[bigI].pid)} alt={moments[bigI].text} />
+                <div className="og-nav">
+                  <button type="button" disabled={bigI <= 0} onClick={() => setBigI(bigI - 1)}>‹</button>
+                  <span><b>{moments[bigI].text}</b><small>{moments[bigI].who} & tim · {fmtDay(moments[bigI].at)}</small></span>
+                  <button type="button" disabled={bigI >= moments.length - 1} onClick={() => setBigI(bigI + 1)}>›</button>
+                </div>
+                <button type="button" className="og-back" onClick={() => setBigI(-1)}>← Semua foto</button>
+              </div>
+            ) : big ? (
+              <div className="og-big"><img src={big.img} alt={big.text} /><button type="button" className="og-back" onClick={() => setBig(null)}>← Semua foto</button></div>
+            ) : (
+              <>
+                {moments.length ? <div className="og-grid">{moments.map((m, i) => (
+                  <button type="button" key={m.id} className="og-tile" onClick={() => setBigI(i)}>
+                    <div className="og-img">{thumbs[m.id] ? <img src={thumbs[m.id]} alt={m.text} /> : <i />}</div>
+                    <b>{m.text}</b><small>{m.who} · {fmtDay(m.at)}</small>
+                  </button>
+                ))}</div> : <p className="og-empty">Belum ada TP. Setiap TP nanti jadi foto selfie bareng tim di sini.</p>}
+                {photos.length ? <>
+                  <h5 className="og-sub">Foto kantor</h5>
+                  <div className="og-grid">{photos.map((x) => (
+                    <button type="button" key={x.id} className="og-tile" onClick={() => setBig(x)}><div className="og-img"><img src={x.img} alt={x.text} /></div><b>{x.text}</b><small>{fmtDay(x.at)}</small></button>
+                  ))}</div>
+                </> : null}
+              </>
+            )}
           </div>
         </div>
       ) : null}
