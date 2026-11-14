@@ -190,20 +190,31 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
   }
   // drag a line: press on it (no tool active) and move; the chart does not pan while a line is held
   const drag = useRef<{ kind: 'h' | 't'; i: number; end: number; x0: number; y0: number; orig: Drawings } | null>(null);
+  // a line is picked up only after a long press (0.45 s without moving); a normal swipe scrolls the chart as usual
+  const pend = useRef<{ timer: number; x0: number; y0: number } | null>(null);
+  const [grab, setGrab] = useState(false);
   useEffect(() => {
     const el = box.current; if (!el || !drawKey) return;
     const at = (e: { clientX: number; clientY: number }) => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top] as const; };
     const timeAt = (x: number) => { const c = chart.current; const lg = c?.timeScale().coordinateToLogical(x); if (lg == null || !candles.length) return null; const i = Math.round(lg), last = candles.length - 1; return i <= last ? candles[Math.max(0, i)].time : candles[last].time + (i - last) * barMs(); };
     const priceAt = (y: number) => { const v = series.current?.coordinateToPrice(y); return v == null ? null : Number(v); };
+    const cancelPend = () => { if (pend.current) { window.clearTimeout(pend.current.timer); pend.current = null; } };
     const down = (e: PointerEvent) => {
-      if (mode) return;
+      cancelPend();
+      if (mode || (e.pointerType === 'mouse' && e.button !== 0)) return;
       const [x, y] = at(e); const h = hitTest(x, y); if (!h) return;
-      drag.current = { ...h, x0: x, y0: y, orig: JSON.parse(JSON.stringify(drawRef.current)) };
-      chart.current?.applyOptions({ handleScroll: false, handleScale: false });
-      try { el.setPointerCapture(e.pointerId); } catch { /* old browser */ }
-      e.stopPropagation(); e.preventDefault();
+      const id = e.pointerId;
+      pend.current = { x0: x, y0: y, timer: window.setTimeout(() => {
+        pend.current = null;
+        drag.current = { ...h, x0: x, y0: y, orig: JSON.parse(JSON.stringify(drawRef.current)) };
+        chart.current?.applyOptions({ handleScroll: false, handleScale: false });
+        try { el.setPointerCapture(id); } catch { /* old browser / pointer gone */ }
+        try { navigator.vibrate?.(15); } catch { /* not supported */ }
+        setGrab(true);
+      }, 450) };
     };
     const move = (e: PointerEvent) => {
+      if (pend.current) { const [x, y] = at(e); if (Math.hypot(x - pend.current.x0, y - pend.current.y0) > 8) cancelPend(); }     // moved: it is a swipe
       const g = drag.current; if (!g) return;
       e.stopPropagation(); e.preventDefault();
       const [x, y] = at(e); const p1 = priceAt(y), p0 = priceAt(g.y0), t1 = timeAt(x), t0 = timeAt(g.x0); if (p1 == null || p0 == null || t1 == null || t0 == null) return;
@@ -215,8 +226,9 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       setDraw(d);
     };
     const up = (e: PointerEvent) => {
+      cancelPend();
       if (!drag.current) return;
-      drag.current = null; e.stopPropagation();
+      drag.current = null; e.stopPropagation(); setGrab(false);
       chart.current?.applyOptions({ handleScroll: true, handleScale: true });
       if (drawKey) saveDraw(drawKey, drawRef.current);
     };
@@ -225,13 +237,14 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     el.addEventListener('pointerdown', down, true); el.addEventListener('pointermove', move, true); el.addEventListener('pointerup', up, true); el.addEventListener('pointercancel', up, true);
     for (const k of ['mousedown', 'mousemove', 'touchstart', 'touchmove']) el.addEventListener(k, block, { capture: true, passive: false });
     return () => {
+      cancelPend();
       el.removeEventListener('pointerdown', down, true); el.removeEventListener('pointermove', move, true); el.removeEventListener('pointerup', up, true); el.removeEventListener('pointercancel', up, true);
       for (const k of ['mousedown', 'mousemove', 'touchstart', 'touchmove']) el.removeEventListener(k, block, { capture: true } as EventListenerOptions);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, candles, drawKey, timezone]);
   const pick = (m: typeof mode) => { setAnchor(null); setMode((cur) => (cur === m ? '' : m)); };
-  const hint = mode === 'trend' ? (anchor ? 'Ketuk titik kedua' : 'Ketuk titik pertama') : mode === 'hline' ? 'Ketuk harga untuk garis' : mode === 'erase' ? 'Ketuk garis yang mau dihapus' : '';
+  const hint = grab ? 'Geser garis, lepas untuk simpan' : mode === 'trend' ? (anchor ? 'Ketuk titik kedua' : 'Ketuk titik pertama') : mode === 'hline' ? 'Ketuk harga untuk garis' : mode === 'erase' ? 'Ketuk garis yang mau dihapus' : '';
 
   const zoom = (factor: number) => {
     const scale = chart.current?.timeScale(), range = scale?.getVisibleLogicalRange();

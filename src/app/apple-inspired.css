@@ -1057,3 +1057,6 @@ body:has(.office-home)::after { display: none; }
 .draw-tools button:disabled { opacity: .3; }
 .draw-tools svg { width: 18px; height: 18px; }
 .draw-hint { position: absolute; top: 10px; left: 58px; right: 70px; z-index: 3; padding: 7px 10px; border-radius: 10px; background: var(--ink); color: var(--surface); font-size: 12.5px; font-weight: 600; text-align: center; pointer-events: none; }
+
+/* long press on a drawn line picks it up: no iOS callout / text selection */
+.chartbox { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
