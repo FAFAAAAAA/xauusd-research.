@@ -66,16 +66,16 @@ const PEOPLE: Person[] = [
   { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'NONTON DRAKOR'), hair: '#3a2418', skin: '#f5d4bf', shirt: '#9a8590', pants: '#6e5a66', style: 'long', hijab: '#d9d3c8', mole: true, lips: '#c9615a' },
   { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#2e221a', skin: '#d6a07a', shirt: '#1e1f23', pants: '#2a2b30', style: 'curtain', lips: '#b97a6c' },
 
-  { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.35, 1.55, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
-  { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.35, 3.75, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
-  { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.35, 5.95, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
-  { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.35, 8.15, 'nx'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
-  { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 2.35, 10.35, 'nx', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
-  { id: 'risk', name: 'Rina', role: 'RISIKO', seat: seat('risk', 1, 8.15, 4.2, 'py', 'CEK RISIKO'), hair: '#2b1d16', skin: '#f1c7a3', shirt: '#7b5cd6', pants: '#2a2b30', style: 'bun', glasses: true, lips: '#c06a62' },
-  { id: 'akun', name: 'Sari', role: 'AKUNTAN', seat: seat('akun', 1, 6.95, 4.2, 'py', 'PEMBUKUAN'), hair: '#4a2c1c', skin: '#efc39f', shirt: '#f08a3c', pants: '#3a3f4a', style: 'long', lips: '#c9615a' },
-  { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 13.65, 3.2, 'px', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
-  { id: 'ob', name: 'Udin', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
-  { id: 'tamu', name: 'Tamu', role: 'KLIEN', seat: { ...seat('tamu', 2, 13.5, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#3a2a20', skin: '#efc9a4', shirt: '#3b4a6b', pants: '#2a2f3a', style: 'slick', tie: true, glasses: true },
+  { id: 'alt', name: 'Trader ALT', role: 'ALT', seat: seat('alt', 1, 2.35, 1.55, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
+  { id: 'big', name: 'Trader BTC', role: 'BTC', seat: seat('big', 1, 2.35, 3.75, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
+  { id: 'xau', name: 'Trader XAU', role: 'XAU', seat: seat('xau', 1, 2.35, 5.95, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
+  { id: 'nas', name: 'Trader NASDAQ', role: 'NASDAQ', seat: seat('nas', 1, 2.35, 8.15, 'nx'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
+  { id: 'tg', name: 'Admin Telegram', role: 'TELEGRAM', seat: seat('tg', 1, 2.35, 10.35, 'nx', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
+  { id: 'risk', name: 'Manajer Risiko', role: 'RISIKO', seat: seat('risk', 1, 8.15, 4.2, 'py', 'CEK RISIKO'), hair: '#2b1d16', skin: '#f1c7a3', shirt: '#7b5cd6', pants: '#2a2b30', style: 'bun', glasses: true, lips: '#c06a62' },
+  { id: 'akun', name: 'Akuntan', role: 'AKUNTAN', seat: seat('akun', 1, 6.95, 4.2, 'py', 'PEMBUKUAN'), hair: '#4a2c1c', skin: '#efc39f', shirt: '#f08a3c', pants: '#3a3f4a', style: 'long', lips: '#c9615a' },
+  { id: 'jaga', name: 'Satpam', role: 'SECURITY', seat: seat('jaga', 2, 13.65, 3.2, 'px', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
+  { id: 'ob', name: 'Office Boy', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
+  { id: 'tamu', name: 'Klien', role: 'KLIEN', seat: { ...seat('tamu', 2, 13.5, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#3a2a20', skin: '#efc9a4', shirt: '#3b4a6b', pants: '#2a2f3a', style: 'slick', tie: true, glasses: true },
   { id: 'kurir', name: 'Kurir', role: 'KURIR', seat: { ...seat('kurir', 2, 11.65, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#222', skin: '#e2b48a', shirt: '#e5484d', pants: '#2a2b30', style: 'cap', cap: '#c0392b' },
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
@@ -447,13 +447,13 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
         { act: { ...PEOPLE.find((q) => q.id === 'bos')!.seat, id: 'seat-bos', label: 'TANDA TANGAN', prop: 'paper', say: [!b.todayAll.length ? 'Oke, besok semoga ada setup' : pnl > 0 ? 'Mantap! Simpan laporannya' : pnl < 0 ? 'Rugi wajar, asal sesuai aturan' : 'Impas, oke', '#1e1f23'] }, dwell: S(10) },
       ],
     };
-    if (freeFor(ctx, 'vet') && ctx.agents.vet.room === 0) plans.vet = [{ act: { ...PEOPLE[0].seat, id: 'ev-laporan-vet', label: 'DENGERIN LAPORAN', prop: 'tablet' }, dwell: S(30) }, { act: { ...PEOPLE[0].seat, id: 'ev-laporan-vet', label: pnl >= 0 ? 'SENANG' : 'NONTON DRAKOR', prop: 'tablet', say: [pnl > 0 ? 'Bagus, Sari! Hihi' : 'Sabar ya semua', PK] }, dwell: S(8) }];
+    if (freeFor(ctx, 'vet') && ctx.agents.vet.room === 0) plans.vet = [{ act: { ...PEOPLE[0].seat, id: 'ev-laporan-vet', label: 'DENGERIN LAPORAN', prop: 'tablet' }, dwell: S(30) }, { act: { ...PEOPLE[0].seat, id: 'ev-laporan-vet', label: pnl >= 0 ? 'SENANG' : 'NONTON DRAKOR', prop: 'tablet', say: [pnl > 0 ? 'Bagus laporannya! Hihi' : 'Sabar ya semua', PK] }, dwell: S(8) }];
     return ev(plans, 48, { random: false });
   }
   if (kind === 'bulanan') {
-    // the 1st of the month, 10:00: Sari presents last month in the boss's meeting room
+    // the last day of the month, 22:00: Sari presents this month in the boss's meeting room
     if (!freeFor(ctx, 'akun')) return null;
-    const b = biz(ctx.data, wall), done = b.last;
+    const b = biz(ctx.data, wall), done = b.month;
     const tp = done.filter((t) => t.result === 'tp').length, sl = done.filter((t) => t.result === 'sl').length;
     const wr = tp + sl ? Math.round((tp / (tp + sl)) * 100) : 0;
     const byCoin: Record<string, number> = {};
@@ -465,13 +465,13 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     who.slice(0, seats.length).forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-bulanan-${id}`, label: 'RAPAT BULANAN' }, dwell: S(80) }]; });
     const at = (say: [string, string]) => sp('ev-bulanan-akun', 0, 3.0, 5.8, 'py', 'PRESENTASI BULANAN', { prop: 'laptop', say });
     plans.akun = [
-      { act: at([`Laporan bulan ${b.pmName}`, '#1e1f23']), dwell: S(6) },
-      { act: at(done.length ? [`Total ${usd2(b.lastPnl)} dari ${done.length} trade`, b.lastPnl >= 0 ? '#2e9e5b' : '#e5242b'] : ['Bulan lalu belum ada trade selesai', '#1e1f23']), dwell: S(8) },
-      { act: at(done.length ? [`TP ${tp}, SL ${sl}, win rate ${wr}%`, '#1e1f23'] : ['Bulan ini semoga lebih ramai', '#1e1f23']), dwell: S(8) },
+      { act: at([`Laporan bulan ${b.mName}`, '#1e1f23']), dwell: S(6) },
+      { act: at(done.length ? [`Total ${usd2(b.monthPnl)} dari ${done.length} trade`, b.monthPnl >= 0 ? '#2e9e5b' : '#e5242b'] : ['Bulan ini belum ada trade selesai', '#1e1f23']), dwell: S(8) },
+      { act: at(done.length ? [`TP ${tp}, SL ${sl}, win rate ${wr}%`, '#1e1f23'] : ['Bulan depan semoga lebih ramai', '#1e1f23']), dwell: S(8) },
       { act: at(best ? [`Terbaik: ${best[0]} ${usd2(best[1])}`, best[1] >= 0 ? '#2e9e5b' : '#e5242b'] : ['Sekian, terima kasih', '#1e1f23']), dwell: S(8) },
       { act: at(['Sekian laporannya, terima kasih', '#1e1f23']), dwell: S(10) },
     ];
-    if (freeFor(ctx, 'bos', true)) plans.bos = [{ act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'DENGERIN LAPORAN'), dwell: S(48) }, { act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'TEPUK TANGAN', { say: [b.lastPnl >= 0 ? 'Kerja bagus, tim!' : 'Bulan ini kita perbaiki!', '#1e1f23'] }), dwell: S(20) }];
+    if (freeFor(ctx, 'bos', true)) plans.bos = [{ act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'DENGERIN LAPORAN'), dwell: S(48) }, { act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'TEPUK TANGAN', { say: [b.monthPnl >= 0 ? 'Kerja bagus, tim!' : 'Bulan depan kita perbaiki!', '#1e1f23'] }), dwell: S(20) }];
     return ev(plans, 110, { random: false });
   }
   if (kind === 'modal') {
@@ -504,7 +504,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
       const q = PEOPLE.find((x) => x.id === id)!.seat;
       plans.ob.push({ act: sp(`ev-kopi-${id}`, 1, 3.15, q.y + 0.6, 'nx', 'ANTAR KOPI', { prop: 'cup', say: ['Kopinya, mas/mbak', '#1e1f23'] }), dwell: S(4) });
       const k = plans.ob.length;
-      plans[id] = [{ act: { ...q, id: `seat-${id}`, label: 'NUNGGU KOPI' }, dwell: S(12 + k * 6) }, { act: { ...q, id: `seat-${id}`, label: 'MINUM KOPI', prop: 'cup', say: [any1(['Makasih Din!', 'Mantap, pas ngantuk', 'Udin terbaik!']), '#2e9e5b'] }, dwell: S(15) }];
+      plans[id] = [{ act: { ...q, id: `seat-${id}`, label: 'NUNGGU KOPI' }, dwell: S(12 + k * 6) }, { act: { ...q, id: `seat-${id}`, label: 'MINUM KOPI', prop: 'cup', say: [any1(['Makasih Mas OB!', 'Mantap, pas ngantuk', 'OB terbaik!']), '#2e9e5b'] }, dwell: S(15) }];
     }
     return ev(plans, 30 + at.length * 7, { random: false });
   }
@@ -624,27 +624,27 @@ const SCRIPTS: Script[] = [
   { key: 'drakor', roles: ['vet', 'w'], label: 'NGOBROL', lines: [
     [0, 'Kamu udah nonton drakor yang baru?', BK, { label: 'SENANG' }], [1, 'Yang mana bu?', BK], [0, 'Yang CEO-nya galak tapi baik', BK], [1, 'Kayak pak Marcel dong bu', BK, { label: 'KETAWA' }], [0, 'Hush! Hihi', PK, { label: 'KETAWA' }]] },
   { key: 'kopi', roles: ['w', 'ob'], label: 'NGOBROL', lines: [
-    [0, 'Din, kopi aku mana?', BK], [1, 'Waduh, lupa mas, hehe', BK, { label: 'GARUK KEPALA' }], [0, 'UDIIIN!', RD, { label: 'KESAL' }], [1, 'Siap, bikin sekarang!', BK, { label: 'GUGUP' }]] },
+    [0, 'Mas OB, kopi aku mana?', BK], [1, 'Waduh, lupa mas, hehe', BK, { label: 'GARUK KEPALA' }], [0, 'MAS OOOB!', RD, { label: 'KESAL' }], [1, 'Siap, bikin sekarang!', BK, { label: 'GUGUP' }]] },
   { key: 'pahit', roles: ['ob', 'jaga'], label: 'NGOBROL', lines: [
-    [0, 'Toel, ngopi?', BK], [1, 'Boleh, gulanya dikit', BK], [0, 'Gula habis…', BK, { label: 'GARUK KEPALA' }], [1, 'Yaudah pahit. Kayak hidup', BK, { label: 'CURHAT' }], [0, 'Wkwkwk', BK, { label: 'KETAWA' }]] },
+    [0, 'Pak Satpam, ngopi?', BK], [1, 'Boleh, gulanya dikit', BK], [0, 'Gula habis…', BK, { label: 'GARUK KEPALA' }], [1, 'Yaudah pahit. Kayak hidup', BK, { label: 'CURHAT' }], [0, 'Wkwkwk', BK, { label: 'KETAWA' }]] },
   { key: 'tidur', roles: ['bos', 'jaga'], label: 'NGOBROL', lines: [
-    [0, 'Toel! Tadi tidur ya?!', RD, { label: 'KESAL' }], [1, 'Nggak pak! Merem doang…', BK, { label: 'GUGUP' }], [0, 'SAMA AJA!', RD], [1, 'Siap salah pak!', BK, { label: 'MALU' }]] },
+    [0, 'Satpam! Tadi tidur ya?!', RD, { label: 'KESAL' }], [1, 'Nggak pak! Merem doang…', BK, { label: 'GUGUP' }], [0, 'SAMA AJA!', RD], [1, 'Siap salah pak!', BK, { label: 'MALU' }]] },
   { key: 'bola', roles: ['w', 'jaga'], label: 'NGOBROL', lines: [
-    [0, 'Pak Toel, semalam nonton bola?', BK], [1, 'Nonton! Gol menit terakhir!', GR, { label: 'SENANG', pose: 'jump' }], [0, 'Gila sih itu!', GR, { label: 'KETAWA' }], [1, 'Kayak TP pas mau SL', BK, { label: 'KETAWA', pose: 'stand' }]] },
+    [0, 'Pak Satpam, semalam nonton bola?', BK], [1, 'Nonton! Gol menit terakhir!', GR, { label: 'SENANG', pose: 'jump' }], [0, 'Gila sih itu!', GR, { label: 'KETAWA' }], [1, 'Kayak TP pas mau SL', BK, { label: 'KETAWA', pose: 'stand' }]] },
   { key: 'struk', roles: ['akun', 'bos'], label: 'NGOBROL', lines: [
     [0, 'Pak, struk golf ini masuk biaya kantor?', BK, { label: 'TANYA STRUK' }], [1, 'Iya dong, itu meeting!', BK], [0, 'Meeting sama siapa, pak?', BK], [1, '…sama bola golf', BK, { label: 'MALU' }], [0, 'Saya catat biaya pribadi ya, pak', GR, { label: 'KETAWA' }]] },
   { key: 'kwitansi', roles: ['akun', 'w'], label: 'DEBAT', fight: true, exit: [null, 'NGAMBEK'], lines: [
     [0, '{1}, kwitansi jajan kemarin mana?', BK], [1, 'Hilang… hehe', BK, { label: 'GUGUP' }], [0, 'Nggak ada kwitansi, nggak diganti!', RD, { label: 'BERANTEM' }], [1, 'Ih, cuma gorengan!', RD, { label: 'BERANTEM' }], [0, 'Aturan tetap aturan!', RD]] },
   { key: 'kalkulator', roles: ['akun', 'risk'], label: 'NGOBROL', lines: [
-    [0, 'Rin, angka nolnya kebanyakan nih', BK, { label: 'BINGUNG' }], [1, 'Untung atau rugi?', BK], [0, 'Untung!', GR, { label: 'SENANG' }], [1, 'Itu bukan masalah, Sar!', GR, { label: 'KETAWA' }], [0, 'Hehe iya ya', BK, { label: 'KETAWA' }]] },
+    [0, 'Bu, angka nolnya kebanyakan nih', BK, { label: 'BINGUNG' }], [1, 'Untung atau rugi?', BK], [0, 'Untung!', GR, { label: 'SENANG' }], [1, 'Itu bukan masalah dong!', GR, { label: 'KETAWA' }], [0, 'Hehe iya ya', BK, { label: 'KETAWA' }]] },
   { key: 'geser', roles: ['risk', 'w'], label: 'TEGURAN', lines: [
     [0, '{1}, SL kamu nggak digeser kan?', BK, { label: 'INTEROGASI' }], [1, 'Nggak dong bu! Otomatis', BK, { label: 'GUGUP' }], [0, 'Yakin? Coba lihat…', BK], [1, 'Tuh kan, aman', GR], [0, 'Bagus. Disiplin itu kunci', GR, { label: 'SENANG' }]] },
   { key: 'allin', roles: ['w', 'risk'], label: 'DEBAT', fight: true, exit: ['NGAMBEK', null], lines: [
     [0, 'Bu, gimana kalau risiko 10% biar cepat kaya?', BK, { label: 'MIKIR' }], [1, 'APA?! Mau saldo habis?!', RD, { label: 'MARAH' }], [0, 'Kan cuma ide…', BK, { label: 'GUGUP' }], [1, 'Ide buruk! Satu SL beruntun habis!', RD], [0, 'Iya, iya…', BK, { label: 'NGAMBEK' }]] },
   { key: 'belanja', roles: ['vet', 'akun'], label: 'NGOBROL', lines: [
-    [0, 'Sari, belanja online saya masuk biaya kantor ya', PK, { label: 'SENANG' }], [1, 'Ehm… bu…', BK, { label: 'GUGUP' }], [0, 'Bercanda! Hihi', PK, { label: 'KETAWA' }], [1, 'Fiuh…', BK, { label: 'LEGA' }]] },
+    [0, 'Mbak, belanja online saya masuk biaya kantor ya', PK, { label: 'SENANG' }], [1, 'Ehm… bu…', BK, { label: 'GUGUP' }], [0, 'Bercanda! Hihi', PK, { label: 'KETAWA' }], [1, 'Fiuh…', BK, { label: 'LEGA' }]] },
   { key: 'naksir2', roles: ['jaga', 'akun'], label: 'NGOBROL', lines: [
-    [0, 'Mbak Sari, pulang bareng?', BK, { label: 'NAKSIR' }], [1, 'Pak Toel kan jaga malam', BK], [0, 'Oh iya… lupa', BK, { label: 'MALU' }], [1, 'Hihi', PK, { label: 'KETAWA' }]] },
+    [0, 'Mbak Akuntan, pulang bareng?', BK, { label: 'NAKSIR' }], [1, 'Bapak kan jaga malam', BK], [0, 'Oh iya… lupa', BK, { label: 'MALU' }], [1, 'Hihi', PK, { label: 'KETAWA' }]] },
   { key: 'telpon', roles: ['w'], label: 'TELPON MAMA', lines: [
     [0, 'Halo ma… iya udah makan', BK], [0, 'Iya, kerjanya lancar kok', BK], [0, 'Nanti pulang ma. Dah!', GR, { label: 'SENANG' }]] },
 ];
@@ -658,7 +658,7 @@ const MEET: Record<number, Array<Array<[number, number, Face]>>> = {
 };
 type Scene = { s: Script; who: string[]; spots: Spot[]; t0: number; talking: boolean; i: number; next: number; meet: string };
 const SC: { list: Scene[]; next: number; grudge: Record<string, number> } = { list: [], next: 0, grudge: {} };
-const shortName = (id: string) => ({ ob: 'Din', jaga: 'Toel', bos: 'Marcel', vet: 'Bu', akun: 'Sar', risk: 'Rin' } as Record<string, string>)[id] ?? PEOPLE.find((p) => p.id === id)?.name ?? '';
+const shortName = (id: string) => ({ ob: 'Mas OB', jaga: 'Pak Satpam', bos: 'Marcel', vet: 'Bu', akun: 'Mbak Akuntan', risk: 'Bu Risk', alt: 'ALT', big: 'BTC', xau: 'XAU', nas: 'NASDAQ', tg: 'Admin' } as Record<string, string>)[id] ?? PEOPLE.find((p) => p.id === id)?.name ?? '';
 const pairKey = (a: string, b: string) => [a, b].sort().join('|');
 function sceneFree(ctx: EvCtx, id: string) {
   const a = ctx.agents[id]; if (!a || !freeFor(ctx, id)) return false;
@@ -759,7 +759,7 @@ function scheduleEvents(ctx: EvCtx) {
   if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
   if (h === 23 && m < 4 && EV.done.rekap !== day) want.unshift('rekap');
   if (h === 22 && m >= 30 && m < 45 && EV.done.laporan !== day) want.push('laporan');               // Sari's daily report
-  if (d.getDate() === 1 && h === 10 && m < 30 && EV.done.bulanan !== day) want.push('bulanan');     // monthly meeting
+  if (new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getDate() === 1 && h === 22 && m < 25 && EV.done.bulanan !== day) want.push('bulanan');     // monthly meeting: last day of the month, 22:00
   if (newCash(data, wall)) want.unshift('modal');                                                     // deposit / withdrawal
   if (CALL.at) {
     const k = CALL.kind, fresh = wall - CALL.at < 8000; CALL.at = 0;
@@ -815,7 +815,7 @@ export function biz(data: OfficeData, now: number) {
   const openN = data.trades.filter((t) => t.result === 'open').length;
   const level: 'RISIKO AMAN' | 'WASPADA' | 'BAHAYA' = streak >= 5 || todayPct <= -10 ? 'BAHAYA' : streak >= 3 || todayPct <= -5 ? 'WASPADA' : 'RISIKO AMAN';
   const why = streak >= 3 ? `SL ${streak}× beruntun` : todayPct <= -5 ? `Hari ini ${todayPct.toFixed(1)}%` : '';
-  return { streak, todayB, todayPct, todayAll, openN, level, why, wallet, month, monthPnl: sum(month), last, lastPnl: sum(last), pmName: pm0.toLocaleString('id-ID', { month: 'long' }) };
+  return { streak, todayB, todayPct, todayAll, openN, level, why, wallet, month, monthPnl: sum(month), last, lastPnl: sum(last), pmName: pm0.toLocaleString('id-ID', { month: 'long' }), mName: m0.toLocaleString('id-ID', { month: 'long' }) };
 }
 /** a deposit / withdrawal from the last 3 hours that the office has not celebrated yet */
 function newCash(data: OfficeData, now: number): CashMove | null {
@@ -2366,7 +2366,7 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
         const who = shuffle(WORKERS.filter((id) => id !== 'tg' && all[id] && !S[id]?.sleep && S[id]?.label !== 'LIBUR'))[0];
         if (who) {
           const v = all[who];
-          if (v && !v.queue?.length && !inEvent(who, now)) v.queue = [{ act: { ...PEOPLE.find((q) => q.id === who)!.seat, label: 'DENGERIN RISK', say: [any1(['Siap bu Rina!', 'Iya bu, disiplin!', 'Oke, SL nggak digeser']), '#1e1f23'] }, dwell: rnd(8, 12) }];
+          if (v && !v.queue?.length && !inEvent(who, now)) v.queue = [{ act: { ...PEOPLE.find((q) => q.id === who)!.seat, label: 'DENGERIN RISK', say: [any1(['Siap bu!', 'Iya bu, disiplin!', 'Oke, SL nggak digeser']), '#1e1f23'] }, dwell: rnd(8, 12) }];
           return { act: { ...near(who, 'PERINGATAN RISIKO'), prop: 'tablet', say: [any1([`${why}, hati-hati!`, 'Jangan geser SL ya!', 'Ingat RR 1:2, jangan balas dendam!', 'Cek rem bot, jangan panik!']), lvl === 'BAHAYA' ? '#e5242b' : '#b7791f'] }, dwell: rnd(6, 9) };
         }
       }
@@ -2634,7 +2634,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const [toast, setToast] = useState('');
   const say = (t: string) => { setToast(t); window.setTimeout(() => setToast(''), 2600); };
   const MENU: Array<[string, string, string]> = [
-    ['dadakan', '📢', 'Panggil rapat'], ['laporan', '📊', 'Minta laporan'], ['galeri', '🖼️', 'Galeri momen'], ['foto', '📷', 'Foto kantor'], ['kopi', '☕', 'Udin bagi kopi'],
+    ['dadakan', '📢', 'Panggil rapat'], ['laporan', '📊', 'Minta laporan'], ['galeri', '🖼️', 'Galeri momen'], ['foto', '📷', 'Foto kantor'], ['kopi', '☕', 'OB bagi kopi'],
     ['pizza', '🍕', 'Pesan pizza'], ['senam', '🤸', 'Senam bareng'], ['kucing', '🐟', 'Kasih makan kucing'], ['ultah', '🎂', 'Pesta kejutan'], ['trade', '📈', 'Buka Trade'],
   ];
   const act = (k: string) => {
@@ -2643,7 +2643,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     if (k === 'foto') { window.setTimeout(() => { snapRef.current(`foto-${Date.now()}`, 'Foto kantor'); say('📷 Tersimpan di Galeri momen'); }, 300); return; }
     if (k === 'trade') { swipeRef.current?.(); return; }
     CALL.kind = k; CALL.at = Date.now(); CALL.res = '';
-    const started: Record<string, string> = { laporan: '📊 Sari bawa laporan ke Marcel', dadakan: '📢 Semua dipanggil rapat!', kopi: '☕ Udin bikin kopi buat semua', pizza: '🍕 Pizza dipesan!', senam: '🤸 Ayo senam!', kucing: '🐟 Udin kasih makan kucing', ultah: '🎂 Pesta kejutan!' };
+    const started: Record<string, string> = { laporan: '📊 Akuntan bawa laporan ke Marcel', dadakan: '📢 Semua dipanggil rapat!', kopi: '☕ OB bikin kopi buat semua', pizza: '🍕 Pizza dipesan!', senam: '🤸 Ayo senam!', kucing: '🐟 OB kasih makan kucing', ultah: '🎂 Pesta kejutan!' };
     let n = 0;
     const wait = window.setInterval(() => {
       n++;
@@ -3079,7 +3079,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
               <button type="button" className="oc-x" onClick={() => setCard(null)} aria-label="Tutup">✕</button>
               <img className="oc-face" src={portrait(card.id)} alt="" />
               <b className="oc-name">{p.name}</b>
-              <span className="oc-job">{JOB[card.id] ?? p.role}</span>
+              {card.id === 'bos' || card.id === 'vet' ? <span className="oc-job">{JOB[card.id] ?? p.role}</span> : null}
               <div className="oc-now"><i style={{ background: s0?.color ?? '#9aa' }} />{card.what || s0?.label || '—'}{s0 && s0.label !== card.what && strat ? <em> · {s0.label}</em> : null}</div>
               {card.id === 'risk' || card.id === 'akun' ? (() => {
                 const b = biz(data, now);
@@ -3204,10 +3204,10 @@ function drawWallText(c: C, lines: ScreenLine[], room: number, t: number) {
     const team = PEOPLE.filter((p) => p.id !== 'kurir' && p.id !== 'tamu'), lh = (rh2 - 10) / team.length;
     team.forEach((p, i) => {
       const y = 10 + lh * (i + 0.5);
-      c.font = '600 4px ui-monospace, Menlo, monospace'; const roleW = c.measureText(p.role).width;
+      const boss = p.id === 'bos' || p.id === 'vet'; c.font = '600 4px ui-monospace, Menlo, monospace'; const roleW = boss ? c.measureText(p.role).width : 0;
       let fs = 5; c.font = `800 ${fs}px system-ui, sans-serif`; while (fs > 3 && c.measureText(p.name).width + roleW + 9 > rw) { fs -= 0.25; c.font = `800 ${fs}px system-ui, sans-serif`; }
       c.fillStyle = '#1e1f23'; c.fillText(p.name, 3, y);
-      c.font = '600 4px ui-monospace, Menlo, monospace'; c.fillStyle = p.id === 'bos' || p.id === 'vet' ? '#c0392b' : '#6b6f78'; c.textAlign = 'right'; c.fillText(p.role, rw - 3, y); c.textAlign = 'left';
+      c.font = '600 4px ui-monospace, Menlo, monospace'; if (boss) { c.fillStyle = '#c0392b'; c.textAlign = 'right'; c.fillText(p.role, rw - 3, y); c.textAlign = 'left'; }
     });
     c.textBaseline = 'alphabetic';
   });
