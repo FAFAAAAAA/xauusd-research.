@@ -959,6 +959,9 @@ body::before { display: none; }
 /* home: the office alone, full screen */
 /* the office fills the whole screen, top to bottom (the app draws under the clock / battery, so no offsets are needed) */
 .office-home { position: fixed; inset: 0; background: var(--office-ground, #86b96f); overflow: hidden; }
+/* iPhone app with the short-window bug (see OfficeDock): office in the page at the full screen height */
+html.app-tall, html.app-tall body { height: var(--app-h); min-height: var(--app-h); overflow: hidden; overscroll-behavior: none; }
+html.app-tall .office-home { position: absolute; inset: auto; top: 0; left: 0; right: 0; height: var(--app-h); }
 /* a strip under the office in the iPhone app = an app installed before the see-through status bar setting (iOS bug, WebKit #316008): reinstall from Safari */
 /* behind the office: the lawn colour, so if iOS leaves a strip under the page at the bottom it blends with the grass */
 html:has(.office-home), html:has(.office-home) body { background: var(--office-ground, #86b96f); }

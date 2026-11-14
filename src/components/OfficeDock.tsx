@@ -66,6 +66,23 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
     return () => { off = true; window.clearInterval(id); };
   }, [syms]);
 
+  // iPhone app bug (iOS 26): the page gets a window one status-bar shorter than the screen (e.g. 793 of 852), and things pinned
+  // to that window stop there, leaving a strip at the bottom. The page itself can still paint the whole screen, so in that case the
+  // office is laid out in the page (not pinned) at the real screen height.
+  useEffect(() => {
+    if (!full) return;
+    const root = document.documentElement;
+    const set = () => {
+      const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+      const portrait = window.innerHeight >= window.innerWidth;
+      const scr = Math.max(window.screen.height, window.screen.width);
+      const short = standalone && portrait && scr - window.innerHeight > 20;
+      root.classList.toggle('app-tall', short);
+      if (short) root.style.setProperty('--app-h', `${scr}px`); else root.style.removeProperty('--app-h');
+    };
+    set(); window.addEventListener('resize', set);
+    return () => { window.removeEventListener('resize', set); root.classList.remove('app-tall'); root.style.removeProperty('--app-h'); };
+  }, [full]);
   const cls = full ? 'office-home' : 'office-dock';
   if (!j) return <div className={cls}><Office data={{ trades: [], market, cal }} now={now} screen={[]} full={full} onSwipe={onSwipe} /></div>;   // the building shows at once, people appear when the data arrives
   // realtime floating P&L per crypto position from the mark price (falls back to the bot report)
