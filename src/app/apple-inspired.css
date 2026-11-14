@@ -1448,3 +1448,33 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .cs .cs-in { flex: none; }
 .cs .cs-in input { width: 92px; text-align: right; }
 .cs-more { margin-top: 14px; }
+/* company settings v4: widgets */
+.wg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wg-t { background: var(--sunk); border-radius: 22px; padding: 15px; min-height: 124px; display: flex; flex-direction: column; min-width: 0; }
+.wg-t.wide { grid-column: 1 / -1; min-height: 0; }
+.wg-t > small { font-size: 12.5px; color: var(--mute); font-weight: 600; }
+.wg-t > b { font-size: 28px; font-weight: 800; letter-spacing: -.035em; margin-top: 6px; line-height: 1.1; }
+.wg-t > b.nm { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wg-t > b.m { color: #4c6ef5; }
+.wg-t > i { font-style: normal; font-size: 12.5px; color: var(--mute); margin-top: 3px; }
+.wg-t.dk { background: radial-gradient(130% 140% at 100% 0%, #3b3a1c 0%, #16161a 60%); color: #fff; }
+.wg-t.dk > small, .wg-t.dk > i { color: #a7a7ae; } .wg-t .y { color: #f7cf45; font-size: 32px; }
+.wg-t.warn { background: #fff4e6; } .wg-t.warn > i { color: #c2620c; font-weight: 600; }
+.wg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.wg-chips button { display: inline-flex; align-items: center; gap: 6px; border: 0; font: inherit; font-size: 13px; font-weight: 600; padding: 7px 11px; border-radius: 99px; cursor: pointer; background: rgba(255,255,255,.1); color: #fff; }
+.wg-chips button em { width: 8px; height: 8px; border-radius: 50%; } .wg-chips button span { color: #a7a7ae; font-weight: 500; }
+.wg-chips button.due span { color: #ffc56b; font-weight: 700; }
+.wg-chips button.add { width: 34px; justify-content: center; padding: 7px 0; color: #f7cf45; font-weight: 800; }
+.wg-chips.lt button { background: var(--surface, #fff); color: var(--mute); box-shadow: inset 0 0 0 1px var(--line); }
+.wg-chips.lt button.on { background: #141416; color: #fff; box-shadow: none; }
+.wg-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.wg-foot i { font-style: normal; font-size: 12.5px; color: var(--mute); }
+.wg-pm { display: flex; gap: 6px; }
+.wg-pm button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--surface, #fff); color: var(--ink); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.wg-paid { margin-top: auto; border: 0; background: #16a35a; color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; padding: 8px; border-radius: 12px; cursor: pointer; }
+.wg-more { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 10px; border: 0; background: var(--sunk); border-radius: 18px; padding: 15px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.wg-more em { font-style: normal; color: var(--mute); font-size: 18px; }
+.wg-more + .cs-card { margin-top: 10px; }
+.wg-t > i.amt { font-size: 15px; font-weight: 800; color: var(--ink); margin-top: 2px; }
+.wg-t.warn > b.nm { color: var(--ink); }
+.wg-paid { margin-top: 10px; }
