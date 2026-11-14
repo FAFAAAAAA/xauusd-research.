@@ -14,7 +14,7 @@ function lsGet(url: string): unknown {
   try { const v = localStorage.getItem(LS + url); return v ? JSON.parse(v) : undefined; } catch { return undefined; }
 }
 // only page data is kept in the browser; trade charts / candles are large and would fill the storage (5 MB) and slow every save
-const KEEP = /^\/api\/(journal|live|settings|analytics|dashboard|markets)(\?|$)/;
+const KEEP = /^\/api\/(journal|live|settings|analytics|dashboard|markets|company)(\?|$)/;
 function lsSet(url: string, data: unknown) {
   if (!KEEP.test(url)) return;
   try { const v = JSON.stringify(data); if (v.length <= LS_MAX) localStorage.setItem(LS + url, v); } catch { /* full / blocked */ }

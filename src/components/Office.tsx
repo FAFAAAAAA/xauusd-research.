@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JournalTrade } from '@/lib/core/journal';
+import { Sheet } from './Status';
+import { CompanyReport, CompanySettingsView, useCompany, useReport } from './Company';
+import { idrT, costIdrIn, usdT, type CashMove } from '@/lib/core/company';
 
 /* Kantor (12 Nov 2026): a smooth isometric 3D office (black / white / yellow, day and night) shown on top of every page.
  * Every "employee" is one of our bots / EA methods and follows real data from /api/journal:
@@ -20,7 +23,6 @@ export interface OfficeData {
   btc?: number | null;                                       // Bitcoin % change today (from the 00:00 UTC daily open), realtime
   cashflow?: { crypto?: CashMove[]; forex?: CashMove[] };    // deposits / withdrawals / transfers reported by the bot and the EA
 }
-type CashMove = { id: string; at: number; amount: number; asset?: string; type?: string };
 export type ScreenLine = { k: string; v: string; color?: string; sub?: string; subColor?: string };
 
 /* ---------- geometry ---------- */
@@ -420,9 +422,22 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     if (!freeFor(ctx, 'bos')) return null;
     const who = [...workers(true), ...['akun', 'risk', 'ob', 'jaga'].filter((id) => freeFor(ctx, id))]; if (!who.length) return null;
     const word = kind === 'bonus' ? 'BONUS' : 'GAJI';
-    const plans: Record<string, Step[]> = { bos: [{ act: sp('ev-bonus-safe', 0, 8.37, 1.45, 'ny', 'BUKA BRANKAS'), dwell: S(5) }, { act: sp('ev-bonus-bos', 0, 8.6, 2.6, 'py', `BAGI ${word}`, { prop: 'envelope', say: [kind === 'bonus' ? 'Profit bagus, ini bonus kalian!' : 'Gajian, gajian!', '#2e9e5b'] }), dwell: S(36) }] };
+    const plans: Record<string, Step[]> = { bos: [{ act: sp('ev-bonus-safe', 0, 8.37, 1.45, 'ny', 'BUKA BRANKAS'), dwell: S(5) }, { act: sp('ev-bonus-bos', 0, 8.6, 2.6, 'py', `BAGI ${word}`, { prop: 'envelope', say: [kind === 'bonus' ? 'Profit bagus, ini bonus kalian!' : GAJI != null && GAJI > 0.005 ? `Gajian! Gaji bulan ini ${usdT(GAJI)}` : 'Gajian, gajian!', '#2e9e5b'] }), dwell: S(36) }] };
     who.slice(0, 7).forEach((id, i) => { const at = (label: string, more: Partial<Spot> = {}) => sp(`ev-bonus-${id}`, 0, 8.6, 3.5 + i * 0.8, 'ny', label, more); plans[id] = [{ act: at(`ANTRI ${word}`), dwell: S(10 + i * 3) }, { act: at(`DAPAT ${word}!`, { pose: 'jump', prop: 'envelope', say: ['Makasih bos!', '#2e9e5b'] }), dwell: S(6) }]; });
     return ev(plans, 46, { random: false });
+  }
+  if (kind === 'tagihan') {
+    // a bill is due in ≤ 3 days (or overdue): the accountant brings it to Marcel (once per app open)
+    const b = BILLS.find((x) => !BILL_SAID.has(x.key)); if (!b) return null;
+    const who = freeFor(ctx, 'akun', true) ? 'akun' : null; if (!who) return null;
+    BILL_SAID.add(b.key);
+    const when = b.daysLeft > 1 ? `${b.daysLeft} hari lagi` : b.daysLeft === 1 ? 'besok' : b.daysLeft === 0 ? 'hari ini' : 'sudah lewat';
+    const boss = freeFor(ctx, 'bos', true) && !awayHours(wall);
+    const plans: Record<string, Step[]> = {
+      akun: [{ act: boss ? { ...X.ttd, id: 'ev-tagihan-akun', label: 'BAWA TAGIHAN', prop: 'paper' as Prop, say: [`Pak, ${b.name} jatuh tempo ${when}`, '#c46a12'] } : sp('ev-tagihan-akun', 1, 9.0, 3.2, 'ny', 'INGATKAN TAGIHAN', { prop: 'paper', say: [`${b.name} jatuh tempo ${when} · ${idrT(b.idr)}`, '#c46a12'] }), dwell: S(9) }],
+    };
+    if (boss) plans.bos = [{ act: { ...PEOPLE.find((q) => q.id === 'bos')!.seat, id: 'seat-bos', label: 'TERIMA TAGIHAN', prop: 'paper', say: [b.daysLeft < 0 ? 'Waduh, segera bayar!' : 'Oke, nanti saya bayar', '#1e1f23'] }, dwell: S(12) }];
+    return ev(plans, 24, { random: false });
   }
   if (kind === 'laporan') {
     // 22:30 (or from the cat menu): Sari prints today's report and reads it to Marcel (Ny. Vetrycia listens in)
@@ -438,7 +453,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
         { act: at('LAPORAN HARIAN', { say: ['Pak, laporan hari ini', '#1e1f23'] }), dwell: S(5) },
         { act: at('LAPORAN HARIAN', { say: line1 }), dwell: S(7) },
         { act: at('LAPORAN HARIAN', { say: [bal ? `Saldo: ${bal}` : 'Saldo belum dilaporkan bot', '#1e1f23'] }), dwell: S(7) },
-        { act: at('LAPORAN HARIAN', { say: [`Bulan ini ${usd2(b.monthPnl)} dari ${b.month.length} trade`, b.monthPnl >= 0 ? '#2e9e5b' : '#e5242b'] }), dwell: S(7) },
+        { act: at('LAPORAN HARIAN', { say: NETM != null ? [`Laba bersih bulan ini ${usd2(NETM)}`, NETM >= 0 ? '#2e9e5b' : '#e5242b'] : [`Bulan ini ${usd2(b.monthPnl)} dari ${b.month.length} trade`, b.monthPnl >= 0 ? '#2e9e5b' : '#e5242b'] }), dwell: S(7) },
         { act: at('LAPORAN HARIAN', { label: 'MINTA TTD', say: ['Mohon tanda tangan, pak', '#1e1f23'] }), dwell: S(5) },
       ],
       bos: [
@@ -465,9 +480,10 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const at = (say: [string, string]) => sp('ev-bulanan-akun', 0, 3.0, 5.8, 'py', 'PRESENTASI BULANAN', { prop: 'laptop', say });
     plans.akun = [
       { act: at([`Laporan bulan ${b.mName}`, '#1e1f23']), dwell: S(6) },
-      { act: at(done.length ? [`Total ${usd2(b.monthPnl)} dari ${done.length} trade`, b.monthPnl >= 0 ? '#2e9e5b' : '#e5242b'] : ['Bulan ini belum ada trade selesai', '#1e1f23']), dwell: S(8) },
+      { act: at(NETM != null ? [`Laba bersih ${usd2(NETM)} dari ${done.length} trade`, NETM >= 0 ? '#2e9e5b' : '#e5242b'] : done.length ? [`Total ${usd2(b.monthPnl)} dari ${done.length} trade`, b.monthPnl >= 0 ? '#2e9e5b' : '#e5242b'] : ['Bulan ini belum ada trade selesai', '#1e1f23']), dwell: S(8) },
       { act: at(done.length ? [`TP ${tp}, SL ${sl}, win rate ${wr}%`, '#1e1f23'] : ['Bulan depan semoga lebih ramai', '#1e1f23']), dwell: S(8) },
       { act: at(best ? [`Terbaik: ${best[0]} ${usd2(best[1])}`, best[1] >= 0 ? '#2e9e5b' : '#e5242b'] : ['Sekian, terima kasih', '#1e1f23']), dwell: S(8) },
+      ...(GAJI != null && GAJI > 0.005 ? [{ act: at([`Gaji bulan ini ${usd2(GAJI)}, sisanya tambah modal`, '#2e9e5b']), dwell: S(8) }] : []),
       { act: at(['Sekian laporannya, terima kasih', '#1e1f23']), dwell: S(10) },
     ];
     if (freeFor(ctx, 'bos', true)) plans.bos = [{ act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'DENGERIN LAPORAN'), dwell: S(48) }, { act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'TEPUK TANGAN', { say: [b.monthPnl >= 0 ? 'Kerja bagus, tim!' : 'Bulan depan kita perbaiki!', '#1e1f23'] }), dwell: S(20) }];
@@ -749,7 +765,9 @@ function scheduleEvents(ctx: EvCtx) {
   const today = new Date(wall); today.setHours(0, 0, 0, 0);
   const tdy = closed.filter((t) => (t.closedAt ?? 0) >= today.getTime());
   if (tdy.filter((t) => t.result === 'tp').length >= 2 && tdy.reduce((s, t) => s + Number(t.pnl ?? 0), 0) > 0 && EV.done.bonus !== day && h >= 8 && h < 22) want.push('bonus');
-  if (d.getDate() === 25 && h === 10 && EV.done.gajian !== day) want.push('gajian');
+  const lastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getDate() === 1;
+  if (lastDay && h === 22 && m >= 15 && m < 45 && EV.done.gajian !== day) want.push('gajian');            // payday: the last day, after the monthly meeting
+  if (BILLS.length && !inEventKind('tagihan') && BILLS.some((b) => !BILL_SAID.has(b.key))) want.push('tagihan');   // bills due: the accountant tells the boss (once per app open)
   // big US news on the calendar: watch the TV from 2 minutes before until 10 minutes after the release
   // (no calendar: the old rule, first Friday evening = US jobs report)
   const cal = data.cal ?? [];
@@ -2561,6 +2579,18 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const scrRef = useRef(screen); scrRef.current = screen;
   const positions = useMemo(() => openPositions(data), [data]);
   const posRef = useRef(positions); posRef.current = positions;
+  // company (accountant): bills due and this month's salary for the office scenes, the report and its settings
+  const company = useCompany();
+  const report = useReport(data.trades.length || data.binance ? data : null, now);
+  const [coSet, setCoSet] = useState(false);
+  const [billHide, setBillHide] = useState<string[]>([]);
+  useEffect(() => {      // opening the app again shows the bill reminders again (and the accountant repeats them)
+    const vis = () => { if (document.visibilityState === 'visible') { setBillHide([]); BILL_SAID.clear(); } };
+    document.addEventListener('visibilitychange', vis);
+    return () => document.removeEventListener('visibilitychange', vis);
+  }, []);
+  const bills = company?.settings.officeBills === false || !report ? [] : report.bills.map((b) => ({ key: `${b.cost.id}:${b.ym}`, name: b.cost.name, idr: costIdrIn(b.cost, b.ym), daysLeft: b.daysLeft, due: b.due }));
+  BILLS = bills; GAJI = report ? report.cur.salary : null; NETM = report ? report.cur.net : null;
   const items = useMemo(() => furniture(theme), [theme]);
   const grids = useMemo(() => items.map((list) => buildGrid(list)), [items]);
   PHASE = phaseOf(now); SEASON = seasonOf(now);
@@ -2629,7 +2659,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const [toast, setToast] = useState('');
   const say = (t: string) => { setToast(t); window.setTimeout(() => setToast(''), 2600); };
   const MENU: Array<[string, string, string]> = [
-    ['dadakan', '📢', 'Panggil rapat'], ['laporan', '📊', 'Minta laporan'], ['galeri', '🖼️', 'Galeri momen'], ['foto', '📷', 'Foto kantor'], ['kopi', '☕', 'OB bagi kopi'],
+    ['perusahaan', '🏢', 'Perusahaan'], ['dadakan', '📢', 'Panggil rapat'], ['laporan', '📊', 'Minta laporan'], ['galeri', '🖼️', 'Galeri momen'], ['foto', '📷', 'Foto kantor'], ['kopi', '☕', 'OB bagi kopi'],
     ['pizza', '🍕', 'Pesan pizza'], ['senam', '🤸', 'Senam bareng'], ['kucing', '🐟', 'Kasih makan kucing'], ['ultah', '🎂', 'Pesta kejutan'], ['trade', '📈', 'Buka Trade'],
   ];
   const act = (k: string) => {
@@ -2637,6 +2667,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     if (k === 'galeri') { setGallery(true); return; }
     if (k === 'foto') { window.setTimeout(() => { snapRef.current(`foto-${Date.now()}`, 'Foto kantor'); say('📷 Tersimpan di Galeri momen'); }, 300); return; }
     if (k === 'trade') { swipeRef.current?.(); return; }
+    if (k === 'perusahaan') { setCoSet(true); return; }
     CALL.kind = k; CALL.at = Date.now(); CALL.res = '';
     const started: Record<string, string> = { laporan: '📊 Akuntan bawa laporan ke Marcel', dadakan: '📢 Semua dipanggil rapat!', kopi: '☕ OB bikin kopi buat semua', pizza: '🍕 Pizza dipesan!', senam: '🤸 Ayo senam!', kucing: '🐟 OB kasih makan kucing', ultah: '🎂 Pesta kejutan!' };
     let n = 0;
@@ -3057,7 +3088,16 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div></>}
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
-      {card ? (() => {
+      {card?.id === 'akun' ? <Sheet title="Laporan Perusahaan" onClose={() => setCard(null)}><CompanyReport data={data} now={now} /></Sheet> : null}
+      {coSet ? <Sheet title="Perusahaan" onClose={() => setCoSet(false)}><CompanySettingsView now={now} onDone={() => { setCoSet(false); say('🏢 Pengaturan perusahaan disimpan'); }} /></Sheet> : null}
+      {full && bills.some((b) => !billHide.includes(b.key)) ? <div className="office-bill" data-noswipe>
+        {bills.filter((b) => !billHide.includes(b.key)).map((b) => (
+          <button type="button" key={b.key} onClick={() => setBillHide((h) => [...h, b.key])} aria-label={`Tagihan ${b.name}, ketuk untuk sembunyikan`}>
+            🧾 <span>Tagihan {b.name} · {idrT(b.idr)}</span><em>{b.daysLeft > 1 ? `${b.daysLeft} hari lagi` : b.daysLeft === 1 ? 'besok' : b.daysLeft === 0 ? 'hari ini' : 'lewat'}</em>
+          </button>
+        ))}
+      </div> : null}
+      {card && card.id !== 'akun' ? (() => {
         const p = PEOPLE.find((q) => q.id === card.id); if (!p) return null;
         const s0 = st[card.id];
         const strat = ({ alt: 'snr', big: 'btc', xau: 'v2', nas: 'nas' } as Record<string, string>)[card.id];
@@ -3248,6 +3288,11 @@ function drawPositions(c: C, list: Pos[], t: number) {
 /* small wall boards: the H4 candle countdown (trading floor) and the clock + date (lobby) */
 let CAL: Array<{ title: string; at: number }> = [];
 let BTCP: number | null = null;
+/** company numbers for the office (set by the component): bills due and this month's salary */
+let BILLS: Array<{ key: string; name: string; idr: number; daysLeft: number }> = [];
+const BILL_SAID = new Set<string>();
+let GAJI: number | null = null, NETM: number | null = null;
+const inEventKind = (k: string) => !!EV.cur && EV.cur.kind === k;
 const inTime = (ms: number) => { const mn = Math.ceil(ms / 60_000); if (mn < 60) return `${mn} MENIT LAGI`; const hr = Math.floor(mn / 60); if (hr < 48) return `${hr} JAM LAGI`; return `${Math.floor(hr / 24)} HARI LAGI`; };
 function drawBoards(c: C, room: number, wall: number, t: number) {
   const board = (x0: number, x1: number, z0: number, z1: number, fn: (w: number, h: number) => void) => {
