@@ -1509,3 +1509,26 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .bc-step button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--surface, #fff); color: var(--ink); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 .bc-now { margin: 0; font-size: 12.5px; color: var(--mute); }
 .bc-reset { justify-self: start; border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; color: var(--mute); text-decoration: underline; cursor: pointer; }
+.bc-sec { background: var(--sunk); border-radius: 16px; overflow: hidden; }
+.bc-sh { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; font: inherit; color: inherit; text-align: left; padding: 13px 14px; cursor: pointer; }
+.bc-sh b { font-size: 15px; } .bc-sh span { flex: 1; min-width: 0; text-align: right; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bc-sh em { font-style: normal; color: var(--mute); font-size: 18px; transition: transform .15s; } .bc-sec.open .bc-sh em { transform: rotate(90deg); }
+.bc-sec .bc-card { background: none; border-top: 1px solid rgba(0,0,0,.06); border-radius: 0; padding: 0 14px 4px; }
+.bc-tog { width: 100%; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.bc-col { flex-direction: column; align-items: stretch; }
+.bc-seg { display: flex; background: var(--surface, #fff); border-radius: 10px; padding: 2px; box-shadow: inset 0 0 0 1px var(--line); }
+.bc-seg button { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--mute); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.bc-seg button.on { background: #141416; color: #fff; }
+.bc-step b.dn { color: var(--co-dn, #e5484d); }
+.bc-mini { width: auto !important; height: 32px !important; border-radius: 99px !important; padding: 0 12px; font-size: 13px !important; }
+.bc-mini:disabled { opacity: .45; }
+.bc-hours { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 8px; }
+.bc-hours button { border: 0; border-radius: 9px; padding: 7px 0; font: inherit; font-size: 12.5px; font-weight: 600; background: var(--surface, #fff); color: var(--mute); cursor: pointer; }
+.bc-hours button.on { background: #141416; color: #fff; }
+.bc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bc-chips button { border: 0; border-radius: 99px; padding: 6px 11px; font: inherit; font-size: 13px; font-weight: 700; background: #141416; color: #fff; cursor: pointer; } .bc-chips i { font-style: normal; opacity: .6; margin-left: 2px; }
+.bc-add { display: flex; gap: 8px; margin-top: 10px; }
+.bc-add input { flex: 1; min-width: 0; border: 0; border-radius: 10px; padding: 9px 10px; font: inherit; font-size: 15px; background: var(--surface, #fff); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.bc-add button { border: 0; border-radius: 10px; padding: 0 14px; font: inherit; font-size: 14px; font-weight: 700; background: #141416; color: #fff; cursor: pointer; }
+.bc-foot { margin: 0; font-size: 11.5px; color: var(--mute); }
+.bc-card .bc-row:first-child { border-top: 0; }

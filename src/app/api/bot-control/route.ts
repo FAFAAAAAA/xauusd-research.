@@ -13,8 +13,10 @@ export async function GET() {
 }
 export async function PUT(req: Request) {
   return api(async (db) => {
-    const c = cleanBotControl(await req.json().catch(() => ({})), Date.now());
+    const body = await req.json().catch(() => ({}));
+    const c = cleanBotControl(body, Date.now());
     c.updatedAt = Date.now();
+    if (body && (body as Record<string, unknown>).reset === true) c.resetAt = Date.now();   // reset the loss-streak brake once
     await repo.setAppSetting(db, 'bot_control', c);
     return { control: c, seen: await repo.getAppSetting<BotSeen | null>(db, 'bot_control_seen', null) };
   });

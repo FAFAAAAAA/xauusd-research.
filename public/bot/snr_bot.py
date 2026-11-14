@@ -244,7 +244,7 @@ class Bot:
     def __init__(self, cfg):
         self.cfg, self.api, self.st = cfg, Binance(cfg), load_state()
         self.filters = {}
-        self.base = {k: cfg.get(k) for k in ('risk_mode', 'risk_percent', 'max_positions', 'max_buy_positions')}   # values from the config file
+        self.base = {k: (list(v) if isinstance(v, list) else v) for k, v in ((k, cfg.get(k)) for k in self.REMOTE)}   # values from the config file
         self.paused = False; self.ctl_at = 0
 
     def load_symbols(self):
@@ -504,35 +504,74 @@ class Bot:
         notify(self.cfg, f"Ringkasan {kst.strftime('%H:%M')} (waktu Korea) — bot aktif.\nSaldo Futures: {bal:.2f} USDT\n"
                          f"Sejak ringkasan terakhir: {len(done)} trade selesai (TP {tp}, SL {sl}), hasil {res:+.2f} USDT\nPosisi terbuka: {pos}")
 
+    REMOTE = {'risk_mode': ('mode',), 'risk_percent': ('num', 0.1, 5, 1), 'risk_usdt': ('num', 0.5, 500, 2), 'max_positions': ('num', 1, 6, 0),
+              'max_buy_positions': ('num', 0, 4, 0), 'buy_enabled': ('bool',), 'stop_balance_usdt': ('num', 0, 100000, 0), 'max_loss_streak': ('num', 0, 30, 0),
+              'leverage_auto': ('bool',), 'leverage': ('num', 1, 20, 0), 'margin_isolated': ('bool',), 'daily_summary': ('bool',),
+              'summary_hours_kst': ('hours',), 'exclude': ('syms',)}
+    LABEL = {'risk_mode': 'mode risiko', 'risk_percent': 'risiko %', 'risk_usdt': 'risiko USDT', 'max_positions': 'maks SELL', 'max_buy_positions': 'maks BUY',
+             'buy_enabled': 'BUY aktif', 'stop_balance_usdt': 'rem saldo', 'max_loss_streak': 'rem kalah beruntun', 'leverage_auto': 'leverage otomatis',
+             'leverage': 'leverage', 'margin_isolated': 'margin isolated', 'daily_summary': 'ringkasan', 'summary_hours_kst': 'jam ringkasan', 'exclude': 'koin dikecualikan'}
+
+    @staticmethod
+    def remote_val(spec, v):
+        if v is None: return None
+        t = spec[0]
+        if t == 'num':
+            try: x = float(v)
+            except (TypeError, ValueError): return None
+            if not math.isfinite(x): return None
+            x = round(min(spec[2], max(spec[1], x)), spec[3])
+            return int(x) if spec[3] == 0 else x
+        if t == 'bool': return v if isinstance(v, bool) else None
+        if t == 'mode': return v if v in ('percent', 'usdt') else None
+        if t == 'hours':
+            if not isinstance(v, list): return None
+            return sorted({int(h) for h in v if isinstance(h, (int, float)) and 0 <= h <= 23})[:6]
+        if t == 'syms':
+            if not isinstance(v, list): return None
+            out = []
+            for x in v:
+                x = str(x).upper().strip()
+                if 6 <= len(x) <= 24 and x.endswith('USDT') and x.isalnum() and x not in out: out.append(x)
+            return out[:40]
+        return None
+
     def applied(self):
-        return {'riskMode': self.cfg['risk_mode'], 'riskPercent': float(self.cfg['risk_percent']), 'riskUsdt': float(self.cfg['risk_usdt']),
-                'maxSell': int(self.cfg['max_positions']), 'maxBuy': int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0,
-                'paused': self.paused, 'version': BOT_VERSION}
+        cfg = {k: self.cfg.get(k) for k in self.REMOTE}
+        return {'cfg': cfg, 'paused': self.paused, 'lossStreak': int(self.st.get('loss_streak', 0)), 'version': BOT_VERSION}
 
     def control(self, quiet=False):
-        """apply the remote settings from the website; anything not set there falls back to snr_bot_config.json"""
+        """apply the remote settings from the website (Atur -> Kontrol bot); anything not set there = snr_bot_config.json.
+        API keys, testnet, dry_run and the report key are never changed from the website."""
         self.ctl_at = time.time()
         c = fetch_control(self.cfg, self.applied())
         if c is None: return
-        def num(x, lo, hi, nd):
-            try: v = float(x)
-            except (TypeError, ValueError): return None
-            return round(min(hi, max(lo, v)), nd) if math.isfinite(v) else None
-        rp, ms, mb = num(c.get('riskPercent'), 0.1, 5, 1), num(c.get('maxSell'), 1, 6, 0), num(c.get('maxBuy'), 0, 4, 0)
-        want = {'risk_mode': 'percent' if rp is not None else self.base['risk_mode'], 'risk_percent': rp if rp is not None else self.base['risk_percent'],
-                'max_positions': int(ms) if ms is not None else self.base['max_positions'], 'max_buy_positions': int(mb) if mb is not None else self.base['max_buy_positions']}
+        remote = c.get('set') if isinstance(c.get('set'), dict) else {}
+        changes, reload = [], False
+        for k, spec in self.REMOTE.items():
+            v = self.remote_val(spec, remote.get(k))
+            want = self.base[k] if v is None else v
+            if want != self.cfg.get(k):
+                self.cfg[k] = want
+                changes.append(f"{self.LABEL[k]} {(', '.join(map(str, want)) or '-') if isinstance(want, list) else ('ya' if want is True else 'tidak' if want is False else want)}")
+                if k in ('exclude', 'buy_enabled'): reload = True
         paused = c.get('paused') is True
-        changes = []
-        if want['risk_mode'] != self.cfg['risk_mode'] or float(want['risk_percent']) != float(self.cfg['risk_percent']):
-            changes.append(f"risiko {want['risk_percent']}% saldo" if want['risk_mode'] == 'percent' else f"risiko {self.cfg['risk_usdt']} USDT")
-        if int(want['max_positions']) != int(self.cfg['max_positions']): changes.append(f"maks {want['max_positions']} SELL")
-        if int(want['max_buy_positions'] or 0) != int(self.cfg.get('max_buy_positions') or 0): changes.append(f"maks {want['max_buy_positions']} BUY")
-        if paused != self.paused: changes.append('JEDA: tidak buka posisi baru (posisi terbuka tetap jalan dengan SL/TP)' if paused else 'LANJUT: boleh buka posisi baru lagi')
-        self.cfg.update(want); self.paused = paused
+        if paused != self.paused:
+            self.paused = paused
+            changes.append('JEDA: tidak buka posisi baru (posisi terbuka tetap jalan dengan SL/TP)' if paused else 'LANJUT: boleh buka posisi baru lagi')
+        reset_at = c.get('resetAt') if isinstance(c.get('resetAt'), (int, float)) else 0
+        if reset_at and reset_at > self.st.get('reset_at', 0):          # the website's "Reset" button (only a recent press counts)
+            self.st['reset_at'] = reset_at
+            if reset_at > (time.time() - 900) * 1000 and self.st.get('loss_streak', 0):
+                self.st['loss_streak'] = 0; self.st['brake_sent'] = 0; changes.append('hitungan kalah beruntun di-reset ke 0')
+            save_state(self.st)
+        if reload:
+            try: self.load_symbols()
+            except RuntimeError as e: log.warning('Muat ulang koin gagal: %s', e)
         if changes:
-            log.info('Setelan dari website: %s', ', '.join(changes))
-            if not quiet: notify(self.cfg, 'Setelan dari website dipakai: ' + ', '.join(changes) + '.')
-        fetch_control(self.cfg, self.applied()) if changes else None   # tell the website what is used now
+            log.info('Setelan dari website: %s', '; '.join(changes))
+            if not quiet: notify(self.cfg, 'Setelan dari website dipakai: ' + '; '.join(changes) + '.')
+            fetch_control(self.cfg, self.applied())   # tell the website what is used now
 
     def run(self):
         self.api.sync_time(); self.load_symbols()
