@@ -86,10 +86,10 @@ const S0: Array<Omit<Spot, 'room'>> = [
   { id: 'safe', x: 8.37, y: 1.45, face: 'ny', pose: 'stand', label: 'BUKA BRANKAS', zone: 'boss' },
   { id: 'trophy', x: 9.7, y: 1.2, face: 'ny', pose: 'stand', label: 'LIHAT PIALA', zone: 'boss' },
   { id: 'golf', x: 8.7, y: 5.3, face: 'px', pose: 'stand', label: 'MAIN GOLF', prop: 'club', zone: 'boss' },
-  { id: 'meet1', x: 2.1, y: 7.6, face: 'px', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'BIKIN LAPORAN', prop: 'laptop' }] },
-  { id: 'meet2', x: 3.9, y: 7.6, face: 'nx', pose: 'sit', label: 'RAPAT', zone: 'meet' },
-  { id: 'meet3', x: 3.0, y: 8.5, face: 'ny', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'PRESENTASI', prop: 'laptop' }] },
-  { id: 'meet4', x: 3.0, y: 6.7, face: 'py', pose: 'sit', label: 'RAPAT', zone: 'meet' },
+  { id: 'meet1', x: 2.0, y: 7.6, face: 'px', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'BIKIN LAPORAN', prop: 'laptop' }] },
+  { id: 'meet2', x: 4.0, y: 7.6, face: 'nx', pose: 'sit', label: 'RAPAT', zone: 'meet' },
+  { id: 'meet3', x: 2.0, y: 8.5, face: 'px', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'PRESENTASI', prop: 'laptop' }] },
+  { id: 'meet4', x: 4.0, y: 8.5, face: 'nx', pose: 'sit', label: 'RAPAT', zone: 'meet' },
   { id: 'bsofa1', x: 9.75, y: 9.55, face: 'ny', pose: 'sit', label: 'NUNGGU BOS', zone: 'lounge' },
   { id: 'bsofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'NUNGGU BOS', zone: 'lounge' },
   { id: 'bwin', x: 0.95, y: 4.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
@@ -283,7 +283,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   if (kind === 'darurat') {
     const who = workers(true); if (!who.length) return null;
-    const seats = [sp('', 0, 2.1, 7.6, 'px', '', { pose: 'sit' }), sp('', 0, 3.9, 7.6, 'nx', '', { pose: 'sit' }), sp('', 0, 3.0, 8.5, 'ny', '', { pose: 'sit' }), sp('', 0, 3.0, 6.7, 'py', '', { pose: 'sit' }), sp('', 0, 1.3, 7.0, 'px', ''), sp('', 0, 4.8, 7.0, 'nx', ''), sp('', 0, 4.8, 8.6, 'nx', '')];
+    const seats = [...[2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' }))), sp('', 0, 3.0, 10.4, 'ny', ''), sp('', 0, 2.2, 10.5, 'ny', '')];
     const plans: Record<string, Step[]> = {};
     who.forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-darurat-${id}`, label: 'RAPAT DARURAT' }, dwell: S(50) }]; });
     if (freeFor(ctx, 'bos')) plans.bos = [{ act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'RAPAT DARURAT', { say: ['KENAPA SL TERUS?!', '#e5242b'] }), dwell: S(22) }, { act: sp('ev-darurat-bos', 0, 3.0, 5.8, 'py', 'EVALUASI', { say: ['Cek lagi aturannya!', '#e5242b'] }), dwell: S(26) }];
@@ -296,7 +296,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const wk = wall - 7 * 86_400_000;
     const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= wk && t.strategy !== 'v2' && t.strategy !== 'nas');
     const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
-    const seats = [sp('', 0, 2.1, 7.6, 'px', '', { pose: 'sit' }), sp('', 0, 3.9, 7.6, 'nx', '', { pose: 'sit' }), sp('', 0, 3.0, 8.5, 'ny', '', { pose: 'sit' }), sp('', 0, 3.0, 6.7, 'py', '', { pose: 'sit' }), sp('', 0, 1.3, 7.0, 'px', '')];
+    const seats = [2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' })));
     const plans: Record<string, Step[]> = {};
     who.slice(0, seats.length).forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-rapat-${id}`, label: 'RAPAT MINGGUAN' }, dwell: S(110) }]; });
     const at = (label: string, say?: [string, string]) => sp('ev-rapat-bos', 0, 3.0, 5.8, 'py', label, { say });
@@ -318,8 +318,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const fin = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'nas');
     const pnl = fin.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
     const openN = ctx.data.trades.filter((t) => t.result === 'open').length;
-    const seats: Spot[] = [sp('', 0, 2.1, 7.6, 'px', '', { pose: 'sit' }), sp('', 0, 3.9, 7.6, 'nx', '', { pose: 'sit' }), sp('', 0, 3.0, 8.5, 'ny', '', { pose: 'sit' }), sp('', 0, 3.0, 6.7, 'py', '', { pose: 'sit' }),
-      sp('', 0, 1.2, 6.9, 'px', ''), sp('', 0, 1.2, 8.3, 'px', ''), sp('', 0, 4.8, 6.9, 'nx', ''), sp('', 0, 4.8, 8.3, 'nx', ''), sp('', 0, 2.2, 9.5, 'ny', ''), sp('', 0, 3.8, 9.5, 'ny', '')];
+    const seats: Spot[] = [...[2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' }))), sp('', 0, 3.0, 10.4, 'ny', ''), sp('', 0, 2.2, 10.5, 'ny', '')];
     const plans: Record<string, Step[]> = {};
     who.slice(0, seats.length).forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-dadakan-${id}`, label: 'RAPAT DADAKAN' }, dwell: S(75) }]; });
     const at = (label: string, say?: [string, string]) => sp(`ev-dadakan-${lead}`, 0, 3.0, 5.8, 'py', label, { say });
@@ -605,7 +604,7 @@ const THEMES: Record<string, Theme> = {
     floor: '#b98a5e', floorN: '#7d5d40', line: 'rgba(70,40,15,.3)', back: '#efe7dc', backN: '#bdb3a6', left: '#e8dfd2', leftN: '#b2a898', cap: '#2a1f18', base: '#4a3324',
     extra: (c, night, room, wh) => {
       // colourful rugs like a design studio
-      if (room === 0) { ell(c, 3.0, 7.6, 0.45, 1.3, '#9c3b2c'); ell(c, 3.0, 7.6, 0.5, 1.1, '#b5503d'); }
+      if (room === 0) poly(c, [iso(1.55, 5.95, 0.45), iso(4.45, 5.95, 0.45), iso(4.45, 10.05, 0.45), iso(1.55, 10.05, 0.45)], night ? '#3a3f4a' : '#5a6070');     // dark carpet under the long meeting table
       if (room === 1) poly(c, [iso(6.1, 3.9, 0.45), iso(8.9, 3.9, 0.45), iso(8.9, 6.3, 0.45), iso(6.1, 6.3, 0.45)], '#d9a33a');
       if (room === 2) { ell(c, 4.75, 8.85, 0.5, 1.5, '#e0b93e'); ell(c, 4.75, 8.85, 0.55, 1.15, '#ecc95a'); ell(c, 7.6, 5.4, 0.5, 1.3, '#b5503d'); }
       // living green wall + brand sign in the lobby, green wall behind the boss
@@ -1239,8 +1238,17 @@ function furniture(theme = 'modern'): Item[][] {
   // boss office: boss desk + chair, bookshelves, meeting table + chairs, sofa
   R[0].push(...take(9.6, 5.9).map((it) => moved(it, -4.1, -1.3)));
   R[0].push(...all.filter((it) => it.x0 > 10.1 && it.x0 < 10.4 && it.y0 > 4.9 && it.y0 < 5.2).map((it) => moved(it, -4.1, -1.3)));
-  R[0].push(...take(6.95, 4.8).map((it) => moved(it, -4.6, 2.2)));
-  R[0].push(...all.filter((it) => it.x0 > 6.2 && it.x0 < 9.0 && it.y0 > 3.9 && it.y0 < 6.7 && it.x1 - it.x0 < 0.7).map((it) => moved(it, -4.6, 2.2)));
+  // long meeting table (like the Claude-Office one): wooden top on metal legs, grey office chairs along both sides
+  R[0].push({ x0: 2.45, y0: 6.2, x1: 3.55, y1: 9.8, draw: (c) => {
+    shadow(c, 2.45, 6.2, 1.1, 3.6);
+    for (const y of [6.45, 9.45]) { box(c, 2.75, y, 0.5, 0.12, 0, 1.2, '#9aa0a8', '#7d838c', '#8b9199'); box(c, 2.96, y + 0.02, 0.08, 0.08, 1.2, 13, '#b8bec6', '#9aa0a8', '#a9afb7'); }
+    box(c, 2.45, 6.2, 1.1, 3.6, 14.2, 1.8, '#7a4a2e', '#5c3622', '#6b3f27');
+    poly(c, [iso(2.55, 6.3, 16.05), iso(3.45, 6.3, 16.05), iso(3.45, 9.7, 16.05), iso(2.55, 9.7, 16.05)], '#8a5636');
+    poly(c, [iso(2.6, 6.5, 16.1), iso(2.75, 6.5, 16.1), iso(2.75, 9.5, 16.1), iso(2.6, 9.5, 16.1)], 'rgba(255,255,255,.12)');
+    for (const y of [7.1, 8.0, 8.9]) { box(c, 2.62, y, 0.3, 0.22, 16, 0.4, '#f4f4f2'); box(c, 3.1, y + 0.1, 0.22, 0.16, 16, 0.6, '#2a2b30'); }
+    cyl(c, 3.3, 6.6, 16, 0.07, 2.4, '#ffffff', '#eeeeee'); cyl(c, 2.7, 9.3, 16, 0.07, 2.4, '#ffffff', '#eeeeee');
+  } });
+  for (const y of [6.7, 7.6, 8.5, 9.4]) { R[0].push(...chair(2.0, y, 'px', '#55585f'), ...chair(4.0, y, 'nx', '#55585f')); }
   R[0].push(...take(9.2, 9.4));
   const pl = (r: number, list: Array<[number, number, number]>) => { for (const [px, py, sc] of list) R[r].push({ x0: px - 0.25, y0: py - 0.25, x1: px + 0.25, y1: py + 0.25, draw: (c, t) => plant(c, px, py, sc, t) }); };
   // lobby: ping-pong table, the cat's bowl, the fingerprint clock-in machine by the lift
