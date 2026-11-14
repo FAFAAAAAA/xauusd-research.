@@ -60,16 +60,36 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
         <button type="button" className={tab === 'm' ? 'on' : ''} onClick={() => setTab('m')}>Bulan</button>
       </div>
       {r.noRate ? <p className="co-warn">Kurs Rupiah belum tersedia, operasional belum dihitung.</p> : null}
-      {tab === 'w' ? (
-        <div className="inv">
-          <div className="inv-top"><div><small>MINGGU INI</small><b>{dayName(r.week.from, tz)} – hari ini</b></div></div>
-          <div className="inv-lines">
-            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: 'var(--up-tint, #e8f6ee)' }}>📈</span><span><b>Pendapatan</b><small>{r.week.trades} trade · {r.week.tp} TP · {r.week.sl} SL</small></span></span><span className={`inv-v ${cls(r.week.revenue)}`}>{usdT(r.week.revenue, true)}</span></div>
+      {tab === 'w' ? (() => {
+        const W = data.trades.filter((t) => t.result !== 'open' && t.pnl != null && t.closedAt != null && t.closedAt >= r.week.from && t.closedAt <= now && (S.mt5 !== 'off' || (t.strategy !== 'v2' && t.strategy !== 'nas')));
+        const days = Array.from({ length: 7 }, (_, d) => W.filter((t) => Math.floor((t.closedAt! - r.week.from) / 86_400_000) === d).reduce((a, t) => a + Number(t.pnl), 0));
+        const today = Math.min(6, Math.floor((now - r.week.from) / 86_400_000));
+        const top = Math.max(1, ...days.map(Math.abs));
+        const wr = r.week.tp + r.week.sl ? Math.round((r.week.tp / (r.week.tp + r.week.sl)) * 100) : 0;
+        const best = days.reduce((b, v, d) => (v > days[b] ? d : b), 0);
+        return (
+          <div className="wk">
+            <div className="wk-top"><small>{r.week.revenue < 0 ? 'Rugi minggu ini' : 'Untung minggu ini'}</small><span>{dayName(r.week.from, tz)} – hari ini</span></div>
+            <b className={`wk-big ${r.week.revenue < 0 ? 'neg' : ''}`}>{usdT(r.week.revenue, true)}</b>
+            <div className="wk-rp">{toIdr(r.week.revenue, rate)}</div>
+            <div className="wk-chart">
+              {days.map((v, d) => (
+                <div key={d} className={`wk-col ${d > today ? 'future' : ''} ${d === today ? 'today' : ''}`}>
+                  <div className="wk-bars"><span className={v >= 0 ? 'p' : 'n'} style={{ height: `${d > today ? 0 : Math.max(v ? 6 : 2, (Math.abs(v) / top) * 100)}%` }} /></div>
+                  <small>{['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'][d]}</small>
+                </div>
+              ))}
+            </div>
+            <div className="wk-stats">
+              <div><small>Trade</small><b>{r.week.trades}</b></div>
+              <div><small>TP</small><b className="p">{r.week.tp}</b></div>
+              <div><small>SL</small><b className="n">{r.week.sl}</b></div>
+              <div><small>Win</small><b>{wr}%</b></div>
+            </div>
+            {W.length ? <div className="wk-best">Hari terbaik: <b>{['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][best]}</b> {usdT(days[best], true)}</div> : null}
           </div>
-          <div className="inv-cut"><i /><i /></div>
-          <div className="inv-total"><small>{r.week.revenue < 0 ? 'RUGI' : 'UNTUNG'}</small><div><b className={cls(r.week.revenue)}>{usdT(r.week.revenue)}</b><span>{toIdr(r.week.revenue, rate)}</span></div></div>
-        </div>
-      ) : (<>
+        );
+      })() : (<>
         <div className="inv-hero">
           <span className="inv-hero-m">{ymName(m.ym, true).toUpperCase()}</span>
           <small>Tarik bulan ini</small>
@@ -84,12 +104,19 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
             const opsFee = ops > 0 ? wdFeeOf(S, ops) : 0;
             const parts: Array<[string, number]> = [['Operasional', ops], ['Biaya penarikan', opsFee], ['Kasbon', r.owed.advance], ['Rugi belum ketutup', m.deficit]];
             const target = parts.reduce((a, [, v]) => a + v, 0), rev = m.revenue;
-            const pct = target > 0 ? (rev / target) * 100 : rev > 0 ? 100 : 0, done = rev >= target && target > 0;
+            const done = rev >= target && target > 0;
+            const max = Math.max(rev, target * 1.25, 1) * 1.06;
+            const tx = Math.min(94, Math.max(6, (target / max) * 100)), rx = Math.min(96, Math.max(3, (Math.max(0, rev) / max) * 100));
             return (
-              <button type="button" className="tgt-card dark" onClick={() => setInfo(true)} aria-label="Kenapa targetnya segini">
-                <div className="tgt-h"><small>Target bulan ini</small><b>{usdT(target)}</b></div>
-                <div className="tgt-bar"><i className={done ? 'ok' : pct > 60 ? 'mid' : 'low'} style={{ width: `${Math.max(4, Math.min(100, pct))}%` }} /></div>
-                <div className="tgt-f"><span>{done ? `Lebih ${usdT(rev - target)}` : `Kurang ${usdT(target - rev)}`}</span><b className={done ? 'up' : ''}>{done ? '✓ ' : ''}{Math.max(0, Math.round(pct))}%</b></div>
+              <button type="button" className="trk-card" onClick={() => setInfo(true)} aria-label="Kenapa targetnya segini">
+                <div className="trk-h"><small>Target bulan ini</small><b>{usdT(target)}</b></div>
+                <div className="trk">
+                  <span className="trk-base" /><span className={`trk-fill ${done ? 'good' : 'low'}`} style={{ width: `${rx}%` }} />
+                  <span className="trk-flag" style={{ left: `${tx}%` }}><i /><em>Target</em></span>
+                  <span className={`trk-dot ${done ? 'good' : 'low'}`} style={{ left: `${rx}%` }} />
+                  <span className={`trk-now ${done ? 'good' : 'low'} ${rx > 75 ? 'r' : ''}`} style={{ left: `${rx}%` }}>{usdT(rev)}</span>
+                </div>
+                <div className="trk-f">{done ? `Sudah lewat target ${usdT(rev - target)}` : `Kurang ${usdT(target - rev)} lagi`}</div>
               </button>
             );
           })()}
@@ -100,38 +127,45 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
         </div>
 
 
-        {info ? (
-          <div className="inv-pop-bg" onClick={() => setInfo(false)}>
-            <div className="inv-pop" onClick={(e) => e.stopPropagation()}>
-              <div className="inv-pop-h"><b>Cara hitung</b><button type="button" onClick={() => setInfo(false)} aria-label="Tutup">✕</button></div>
-              <div className="inv-steps">
-                <div><span>Pendapatan</span><b className="up">{usdT(m.revenue)}</b></div>
-                <div><span><em>−</em>Operasional</span><b className="dn">{usdT(ops)}</b></div>
-                <div className="eq"><span><em>=</em>Laba bersih</span><b>{usdT(m.net)}</b></div>
-                <div><span><em>−</em>Pengembangan modal {capPct}%</span><b>{usdT(Math.max(0, m.net - m.salary))}</b></div>
-                <div className="eq"><span><em>=</em>Gaji</span><b className="up">{usdT(m.salary)}</b></div>
+        {info ? (() => {
+          const fee = ops > 0 ? wdFeeOf(S, ops) : 0, mod = Math.max(0, m.net - m.salary);
+          const target = ops + fee + r.owed.advance + m.deficit;
+          const flow: Array<[string, string, number, string]> = [
+            ['in', 'Pendapatan', m.revenue, '+'], ['out', 'Operasional', ops, '−'], ['eq', 'Laba bersih', m.net, '='], ['cap', `Modal ${capPct}%`, mod, '−'], ['sal', 'Gaji', m.salary, '='],
+          ];
+          return (
+            <div className="ip-bg" onClick={() => setInfo(false)}>
+              <div className="ip" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Cara hitung">
+                <div className="ip-grab" />
+                <div className="ip-h"><b>Cara hitung</b><button type="button" onClick={() => setInfo(false)} aria-label="Tutup">✕</button></div>
+                <div className="ip-scroll">
+                  <div className="ip-flow">
+                    {flow.map(([k, label, v, op]) => (
+                      <div key={label} className={`ip-step ${k}`}><span className="ip-op">{op}</span><span className="ip-l">{label}</span><b>{usdT(v)}</b></div>
+                    ))}
+                  </div>
+                  <div className="ip-sum">
+                    <small>Tarik bulan ini</small>
+                    <div className="ip-chips"><span>Gaji</span><i>+</i><span>Operasional</span><i>+</i><span>Biaya tarik</span></div>
+                    <b>{usdT(r.owed.allowed)}</b>
+                  </div>
+                  <div className="ip-card">
+                    <div className="ip-row head"><span>Target bulan ini</span><b>{usdT(target)}</b></div>
+                    <div className="ip-row"><span>Operasional</span><b>{usdT(ops)}</b></div>
+                    <div className="ip-row"><span>Biaya penarikan</span><b>{usdT(fee)}</b></div>
+                    {r.owed.advance > 0.005 ? <div className="ip-row"><span>Kasbon</span><b>{usdT(r.owed.advance)}</b></div> : null}
+                    {m.deficit > 0.005 ? <div className="ip-row"><span>Rugi belum ketutup</span><b>{usdT(m.deficit)}</b></div> : null}
+                  </div>
+                  <div className="ip-tips">
+                    <div><span>⚙️</span><p>Ubah operasional & biaya tarik di <b>menu kucing → Perusahaan</b>.</p></div>
+                    <div><span>💱</span><p>Kurs otomatis{rate ? ` ± ${idrT(rate)} / $1` : ''}.</p></div>
+                    <div><span>🔁</span><p>Rugi bulan lalu ditutup dulu sebelum gaji.</p></div>
+                  </div>
+                </div>
               </div>
-              <div className="inv-formula">
-                <small>TARIK BULAN INI</small>
-                <div>Gaji <em>+</em> Operasional <em>+</em> Biaya tarik <em>=</em> <b>{usdT(r.owed.allowed)}</b></div>
-              </div>
-              <div className="inv-steps" style={{ marginTop: 12 }}>
-                <div className="eq0"><span><b>Target bulan ini</b></span><b>{usdT(ops + (ops > 0 ? wdFeeOf(S, ops) : 0) + r.owed.advance + m.deficit)}</b></div>
-                <div><span><em>·</em>Operasional</span><b>{usdT(ops)}</b></div>
-                <div><span><em>·</em>Biaya penarikan</span><b>{usdT(ops > 0 ? wdFeeOf(S, ops) : 0)}</b></div>
-                {r.owed.advance > 0.005 ? <div><span><em>·</em>Kasbon</span><b>{usdT(r.owed.advance)}</b></div> : null}
-                {m.deficit > 0.005 ? <div><span><em>·</em>Rugi belum ketutup</span><b>{usdT(m.deficit)}</b></div> : null}
-              </div>
-              <p className="inv-where">Target = semua yang harus ditutup bulan ini sebelum ada gaji. Ubah lewat <b>menu kucing → Perusahaan</b>: daftar <b>Operasional</b> (tambah, ubah, hapus) dan <b>Pengaturan lain</b> untuk biaya penarikan.</p>
-              <ul className="inv-notes">
-                <li>Pendapatan = untung/rugi semua trade Binance yang selesai bulan ini (fee sudah termasuk).</li>
-                <li>Operasional ditulis dalam Rupiah, diubah ke dolar dengan kurs otomatis{rate ? ` (± ${idrT(rate)} per $1)` : ''}.</li>
-                <li>Kalau bulan sebelumnya rugi, rugi itu ditutup dulu sebelum ada gaji lagi.</li>
-                <li>Biaya penarikan {usdT(r.owed.fee)} = {S.wdFee.fixed} USDT + {S.wdFee.pct}% (perkiraan biaya jaringan & selisih kurs, sengaja dilebihkan; bisa diubah di pengaturan).</li>
-              </ul>
             </div>
-          </div>
-        ) : null}
+          );
+        })() : null}
       </>      )}
     </div>
   );
