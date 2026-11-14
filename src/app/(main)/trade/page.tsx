@@ -231,7 +231,6 @@ export default function TradePage() {
                 <span className="hc-side op-badge btc-badge">₿</span>
                 <span className="op-left">
                   <strong className="hc-name">Bitcoin</strong>
-                  <span className="op-strat">{btc ? `$${btc.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · hari ini` : 'memuat…'}</span>
                 </span>
                 <span className={`op-pnl ${!btc ? 'mute' : btc.pct > 0 ? 'pos' : btc.pct < 0 ? 'neg' : ''}`}>{btc ? pctText(btc.pct) : '—'}</span>
               </button>

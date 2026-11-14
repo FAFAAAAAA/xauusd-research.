@@ -35,7 +35,7 @@ export default function BtcChart({ tz }: { tz: string }) {
     <div className="stack" style={{ gap: 10 }}>
       <Seg label="Timeframe" options={IV} value={iv} onChange={(v) => setIv(v)} />
       <div className="chartbox trade-review-chart">
-        {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`btc-${iv}`} /> : err ? <div className="mute small" style={{ padding: 20 }}>Chart tidak bisa dimuat.</div> : <div style={{ padding: 20 }}><Spinner /></div>}
+        {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`btc-${iv}`} drawKey="BTCUSDT" /> : err ? <div className="mute small" style={{ padding: 20 }}>Chart tidak bisa dimuat.</div> : <div style={{ padding: 20 }}><Spinner /></div>}
       </div>
     </div>
   );
