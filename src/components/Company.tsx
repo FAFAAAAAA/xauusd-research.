@@ -68,18 +68,26 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
           <div className="inv-cut"><i /><i /></div>
           <div className="inv-total"><small>{r.week.revenue < 0 ? 'RUGI' : 'UNTUNG'}</small><div><b className={cls(r.week.revenue)}>{usdT(r.week.revenue)}</b><span>{toIdr(r.week.revenue, rate)}</span></div></div>
         </div>
-      ) : (
+      ) : (<>
+        <div className="inv-hero">
+          <span className="inv-hero-m">{ymName(m.ym, true).toUpperCase()}</span>
+          <small>Tarik bulan ini</small>
+          <b>{usdT(Math.max(0, r.owed.avail))}</b>
+          <div className="inv-hero-sub">
+            <div><small>Gaji</small><b>{usdT(m.salary)}</b><i>{toIdr(m.salary, rate)}</i></div>
+            <div><small>Operasional</small><b>{usdT(ops)}</b></div>
+          </div>
+          {r.owed.takenNow > 0.005 ? <p className="inv-hero-note">Sudah ditarik {usdT(r.owed.takenNow)} bulan ini</p> : null}
+        </div>
         <div className="inv">
-          <div className="inv-top"><div><small>INVOICE GAJI</small><b>{ymName(m.ym, true)}</b></div><span className="inv-badge">● Berjalan</span></div>
           <div className="inv-lines">
-            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: 'var(--up-tint, #e8f6ee)' }}>📈</span><span><b>Pendapatan</b><small>Hasil trading</small></span></span><span className={`inv-v ${cls(m.revenue)}`}>{usdT(m.revenue, true)}</span></div>
+            <div className="inv-ln big"><span className="inv-k"><span className="inv-ic" style={{ background: 'var(--up-tint, #e8f6ee)' }}>📈</span><span><b>Pendapatan</b><small>Hasil trading</small></span></span><span className={`inv-v ${cls(m.revenue)}`}>{usdT(m.revenue, true)}</span></div>
             <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#fdecec' }}>🧾</span><span><b>Operasional</b><small>{names || 'Belum ada'}</small></span></span><span className="inv-v dn">−{usdT(ops)}</span></div>
             <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#eef1ff' }}>🏦</span><span><b>Pengembangan modal</b><small>{capPct}% dari laba</small></span></span><span className="inv-v mu">−{usdT(Math.max(0, m.net - m.salary))}</span></div>
+            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#fff6d6' }}>💵</span><span><b>Gaji</b></span></span><span className="inv-v up">{usdT(m.salary)}</span></div>
           </div>
-          <div className="inv-cut"><i /><i /></div>
-          <div className="inv-total"><small>GAJI</small><div><b className="up">{usdT(m.salary)}</b><span>{toIdr(m.salary, rate)}</span></div></div>
         </div>
-      )}
+      </>      )}
     </div>
   );
 }
