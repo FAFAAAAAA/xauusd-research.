@@ -2060,8 +2060,6 @@ function selfie(key: string, title: string, when: string, pid: string): string {
     if (scene === 0) {            // office wall with wood panels and the LIVE board
       c.fillStyle = '#f1e3c8'; c.fillRect(0, 0, Wd, Hd); c.fillStyle = '#a8774c'; c.fillRect(0, Hd * 0.62, Wd, Hd);
       for (let x = 0; x < Wd; x += 34) { c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(x, Hd * 0.62, 2, Hd); }
-      c.fillStyle = '#0d1424'; c.fillRect(Wd * 0.55, Hd * 0.08, Wd * 0.38, Hd * 0.3); c.fillStyle = '#2ee59d'; c.font = '800 22px ui-monospace, Menlo, monospace'; c.fillText(title, Wd * 0.58, Hd * 0.27);
-      c.fillStyle = '#ff4d4f'; c.beginPath(); c.arc(Wd * 0.585, Hd * 0.14, 5, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = '800 13px ui-monospace, Menlo, monospace'; c.fillText('LIVE', Wd * 0.605, Hd * 0.155);
     } else if (scene === 1) {     // big window, city in the sky
       const g = c.createLinearGradient(0, 0, 0, Hd); g.addColorStop(0, '#7fb6e6'); g.addColorStop(1, '#d6ecfb'); c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
       for (let k = 0; k < 14; k++) { const h = 60 + R(`b${k}`) * 160; c.fillStyle = k % 2 ? '#9fb7cf' : '#b7c9db'; c.fillRect(k * 42 - 10, Hd * 0.75 - h, 36, h + 200); }
@@ -2075,6 +2073,22 @@ function selfie(key: string, title: string, when: string, pid: string): string {
     } else {                      // night: the city lights behind the glass
       const g = c.createLinearGradient(0, 0, 0, Hd); g.addColorStop(0, '#0b1430'); g.addColorStop(1, '#25335c'); c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
       for (let k = 0; k < 14; k++) { const h = 80 + R(`n${k}`) * 180, x = k * 42 - 10; c.fillStyle = '#18213d'; c.fillRect(x, Hd * 0.8 - h, 36, h + 200); for (let w = 0; w < 18; w++) if (R(`w${k}${w}`) > 0.55) { c.fillStyle = '#ffd979'; c.fillRect(x + 5 + (w % 3) * 10, Hd * 0.8 - h + 8 + Math.floor(w / 3) * 16, 5, 7); } }
+    }
+    // the big screen on the wall behind them: which TP and how much
+    {
+      const x0 = Wd * 0.2, y0 = Hd * 0.05, w = Wd * 0.6, h = Hd * 0.25;
+      c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(x0 + 4, y0 + 6, w, h);
+      c.fillStyle = '#1f2638'; c.fillRect(x0 - 5, y0 - 5, w + 10, h + 10);
+      const sg = c.createLinearGradient(0, y0, 0, y0 + h); sg.addColorStop(0, '#0f1a30'); sg.addColorStop(1, '#0a1222'); c.fillStyle = sg; c.fillRect(x0, y0, w, h);
+      c.fillStyle = 'rgba(255,255,255,.05)'; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + w * 0.45, y0); c.lineTo(x0 + w * 0.25, y0 + h); c.lineTo(x0, y0 + h); c.closePath(); c.fill();
+      c.textBaseline = 'middle'; c.textAlign = 'left';
+      c.fillStyle = '#ff4d4f'; c.beginPath(); c.arc(x0 + 16, y0 + 17, 4.5, 0, 7); c.fill();
+      c.fillStyle = '#9cc3ea'; c.font = '800 12px ui-monospace, Menlo, monospace'; c.fillText('TAKE PROFIT', x0 + 26, y0 + 18);
+      c.textAlign = 'right'; c.fillStyle = '#86aed3'; c.font = '700 10px ui-monospace, Menlo, monospace'; c.fillText(when, x0 + w - 12, y0 + 18);
+      const m = /^TP (\S+) (.+)$/.exec(title), coinName = m?.[1] ?? title, amt = m?.[2] ?? '';
+      c.textAlign = 'center'; c.fillStyle = '#ffffff'; c.font = '800 30px ui-monospace, Menlo, monospace'; c.fillText(coinName, x0 + w / 2, y0 + h * 0.48);
+      c.fillStyle = '#2ee59d'; c.font = '800 34px ui-monospace, Menlo, monospace'; c.fillText(amt, x0 + w / 2, y0 + h * 0.8);
+      c.textAlign = 'left'; c.textBaseline = 'alphabetic';
     }
     // who: two neat rows, nobody hiding anybody; the TP trader in the middle in front, biggest
     const others = ['alt', 'big', 'xau', 'nas', 'tg', 'bos', 'vet', 'ob', 'jaga'].filter((id) => id !== pid).sort((a, b) => R(`o${a}`) - R(`o${b}`));
@@ -2093,12 +2107,8 @@ function selfie(key: string, title: string, when: string, pid: string): string {
     back.forEach((id, i) => draw(id, Wd * (0.2 + i * 0.2), Hd * 0.74, 3.0, i < 2 ? 'px' : 'py'));
     [0.1, 0.27, 0.73, 0.9].forEach((x, i) => front[i] && draw(front[i], Wd * x, Hd * 0.98, 3.6, x < 0.5 ? 'px' : 'py'));
     draw(pid || 'alt', Wd * 0.5, Hd * 1.16, 4.6, R('tf') > 0.5 ? 'px' : 'py');
-    // the selfie arm going to the camera, a flash and the caption
-    c.strokeStyle = '#2a1d14'; c.lineWidth = 3;
+    // a soft camera flash
     const fl = c.createRadialGradient(Wd * 0.1, Hd * 0.1, 0, Wd * 0.1, Hd * 0.1, Wd * 0.5); fl.addColorStop(0, 'rgba(255,255,255,.45)'); fl.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = fl; c.fillRect(0, 0, Wd, Hd);
-    c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(0, Hd - 46, Wd, 46);
-    c.fillStyle = '#fff'; c.font = '800 20px system-ui, sans-serif'; c.textBaseline = 'middle'; c.fillText(`🎉 ${title}`, 14, Hd - 23);
-    c.textAlign = 'right'; c.font = '600 13px system-ui, sans-serif'; c.fillText(when, Wd - 14, Hd - 23);
     SELFIE[key] = cv.toDataURL('image/jpeg', 0.9);
   } catch { SELFIE[key] = ''; }
   return SELFIE[key];
