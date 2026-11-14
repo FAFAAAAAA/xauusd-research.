@@ -987,30 +987,54 @@ body:has(.office-home)::after { display: none; }
 .build-tag { position: fixed; left: 8px; bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); z-index: 5; font: 600 9px ui-monospace, Menlo, monospace; color: rgba(255,255,255,.55); text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; }
 
 /* ---------- Kantor, gaya Claude-Office (OfficeTower) ---------- */
-.tower-root { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.tower-root { position: absolute; inset: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tower-zoom { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
 .tower { position: absolute; }
-.tower-floor { position: absolute; left: 0; }
+.tower-floor { position: absolute; }
 .tower-room { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .tower-it, .tower-ch { position: absolute; transform: translate(-50%, -100%); pointer-events: none; }
+.tower-ch { transform-origin: 50% 100%; }
 .tower-it img, .tower-ch img { display: block; width: 100%; height: auto; -webkit-user-drag: none; }
-.tower-label { position: absolute; left: calc(var(--cx, 0px) + 8px); top: 64%; font: 800 calc(var(--u) * 6px) ui-monospace, Menlo, monospace; color: #fff; background: rgba(20, 24, 40, .75); padding: 2px 5px; border-radius: 4px; }
-.tower-wall { position: absolute; transform-origin: 0 0; background: #0d1424; border: 2px solid #1d2235; border-radius: 2px; color: #d8e2ff; font: 700 calc(var(--u) * 4px)/1.2 ui-monospace, Menlo, monospace; padding: calc(var(--u) * 2px); overflow: hidden; box-shadow: 0 0 6px rgba(80, 140, 255, .35); }
-.tower-wall h4 { margin: 0 0 2px; font-size: calc(var(--u) * 4.2px); letter-spacing: .06em; color: #9fb2e6; display: flex; gap: 3px; align-items: center; white-space: nowrap; }
-.tower-wall > div { white-space: nowrap; }
-.tower-dot { width: calc(var(--u) * 3px); height: calc(var(--u) * 3px); border-radius: 50%; background: #ff4d4f; box-shadow: 0 0 4px #ff4d4f; display: inline-block; animation: tower-blink 1.2s steps(2) infinite; }
+.tower-scr { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* boards on the walls: the same look as the old office (dark navy, monospace) */
+.tower-board { position: absolute; transform-origin: 0 0; box-sizing: border-box; background: #0d1424; border: calc(var(--uf) * 1.2px) solid #1f2638; border-radius: 2px; color: #d8e2ff;
+  font: 800 calc(var(--uf) * 4.6px)/1.25 ui-monospace, Menlo, monospace; padding: calc(var(--uf) * 2px) calc(var(--uf) * 2.6px); overflow: hidden; box-shadow: 0 0 8px rgba(80, 140, 255, .3); }
+.tower-board h4 { margin: 0 0 calc(var(--uf) * 1.4px); font-size: calc(var(--uf) * 4.2px); letter-spacing: .05em; color: #fff; display: flex; gap: calc(var(--uf) * 1.5px); align-items: center; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,.12); padding-bottom: calc(var(--uf) * 1px); }
+.tower-row { display: flex; gap: calc(var(--uf) * 1.4px); align-items: baseline; white-space: nowrap; font-size: calc(var(--uf) * 4.8px); padding: calc(var(--uf) * .4px) 0; }
+.tower-row:nth-child(even) { background: rgba(255,255,255,.04); }
+.tower-nm { color: #fff; overflow: hidden; text-overflow: clip; }
+.tower-row b { font-size: calc(var(--uf) * 4.6px); }
+.tower-more, .tower-none { color: #6f93b8; font-weight: 600; text-align: center; font-size: calc(var(--uf) * 4.4px); }
+.tower-none { margin-top: calc(var(--uf) * 4px); font-size: calc(var(--uf) * 5px); }
+.tower-dot { width: calc(var(--uf) * 2.6px); height: calc(var(--uf) * 2.6px); border-radius: 50%; background: #ff4d4f; box-shadow: 0 0 4px #ff4d4f; display: inline-block; animation: tower-blink 1.2s steps(2) infinite; flex: none; }
+.tower-dot-g { background: #2ee59d; box-shadow: 0 0 4px #2ee59d; animation: none; }
 @keyframes tower-blink { 50% { opacity: .3; } }
-.tower-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
-.tower-tiles div { background: #152038; padding: calc(var(--u) * 1.2px); border-radius: 1px; color: #8fa0c8; overflow: hidden; }
-.tower-tiles b { display: block; color: #fff; font-size: calc(var(--u) * 4.4px); }
-.tower-clock { text-align: center; color: #ffd36b; }
-.tower-clock b { display: block; font-size: calc(var(--u) * 8px); color: #fff; letter-spacing: .04em; }
+.tower-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--uf) * 1px); }
+.tower-tiles div { padding: calc(var(--uf) * .8px) calc(var(--uf) * 1px); overflow: hidden; white-space: nowrap; }
+.tower-tiles small { display: block; color: #9cc3ea; font-size: calc(var(--uf) * 4.2px); font-weight: 800; }
+.tower-tiles b { display: block; color: #fff; font-size: calc(var(--uf) * 7.2px); line-height: 1.1; }
+.tower-lines div { display: flex; justify-content: flex-start; align-items: baseline; gap: calc(var(--uf) * 1.5px); white-space: nowrap; padding: 0; line-height: 1.12; border-bottom: 1px solid rgba(255,255,255,.06); }
+.tower-lines small { color: #9cc3ea; font-size: calc(var(--uf) * 3.3px); font-weight: 800; }
+.tower-lines b { color: #fff; font-size: calc(var(--uf) * 4.6px); }
+.tower-clock { text-align: center; color: #f2c230; display: flex; flex-direction: column; justify-content: center; }
+.tower-clock b { display: block; font-size: calc(var(--uf) * 15px); color: #fff; letter-spacing: .04em; line-height: 1; }
+.tower-clock span { font-size: calc(var(--uf) * 4.4px); margin-top: calc(var(--uf) * 1px); }
+.tower-clock em { font-style: normal; font-size: calc(var(--uf) * 6px); margin-top: calc(var(--uf) * 1.2px); border-top: 1px solid rgba(255,255,255,.14); padding-top: calc(var(--uf) * 1px); }
+.tower-clock em small { color: #86aed3; font-size: calc(var(--uf) * 4px); }
+.tower-clock strong { font-size: calc(var(--uf) * 4.2px); color: #f2c230; }
+.tower-clock strong.soon { color: #ff5a5a; animation: tower-blink .8s steps(2) infinite; }
+.tower-alarm { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 60% 45%, rgba(255,40,40,.9), rgba(255,40,40,0) 70%); opacity: 0; mix-blend-mode: screen; }
 .tower-tags { position: absolute; inset: 0; z-index: 10000; pointer-events: none; }
-.tower-tag { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; text-align: center; font: 700 calc(var(--u) * 5.6px)/1.15 ui-monospace, Menlo, monospace; background: rgba(255, 250, 240, .94); color: #2a2320; border-radius: 5px; padding: 1.5px 4px; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
-.tower-tag small { display: block; font-weight: 600; font-size: calc(var(--u) * 4.9px); }
+.tower-tag { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; text-align: center; background: rgba(255, 250, 240, .94); color: #2a2320; border-radius: 999px; padding: 1px 5px; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
+.tower-tag small { display: flex; align-items: center; gap: 3px; font: 700 calc(var(--u) * 4.6px)/1.2 ui-monospace, Menlo, monospace; }
+.tower-tag small i { width: 5px; height: 5px; border-radius: 50%; display: inline-block; flex: none; }
+.tower-say { z-index: 5; position: absolute; transform: translate(-50%, -100%); white-space: nowrap; background: #fff; border-radius: 10px; padding: 2px 7px; font: 800 calc(var(--u) * 5.6px)/1.25 system-ui, sans-serif; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.tower-say::after { content: ''; position: absolute; left: 50%; bottom: -4px; margin-left: -4px; border: 4px solid transparent; border-top-color: #fff; border-bottom: 0; }
 .tower-road { position: absolute; left: 0; right: 0; bottom: 4px; height: 22px; background: #3a3f47; }
 .tower-road::after { content: ''; position: absolute; left: 0; right: 0; top: 10px; border-top: 2px dashed #e8c84a; opacity: .8; }
 .tower-cloud { position: absolute; width: 70px; height: 22px; background: #fff; border-radius: 20px; opacity: .85; animation: tower-drift 70s linear infinite; }
 .tower-cloud::before { content: ''; position: absolute; width: 34px; height: 28px; background: #fff; border-radius: 50%; left: 14px; top: -12px; }
 @keyframes tower-drift { from { transform: translateX(-120px); } to { transform: translateX(110vw); } }
 .tower-stars { position: absolute; inset: 0 0 50% 0; background-image: radial-gradient(1px 1px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 36% 8%, #fff, transparent), radial-gradient(1px 1px at 58% 22%, #fff, transparent), radial-gradient(1px 1px at 78% 12%, #fff, transparent), radial-gradient(1px 1px at 90% 30%, #fff, transparent), radial-gradient(1px 1px at 24% 34%, #fff, transparent); opacity: .8; }
+.tower-reset { position: absolute; right: auto; left: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 20000; }
 @media (prefers-reduced-motion: reduce) { .tower-cloud, .tower-dot { animation: none; } }
