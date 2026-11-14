@@ -1371,9 +1371,27 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .ip-card { margin-top: 10px; background: var(--sunk); border-radius: 16px; padding: 4px 14px; }
 .ip-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13.5px; color: var(--ink-2, #4b5260); font-variant-numeric: tabular-nums; }
 .ip-row + .ip-row { border-top: 1px solid var(--line); } .ip-row.head { color: var(--ink); font-weight: 700; } .ip-row.head b { font-size: 15px; }
-.ip-tips { display: grid; gap: 6px; margin-top: 10px; }
-.ip-tips > div { display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: var(--mute); }
-.ip-tips span { width: 26px; height: 26px; border-radius: 8px; background: var(--sunk); display: grid; place-items: center; font-size: 13px; flex: none; } .ip-tips p { margin: 0; } .ip-tips b { color: var(--ink); }
+.ip-tips { display: grid; margin-top: 10px; border: 1px solid var(--line); border-radius: 16px; padding: 2px 12px; }
+.ip-tips > div { display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: var(--mute); padding: 9px 0; }
+.ip-tips > div + div { border-top: 1px solid var(--line); }
+.ip-tips span { width: 28px; height: 28px; border-radius: 9px; background: var(--sunk); display: grid; place-items: center; flex: none; color: var(--ink); }
+.ip-tips svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ip-tips p { margin: 0; } .ip-tips b { color: var(--ink); font-weight: 700; }
+/* info sheet: modern refresh */
+.ip-split { margin: 2px 0 6px; }
+.ip-bar { display: flex; gap: 3px; height: 10px; }
+.ip-bar i { border-radius: 99px; min-width: 6px; }
+.ip-bar .out, .ip-leg em.out { background: #ff6b70; } .ip-bar .cap, .ip-leg em.cap { background: #6c8cff; } .ip-bar .sal, .ip-leg em.sal { background: #22c26e; }
+.ip-leg { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--mute); flex-wrap: wrap; }
+.ip-leg span { display: inline-flex; align-items: center; gap: 5px; } .ip-leg em { width: 8px; height: 8px; border-radius: 50%; display: inline-block; } .ip-leg b { color: var(--ink); font-weight: 700; }
+.ip-flow { background: var(--sunk); border-radius: 18px; padding: 4px 12px; margin-top: 10px; }
+.ip-step { padding: 10px 0; }
+.ip-step.eq, .ip-step.sal { border-top: 1px solid var(--line); }
+.ip-op { width: 28px; height: 28px; border-radius: 50%; }
+.ip-step.in .ip-op { background: rgba(34,194,110,.14); } .ip-step.out .ip-op { background: rgba(255,107,112,.14); } .ip-step.cap .ip-op { background: rgba(108,140,255,.14); }
+.ip-sum { border-radius: 20px; padding: 14px 16px; background: radial-gradient(130% 140% at 100% 0%, #3b3a1c 0%, #16161a 60%); }
+.ip-sum > b { font-size: 26px; letter-spacing: -.03em; }
+.ip-card { border-radius: 18px; }
 /* week view C */
 .wkc { border: 1px solid var(--line); background: var(--surface, #fff); border-radius: 24px; padding: 18px; }
 .wkc-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--mute); font-weight: 600; }
@@ -1390,3 +1408,8 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .wkc-li b.mu { color: var(--mute); font-weight: 600; }
 .wkc-li.future { opacity: .55; }
 .trk-f.pos { color: #4cd98a; font-weight: 800; font-size: 14px; } .trk-f.neg { color: #ff7b7f; font-weight: 800; font-size: 14px; }
+.trk { height: 30px; margin-top: 6px; }
+.trk-base, .trk-fill { top: 12px; } .trk-flag { top: 3px; } .trk-flag i { height: 24px; } .trk-dot { top: 7px; }
+.trk-f { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px !important; font-size: 14px !important; }
+.trk-f .pos { color: #4cd98a; font-weight: 800; } .trk-f .neg { color: #ff7b7f; font-weight: 800; }
+.trk-f .now { font-weight: 800; color: #6ff0a8; } .trk-f .now.low { color: #ffc56b; }

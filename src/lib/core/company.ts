@@ -277,5 +277,5 @@ export function monthlyText(r: CompanyReport, s: CompanySettings): string {
   return lines.filter((x, i, a) => x !== '' || a[i - 1] !== '').join('\n').trim();
 }
 export function billText(b: Bill): string {
-  return `🧾 <b>Hari ini bayar ${b.cost.name}</b>\n\n${idrT(costIdrIn(b.cost, b.ym))}${b.usd ? ` (± ${usdT(b.usd)})` : ''}\nSudah bayar? Tandai di Kantor → menu kucing → Perusahaan.`;
+  return `🧾 <b>Hari ini bayar ${b.cost.name}</b>\n\n${idrT(costIdrIn(b.cost, b.ym))}${b.usd ? ` (± ${usdT(b.usd)})` : ''}\nSudah bayar? Tandai di Kantor → Menu → Perusahaan.`;
 }

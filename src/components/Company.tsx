@@ -101,14 +101,12 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
             const tx = Math.min(100, Math.max(0, (target / max) * 100)), rx = Math.min(100, Math.max(0, (Math.max(0, rev) / max) * 100));
             return (
               <button type="button" className="trk-card" onClick={() => setInfo(true)} aria-label="Kenapa targetnya segini">
-                <div className="trk-h"><small>Target bulan ini</small><b>{usdT(target)}</b></div>
                 <div className="trk">
                   <span className="trk-base" /><span className={`trk-fill ${done ? 'good' : 'low'}`} style={{ width: `${rx}%` }} />
                   <span className="trk-flag" style={{ left: `${tx}%` }}><i /></span>
                   <span className={`trk-dot ${done ? 'good' : 'low'}`} style={{ left: `${rx}%` }} />
-                  <span className={`trk-now ${done ? 'good' : 'low'} ${rx > 75 ? 'r' : ''}`} style={{ left: `${rx}%` }}>{usdT(rev)}</span>
                 </div>
-                <div className={`trk-f ${rev >= target ? 'pos' : 'neg'}`}>{usdT(rev - target, true)}</div>
+                <div className="trk-f"><span className={rev >= target ? 'pos' : 'neg'}>{usdT(rev - target, true)}</span></div>
               </button>
             );
           })()}
@@ -131,6 +129,15 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
                 <div className="ip-grab" />
                 <div className="ip-h"><b>Cara hitung</b><button type="button" onClick={() => setInfo(false)} aria-label="Tutup">✕</button></div>
                 <div className="ip-scroll">
+                  {m.revenue > 0 && m.net > 0 ? (() => {
+                    const seg: Array<[string, string, number]> = [['out', 'Operasional', ops], ['cap', 'Modal', mod], ['sal', 'Gaji', m.salary]];
+                    return (
+                      <div className="ip-split">
+                        <div className="ip-bar">{seg.map(([k, l, v]) => v > 0 ? <i key={l} className={k} style={{ flexGrow: v }} /> : null)}</div>
+                        <div className="ip-leg">{seg.map(([k, l, v]) => <span key={l}><em className={k} />{l}<b>{Math.round((v / m.revenue) * 100)}%</b></span>)}</div>
+                      </div>
+                    );
+                  })() : null}
                   <div className="ip-flow">
                     {flow.map(([k, label, v, op]) => (
                       <div key={label} className={`ip-step ${k}`}><span className="ip-op">{op}</span><span className="ip-l">{label}</span><b>{usdT(v)}</b></div>
@@ -149,9 +156,9 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
                     {m.deficit > 0.005 ? <div className="ip-row"><span>Rugi belum ketutup</span><b>{usdT(m.deficit)}</b></div> : null}
                   </div>
                   <div className="ip-tips">
-                    <div><span>⚙️</span><p>Ubah operasional & biaya tarik di <b>menu kucing → Perusahaan</b>.</p></div>
-                    <div><span>💱</span><p>Kurs otomatis{rate ? ` ± ${idrT(rate)} / $1` : ''}.</p></div>
-                    <div><span>🔁</span><p>Rugi bulan lalu ditutup dulu sebelum gaji.</p></div>
+                    <div><span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg></span><p>Ubah operasional di <b>Menu → Perusahaan</b></p></div>
+                    <div><span><svg viewBox="0 0 24 24"><path d="M4 9h13l-3-3M20 15H7l3 3" /></svg></span><p>Kurs otomatis{rate ? <> <b>{idrT(rate)}</b> / $1</> : ''}</p></div>
+                    <div><span><svg viewBox="0 0 24 24"><path d="M12 4v16M5 11l7-7 7 7" /></svg></span><p>Rugi bulan lalu ditutup dulu sebelum gaji</p></div>
                   </div>
                 </div>
               </div>
