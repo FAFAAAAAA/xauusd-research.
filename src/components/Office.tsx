@@ -153,6 +153,9 @@ const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', xau: 'nas', na
 const YELL = ['KERJA!!', 'PROFIT MANA?!', 'JANGAN SANTAI!', 'CEPAT!!', 'GAJI POTONG!', 'BALIK KE MEJA!', 'LEMBUR KAMU!'];
 const SL_YELL = ['KENA SL LAGI?!', 'RUGI TERUS!', 'MAU DIPECAT?!'];
 const SORRY = ['Ampun bos!', 'Iya bos!', 'Siap bos!', 'Maaf bos…'];
+// after a stop loss: the trader is down for a moment, then a colleague comes over to cheer them up
+const COMFORT = new Set<string>();             // `${who}:${trade}` already comforted
+const CHEERED: Record<string, number> = {};    // when someone was cheered up (they stop looking sad)
 /** extra places that are not in the everyday roaming list */
 const X = {
   absen: { id: 'absen', room: 2, x: 10.85, y: 1.2, face: 'ny', pose: 'stand', label: 'ABSEN' } as Spot,
@@ -757,19 +760,44 @@ function drawRoofDeck(c: C, night: boolean) {
 /* ---------- the static room ---------- */
 const CITY = Array.from({ length: 26 }, (_, i) => ({ y: 0.5 + i * 0.4 + hash(`b${i}`) * 0.15, w: 0.25 + hash(`w${i}`) * 0.3, h: 22 + hash(`h${i}`) * 42 }));
 // the colour at the very top of the sky: also used above the drawing and behind the phone's clock, so there is no visible edge
-const skyTop = (night: boolean) => (night ? '#03060f' : THEME.sky?.[0] ?? '#5aa8e0');
+const skyTop = (night: boolean) => (night ? '#03060f' : PHASE === 'pagi' ? DAWN[0] : PHASE === 'sore' ? DUSK[0] : THEME.sky?.[0] ?? '#5aa8e0');
+/* ---- time of day (Seoul sunrise / sunset by month, roughly) and the season ---- */
+type Phase = 'pagi' | 'siang' | 'sore' | 'malam';
+const SUN: Array<[number, number]> = [[7.75, 17.6], [7.4, 18.1], [6.85, 18.6], [6.1, 19.0], [5.5, 19.4], [5.2, 19.85], [5.35, 19.9], [5.75, 19.4], [6.15, 18.75], [6.6, 18.0], [7.1, 17.4], [7.6, 17.25]];
+const phaseOf = (now: number): Phase => {
+  const d = new Date(now), h = d.getHours() + d.getMinutes() / 60, [rise, set] = SUN[d.getMonth()];
+  return h >= rise - 0.6 && h < rise + 0.7 ? 'pagi' : h >= rise + 0.7 && h < set - 0.7 ? 'siang' : h >= set - 0.7 && h < set + 0.5 ? 'sore' : 'malam';
+};
+let PHASE: Phase = 'siang';
+const DAWN = ['#56679e', '#e7a08c', '#ffe1b4'], DUSK = ['#33407a', '#d9735f', '#ffbf78'];
+/** Christmas / New Year decorations: 1 December – 6 January */
+const seasonOf = (now: number) => { const d = new Date(now); return d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 6) ? 'natal' : ''; };
+let SEASON = '';
+/** New Year's Eve fireworks over the city: 31 Dec 22:00 – 1 Jan 01:00 */
+const fireworksOn = (now: number) => { const d = new Date(now), m = d.getMonth(), day = d.getDate(), h = d.getHours(); return (m === 11 && day === 31 && h >= 22) || (m === 0 && day === 1 && h < 1); };
 function drawBackdrop(c: C, night: boolean) {
   const y0 = -H, y1 = TOTAL + H;
   c.fillStyle = skyTop(night); c.fillRect(-W * 4, y0 - TOTAL * 4, CW + 8 * W, TOTAL * 4 + 1);
   const sky = c.createLinearGradient(0, y0, 0, TOTAL);
   if (night) { sky.addColorStop(0, '#03060f'); sky.addColorStop(0.6, '#0b1430'); sky.addColorStop(1, '#1a2550'); }
-  else { const sk = THEME.sky ?? ['#5aa8e0', '#a9d5f2', '#e6f3fb']; sky.addColorStop(0, sk[0]); sky.addColorStop(0.55, sk[1]); sky.addColorStop(1, sk[2]); }
+  else { const sk = PHASE === 'pagi' ? DAWN : PHASE === 'sore' ? DUSK : THEME.sky ?? ['#5aa8e0', '#a9d5f2', '#e6f3fb']; sky.addColorStop(0, sk[0]); sky.addColorStop(0.55, sk[1]); sky.addColorStop(1, sk[2]); }
   c.fillStyle = sky; c.fillRect(-W * 4, y0, CW + 8 * W, y1 - y0);
-  c.fillStyle = night ? '#1a2550' : THEME.sky?.[2] ?? '#e6f3fb'; c.fillRect(-W * 4, y1 - 1, CW + 8 * W, TOTAL * 4);
+  c.fillStyle = night ? '#1a2550' : PHASE === 'pagi' ? DAWN[2] : PHASE === 'sore' ? DUSK[2] : THEME.sky?.[2] ?? '#e6f3fb'; c.fillRect(-W * 4, y1 - 1, CW + 8 * W, TOTAL * 4);
   if (night) {
     for (let i = 0; i < 140; i++) { c.fillStyle = `rgba(255,255,255,${0.25 + hash(`a${i}`) * 0.5})`; const r = hash(`r${i}`) > 0.9 ? 1.1 : 0.7; c.fillRect(-20 + hash(`st${i}`) * (CW + 40), -40 + hash(`sy${i}`) * TOTAL * 0.8, r, r); }
     const mg = c.createRadialGradient(60, 70, 2, 60, 70, 45); mg.addColorStop(0, 'rgba(255,248,220,.35)'); mg.addColorStop(1, 'rgba(255,248,220,0)'); c.fillStyle = mg; c.fillRect(15, 25, 90, 90);
     c.fillStyle = '#f4efd9'; c.beginPath(); c.arc(60, 70, 11, 0, 7); c.fill(); c.fillStyle = '#0b1430'; c.beginPath(); c.arc(65, 66, 10, 0, 7); c.fill();
+  } else if (PHASE !== 'siang') {     // sunrise / sunset: a big low sun, warm glow, a few stars still out at dawn
+    const sx = PHASE === 'pagi' ? 70 : CW - 60, sy = 150;
+    const sg = c.createRadialGradient(sx, sy, 6, sx, sy, 160); sg.addColorStop(0, PHASE === 'pagi' ? 'rgba(255,236,190,.95)' : 'rgba(255,190,120,.95)'); sg.addColorStop(0.2, PHASE === 'pagi' ? 'rgba(255,200,160,.45)' : 'rgba(255,140,90,.45)'); sg.addColorStop(1, 'rgba(255,160,110,0)');
+    c.fillStyle = sg; c.fillRect(sx - 170, sy - 170, 340, 340);
+    c.fillStyle = PHASE === 'pagi' ? '#fff1cf' : '#ffcf7a'; c.beginPath(); c.arc(sx, sy, 16, 0, 7); c.fill();
+    if (PHASE === 'pagi') for (let i = 0; i < 30; i++) { c.fillStyle = `rgba(255,255,255,${0.15 + hash(`a${i}`) * 0.3})`; c.fillRect(-20 + hash(`st${i}`) * (CW + 40), -40 + hash(`sy${i}`) * 140, 0.7, 0.7); }
+    for (let i = 0; i < 9; i++) {      // clouds lit from below
+      const cx = hash(`cx${i}`) * (CW + 60) - 30, cy = 30 + hash(`cy${i}`) * TOTAL * 0.62, sc = 0.6 + hash(`cs${i}`) * 0.9;
+      c.fillStyle = PHASE === 'pagi' ? 'rgba(255,214,206,.7)' : 'rgba(255,170,140,.6)';
+      for (const [dx, dy, r] of [[0, 0, 12], [13, -5, 14], [27, 0, 11], [8, 4, 10], [20, 5, 10]]) { c.beginPath(); c.ellipse(cx + dx * sc, cy + dy * sc, r * sc * 1.2, r * sc * 0.75, 0, 0, 7); c.fill(); }
+    }
   } else {
     const sg = c.createRadialGradient(CW - 55, 60, 4, CW - 55, 60, 70); sg.addColorStop(0, 'rgba(255,250,215,.95)'); sg.addColorStop(0.25, 'rgba(255,240,180,.45)'); sg.addColorStop(1, 'rgba(255,240,180,0)');
     c.fillStyle = sg; c.fillRect(CW - 140, -20, 170, 170);
@@ -795,7 +823,7 @@ function drawBackdrop(c: C, night: boolean) {
       const w = 16 + hash(`w${layer}${i}`) * 28, h = 50 + hash(`h${layer}${i}`) * hmax, y = base - h;
       c.fillStyle = col; c.fillRect(x, y, w, h + 300);
       if (hash(`ant${layer}${i}`) > 0.75) c.fillRect(x + w / 2 - 0.5, y - 12, 1, 12);
-      for (let ry = y + 6; ry < base - 6; ry += 8) for (let rx = x + 3; rx < x + w - 4; rx += 6) if (hash(`${layer}${i}:${rx}:${ry}`) > (night ? 0.55 : 0.75)) { c.fillStyle = win; c.fillRect(rx, ry, 2.4, 3); }
+      for (let ry = y + 6; ry < base - 6; ry += 8) for (let rx = x + 3; rx < x + w - 4; rx += 6) if (hash(`${layer}${i}:${rx}:${ry}`) > (night ? 0.55 : 0.75)) { c.fillStyle = PHASE === 'sore' ? 'rgba(255,214,120,.7)' : win; c.fillRect(rx, ry, 2.4, 3); }
       c.fillStyle = col; x += w + 2 + hash(`g${layer}${i}`) * 6;
     }
   }
@@ -1335,6 +1363,29 @@ function furniture(theme = 'modern'): Item[][] {
     box(c, 10.78, 0.33, 0.14, 0.14, 0, 13, '#2a2b30'); box(c, 10.72, 0.3, 0.26, 0.2, 13, 5, '#33343a', '#26272c', '#2d2e34');
     poly(c, [iso(10.76, 0.505, 14.5), iso(10.94, 0.505, 14.5), iso(10.94, 0.505, 17), iso(10.76, 0.505, 17)], '#2ee59d');
   } });
+  // December: a Christmas tree with presents in the lobby corner by the window
+  if (typeof window !== 'undefined' && seasonOf(Date.now())) R[2].push({ x0: 0.7, y0: 10.35, x1: 1.75, y1: 11.45, draw: (c, t) => {
+    const cx = 1.2, cy = 10.9;
+    shadow(c, 0.7, 10.4, 1.05, 1.05, 0.18);
+    cyl(c, cx, cy, 0, 0.32, 5, '#b8443a', '#93342c'); cyl(c, cx, cy, 5, 0.07, 4, '#6b4226', '#5a361f');
+    const [bx, by] = iso(cx, cy, 8);
+    const layers: Array<[number, number, number]> = [[0, 13, 15], [10, 10.5, 13], [19, 8, 11], [27, 5.5, 9]];
+    for (const [z, rw, h] of layers) {
+      const y = by - z;
+      c.fillStyle = '#1f6b3a'; c.beginPath(); c.moveTo(bx - rw, y); c.quadraticCurveTo(bx, y + 4, bx + rw, y); c.lineTo(bx, y - h); c.closePath(); c.fill();
+      c.fillStyle = '#2f8a4b'; c.beginPath(); c.moveTo(bx - rw * 0.15, y + 1.5); c.quadraticCurveTo(bx + rw * 0.5, y + 2.6, bx + rw, y); c.lineTo(bx, y - h); c.closePath(); c.fill();
+    }
+    const cols = ['#e5484d', '#f2c230', '#4c7dff', '#ffffff', '#ff8ad8'];
+    for (let i = 0; i < 16; i++) {
+      const lv = i % 4, [z, rw] = layers[lv], f = hash(`orn${i}`) * 1.6 - 0.8, px = bx + f * rw * 0.75, py = by - z - 2 - hash(`orz${i}`) * 4 + Math.abs(f) * 2;
+      const on = Math.sin(t * 2 + i * 1.3) > -0.2; c.fillStyle = on ? cols[i % 5] : '#7a7d86'; c.beginPath(); c.arc(px, py, 1, 0, 7); c.fill();
+    }
+    const sy = by - 27 - 9, tw = 0.85 + Math.sin(t * 3) * 0.15;       // the star on top
+    c.fillStyle = '#ffd84a'; c.beginPath(); for (let j = 0; j < 10; j++) { const r = j % 2 ? 1.6 * tw : 3.6 * tw, an = -Math.PI / 2 + (j * Math.PI) / 5; c.lineTo(bx + Math.cos(an) * r, sy + Math.sin(an) * r); } c.closePath(); c.fill();
+    // presents
+    box(c, 1.35, 11.0, 0.32, 0.3, 0, 4, '#e5484d', '#b83a3e', '#cc4146'); box(c, 1.48, 11.0, 0.06, 0.3, 4, 0.2, '#f2c230');
+    box(c, 0.8, 11.05, 0.3, 0.28, 0, 3.2, '#4c7dff', '#3a63cc', '#4370e6'); box(c, 0.92, 11.05, 0.06, 0.28, 3.2, 0.2, '#ffffff');
+  } });
   /* --- new pieces --- */
   R[0].push(...chair(2.2, 3.4, 'px', '#c9a227'));
   R[0].push({ x0: 2.0, y0: 2.45, x1: 2.45, y1: 2.9, draw: (c) => { ell(c, 2.22, 2.68, 0, 0.25, 'rgba(0,0,0,.14)'); cyl(c, 2.22, 2.68, 0, 0.05, 10, '#1e1f23', '#2b2c31'); cyl(c, 2.22, 2.68, 10, 0.24, 1.5, '#f2c230', '#c9a227'); cyl(c, 2.15, 2.62, 11.5, 0.05, 2.5, '#ffffff', '#eeeeee'); } });
@@ -1511,7 +1562,7 @@ interface Agent {
   room: number; pending: Spot | null; hiddenUntil: number; fx?: number; sit?: number; lt?: number; fidget?: number; arms?: Record<string, [number, number]>;
   x: number; y: number; vx: number; vy: number; face: Face; path: Array<[number, number]>; act: Spot; until: number; dist: number; speed: number;
   carry: Prop | null; carryUntil: number; patrol: number; last: string; run: boolean;
-  scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number;
+  scoldUntil: number; scoldBy: string; bubble: { text: string; until: number; color: string } | null; chase: number; celebrated: string; angryAt: number; sadFor?: string;
   queue?: Array<{ act: Spot; dwell: number }>; kick?: boolean; talkAt?: number;
   ride?: Ride;      // riding the glass lift
 }
@@ -1548,7 +1599,8 @@ type Expr = 'senang' | 'ketawa' | 'sedih' | 'cemas' | 'fokus' | 'kaget' | 'ngant
 function exprOf(p: Person, a: Agent, st: Status, t: number): Expr {
   const L = a.act.label ?? '', walking = a.path.length > 0;
   if (a.act.pose === 'jump' || /SELEBRASI|BONUS|GAJIAN|ULTAH|TIUP LILIN|FOTO/.test(L) || st.tp) return 'ketawa';
-  if (/DIMARAHI|SL!/.test(L) || st.sl) return 'sedih';
+  if (/DIMARAHI|SL!|LESU/.test(L) || (st.sl && !((Date.now() - (CHEERED[p.id] ?? -1e15)) >= 0 && Date.now() - (CHEERED[p.id] ?? 0) < 15 * 60_000))) return 'sedih';
+  if (/MENGHIBUR|DIHIBUR/.test(L)) return 'senang';
   if (/LIHAT TV|ALARM|KAGET/.test(L) || (EV.cur?.kind === 'pasar' && L === 'LIHAT TV')) return 'kaget';
   if (/NGANTUK|TIDUR SIANG|REBAHAN/.test(L)) return 'ngantuk';
   if (/KUCING|PIZZA|KUE|MAKAN|KOPI|DRAKOR/.test(L) && !/BIKIN/.test(L)) return Math.sin(t * 0.5 + hash(p.id) * 4) > 0.3 ? 'cinta' : 'senang';
@@ -2031,7 +2083,21 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   }
   if (s.sleep || s.label === 'KIRIM PESAN') return { act: p.seat, dwell: 4000 };
   if (s.tp && a.celebrated !== (s.tag?.text ?? '')) { a.celebrated = s.tag?.text ?? ''; return { act: { ...p.seat, pose: 'jump', label: 'SELEBRASI TP' }, dwell: 7000 }; }
+  if (s.sl && a.sadFor !== (s.tag?.text ?? '')) { a.sadFor = s.tag?.text ?? ''; return { act: { ...p.seat, label: 'LESU KENA SL', say: [any1(['Yah… kena SL', 'Aduh, SL…', 'Huft…']), '#1e1f23'] }, dwell: 9000 }; }
   if (a.run) { a.run = false; return { act: p.seat, dwell: rnd(25, 45) }; }
+  // a colleague just hit a stop loss: go and cheer them up (one person per stop loss, the desk partner first if free)
+  if (!s.sl && WORKERS.includes(p.id) && p.id !== 'tg') {
+    const sad = [PARTNER[p.id], ...WORKERS].find((id) => id && id !== p.id && id !== 'tg' && S[id]?.sl && all[id] && !COMFORT.has(`${id}:${S[id].tag?.text ?? ''}`));
+    if (sad && Math.random() < 0.7) {
+      COMFORT.add(`${sad}:${S[sad].tag?.text ?? ''}`);
+      const spot = near(sad, 'MENGHIBUR');
+      const v = all[sad];
+      a.queue = [{ act: { ...spot, id: `${spot.id}-2`, say: [any1(['SL itu biasa, RR 1:2 kok!', 'Satu TP nutup dua SL!', 'Tenang, sesuai rencana kok']), '#2e9e5b'] }, dwell: rnd(5, 7) }];
+      if (v) v.queue = [{ act: { ...PEOPLE.find((q) => q.id === sad)!.seat, label: 'DIHIBUR', say: [any1(['Makasih bro!', 'Iya, semangat lagi!', 'Siap, lanjut!']), '#2e9e5b'] }, dwell: rnd(10, 16) }];
+      CHEERED[sad] = now + 12_000;
+      return { act: { ...spot, say: [any1(['Sabar bro…', 'Gapapa bro!', 'Semangat bro!']), '#1e1f23'] }, dwell: rnd(5, 7) };
+    }
+  }
   if (s.label.startsWith('POSISI')) {
     if (!a.act.id.startsWith('seat-') && r < 0.9) return { act: p.seat, dwell: rnd(25, 50) };
     return r < 0.8 ? { act: p.seat, dwell: rnd(25, 50) } : { act: pick(SPOTS.filter((q) => ['water', 'win1', 'win2', 'win3', 'tv', 'stretch', 'trash', 'board', 'printer'].includes(q.id))), dwell: rnd(5, 9) };
@@ -2180,7 +2246,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const posRef = useRef(positions); posRef.current = positions;
   const items = useMemo(() => furniture(theme), [theme]);
   const grids = useMemo(() => items.map((list) => buildGrid(list)), [items]);
-  const night = (() => { const h = new Date(now).getHours(); return h >= 18 || h < 6; })();
+  PHASE = phaseOf(now); SEASON = seasonOf(now);
+  const night = PHASE === 'malam';
   const nightRef = useRef(night); nightRef.current = night;
   const view = useRef({ ...HOME });
   const fullRef = useRef(full); fullRef.current = full;
@@ -2320,6 +2387,14 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         const cy = Math.max(Math.min(y, tg.fy), tg.ay - 6), half = Math.max(8, (tg.fy - tg.ay) * 0.28);
         const d = inTag ? 0 : Math.max(0, Math.hypot(x - tg.ax, y - cy) - half);
         if (d < bd) { bd = d; best = tg.id; }
+      }
+      // the cat wins when the finger is on it (it is small, so it gets its own generous circle)
+      const dc = CATHIT.on ? Math.hypot(x - CATHIT.x, y - CATHIT.y) : 1e9;
+      if (dc < 20 && dc <= bd + 10 && CATREF) {
+        const k0 = CATREF, w0 = Date.now(); CATPET.at = w0;
+        if (k0.mode !== 'walk' && !k0.hop) k0.until = Math.max(k0.until, w0 + 9000);
+        k0.meow = w0 + 2600; k0.meowText = any1(['prrr~ ♥', 'meong ♥', 'prrrr…', 'nyaa~']);
+        return;
       }
       if (best && bd < 22) { const a = AGENTS[best]; cardRef.current({ id: best, what: a ? (a.path.length ? 'JALAN' : a.act.label) : '' }); }
     };
@@ -2522,7 +2597,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       // picture is only moved / scaled (cheap); once the view rests (or runs out of margin) it is painted sharp again.
       const viewKey = `${V.z.toFixed(4)}:${V.tx.toFixed(2)}:${V.ty.toFixed(2)}`;
       if (viewKey !== lastView) { lastView = viewKey; viewMoved = tm; }
-      const base = `${cv.width}x${cv.height}:${nightNow}:${themeRef.current}:${SHAPE}:${PHOTO.ok}`;
+      const base = `${cv.width}x${cv.height}:${nightNow}:${PHASE}:${themeRef.current}:${SHAPE}:${PHOTO.ok}`;
       const sNow = bgV ? V.z / bgV.z : 1;
       const offX = bgV ? k * V.tx - sNow * (bgM + k * bgV.tx) : 0, offY = bgV ? k * V.ty - sNow * (bgM + k * bgV.ty) : 0;
       const outside = !bgV || offX > 0 || offY > 0 || offX + bgW * sNow < cv.width || offY + bgH * sNow < cv.height;
@@ -2540,6 +2615,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       }
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = skyTop(nightNow); c.fillRect(0, 0, cv.width, cv.height);
       if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
+      if (nightNow && fireworksOn(wall)) { c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * V.ty); drawFireworks(c, t); c.setTransform(1, 0, 0, 1, 0, 0); }
       // the top edge of the screen fades into one flat sky colour, and the phone's status bar gets exactly that colour: no visible edge under the clock
       if (fullRef.current) {
         const top = skyTop(nightNow), fh = 70 * dpr, fg = c.createLinearGradient(0, 0, 0, fh);
@@ -2573,6 +2649,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (r === 1) drawPositions(c, posRef.current, t);
         drawBoards(c, r, wall, t);
         drawWeather(c, r, t);
+        if (SEASON) drawSeason(c, r, t);
         if (SHAPE === 'tower') drawLift(c, r, Math.abs(r - liftPos) < 0.999 ? liftPos : null, liftDoor, nightNow, t, rider?.inCab ? drawRiders : null);
         for (const m of MOPS) if (m.room === r) { const k = 1 - (wall - m.t) / 25_000; ell(c, m.x, m.y, 0.2, 0.32, `rgba(205,232,255,${0.22 * k})`); ell(c, m.x - 0.08, m.y - 0.05, 0.25, 0.1, `rgba(255,255,255,${0.35 * k})`); }
         const list: Item[] = items[r].slice();
@@ -2589,6 +2666,16 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           const up = cat.z > 3;      // on a desk / sofa: draw after the furniture it sits on
           list.push({ x0: cat.x - 0.15 + (up ? 0.5 : 0), y0: cat.y - 0.15 + (up ? 0.5 : 0), x1: cat.x + 0.15 + (up ? 0.5 : 0), y1: cat.y + 0.15 + (up ? 0.5 : 0), draw: (cc, tt) => {
             drawCat(cc, cat, tt);
+            if (wall - CATPET.at < 2400) {
+              const [hx0, hy0] = iso(cat.x, cat.y, cat.z), f = (wall - CATPET.at) / 2400;
+              for (let j = 0; j < 3; j++) {
+                const ff = Math.min(1, Math.max(0, f * 1.4 - j * 0.18)); if (ff <= 0 || ff >= 1) continue;
+                const hx = hx0 + (j - 1) * 4 + Math.sin(ff * 6 + j) * 1.5, hy = hy0 - 10 - ff * 16, sz = 1.6 + j * 0.2;
+                cc.globalAlpha = 1 - ff; cc.fillStyle = '#ff5a8a';
+                cc.beginPath(); cc.arc(hx - sz * 0.5, hy, sz * 0.6, Math.PI, 0); cc.arc(hx + sz * 0.5, hy, sz * 0.6, Math.PI, 0); cc.lineTo(hx, hy + sz * 1.2); cc.closePath(); cc.fill();
+              }
+              cc.globalAlpha = 1;
+            }
             if (wall < cat.meow) { const [mx, my] = iso(cat.x, cat.y, cat.z); cc.font = '800 5px system-ui, sans-serif'; cc.textAlign = 'center'; cc.fillStyle = '#ffffff'; cc.strokeStyle = 'rgba(30,31,35,.8)'; cc.lineWidth = 1.6; const mt = cat.meowText ?? 'meong~'; cc.strokeText(mt, mx, my - 14); cc.fillText(mt, mx, my - 14); cc.textAlign = 'start'; }
           } });
         }
@@ -2620,6 +2707,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       /* ---- name tags (screen space, never overlapping) ---- */
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawTags(c, agents, S, wall, (x, y, r) => [((x + roomX(r)) * V.z + V.tx) * css, ((y + roomY(r)) * V.z + V.ty) * css], css * W, css * V.z, 1.15);
+      { const [cx0, cy0] = iso(cat.x, cat.y, cat.z + 4); CATHIT.x = ((cx0 + roomX(cat.room)) * V.z + V.tx) * css; CATHIT.y = ((cy0 + roomY(cat.room)) * V.z + V.ty) * css; CATHIT.on = wall >= cat.hidden; }
     };
     const io = new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was) { last = performance.now(); raf = requestAnimationFrame(frame); } }, { threshold: 0 });
     io.observe(box0);
@@ -2950,11 +3038,14 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
 /** draw order for an isometric scene: a box is in front of another when it is fully past it on x or on y */
 /* ---------- the office cat ---------- */
 type CatMode = 'walk' | 'sit' | 'sleep' | 'groom' | 'loaf';
-type CatSpot = { room: number; x: number; y: number; z: number; mode: CatMode; dwell: [number, number] };
+type CatSpot = { room: number; x: number; y: number; z: number; mode: CatMode; dwell: [number, number]; follow?: boolean };
 type Cat = { room: number; x: number; y: number; z: number; vx: number; vy: number; dx: number; dy: number; path: Array<[number, number]>; spot: CatSpot | null; mode: CatMode;
   until: number; hidden: number; pending: CatSpot | null; hop: { x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; t0: number } | null; meow: number; flee?: number; meowText?: string };
 let CATREF: Cat | null = null;
 const CATCALL = { at: 0, seen: 0 };
+/** where the cat is on screen (for taps), and when it was last petted by a tap */
+const CATHIT = { x: -999, y: -999, on: false };
+const CATPET = { at: 0 };
 const WEATHER: { kind: 'rain' | 'snow' | null } = { kind: null };
 const MOPS: Array<{ room: number; x: number; y: number; t: number }> = [];
 const CAT_SPOTS: CatSpot[] = [
@@ -2971,8 +3062,22 @@ const CAT_SPOTS: CatSpot[] = [
   { room: 0, x: 6.4, y: 4.75, z: 0, mode: 'groom', dwell: [8, 15] },         // at Marcel's feet
 ];
 const BOWL: CatSpot = { room: 2, x: 5.85, y: 1.1, z: 0, mode: 'loaf', dwell: [10, 16] };
-function catPick(c: Cat, wall: number) {
+function catPick(c: Cat, wall: number, grids?: boolean[][][]) {
   if (CATCALL.at > CATCALL.seen) { CATCALL.seen = CATCALL.at; return BOWL; }
+  // sometimes it goes after someone (whoever is walking first, else someone on the same floor) and sits at their feet
+  if (grids && Math.random() < 0.3 && !(c.flee && wall < c.flee)) {
+    const all = Object.values(AGENTS).filter((a) => wall >= a.hiddenUntil && a.act.prop !== 'vanish');
+    const walking = all.filter((a) => a.path.length), here = all.filter((a) => a.room === c.room);
+    const who = walking.length && Math.random() < 0.6 ? walking[Math.floor(Math.random() * walking.length)] : here[Math.floor(Math.random() * here.length)];
+    if (who) {
+      const end = who.path.length ? who.path[who.path.length - 1] : [who.x, who.y];
+      const free = (x: number, y: number) => { const gx = Math.floor(x / GS), gy = Math.floor(y / GS); return !!grids[who.room]?.[gy]?.[gx]; };
+      for (const [ox, oy] of [[0.55, 0.45], [-0.5, 0.5], [0.5, -0.5], [-0.5, -0.45], [0.7, 0], [0, 0.7]]) {
+        const x = end[0] + ox, y = end[1] + oy;
+        if (free(x, y)) return { room: who.room, x, y, z: 0, mode: 'sit' as CatMode, dwell: [5, 10] as [number, number], follow: true };
+      }
+    }
+  }
   if (c.flee && wall < c.flee) { const away = CAT_SPOTS.filter((q) => q.room !== c.room); return away[Math.floor(Math.random() * away.length)]; }
   if (Math.random() < 0.35) { c.spot = null; c.mode = 'walk'; c.until = wall + 4000 + Math.random() * 5000; return { room: c.room, x: 1 + Math.random() * 10.5, y: 1.2 + Math.random() * 9, z: 0, mode: 'sit' as CatMode, dwell: [3, 7] as [number, number] }; }
   return CAT_SPOTS[Math.floor(Math.random() * CAT_SPOTS.length)];
@@ -3007,11 +3112,11 @@ function stepCat(c: Cat, grids: boolean[][][], dt: number, wall: number): CatSpo
     c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); return null;
   }
   if (c.spot && Math.hypot(c.spot.x - c.x, c.spot.y - c.y) > 0.05) { c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: c.spot.x, y1: c.spot.y, z1: c.spot.z, t0: wall }; return null; }
-  if (c.spot && c.mode === 'walk') { c.mode = c.spot.mode; c.until = wall + (c.spot.dwell[0] + Math.random() * (c.spot.dwell[1] - c.spot.dwell[0])) * 1000; if (Math.random() < 0.4) c.meow = wall + 1800; c.meowText = c.spot === BOWL ? 'nyam nyam~' : 'meong~'; return c.spot; }
+  if (c.spot && c.mode === 'walk') { c.mode = c.spot.mode; c.until = wall + (c.spot.dwell[0] + Math.random() * (c.spot.dwell[1] - c.spot.dwell[0])) * 1000; if (Math.random() < 0.4) c.meow = wall + 1800; c.meowText = c.spot === BOWL ? 'nyam nyam~' : c.spot.follow ? any1(['meong? 🐾', 'meong~', 'ikut~']) : 'meong~'; if (c.spot.follow) c.meow = wall + 2200; return c.spot; }
   if (wall < c.until) return null;
   // time to move on: first hop down if we are up on something
   if (c.z > 0.6) { const [fx, fy] = findPath(grids[c.room], c.x, c.y, c.x + 0.8, c.y + 0.8).slice(-1)[0] ?? [c.x + 0.8, c.y]; c.hop = { x0: c.x, y0: c.y, z0: c.z, x1: fx, y1: fy, z1: 0, t0: wall }; c.spot = null; c.mode = 'walk'; return null; }
-  const nx = catPick(c, wall); c.mode = 'walk';
+  const nx = catPick(c, wall, grids); c.mode = 'walk';
   if (nx.room !== c.room) { c.pending = nx; c.spot = null; const d = door(c.room, nx.room); c.path = findPath(grids[c.room], c.x, c.y, d.x, d.y); }
   else { c.spot = nx; c.path = findPath(grids[c.room], c.x, c.y, nx.x, nx.y); }
   return null;
@@ -3077,6 +3182,70 @@ function drawCatBody(c: C, k: Cat, t: number) {
   if (groom) { c.fillStyle = light; c.beginPath(); c.ellipse(hx + side * 1.6, hy + 1.2 + Math.sin(t * 9) * 0.6, 0.9, 0.7, 0, 0, 7); c.fill(); }
 }
 
+/** Christmas: a string of blinking lights along the top of the back wall, and paper snowflakes stuck on the glass */
+function drawSeason(c: C, room: number, t: number) {
+  const wh = FLAT ? FLATWH - 8 : room === 0 ? WALL + 18 : RH - 30;
+  const cols = ['#e5484d', '#f2c230', '#2ee59d', '#4c7dff', '#ff8ad8'];
+  // how high the walls are visible before the floor above hides them (the garland hangs just under that line)
+  const up = FLAT || room === 0;
+  const backTop = (x: number) => (up ? wh : Math.min(wh, x <= NX - NY ? RH - 8 - 2 * NY * TH : RH - 8 - 2 * (NX - x) * TH) - 8);
+  const leftTop = (y: number) => (up ? wh : Math.min(wh, RH - 8 - 2 * TH * (NY - y)) - 8);
+  const garland = (pt: (f: number) => [number, number], n: number, seed: number) => {
+    for (let k = 0; k < n; k++) {
+      const P = (f: number, sag: number) => { const [x, y] = pt((k + f) / n); return iso(x, y, (y < 0.1 ? backTop(x) : leftTop(y)) - Math.sin(f * Math.PI) * sag); };
+      c.strokeStyle = '#1f4d2c'; c.lineWidth = 0.7; c.beginPath();
+      for (let j = 0; j <= 12; j++) { const [px, py] = P(j / 12, 8); if (j) c.lineTo(px, py); else c.moveTo(px, py); }
+      c.stroke();
+      for (let j = 1; j < 6; j++) {
+        const [px, py] = P(j / 6, 9.2), m = seed + k * 6 + j, on = Math.sin(t * 2.2 + m * 1.7) > -0.3;
+        c.fillStyle = on ? cols[m % 5] : 'rgba(80,80,90,.6)'; c.beginPath(); c.ellipse(px, py, 1.1, 1.5, 0, 0, 7); c.fill();
+        if (on) { c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(px - 0.4, py - 1, 0.6, 0.6); }
+      }
+    }
+  };
+  garland((f) => [0.4 + f * (NX - 4.0), 0.05], 7, 0);                  // back wall
+  garland((f) => [0.05, NY - 0.4 - f * (NY - 0.8)], 6, 50);            // under the ceiling along the glass
+  // paper snowflakes on the window glass (left wall)
+  const top = (y: number) => (FLAT || room === 0 ? wh : Math.min(wh, RH - 2 * TH * (NY - y) - 12));
+  c.strokeStyle = 'rgba(132,178,226,.95)'; c.lineWidth = 0.8;
+  for (let i = 0; i < 7; i++) {
+    const y = 1 + hash(`sf${room}${i}`) * (NY - 2), z = 14 + hash(`sz${room}${i}`) * Math.max(10, Math.min(top(y) - 30, 70)), r = 2.6 + hash(`sr${i}`) * 1.8;
+    const [px, py] = iso(0, y, z);
+    for (let a = 0; a < 3; a++) { const an = (a * Math.PI) / 3; c.beginPath(); c.moveTo(px - Math.cos(an) * r * 0.6, py - Math.sin(an) * r); c.lineTo(px + Math.cos(an) * r * 0.6, py + Math.sin(an) * r); c.stroke(); }
+  }
+}
+/** New Year's Eve: fireworks over the roof */
+function drawFireworks(c: C, t: number) {
+  c.save();
+  if (!FLAT) {       // only in the sky: cut the building (with its roof units) out
+    const wh = (SHAPE === 'rooftop' ? RH - 8 : WALL + 26), oy = roomY(0) + (SHAPE === 'rooftop' ? -RH : 0);
+    const L = iso(0, NY, wh + 20), B = iso(0, 0, wh + 40), Rr = iso(NX, 0, wh + 34), X0 = iso(0, NY)[0] - 4, X1 = iso(NX, 0)[0] + 4;
+    c.beginPath(); c.rect(-W * 2, -H * 4, CW + W * 4, TOTAL + H * 8);
+    c.moveTo(X0, L[1] + oy); c.lineTo(B[0], B[1] + oy); c.lineTo(X1, Rr[1] + oy); c.lineTo(X1, TOTAL + H * 4); c.lineTo(X0, TOTAL + H * 4); c.closePath();
+    c.clip('evenodd');
+  }
+  const cols = ['#ffd84a', '#ff5a7a', '#5ad1ff', '#9dff7a', '#ffffff', '#c792ea'];
+  for (let i = 0; i < 6; i++) {
+    const per = 2.4 + hash(`fp${i}`) * 1.4, ph = t / per + hash(`fo${i}`) * 9, cyc = Math.floor(ph), f = ph - cyc;
+    const right = i % 2 === 0, cx = right ? CW - 30 - hash(`fx${i}:${cyc}`) * 90 : 25 + hash(`fx${i}:${cyc}`) * 90, cy = (right ? 55 : 35) + hash(`fy${i}:${cyc}`) * 60, col = cols[Math.floor(hash(`fc${i}:${cyc}`) * cols.length)];
+    if (f < 0.25) {        // the rocket going up
+      const k = f / 0.25, [rx, ry] = [cx, cy + 90 * (1 - k)];
+      c.fillStyle = 'rgba(255,230,180,.9)'; c.fillRect(rx - 0.5, ry, 1, 3);
+      continue;
+    }
+    const k = (f - 0.25) / 0.75, rad = 8 + Math.sqrt(k) * 34, fade = 1 - k;
+    c.globalAlpha = Math.max(0, fade) * 0.35; const gl = c.createRadialGradient(cx, cy, 0, cx, cy, rad * 1.2); gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gl; c.beginPath(); c.arc(cx, cy, rad * 1.2, 0, 7); c.fill();
+    c.globalAlpha = Math.max(0, fade); c.fillStyle = col; c.strokeStyle = col; c.lineWidth = 0.9;
+    for (let j = 0; j < 28; j++) {
+      const an = (j / 28) * Math.PI * 2, px = cx + Math.cos(an) * rad, py = cy + Math.sin(an) * rad + k * k * 14, r2 = rad * 0.75;
+      c.beginPath(); c.moveTo(cx + Math.cos(an) * r2, cy + Math.sin(an) * r2 + k * k * 12); c.lineTo(px, py); c.stroke();
+      c.beginPath(); c.arc(px, py, 1.6, 0, 7); c.fill();
+    }
+    if (k < 0.15) { c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(cx, cy, 7, 0, 7); c.fill(); }
+    c.globalAlpha = 1;
+  }
+  c.restore();
+}
 /** rain or snow behind the big window wall of each floor (Seoul weather) */
 function drawWeather(c: C, room: number, t: number) {
   const kind = WEATHER.kind; if (!kind || (FLAT && room > 0)) return;
