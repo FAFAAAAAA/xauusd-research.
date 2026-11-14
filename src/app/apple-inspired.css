@@ -1325,7 +1325,7 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .trk-dot.low { background: #ffc56b; box-shadow: 0 0 0 2px #ffc56b; }
 .trk-now { position: absolute; top: 2px; transform: translateX(-50%); font-size: 12px; font-weight: 800; color: #6ff0a8; white-space: nowrap; }
 .trk-now.r { transform: translateX(-85%); } .trk-now.low { color: #ffc56b; }
-.trk-f { font-size: 12.5px; color: #a7a7ae; margin-top: 10px; }
+.trk-f { font-size: 12.5px; color: #a7a7ae; margin-top: 0; }
 /* week view (modern) */
 .wk { background: radial-gradient(140% 120% at 100% 0%, #173a2a 0%, #16161a 55%); color: #fff; border-radius: 26px; padding: 20px; }
 .wk-top { display: flex; justify-content: space-between; align-items: baseline; }
@@ -1374,3 +1374,18 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .ip-tips { display: grid; gap: 6px; margin-top: 10px; }
 .ip-tips > div { display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: var(--mute); }
 .ip-tips span { width: 26px; height: 26px; border-radius: 8px; background: var(--sunk); display: grid; place-items: center; font-size: 13px; flex: none; } .ip-tips p { margin: 0; } .ip-tips b { color: var(--ink); }
+/* week view C */
+.wkc { border: 1px solid var(--line); background: var(--surface, #fff); border-radius: 24px; padding: 18px; }
+.wkc-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--mute); font-weight: 600; }
+.wkc-big { display: block; font-size: 40px; font-weight: 800; letter-spacing: -.04em; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.wkc-rp { font-size: 13px; color: var(--mute); }
+.wkc-sep { height: 1px; background: var(--line); margin: 12px 0 6px; }
+.wkc-li { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13.5px; }
+.wkc-li > span { width: 34px; color: var(--mute); font-weight: 600; }
+.wkc-li.today > span { color: var(--ink); font-weight: 800; }
+.wkc-bar { flex: 1; height: 8px; border-radius: 9px; background: var(--sunk); position: relative; }
+.wkc-bar i { position: absolute; top: 0; bottom: 0; border-radius: 9px; }
+.wkc-bar i.p { left: 50%; background: var(--co-up); } .wkc-bar i.n { right: 50%; background: var(--co-dn); }
+.wkc-li b { width: 72px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wkc-li b.mu { color: var(--mute); font-weight: 600; }
+.wkc-li.future { opacity: .55; }

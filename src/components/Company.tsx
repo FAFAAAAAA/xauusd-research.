@@ -65,28 +65,20 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
         const days = Array.from({ length: 7 }, (_, d) => W.filter((t) => Math.floor((t.closedAt! - r.week.from) / 86_400_000) === d).reduce((a, t) => a + Number(t.pnl), 0));
         const today = Math.min(6, Math.floor((now - r.week.from) / 86_400_000));
         const top = Math.max(1, ...days.map(Math.abs));
-        const wr = r.week.tp + r.week.sl ? Math.round((r.week.tp / (r.week.tp + r.week.sl)) * 100) : 0;
-        const best = days.reduce((b, v, d) => (v > days[b] ? d : b), 0);
+        const end = new Date(r.week.from + 6 * 86_400_000);
         return (
-          <div className="wk">
-            <div className="wk-top"><small>{r.week.revenue < 0 ? 'Rugi minggu ini' : 'Untung minggu ini'}</small><span>{dayName(r.week.from, tz)} – hari ini</span></div>
-            <b className={`wk-big ${r.week.revenue < 0 ? 'neg' : ''}`}>{usdT(r.week.revenue, true)}</b>
-            <div className="wk-rp">{toIdr(r.week.revenue, rate)}</div>
-            <div className="wk-chart">
-              {days.map((v, d) => (
-                <div key={d} className={`wk-col ${d > today ? 'future' : ''} ${d === today ? 'today' : ''}`}>
-                  <div className="wk-bars"><span className={v >= 0 ? 'p' : 'n'} style={{ height: `${d > today ? 0 : Math.max(v ? 6 : 2, (Math.abs(v) / top) * 100)}%` }} /></div>
-                  <small>{['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'][d]}</small>
-                </div>
-              ))}
-            </div>
-            <div className="wk-stats">
-              <div><small>Trade</small><b>{r.week.trades}</b></div>
-              <div><small>TP</small><b className="p">{r.week.tp}</b></div>
-              <div><small>SL</small><b className="n">{r.week.sl}</b></div>
-              <div><small>Win</small><b>{wr}%</b></div>
-            </div>
-            {W.length ? <div className="wk-best">Hari terbaik: <b>{['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][best]}</b> {usdT(days[best], true)}</div> : null}
+          <div className="wkc">
+            <div className="wkc-top"><span>Minggu ini</span><span>{dayName(r.week.from, tz)} – {dayName(end.getTime(), tz)}</span></div>
+            <b className={`wkc-big ${r.week.revenue < 0 ? 'dn' : 'up'}`}>{usdT(r.week.revenue, true)}</b>
+            <div className="wkc-rp">{toIdr(r.week.revenue, rate)}</div>
+            <div className="wkc-sep" />
+            {days.map((v, d) => (
+              <div key={d} className={`wkc-li ${d > today ? 'future' : ''} ${d === today ? 'today' : ''}`}>
+                <span>{['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'][d]}</span>
+                <div className="wkc-bar">{d <= today && Math.abs(v) > 0.005 ? <i className={v > 0 ? 'p' : 'n'} style={{ width: `${(Math.abs(v) / top) * 50}%` }} /> : null}</div>
+                <b className={d > today || Math.abs(v) < 0.005 ? 'mu' : v > 0 ? 'up' : 'dn'}>{d > today ? '—' : usdT(v, true)}</b>
+              </div>
+            ))}
           </div>
         );
       })() : (<>
@@ -112,7 +104,7 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
                 <div className="trk-h"><small>Target bulan ini</small><b>{usdT(target)}</b></div>
                 <div className="trk">
                   <span className="trk-base" /><span className={`trk-fill ${done ? 'good' : 'low'}`} style={{ width: `${rx}%` }} />
-                  <span className="trk-flag" style={{ left: `${tx}%` }}><i /><em>Target</em></span>
+                  <span className="trk-flag" style={{ left: `${tx}%` }}><i /></span>
                   <span className={`trk-dot ${done ? 'good' : 'low'}`} style={{ left: `${rx}%` }} />
                   <span className={`trk-now ${done ? 'good' : 'low'} ${rx > 75 ? 'r' : ''}`} style={{ left: `${rx}%` }}>{usdT(rev)}</span>
                 </div>
