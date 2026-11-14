@@ -430,6 +430,37 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     }
     return ev(plans, 30 + at.length * 7, { random: false });
   }
+  if (kind === 'tebak') {
+    // guessing game in front of the LIVE board: will the next candle be green or red?
+    const who = workers(true).slice(0, 4); if (who.length < 2) return null;
+    const green = Math.random() < 0.5, plans: Record<string, Step[]> = {};
+    who.forEach((id, i) => {
+      const x = 6.6 + i * 1.0, mine = i % 2 === 0;
+      plans[id] = [
+        { act: sp(`ev-tebak-${id}`, 1, x, 2.9, 'ny', 'TEBAK CANDLE', { say: [mine ? 'Hijau pasti!' : 'Merah!', mine ? '#2e9e5b' : '#e5242b'] }), dwell: S(9) },
+        { act: sp(`ev-tebak-${id}`, 1, x, 2.9, 'ny', 'TUNGGU CANDLE'), dwell: S(8) },
+        { act: sp(`ev-tebak-${id}`, 1, x, 2.9, mine === green ? 'py' : 'ny', mine === green ? 'MENANG TEBAKAN' : 'KALAH TEBAKAN', { pose: mine === green ? 'jump' : 'stand', say: mine === green ? ['Yes! Aku benar!', '#2e9e5b'] : i < 2 ? ['Yah… traktir deh', '#1e1f23'] : undefined }), dwell: S(7) },
+      ];
+    });
+    return ev(plans, 26);
+  }
+  if (kind === 'pushup') {
+    // a push-up contest in the lobby, Marcel (or Udin) counting
+    const who = workers().slice(0, 2); if (who.length < 2) return null;
+    const plans: Record<string, Step[]> = {};
+    who.forEach((id, i) => { plans[id] = [{ act: sp(`ev-pushup-${id}`, 2, 6.5 + i * 1.3, 8.6, 'py', 'LOMBA PUSH-UP', { pose: 'squat', say: i === 0 ? ['Ayo, siapa kuat!', '#1e1f23'] : undefined }), dwell: S(10) }, { act: sp(`ev-pushup-${id}`, 2, 6.5 + i * 1.3, 8.6, 'py', 'LOMBA PUSH-UP', { pose: 'stretch' }), dwell: S(3) }, { act: sp(`ev-pushup-${id}`, 2, 6.5 + i * 1.3, 8.6, 'py', 'LOMBA PUSH-UP', { pose: 'squat' }), dwell: S(8) }, { act: sp(`ev-pushup-${id}`, 2, 6.5 + i * 1.3, 8.6, 'py', i === 0 ? 'MENANG PUSH-UP' : 'CAPEK', { pose: i === 0 ? 'jump' : 'stand', say: i === 0 ? ['Juara!', '#2e9e5b'] : ['Hah… hah…', '#1e1f23'] }), dwell: S(6) }]; });
+    const ref = freeFor(ctx, 'bos') ? 'bos' : freeFor(ctx, 'ob') ? 'ob' : null;
+    if (ref) plans[ref] = [{ act: sp(`ev-pushup-${ref}`, 2, 7.15, 7.4, 'py', 'HITUNG PUSH-UP', { say: ['Satu! Dua! Tiga!', '#1e1f23'] }), dwell: S(12) }, { act: sp(`ev-pushup-${ref}`, 2, 7.15, 7.4, 'py', 'HITUNG PUSH-UP', { say: ['…dua puluh!', '#1e1f23'] }), dwell: S(14) }];
+    return ev(plans, 30);
+  }
+  if (kind === 'jajan') {
+    // two traders buy drinks together at the vending machine
+    const who = workers().slice(0, 2); if (who.length < 2) return null;
+    const vend = SPOTS.find((q) => q.id === 'vend')!;
+    const plans: Record<string, Step[]> = {};
+    who.forEach((id, i) => { plans[id] = [{ act: { ...vend, id: `ev-jajan-${id}`, x: vend.x + i * 0.7, label: 'JAJAN BARENG', prop: 'can', say: i === 0 ? ['Aku traktir!', '#2e9e5b'] : undefined }, dwell: S(7) }, { act: { ...vend, id: `ev-jajan-${id}`, x: vend.x + i * 0.7, label: 'NGOBROL', prop: 'can', say: i === 1 ? ['Asik, makasih!', '#2e9e5b'] : undefined }, dwell: S(10) }]; });
+    return ev(plans, 20);
+  }
   if (kind === 'tos' || kind === 'debat' || kind === 'lucu') {
     const who = workers().slice(0, 2); if (who.length < 2) return null;
     const lines: Record<string, Array<[string, string]>> = {
@@ -473,7 +504,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
 /** the cat menu: asks scheduleEvents to start an event right now (res: 'ok' started, 'no' nobody free) */
 const CALL = { kind: '', at: 0, res: '' };
 const any1 = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
-const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6], ['kopi', 1.1], ['tos', 0.9], ['debat', 1], ['lucu', 1], ['tamu', 0.9]];
+const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6], ['kopi', 1.1], ['tos', 0.9], ['debat', 1], ['lucu', 1], ['tamu', 0.9], ['tebak', 1], ['pushup', 0.8], ['jajan', 0.9]];
 /** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
 function scheduleEvents(ctx: EvCtx) {
   const { wall, data, agents } = ctx;
@@ -1512,13 +1543,17 @@ function limb(c: C, x0: number, y0: number, x1: number, y1: number, l1: number, 
 const faceTo = (dx: number, dy: number): Face => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'px' : 'nx') : (dy > 0 ? 'py' : 'ny'));
 
 /** the face of the moment, from real data and what the person is doing */
-type Expr = 'senang' | 'ketawa' | 'sedih' | 'cemas' | 'fokus' | 'kaget' | 'ngantuk' | 'ngomong' | 'biasa';
+type Expr = 'senang' | 'ketawa' | 'sedih' | 'cemas' | 'fokus' | 'kaget' | 'ngantuk' | 'ngomong' | 'cinta' | 'bingung' | 'malu' | 'kesal' | 'biasa';
 function exprOf(p: Person, a: Agent, st: Status, t: number): Expr {
   const L = a.act.label ?? '', walking = a.path.length > 0;
   if (a.act.pose === 'jump' || /SELEBRASI|BONUS|GAJIAN|ULTAH|TIUP LILIN|FOTO/.test(L) || st.tp) return 'ketawa';
   if (/DIMARAHI|SL!/.test(L) || st.sl) return 'sedih';
   if (/LIHAT TV|ALARM|KAGET/.test(L) || (EV.cur?.kind === 'pasar' && L === 'LIHAT TV')) return 'kaget';
   if (/NGANTUK|TIDUR SIANG|REBAHAN/.test(L)) return 'ngantuk';
+  if (/KUCING|PIZZA|KUE|MAKAN|KOPI|DRAKOR/.test(L) && !/BIKIN/.test(L)) return Math.sin(t * 0.5 + hash(p.id) * 4) > 0.3 ? 'cinta' : 'senang';
+  if (/SALAMAN|DIPUJI|TERIMA KASIH/.test(L)) return 'malu';
+  if (/ANTRI|TUNGGU LIFT|NUNGGU/.test(L)) return Math.sin(t * 0.4 + hash(p.id) * 6) > 0 ? 'kesal' : 'biasa';
+  if (/DEBAT|TEBAK|BACA BERITA|ANALISA/.test(L) && Math.sin(t * 0.6 + hash(p.id) * 3) > 0.4) return 'bingung';
   if (a.bubble && Date.now() < a.bubble.until) return 'ngomong';
   if (/GOSIP|NGOBROL|KARAOKE|PIZZA|MAIN|NGOPI|BIKIN KOPI|ELUS KUCING|NONTON/.test(L)) return Math.sin(t * 0.7 + hash(p.id) * 9) > 0.2 ? 'ketawa' : 'senang';
   if (!walking && a.act.id.startsWith('seat-') && st.tag) {
@@ -1594,7 +1629,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const hy = hip - torso - 5.6 + breathe * 0.5 + (typing ? Math.sin(t * 1.7 + hash(p.id) * 9) * 0.22 : 0) + (gesture === 'stretch' ? -0.6 : 0) + (pose === 'sleep' ? 3.5 : pose === 'nap' ? 1.5 : 0) + (prop === 'hp' && !walking ? 0.6 : 0);
   const hx = (pose === 'sleep' ? 2.5 : pose === 'nap' ? -1.5 : 0) + lean * 1.2 + look2 + (anim ? Math.cos(ph - 0.6) * 0.25 * am : 0);
   const R = 6.2;
-  const big = p.id === 'vet', HS = INK ? (big ? 1.5 : 1.3) : big ? 1.6 : 1.2, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
+  const big = p.id === 'vet', HS = INK ? (big ? 1.72 : 1.52) : big ? 1.75 : 1.4, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
   const headOn = () => { c.save(); c.translate(hx, hy + 5 - NECK); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
   if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); if (INK) { c.moveTo(hx - 5.9, hy - 1.2); c.bezierCurveTo(hx - 7.2, hy + 9, hx - 4.2, hy + 10.5, hx, hy + 10.5); c.bezierCurveTo(hx + 4.2, hy + 10.5, hx + 7.2, hy + 9, hx + 5.9, hy - 1.2); c.closePath(); } else c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
@@ -1789,7 +1824,8 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     const xp = drama || angry || shaking ? 'biasa' : exprOf(p, a, st, t);
     const closed = drama && (mood === 'KETAWA' || mood === 'NANGIS');
     for (const ex of [hx - 0.6, hx + 3.2]) {
-      if (xp === 'ketawa' && !closed) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.75; c.beginPath(); c.arc(ex, hy + 1.3, 0.95, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); }
+      if (xp === 'cinta' && !closed) { c.fillStyle = '#e5242b'; c.beginPath(); c.moveTo(ex, hy + 2.2); c.bezierCurveTo(ex - 2.2, hy + 0.6, ex - 1.2, hy - 1, ex, hy + 0.1); c.bezierCurveTo(ex + 1.2, hy - 1, ex + 2.2, hy + 0.6, ex, hy + 2.2); c.fill(); }
+      else if ((xp === 'ketawa' || xp === 'malu') && !closed) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.75; c.beginPath(); c.arc(ex, hy + 1.3, 0.95, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); }
       else if (xp === 'ngantuk' && !closed) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(ex - 1, hy + 1); c.quadraticCurveTo(ex, hy + 1.6, ex + 1, hy + 1); c.stroke(); }
       else if (closed) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.7; c.beginPath(); if (mood === 'KETAWA') c.arc(ex, hy + 1.2, 0.9, Math.PI * 1.1, Math.PI * 1.9); else c.arc(ex, hy + 0.2, 0.9, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); }
       else if (blink) c.fillRect(ex - 0.9, hy + 0.6 + look, 1.8, 0.5); else {
@@ -1809,7 +1845,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
       const up = xp === 'kaget' ? -0.9 : xp === 'senang' || xp === 'ketawa' ? -0.3 : 0;
       for (const ex of [hx - 0.6, hx + 3.2]) {
         const inner = ex < hx ? 1 : -1;          // +1: the inner end is on the right
-        const tilt = xp === 'sedih' || xp === 'cemas' ? 0.6 : xp === 'fokus' ? -0.45 : 0;    // sad: inner ends up; focused: inner ends down
+        const tilt = xp === 'sedih' || xp === 'cemas' || xp === 'malu' ? 0.6 : xp === 'fokus' || xp === 'kesal' ? -0.55 : xp === 'bingung' ? (ex < hx ? 0.5 : -0.5) : 0;    // sad: inner ends up; focused: inner ends down
         const a0 = hy - 1.3 + up + (p.id === 'bos' ? (ex < hx ? -0.3 : 0.3) : 0) + (inner > 0 ? 0 : -tilt), a1 = hy - 1.3 + up + (p.id === 'bos' ? (ex < hx ? 0.3 : -0.3) : 0) + (inner > 0 ? -tilt : 0);
         c.moveTo(ex - 1.2, a0); c.quadraticCurveTo(ex, hy - 1.9 + up, ex + 1.2, a1);
       }
@@ -1833,6 +1869,10 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     } else if (shaking) { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx, hy + 3.6); for (let k = 1; k <= 4; k++) c.lineTo(hx + k * 0.7, hy + 3.6 + (k % 2 ? -0.5 : 0)); c.stroke(); }
     else if (pose === 'jump') { c.fillStyle = '#5a1a1a'; c.beginPath(); c.arc(hx + 1.4, hy + 2.8, 1.3, 0, Math.PI); c.fill(); }
     else if (xp === 'ketawa') { c.fillStyle = '#7a1f1f'; c.beginPath(); c.moveTo(hx - 0.2, hy + 2.6); c.lineTo(hx + 3, hy + 2.6); c.quadraticCurveTo(hx + 1.4, hy + 5.4 + Math.abs(Math.sin(t * 12)) * 0.4, hx - 0.2, hy + 2.6); c.fill(); c.fillStyle = '#ff8a8a'; c.beginPath(); c.arc(hx + 1.4, hy + 3.9, 0.6, 0, 7); c.fill(); }
+    else if (xp === 'cinta') { c.fillStyle = '#7a1f1f'; c.beginPath(); c.arc(hx + 1.4, hy + 3, 1.1, 0, Math.PI); c.fill(); }
+    else if (xp === 'malu') { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx + 0.5, hy + 3.4); c.quadraticCurveTo(hx + 1.4, hy + 4, hx + 2.3, hy + 3.4); c.stroke(); c.fillStyle = 'rgba(255,90,90,.45)'; c.beginPath(); c.ellipse(hx - 1.6, hy + 2.6, 1.9, 1.1, 0, 0, 7); c.ellipse(hx + 4.4, hy + 2.6, 1.9, 1.1, 0, 0, 7); c.fill(); }
+    else if (xp === 'bingung') { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx + 0.4, hy + 3.6); c.lineTo(hx + 2.4, hy + 3.1); c.stroke(); }
+    else if (xp === 'kesal') { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.7; c.beginPath(); c.arc(hx + 1.4, hy + 4.4, 1, Math.PI * 1.2, Math.PI * 1.8); c.stroke(); }
     else if (xp === 'senang') { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.7; c.beginPath(); c.arc(hx + 1.4, hy + 2.6, 1.3, 0.15, Math.PI - 0.15); c.stroke(); }
     else if (xp === 'sedih') { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.65; c.beginPath(); c.arc(hx + 1.4, hy + 4.6, 1.1, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); }
     else if (xp === 'cemas') { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.55; c.beginPath(); c.moveTo(hx + 0.2, hy + 3.6); for (let k = 1; k <= 4; k++) c.lineTo(hx + 0.2 + k * 0.6, hy + 3.6 + (k % 2 ? -0.35 : 0)); c.stroke(); }
@@ -1844,6 +1884,9 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     // little signs next to the head: sweat when worried, sparkles when happy, "!" when surprised, z when sleepy
     if (xp === 'cemas') { const w = (t * 0.8 + hash(p.id)) % 1; c.fillStyle = `rgba(120,190,255,${1 - w * 0.6})`; c.beginPath(); c.ellipse(hx - 4.2, hy - 1 + w * 3, 0.7, 1.1, 0, 0, 7); c.fill(); }
     if (xp === 'ketawa' || (xp === 'senang' && Math.sin(t * 1.3 + hash(p.id) * 7) > 0.6)) for (let k = 0; k < 2; k++) { const w = (t * 0.9 + k * 0.5) % 1, sx2 = hx + 6.5 + k * 1.6, sy2 = hy - 4 - w * 3; c.fillStyle = `rgba(255,210,60,${1 - w})`; c.beginPath(); for (let q = 0; q < 4; q++) { const ang = (q * Math.PI) / 2; c.lineTo(sx2 + Math.cos(ang) * 1.3, sy2 + Math.sin(ang) * 1.3); c.lineTo(sx2 + Math.cos(ang + Math.PI / 4) * 0.4, sy2 + Math.sin(ang + Math.PI / 4) * 0.4); } c.closePath(); c.fill(); }
+    if (xp === 'cinta') for (let k = 0; k < 2; k++) { const w = (t * 0.6 + k * 0.5) % 1, hx2 = hx + 6 + k * 2, hy2 = hy - 4 - w * 6; c.fillStyle = `rgba(229,36,43,${1 - w})`; c.beginPath(); c.moveTo(hx2, hy2 + 1.2); c.bezierCurveTo(hx2 - 1.4, hy2, hx2 - 0.8, hy2 - 1, hx2, hy2 - 0.3); c.bezierCurveTo(hx2 + 0.8, hy2 - 1, hx2 + 1.4, hy2, hx2, hy2 + 1.2); c.fill(); }
+    if (xp === 'bingung') { c.fillStyle = '#4c7dff'; c.font = 'bold 5.5px system-ui, sans-serif'; c.fillText('?', hx + 6, hy - 5 - Math.abs(Math.sin(t * 3)) * 1); }
+    if (xp === 'kesal') { const w = (t * 1.2) % 1; c.fillStyle = `rgba(160,160,170,${0.8 - w * 0.8})`; c.beginPath(); c.arc(hx + 6 + w * 3, hy - 3 - w * 4, 1 + w * 1.4, 0, 7); c.fill(); }
     if (xp === 'kaget') { c.fillStyle = '#e5242b'; c.font = 'bold 6px system-ui, sans-serif'; c.fillText('!', hx + 6, hy - 5 - Math.abs(Math.sin(t * 6)) * 1.2); }
     if (xp === 'ngantuk') for (let k = 0; k < 2; k++) { const w = (t * 0.45 + k / 2) % 1; c.fillStyle = `rgba(90,110,160,${0.9 - w * 0.9})`; c.font = `bold ${2.6 + k}px system-ui, sans-serif`; c.fillText('z', hx + 5 + w * 3 + k, hy - 4 - w * 6); }
     if (p.glasses) { c.strokeStyle = '#1e1f23'; c.lineWidth = 0.6; c.strokeRect(hx - 2.3, hy - 0.6, 3.2, 2.4); c.strokeRect(hx + 1.6, hy - 0.6, 3.2, 2.4); c.beginPath(); c.moveTo(hx + 0.9, hy + 0.2); c.lineTo(hx + 1.6, hy + 0.2); c.stroke(); }
