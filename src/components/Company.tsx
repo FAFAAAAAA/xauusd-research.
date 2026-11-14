@@ -74,7 +74,8 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
         <div className="inv-hero">
           <span className="inv-hero-m">{ymName(m.ym, true).toUpperCase()}</span>
           <small>Tarik bulan ini</small>
-          <b>{usdT(Math.max(0, r.owed.avail))}</b>
+          <b>{usdT(r.owed.allowed)}</b>
+          {r.owed.fee > 0.005 ? <span className="inv-hero-fee">termasuk biaya penarikan {usdT(r.owed.fee)}</span> : null}
           <div className="inv-hero-sub">
             <div><small>Pendapatan</small><b className="inc">{usdT(m.revenue)}</b></div>
             <div><small>Pengembangan modal</small><b>{usdT(Math.max(0, m.net - m.salary))}</b><i>{capPct}% dari laba</i></div>
@@ -134,13 +135,13 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
               </div>
               <div className="inv-formula">
                 <small>TARIK BULAN INI</small>
-                <div>Gaji <em>+</em> Operasional <em>=</em> <b>{usdT(Math.max(0, r.owed.avail))}</b></div>
+                <div>Gaji <em>+</em> Operasional <em>+</em> Biaya tarik <em>=</em> <b>{usdT(r.owed.allowed)}</b></div>
               </div>
               <ul className="inv-notes">
                 <li>Pendapatan = untung/rugi semua trade Binance yang selesai bulan ini (fee sudah termasuk).</li>
                 <li>Operasional ditulis dalam Rupiah, diubah ke dolar dengan kurs otomatis{rate ? ` (± ${idrT(rate)} per $1)` : ''}.</li>
                 <li>Kalau bulan sebelumnya rugi, rugi itu ditutup dulu sebelum ada gaji lagi.</li>
-                <li>Saat menarik dari Binance, tambah ± {usdT(S.wdFee.fixed + (S.wdFee.pct / 100) * Math.max(0, r.owed.avail))} untuk biaya penarikan.</li>
+                <li>Biaya penarikan {usdT(r.owed.fee)} = {S.wdFee.fixed} USDT + {S.wdFee.pct}% (perkiraan biaya jaringan & selisih kurs, sengaja dilebihkan; bisa diubah di pengaturan).</li>
               </ul>
             </div>
           </div>
