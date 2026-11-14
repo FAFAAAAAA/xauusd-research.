@@ -108,7 +108,7 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
                   <span className={`trk-dot ${done ? 'good' : 'low'}`} style={{ left: `${rx}%` }} />
                   <span className={`trk-now ${done ? 'good' : 'low'} ${rx > 75 ? 'r' : ''}`} style={{ left: `${rx}%` }}>{usdT(rev)}</span>
                 </div>
-                <div className="trk-f">{done ? `Sudah lewat target ${usdT(rev - target)}` : `Kurang ${usdT(target - rev)} lagi`}</div>
+                <div className={`trk-f ${rev >= target ? 'pos' : 'neg'}`}>{usdT(rev - target, true)}</div>
               </button>
             );
           })()}

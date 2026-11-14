@@ -1389,3 +1389,4 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .wkc-li b { width: 72px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .wkc-li b.mu { color: var(--mute); font-weight: 600; }
 .wkc-li.future { opacity: .55; }
+.trk-f.pos { color: #4cd98a; font-weight: 800; font-size: 14px; } .trk-f.neg { color: #ff7b7f; font-weight: 800; font-size: 14px; }
