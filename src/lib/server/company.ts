@@ -2,12 +2,12 @@ import type { Db } from './db';
 import * as repo from './repo';
 import { sendTelegram, type FetchLike } from './telegram';
 import type { JournalTrade } from '../core/journal';
-import { DEFAULT_COMPANY, billText, cleanCompany, closableMonths, companyReport, moneyMoves, monthBook, monthlyText, weeklyText, ymOf, tzLocalParts,
+import { DEFAULT_COMPANY, billText, cleanCompany, closableMonths, companyInput, companyReport, moneyMoves, monthBook, monthlyText, weeklyText, ymOf, tzLocalParts,
   type CompanyInput, type CompanySettings, type Fx, type MonthBook } from '../core/company';
 
 /* Company (office accountant) on the server: settings, the Rupiah rate and closed books live in app_settings.
  * The rate comes from free public exchange-rate services, at most every 6 hours; each month keeps its last rate (locked once the month is over). */
-const SET = 'company_settings', FX = 'fx_idr', BOOKS = 'company_books';
+const SET = 'company_settings', FX = 'fx_idr', BOOKS = 'company_books_v2';      // v2: books closed without the MT5 trial
 type Get = (url: string, init?: { signal?: AbortSignal }) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
 
 async function fetchIdr(get: Get): Promise<number | null> {
@@ -38,11 +38,11 @@ export async function companyData(db: Db, now = Date.now(), get: Get = fetch as 
     await repo.setAppSetting(db, FX, fx);
   }
   const books = { ...((v[BOOKS] as Record<string, MonthBook> | undefined) ?? {}) };
-  const inp: CompanyInput = {
+  const inp: CompanyInput = companyInput({
     trades: Array.isArray(v.live_journal) ? (v.live_journal as JournalTrade[]) : [],
     cashflow: { crypto: (v.cashflow_binance as never) ?? [], forex: (v.cashflow_mt5 as never) ?? [] },
     binance: (v.binance_balance as never) ?? null, mt5: (v.mt5_balance as never) ?? null, settings, fx, books, now, tz,
-  };
+  });
   // close the books of every finished month once (its numbers stay as they were)
   const outs = moneyMoves(inp).filter((m) => m.kind === 'out');
   let closed = false;
@@ -52,7 +52,7 @@ export async function companyData(db: Db, now = Date.now(), get: Get = fetch as 
 }
 
 export async function saveCompany(db: Db, raw: unknown) {
-  const s = cleanCompany(raw);
+  const s = cleanCompany(raw && typeof raw === 'object' ? { ...raw, mt5v: 2 } : raw);
   await repo.setAppSetting(db, SET, s);
   return s;
 }

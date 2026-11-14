@@ -20,12 +20,13 @@ export interface CompanySettings {
   paid: Record<string, string[]>;       // cost id → months marked "sudah bayar"
   tg: { monthly: boolean; weekly: boolean; bills: boolean };
   officeBills: boolean;
-  mt5: 'prop' | 'own';                  // prop account: its balance is not the owner's money (only profit / payouts count)
+  mt5: 'off' | 'prop' | 'own';          // off: MT5 is still a trial, left out of the company; prop: only its profit / payouts count; own: its balance is the owner's money
   startBinance: number;                 // Binance balance before the first recorded trade (for the balance-sheet check)
+  mt5v?: 2;                             // set once the owner chose the MT5 mode himself (older saved settings → MT5 off)
 }
 export const DEFAULT_COMPANY: CompanySettings = {
   target: 200, salaryPct: 30, budgetIdr: 0, wdFee: { fixed: 1, pct: 1 }, costs: [], paid: {},
-  tg: { monthly: true, weekly: true, bills: true }, officeBills: true, mt5: 'prop', startBinance: 199.02,
+  tg: { monthly: true, weekly: true, bills: true }, officeBills: true, mt5: 'off', startBinance: 199.02,
 };
 export interface Fx { rate: number | null; at: number; byMonth: Record<string, number> }     // Rupiah per 1 USD
 export interface MonthBook { ym: string; revenue: number; costs: number; fees: number; costIdr: number; rate: number | null; trades: number; tp: number; sl: number }
@@ -57,7 +58,7 @@ export function cleanCompany(raw: unknown): CompanySettings {
     wdFee: { fixed: num(wd.fixed, 0, 1000, d.wdFee.fixed), pct: num(wd.pct, 0, 20, d.wdFee.pct) },
     costs, paid,
     tg: { monthly: tg.monthly !== false, weekly: tg.weekly !== false, bills: tg.bills !== false },
-    officeBills: b.officeBills !== false, mt5: b.mt5 === 'own' ? 'own' : 'prop', startBinance: num(b.startBinance, 0, 1e9, d.startBinance),
+    officeBills: b.officeBills !== false, mt5: b.mt5v === 2 && (b.mt5 === 'own' || b.mt5 === 'prop') ? b.mt5 : 'off', /* saved before 15 Nov (no mt5v) → off */ startBinance: num(b.startBinance, 0, 1e9, d.startBinance), mt5v: b.mt5v === 2 ? 2 : undefined,
   };
 }
 
@@ -127,8 +128,12 @@ export type Move = { id: string; at: number; amount: number; kind: 'in' | 'out';
 export function moneyMoves(inp: Pick<CompanyInput, 'cashflow' | 'settings' | 'now'>): Move[] {
   const out: Move[] = [];
   for (const c of inp.cashflow?.crypto ?? []) if (c && Number.isFinite(c.amount) && c.amount !== 0 && c.at <= inp.now) out.push({ id: c.id, at: c.at, amount: Math.abs(c.amount), kind: c.amount > 0 ? 'in' : 'out', market: 'crypto' });
-  for (const c of inp.cashflow?.forex ?? []) if (c && Number.isFinite(c.amount) && c.amount !== 0 && c.at <= inp.now && (c.amount < 0 || inp.settings.mt5 === 'own')) out.push({ id: c.id, at: c.at, amount: Math.abs(c.amount), kind: c.amount > 0 ? 'in' : 'out', market: 'forex' });
+  if (inp.settings.mt5 !== 'off') for (const c of inp.cashflow?.forex ?? []) if (c && Number.isFinite(c.amount) && c.amount !== 0 && c.at <= inp.now && (c.amount < 0 || inp.settings.mt5 === 'own')) out.push({ id: c.id, at: c.at, amount: Math.abs(c.amount), kind: c.amount > 0 ? 'in' : 'out', market: 'forex' });
   return out.sort((a, b) => a.at - b.at);
+}
+/** the input as the company sees it: MT5 trades left out while MT5 is a trial */
+export function companyInput<T extends CompanyInput>(inp: T): T {
+  return inp.settings.mt5 === 'off' ? { ...inp, trades: inp.trades.filter((t) => !isMt5(t)), mt5: null } : inp;
 }
 /** months whose books can be closed now (first activity … last month) */
 export function closableMonths(inp: CompanyInput): string[] {
@@ -138,7 +143,8 @@ export function closableMonths(inp: CompanyInput): string[] {
   return out;
 }
 /** everything the accountant's report shows */
-export function companyReport(inp: CompanyInput): CompanyReport {
+export function companyReport(inp0: CompanyInput): CompanyReport {
+  const inp = companyInput(inp0);
   const { tz, now, settings: S } = inp;
   const cur = ymOf(now, tz);
   // money in / out: Binance transfers (both ways); MT5: payouts always, deposits only for an own account
@@ -211,7 +217,7 @@ export function companyReport(inp: CompanyInput): CompanyReport {
   const mt5Profit = inp.trades.filter((t) => isMt5(t) && t.result !== 'open' && t.pnl != null).reduce((s, t) => s + Number(t.pnl), 0) - outs.filter((m) => m.market === 'forex').reduce((s, m) => s + m.amount, 0);
   const parts: Array<[string, number]> = [];
   if (bin != null) parts.push(['Binance', bin]);
-  if (S.mt5 === 'own' ? inp.mt5 : inp.trades.some(isMt5)) parts.push([S.mt5 === 'own' ? 'MT5' : 'Laba MT5 belum dicairkan', S.mt5 === 'own' ? inp.mt5!.wallet : mt5Profit]);
+  if (S.mt5 !== 'off' && (S.mt5 === 'own' ? inp.mt5 : inp.trades.some(isMt5))) parts.push([S.mt5 === 'own' ? 'MT5' : 'Laba MT5 belum dicairkan', S.mt5 === 'own' ? inp.mt5!.wallet : mt5Profit]);
   if (advance > 0.005) parts.push(['Kasbon', advance]);
   const assets = parts.reduce((s, [, v]) => s + v, 0);
   // check: what the Binance balance should be from the books

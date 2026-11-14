@@ -177,89 +177,133 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
 /* ---------------- settings (cat menu → Perusahaan) ---------------- */
 const newId = () => Math.random().toString(36).slice(2, 10);
 const parseNum = (s: string) => Number(String(s).replace(/[^0-9.,-]/g, '').replace(/\./g, '').replace(',', '.'));
+const COLORS = ['#5b5bd6', '#e5484d', '#16a35a', '#f2a33a', '#0a84ff', '#bf5af2', '#14b8a6'];
+const colorOf = (id: string) => COLORS[[...id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % COLORS.length];
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+function Stepper({ value, step, min, max, fmt, onChange }: { value: number; step: number; min: number; max: number; fmt: (n: number) => string; onChange: (n: number) => void }) {
+  return (
+    <div className="cs-step">
+      <button type="button" aria-label="Kurangi" onClick={() => onChange(Math.max(min, Math.round((value - step) / step) * step))}>−</button>
+      <b>{fmt(value)}</b>
+      <button type="button" aria-label="Tambah" onClick={() => onChange(Math.min(max, Math.round((value + step) / step) * step))}>+</button>
+    </div>
+  );
+}
+
 export function CompanySettingsView({ now, onDone }: { now: number; onDone: () => void }) {
   const c = useCompany();
   const [s, setS] = useState<CompanySettings>(() => c?.settings ?? DEFAULT_COMPANY);
   const [edit, setEdit] = useState<Cost | null>(null);
+  const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
   useEffect(() => { if (c?.settings) setS(c.settings); }, [c?.settings]);
   const tz = deviceTz(), cur = ymOf(now, tz), rate = c?.fx?.rate ?? null;
-  const save = async (next = s) => { setBusy(true); setErr(''); try { await saveCompany(next); onDone(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
+  const dirty = !!c && JSON.stringify(c.settings) !== JSON.stringify(s);
+  const save = async (next = s, close = false) => { setBusy(true); setErr(''); try { await saveCompany(next); if (close) onDone(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
   const nextDue = (x: Cost) => { for (let i = 0; i < 14; i++) { const ym = addYm(cur, i); if (!costIdrIn(x, ym)) continue; const d = dueAt(x, ym, tz); if (d >= now - 86_400_000) return { ym, d }; } return null; };
-  const unpaid = (x: Cost) => { for (const ym of [addYm(cur, -1), cur, addYm(cur, 1)]) { if (!costIdrIn(x, ym) || (s.paid[x.id] ?? []).includes(ym)) continue; const d = dueAt(x, ym, tz); if (now >= d - 3 * 86_400_000 && d >= x.created - 86_400_000) return ym; } return null; };
-  const kindTxt = (x: Cost) => (x.kind === 'once' ? 'Sekali' : x.kind === 'install' ? `Dicicil ${x.months} bln` : 'Bulanan');
+  const unpaid = (x: Cost) => { for (const ym of [addYm(cur, -1), cur, addYm(cur, 1)]) { if (!costIdrIn(x, ym) || (s.paid[x.id] ?? []).includes(ym)) continue; const d = dueAt(x, ym, tz); if (now >= d - 3 * 86_400_000 && d >= x.created - 86_400_000) return { ym, d }; } return null; };
+  const days = (d: number) => { const n = Math.ceil((d - now) / 86_400_000); return n > 1 ? `${n} hari lagi` : n === 1 ? 'besok' : n === 0 ? 'hari ini' : 'lewat'; };
+  const kindTxt = (x: Cost) => (x.kind === 'once' ? `Sekali · ${ymName(x.start)}` : x.kind === 'install' ? `Cicilan ${x.months} bln · tgl ${x.day}` : `Tiap tanggal ${x.day}`);
+  const perMonth = (x: Cost) => costIdrIn(x, cur);
 
+  /* ----- add / edit one cost ----- */
   if (edit) {
     const e = edit, set = (p: Partial<Cost>) => setEdit({ ...e, ...p });
     const exists = s.costs.some((x) => x.id === e.id);
     const nd = e.idr > 0 ? nextDue(e) : null;
+    const ok = !!e.name.trim() && e.idr > 0;
+    const commit = (next: CompanySettings) => { setS(next); setEdit(null); save(next); };
     return (
-      <div className="co co-set" key="edit">
-        <div className="co-grp">
-          <label className="co-it"><span>Nama</span><input value={e.name} maxLength={40} placeholder="mis. VPS" onChange={(ev) => set({ name: ev.target.value })} /></label>
-          <label className="co-it"><span>Jumlah (Rp)</span><input inputMode="numeric" value={e.idr ? e.idr.toLocaleString('id-ID') : ''} placeholder="320.000" onChange={(ev) => set({ idr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} /></label>
-          {e.idr > 0 && rate ? <div className="co-it sub"><span /><small>± {usdT(e.idr / rate)} (kurs hari ini)</small></div> : null}
+      <div className="co cs" key="edit">
+        <div className="cs-amount">
+          <span>Rp</span>
+          <input inputMode="numeric" autoFocus={!exists} value={e.idr ? e.idr.toLocaleString('id-ID') : ''} placeholder="0" aria-label="Jumlah dalam Rupiah" onChange={(ev) => set({ idr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} />
+          <small>{e.idr > 0 && rate ? `± ${usdT(e.idr / rate)}` : 'Jumlah yang kamu bayar'}</small>
         </div>
+        <div className="cs-card">
+          <label className="cs-field"><span>Nama</span><input value={e.name} maxLength={40} placeholder="mis. VPS, Claude, Internet" onChange={(ev) => set({ name: ev.target.value })} /></label>
+        </div>
+        <p className="cs-sl">Cara bayar</p>
         <div className="co-seg">
           {(['monthly', 'once', 'install'] as const).map((k) => <button type="button" key={k} className={e.kind === k ? 'on' : ''} onClick={() => set({ kind: k })}>{k === 'monthly' ? 'Tiap bulan' : k === 'once' ? 'Sekali' : 'Dicicil'}</button>)}
         </div>
-        <div className="co-grp">
-          {e.kind === 'install' ? <label className="co-it"><span>Berapa bulan</span><input inputMode="numeric" value={e.months} onChange={(ev) => set({ months: Math.max(1, Math.min(120, Math.round(parseNum(ev.target.value) || 1))) })} /></label> : null}
-          <label className="co-it"><span>Tanggal bayar</span><input inputMode="numeric" value={e.day} onChange={(ev) => set({ day: Math.max(1, Math.min(31, Math.round(parseNum(ev.target.value) || 1))) })} /></label>
-          <label className="co-it"><span>Mulai</span><input type="month" value={e.start} onChange={(ev) => set({ start: ev.target.value || e.start })} /></label>
-          {e.kind !== 'once' ? <label className="co-it"><span>Berhenti</span><input type="month" value={e.end ?? ''} onChange={(ev) => set({ end: ev.target.value || null })} /></label> : null}
+        <div className="cs-card">
+          {e.kind === 'install' ? <label className="cs-field"><span>Lama cicilan</span><span className="cs-in"><input inputMode="numeric" value={e.months} onChange={(ev) => set({ months: Math.max(1, Math.min(120, Math.round(parseNum(ev.target.value) || 1))) })} /><i>bulan</i></span></label> : null}
+          {e.kind !== 'once' ? <label className="cs-field"><span>Bayar tiap tanggal</span><span className="cs-in"><input inputMode="numeric" value={e.day} onChange={(ev) => set({ day: Math.max(1, Math.min(31, Math.round(parseNum(ev.target.value) || 1))) })} /></span></label> : null}
+          <label className="cs-field"><span>{e.kind === 'once' ? 'Bulan bayar' : 'Mulai'}</span><input type="month" value={e.start} onChange={(ev) => set({ start: ev.target.value || e.start })} /></label>
+          {e.kind !== 'once' ? <label className="cs-field"><span>Berhenti</span><input type="month" value={e.end ?? ''} onChange={(ev) => set({ end: ev.target.value || null })} /></label> : null}
         </div>
-        {nd ? <div className="co-card co-sliprow"><span className="co-ic out">⏰</span><span className="co-grow"><span className="co-k">Bayar berikutnya</span><b>{dayName(nd.d, tz)} · {Math.max(0, Math.ceil((nd.d - now) / 86_400_000))} hari lagi</b></span></div> : null}
+        {nd ? <p className="cs-note">⏰ Bayar berikutnya <b>{dayName(nd.d, tz)}</b> · {days(nd.d)}</p> : null}
         {err ? <p className="co-warn">{err}</p> : null}
-        <button type="button" className="co-btn" disabled={busy || !e.name.trim() || !(e.idr > 0)} onClick={() => { const next = { ...s, costs: exists ? s.costs.map((x) => (x.id === e.id ? e : x)) : [...s.costs, e] }; setS(next); setEdit(null); save(next); }}>Simpan</button>
+        <button type="button" className="co-btn" disabled={busy || !ok} onClick={() => commit({ ...s, costs: exists ? s.costs.map((x) => (x.id === e.id ? e : x)) : [...s.costs, e] })}>{exists ? 'Simpan' : 'Tambah biaya'}</button>
         <div className="co-row2">
           <button type="button" className="co-btn ghost" onClick={() => setEdit(null)}>Batal</button>
-          {exists ? <button type="button" className="co-btn ghost dn" onClick={() => { const next = { ...s, costs: s.costs.filter((x) => x.id !== e.id) }; setS(next); setEdit(null); save(next); }}>Hapus biaya</button> : null}
+          {exists ? <button type="button" className="co-btn ghost dn" onClick={() => commit({ ...s, costs: s.costs.filter((x) => x.id !== e.id) })}>Hapus</button> : null}
         </div>
       </div>
     );
   }
-  const numIn = (v: number, on: (n: number) => void, suffix = '') => <input inputMode="decimal" defaultValue={String(v)} onBlur={(ev) => { const n = parseNum(ev.target.value); if (Number.isFinite(n)) on(n); }} aria-label={suffix} />;
+
+  /* ----- overview ----- */
+  const totalIdr = s.costs.reduce((a, x) => a + perMonth(x), 0);
+  const upcoming = s.costs.map((x) => ({ x, n: nextDue(x) })).filter((q) => q.n).sort((a, b) => a.n!.d - b.n!.d)[0];
+  const ex = 100, gaji = (ex * s.salaryPct) / 100;
   return (
-    <div className="co co-set" key="list">
-      <div className="co-grp">
-        <label className="co-it"><span>Target laba bersih ($/bulan)</span>{numIn(s.target, (n) => setS({ ...s, target: Math.max(0, n) }), 'target')}</label>
-        <label className="co-it"><span>Gaji (% laba)</span>{numIn(s.salaryPct, (n) => setS({ ...s, salaryPct: Math.max(0, Math.min(100, n)) }), 'gaji')}</label>
-        <label className="co-it"><span>Anggaran biaya (Rp/bulan)</span><input inputMode="numeric" defaultValue={s.budgetIdr ? s.budgetIdr.toLocaleString('id-ID') : ''} placeholder="0" onBlur={(ev) => setS({ ...s, budgetIdr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} /></label>
-        <div className="co-it"><span>Biaya penarikan</span><span className="co-pair">{numIn(s.wdFee.fixed, (n) => setS({ ...s, wdFee: { ...s.wdFee, fixed: Math.max(0, n) } }), 'usdt')}<i>USDT +</i>{numIn(s.wdFee.pct, (n) => setS({ ...s, wdFee: { ...s.wdFee, pct: Math.max(0, Math.min(20, n)) } }), 'persen')}<i>%</i></span></div>
+    <div className="co cs" key="list">
+      <div className="cs-hero">
+        <span className="co-k">Biaya bulan ini</span>
+        <b>{idrT(totalIdr)}</b>
+        <small>{rate && totalIdr ? `± ${usdT(totalIdr / rate)} · ` : ''}{s.costs.length} biaya</small>
+        {upcoming ? <div className="cs-next">Berikutnya: <b>{cap(upcoming.x.name)}</b> · {dayName(upcoming.n!.d, tz)} ({days(upcoming.n!.d)})</div> : null}
       </div>
-      <p className="co-sl">Biaya</p>
-      <div className="co-grp">
-        {s.costs.map((x) => {
+
+      <p className="cs-sl">Tagihan</p>
+      <div className="cs-card">
+        {s.costs.length ? s.costs.map((x) => {
           const due = unpaid(x);
           return (
-            <div key={x.id} className="co-it cost">
-              <button type="button" className="co-grow" onClick={() => setEdit(x)}><b>{x.name}</b><small>{kindTxt(x)} · tgl {x.day} · sejak {ymName(x.start)} {x.start.slice(2, 4)}{x.end ? ` – ${ymName(x.end)} ${x.end.slice(2, 4)}` : ''}</small></button>
-              {due ? <button type="button" className="co-paid" onClick={async () => { try { await setPaid(x.id, due, true); } catch (e) { setErr((e as Error).message); } }}>Sudah bayar</button>
-                : <button type="button" className="co-val" onClick={() => setEdit(x)}>{idrT(x.kind === 'install' ? x.idr / x.months : x.idr)}</button>}
+            <div key={x.id} className="cs-cost">
+              <button type="button" className="cs-cost-main" onClick={() => setEdit(x)}>
+                <span className="cs-av" style={{ background: colorOf(x.id) }}>{cap(x.name).slice(0, 1)}</span>
+                <span className="co-grow"><b>{cap(x.name)}</b><small>{kindTxt(x)}</small></span>
+                <span className="cs-amt">{idrT(x.kind === 'install' ? x.idr / x.months : x.idr)}</span>
+              </button>
+              {due ? <div className="cs-due"><span>Jatuh tempo {days(due.d)}</span><button type="button" onClick={async () => { try { await setPaid(x.id, due.ym, true); } catch (e2) { setErr((e2 as Error).message); } }}>✓ Sudah bayar</button></div> : null}
             </div>
           );
-        })}
-        <button type="button" className="co-add" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah biaya</button>
+        }) : <p className="cs-empty">Belum ada biaya. Tambahkan VPS, langganan, dan lainnya.</p>}
+        <button type="button" className="cs-add" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah biaya</button>
       </div>
-      <p className="co-sl">Pengingat & Telegram</p>
-      <div className="co-grp">
-        {([['officeBills', 'Pengingat tagihan di kantor', '3 hari sebelum sampai sudah bayar'], ['bills', 'Tagihan ke Telegram', 'Hari H · 09:00'], ['monthly', 'Ringkasan bulanan', 'Hari terakhir · 22:00'], ['weekly', 'Ringkasan mingguan', 'Sabtu · 22:00']] as const).map(([k, t, sub]) => {
+
+      <p className="cs-sl">Target & gaji</p>
+      <div className="cs-tiles">
+        <div><span className="co-k">Target laba / bulan</span><Stepper value={s.target} step={50} min={0} max={1e6} fmt={(n) => `$${n.toLocaleString('en-US')}`} onChange={(n) => setS({ ...s, target: n })} /></div>
+        <div><span className="co-k">Gaji dari laba</span><Stepper value={s.salaryPct} step={5} min={0} max={100} fmt={(n) => `${n}%`} onChange={(n) => setS({ ...s, salaryPct: n })} /></div>
+      </div>
+      <p className="cs-note">Contoh: laba $100 → gaji <b>{usdT(gaji)}</b>, <b>{usdT(ex - gaji)}</b> jadi modal.</p>
+
+      <p className="cs-sl">Notifikasi</p>
+      <div className="cs-card">
+        {([['officeBills', '🧾', 'Pengingat tagihan di kantor', '3 hari sebelum jatuh tempo'], ['bills', '✈️', 'Tagihan ke Telegram', 'Hari H, jam 09:00'], ['weekly', '📅', 'Ringkasan mingguan', 'Sabtu, jam 22:00'], ['monthly', '🗓️', 'Laporan bulanan', 'Hari terakhir, jam 22:00']] as const).map(([k, ic, t, sub]) => {
           const on = k === 'officeBills' ? s.officeBills : s.tg[k];
           return (
-            <button type="button" key={k} className="co-it" onClick={() => setS(k === 'officeBills' ? { ...s, officeBills: !on } : { ...s, tg: { ...s.tg, [k]: !on } })}>
-              <span className="co-grow"><b>{t}</b><small>{sub}</small></span><span className={`co-tg ${on ? 'on' : ''}`} aria-checked={on} role="switch" />
+            <button type="button" key={k} className="cs-row" role="switch" aria-checked={on} onClick={() => setS(k === 'officeBills' ? { ...s, officeBills: !on } : { ...s, tg: { ...s.tg, [k]: !on } })}>
+              <span className="cs-ic">{ic}</span><span className="co-grow"><b>{t}</b><small>{sub}</small></span><span className={`co-tg ${on ? 'on' : ''}`} />
             </button>
           );
         })}
       </div>
-      <p className="co-sl">Akun MT5</p>
-      <div className="co-seg">
-        <button type="button" className={s.mt5 === 'prop' ? 'on' : ''} onClick={() => setS({ ...s, mt5: 'prop' })}>Akun prop</button>
-        <button type="button" className={s.mt5 === 'own' ? 'on' : ''} onClick={() => setS({ ...s, mt5: 'own' })}>Uang sendiri</button>
-      </div>
+
+      <button type="button" className="cs-more" onClick={() => setMore((v) => !v)}>{more ? 'Sembunyikan' : 'Pengaturan lain'} <span>{more ? '▴' : '▾'}</span></button>
+      {more ? <div className="cs-card">
+        <label className="cs-field"><span>Batas biaya per bulan<small>0 = tanpa batas</small></span><span className="cs-in"><i>Rp</i><input inputMode="numeric" defaultValue={s.budgetIdr ? s.budgetIdr.toLocaleString('id-ID') : ''} placeholder="0" onBlur={(ev) => setS({ ...s, budgetIdr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} /></span></label>
+        <label className="cs-field"><span>Perkiraan biaya tarik (tetap)<small>Biaya jaringan per penarikan</small></span><span className="cs-in"><input inputMode="decimal" defaultValue={String(s.wdFee.fixed)} onBlur={(ev) => { const n = parseNum(ev.target.value); if (Number.isFinite(n)) setS({ ...s, wdFee: { ...s.wdFee, fixed: Math.max(0, n) } }); }} /><i>USDT</i></span></label>
+        <label className="cs-field"><span>Perkiraan biaya tarik (%)<small>Selisih kurs saat jual ke Rupiah</small></span><span className="cs-in"><input inputMode="decimal" defaultValue={String(s.wdFee.pct)} onBlur={(ev) => { const n = parseNum(ev.target.value); if (Number.isFinite(n)) setS({ ...s, wdFee: { ...s.wdFee, pct: Math.max(0, Math.min(20, n)) } }); }} /><i>%</i></span></label>
+      </div> : null}
+
       {err ? <p className="co-warn">{err}</p> : null}
-      <button type="button" className="co-btn" disabled={busy} onClick={() => save()}>{busy ? 'Menyimpan…' : 'Simpan'}</button>
+      {dirty ? <div className="cs-save"><button type="button" className="co-btn" disabled={busy} onClick={() => save(s, true)}>{busy ? 'Menyimpan…' : 'Simpan perubahan'}</button></div> : null}
     </div>
   );
 }
