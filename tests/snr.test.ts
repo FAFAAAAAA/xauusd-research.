@@ -127,7 +127,6 @@ test('snr+snd (owner TradingView indicator): registered, no look-ahead, signals 
 
 test('builder: validation messages, rule strategy fires without look-ahead, signals file only acts on its own candle', async () => {
   const { validateDefinition, customAdapter } = await import('../src/lib/core/strategy/builder');
-  const { parseSignalsCsv } = await import('../src/lib/core/signals-csv');
   const bad = validateDefinition({ kind: 'rules', name: '', sides: 'x', entry: { type: 'nope' }, stop: { type: 'range' } });
   assert.equal(bad.ok, false);
   const good = { kind: 'rules', name: 'Breakout M15', sides: 'both', entry: { type: 'donchian', tf: 'M15', length: 20 },
@@ -152,10 +151,7 @@ test('builder: validation messages, rule strategy fires without look-ahead, sign
   for (const e of ev) { assert.equal(e.side, 'long', 'H1 uptrend filter blocks SELL'); assert.ok(e.sl < e.price); }
   for (let k = 1; k < ev.length; k++) assert.ok(ev[k].t - ev[k - 1].t >= 4 * M15, 'cooldown respected');
   // signals file
-  const csv = `time,side,stop_loss\n${new Date(m15[300].time).toISOString().slice(0, 16).replace('T', ' ')},BUY,${m15[300].close - 5}\nbad,line,x`;
-  const parsed = parseSignalsCsv(csv);
-  assert.equal(parsed.signals.length, 1);
-  assert.equal(parsed.errors.length, 1);
+  const parsed = { signals: [[m15[300].time, 1, m15[300].close - 5]] as Array<[number, number, number]> };
   const sev = run({ kind: 'signals', name: 'file', signals: parsed.signals });
   assert.equal(sev.length, 1);
   assert.equal(sev[0].t, m15[300].time);

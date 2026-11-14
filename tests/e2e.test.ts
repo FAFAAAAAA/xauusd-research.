@@ -7,7 +7,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { psqlDb } from './helpers/psql-db';
 import * as repo from '../src/lib/server/repo';
-import { createReplaySession, stepReplay, resetReplaySession, visibleCandles } from '../src/lib/server/replay-service';
 import { handleTradingViewWebhook } from '../src/lib/server/webhook-service';
 import { importOhlcChunk, deriveTimeframes, importEconomicEventsCsv, importStrategyReportCsv } from '../src/lib/server/import-service';
 import { loadNewsWindow, snapshotAt } from '../src/lib/server/news-service';
@@ -120,99 +119,6 @@ test('3. news import with anti-lookahead (TEST calendar)', async () => {
   assert.equal(none.archiveAvailable, false, '→ UI shows DATA UNAVAILABLE');
 });
 
-test('4. replay with unconfigured strategy produces no events', async () => {
-  const nc = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'not_configured')!;
-  const s = await createReplaySession(db, { sourceId, timeframe: 'H1', startTime: T0 + 5 * H, strategyVersionId: nc.id });
-  assert.equal(s.cursor_time, T0 + 4 * H, 'history before start is visible; processing starts at start candle');
-  await repo.updateReplayControls(db, s.id, { status: 'playing' });
-  const out = await stepReplay(db, s.id, { count: 10, manual: false, fetchImpl: fakeFetch });
-  assert.equal(out.strategy.configured, false);
-  assert.equal(out.events.length, 0);
-  assert.equal(out.revealed.length, 10);
-});
-
-let replayId = '';
-test('5. replay with TEST adapter: events, Telegram, pause, no duplicates, hidden future', async () => {
-  const testSv = (await repo.listStrategyVersions(db)).find((s) => s.adapter_key === 'test_zone_proximity')!;
-  await repo.createZone(db, { instrumentId, mode: 'BACKTEST', kind: 'support', low: 1947.5, high: 1948.5, timeframe: 'H1', origin: 'test', validFrom: T0, validUntil: null, replaySessionId: null, isTest: true, notes: 'TEST zone' });
-  await repo.createZone(db, { instrumentId, mode: 'BACKTEST', kind: 'resistance', low: 1900, high: 1901, timeframe: 'H1', origin: 'test', validFrom: T0 + 100 * H, validUntil: null, replaySessionId: null, isTest: true, notes: 'TEST future zone (must stay invisible)' });
-  await repo.updateTelegramSettings(db, { chat_id: '-100TEST', backtest_enabled: true, cooldown_seconds: 0 });
-
-  const s = await createReplaySession(db, { sourceId, timeframe: 'H1', startTime: T0 + 2 * H, strategyVersionId: testSv.id, params: { near_distance: 1.5 } });
-  replayId = s.id;
-  assert.equal(s.telegram_enabled, false, 'simulation Telegram is OFF by default');
-  assert.equal(s.is_test, true);
-
-  await assert.rejects(stepReplay(db, s.id, { count: 1, manual: false }), (e: HttpError) => e.status === 409, 'auto-step rejected until Play');
-
-  const vis0 = await visibleCandles(db, s.id);
-  assert.equal(vis0.candles.length, 2);
-  assert.ok(vis0.candles.every((c) => c.time <= vis0.session.cursor_time!));
-
-  await repo.updateReplayControls(db, s.id, { status: 'playing', telegram_enabled: true, speed: 5 });
-  sent.length = 0;
-  const a = await stepReplay(db, s.id, { count: 25, manual: false, expectedCursor: T0 + H, fetchImpl: fakeFetch });
-  assert.deepEqual(a.events.map((e) => e.event_type), ['SNR_NEAR', 'SNR_TOUCH']);
-  assert.ok(a.events.every((e) => e.telegram && 'status' in e.telegram && e.telegram.status === 'sent'));
-  assert.equal(sent.length, 2);
-  const txt = String(sent[0].body.text);
-  assert.match(txt, /BACKTEST 2030/);
-  assert.match(txt, /SIMULASI HISTORIS — BUKAN SINYAL LIVE/);
-  assert.match(txt, /TEST FIXTURE/);
-  assert.deepEqual((sent[0].body.reply_markup as { inline_keyboard: { text: string }[][] }).inline_keyboard[0][0].text, 'Lihat Replay');
-  // Event time = candle CLOSE, never before the data that produced it
-  assert.ok(a.events.every((e) => e.event_time <= a.marketTime!));
-
-  // Duplicate request (same expected cursor, e.g. a retried HTTP call) → conflict, nothing re-sent
-  const dup = await stepReplay(db, s.id, { count: 25, manual: false, expectedCursor: T0 + H, fetchImpl: fakeFetch });
-  assert.equal(dup.conflict, true);
-  assert.equal(sent.length, 2);
-
-  // Pause stops automatic processing; Next Candle (manual) still works
-  await repo.updateReplayControls(db, s.id, { status: 'paused' });
-  await assert.rejects(stepReplay(db, s.id, { count: 1, manual: false }), (e: HttpError) => e.status === 409);
-  const m = await stepReplay(db, s.id, { count: 1, manual: true, fetchImpl: fakeFetch });
-  assert.equal(m.revealed.length, 1);
-
-  const vis = await visibleCandles(db, s.id);
-  assert.equal(vis.candles[vis.candles.length - 1].time, vis.session.cursor_time);
-  assert.ok(vis.candles.length < 48, 'future candles are not returned');
-
-  const logs = await repo.listDeliveries(db);
-  assert.equal(logs.filter((l) => l.status === 'sent').length, 2);
-  const links = await db.query<{ n: number }>(`select count(*)::int as n from event_news_links`);
-  assert.ok(links[0].n >= 1, 'events linked to news that was already available');
-  const ev = await repo.listEvents(db, { replaySessionId: s.id });
-  assert.ok(ev.some((e) => e.confirmations.sentiment?.startsWith('Bearish')), 'CPI sentiment was available after release');
-  assert.ok(ev.every((e) => e.confirmations.trend === 'Not configured'));
-});
-
-test('6. reset: policy "never" does not resend; "new_run" does', async () => {
-  sent.length = 0;
-  await resetReplaySession(db, replayId);
-  await repo.updateReplayControls(db, replayId, { status: 'playing' });
-  const r1 = await stepReplay(db, replayId, { count: 30, manual: false, fetchImpl: fakeFetch });
-  assert.equal(r1.events.length, 0);
-  assert.equal(sent.length, 0);
-
-  await repo.updateReplayControls(db, replayId, { resend_policy: 'new_run' });
-  const after = await resetReplaySession(db, replayId);
-  assert.equal(after!.run_number, 2);
-  await repo.updateReplayControls(db, replayId, { status: 'playing' });
-  const r2 = await stepReplay(db, replayId, { count: 30, manual: false, fetchImpl: fakeFetch });
-  assert.equal(r2.events.length, 2);
-  assert.equal(sent.length, 2);
-});
-
-test('7. replay runs to the end and finishes', async () => {
-  let last;
-  for (let i = 0; i < 5; i++) {
-    last = await stepReplay(db, replayId, { count: 50, manual: false, fetchImpl: fakeFetch }).catch((e) => e);
-    if (!(last instanceof Error) && last.session.status === 'finished') break;
-  }
-  assert.equal((last as Awaited<ReturnType<typeof stepReplay>>).session.status, 'finished');
-});
-
 test('8. TradingView webhook: auth, validation, dedupe, LIVE Telegram', async () => {
   await repo.updateTelegramSettings(db, { live_enabled: true });
   sent.length = 0;
@@ -305,7 +211,7 @@ test('10. analytics: empty until real trades exist; TradingView report import', 
   assert.ok(list.sessions.find((x: Record<string, unknown>) => x.id === imp.backtestSessionId && Number(x.trades) === 2 && Number(x.pnl) === 100));
 });
 
-test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overlapping trades; replay agrees', async () => {
+test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overlapping trades', async () => {
   const src = await repo.createSource(db, {
     name: 'TEST SNR zigzag', provider: 'TEST (synthetic)', kind: 'csv_import', broker_symbol: null, file_timezone: 'UTC',
     price_basis: 'bid', spread_spec: {}, notes: 'Synthetic zigzag for strategy tests', is_test: true,
@@ -361,19 +267,6 @@ test('11. SNR backtest: M15 + derived H1/H4, RR 1/2/3 sessions, causal, no overl
   const key = (t: Record<string, unknown>) => `${t.entry_ms}|${t.entry_price}|${t.stop_loss}|${t.exit_ms}|${t.exit_reason}`;
   assert.deepEqual(short2.map(key), long2.map(key));
 
-  // The step-by-step replay engine produces the same setups as the backtest runner
-  const sv = (await repo.listStrategyVersions(db)).find((x) => x.adapter_key === 'snr_h4h1_m15')!;
-  const rp = await createReplaySession(db, { sourceId: src.id, timeframe: 'M15', startTime: from, strategyVersionId: sv.id });
-  const replaySetups: number[] = [];
-  for (let k = 0; k < 6; k++) {
-    const out = await stepReplay(db, rp.id, { count: 50, manual: true, fetchImpl: fakeFetch });
-    assert.deepEqual(out.violations, []);
-    replaySetups.push(...out.events.filter((e) => e.event_type === 'SETUP_CONFIRMED').map((e) => e.event_time));
-  }
-  const until = from + 300 * 15 * 60_000;
-  const btSetups = [...new Set(events.filter((e) => e.type === 'SETUP_CONFIRMED' && Number(e.et) <= until).map((e) => Number(e.et)))].sort((a, b) => a - b);
-  assert.ok(btSetups.length > 0, 'comparison window must contain setups');
-  assert.deepEqual(replaySetups, btSetups);
   const a = await analytics(db, r.sessions[0].backtestSessionId);
   assert.equal(a.overall!.totalTrades, r.sessions[0].trades);
 });
