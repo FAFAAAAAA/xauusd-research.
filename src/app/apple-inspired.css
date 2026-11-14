@@ -1198,3 +1198,4 @@ body:has(.office-home)::after { display: none; }
 .cs-amount input:focus { outline: none; }
 .cs-amount small { display: block; font-size: 13px; color: var(--mute); margin-top: 2px; }
 .cs-save { position: sticky; bottom: 0; padding: 12px 0 calc(4px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg, #f5f5f7) 30%); }
+.cs-tiles.one { grid-template-columns: 1fr; }

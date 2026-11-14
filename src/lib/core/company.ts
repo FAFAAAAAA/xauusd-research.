@@ -261,7 +261,6 @@ export function monthlyText(r: CompanyReport, s: CompanySettings): string {
   const lines = [
     `🏢 <b>Laporan perusahaan ${ymName(c.ym, true)}</b>`, '',
     `Pendapatan: ${usdT(c.revenue, true)}`, `Biaya: ${usdT(-(c.costs + c.fees))}`, `<b>Laba bersih: ${usdT(c.net, true)}</b> ${toIdr(c.net, r.rate)}`,
-    s.target > 0 ? `Target ${usdT(s.target)}: ${c.net >= s.target ? '✅ tercapai' : `${Math.max(0, Math.round((c.net / s.target) * 100))}%`}` : '',
     '', `Gaji ${s.salaryPct}%: <b>${usdT(c.salary)}</b> ${toIdr(c.salary, r.rate)}`, `Tambah modal: ${usdT(c.capital, true)}`,
     `Boleh ditarik: <b>${usdT(o.allowed)}</b> ${toIdr(o.allowed, r.rate)}`, o.advance > 0.005 ? `Kasbon: ${usdT(o.advance)}` : '',
   ];

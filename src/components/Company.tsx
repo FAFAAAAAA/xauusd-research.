@@ -77,10 +77,6 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
           <div className="co-k">Laba bersih</div>
           <div className={`co-big ${cls(m.net)}`}>{usdT(m.net, true)}</div>
           <div className="co-rp">{toIdr(m.net, rate)}</div>
-          {S.target > 0 ? <>
-            <div className="co-bar"><i style={{ width: `${Math.max(0, Math.min(100, (m.net / S.target) * 100))}%` }} /></div>
-            <div className="co-barl"><span>Target {usdT(S.target)}</span><span>{Math.max(0, Math.round((m.net / S.target) * 100))}%</span></div>
-          </> : null}
         </div>
         <div className="co-tiles">
           <div><span className="co-k">Pendapatan</span><b className={cls(m.revenue)}>{usdT(m.revenue)}</b></div>
@@ -276,9 +272,8 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
         <button type="button" className="cs-add" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah biaya</button>
       </div>
 
-      <p className="cs-sl">Target & gaji</p>
-      <div className="cs-tiles">
-        <div><span className="co-k">Target laba / bulan</span><Stepper value={s.target} step={50} min={0} max={1e6} fmt={(n) => `$${n.toLocaleString('en-US')}`} onChange={(n) => setS({ ...s, target: n })} /></div>
+      <p className="cs-sl">Gaji</p>
+      <div className="cs-tiles one">
         <div><span className="co-k">Gaji dari laba</span><Stepper value={s.salaryPct} step={5} min={0} max={100} fmt={(n) => `${n}%`} onChange={(n) => setS({ ...s, salaryPct: n })} /></div>
       </div>
       <p className="cs-note">Contoh: laba $100 → gaji <b>{usdT(gaji)}</b>, <b>{usdT(ex - gaji)}</b> jadi modal.</p>
