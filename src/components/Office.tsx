@@ -1148,7 +1148,7 @@ function drawStatic(c: C, night: boolean, room: number) {
 }
 
 /* ---------- furniture ---------- */
-type Item = { x0: number; y0: number; x1: number; y1: number; draw: (c: C, t: number) => void };
+type Item = { x0: number; y0: number; x1: number; y1: number; draw: (c: C, t: number) => void; anim?: (c: C, t: number) => void };   // anim: the moving part, drawn every frame over a cached sprite
 type ScreenMode = 'off' | 'idle' | 'pos';
 const MODES: Record<string, ScreenMode> = {};
 const BUSY: Record<string, boolean> = {};
@@ -1271,11 +1271,15 @@ function windowDesk(y0: number, id: string): Item {
       for (const [ya, yb] of [[y0 + 0.1, y0 + 0.62], [y0 + 0.68, y0 + 1.2]]) {
         box(c, x0 + 0.18, (ya + yb) / 2 - 0.05, 0.1, 0.1, 17.2, 4, '#1e1f23');
         box(c, x0 + 0.24, ya, 0.07, yb - ya, 20, 12, '#1e1f23', '#141518', '#1e1f23');
-        const A = ya + 0.04, B = yb - 0.04;
-        screenPlane(c, (u, z) => iso(x0 + 0.315, A + u * (B - A), 21 + z * 10), MODES[id] ?? 'idle', t, Math.floor(y0 * 10 + ya * 3));
       }
       box(c, x0 + 0.42, y0 + 0.35, 0.2, 0.6, 17.2, 0.8, '#e3e3e1');
       cyl(c, x0 + 0.55, y0 + 1.15, 17.2, 0.05, 3, '#f2c230', '#d9a91c');
+    },
+    anim: (c, t) => {
+      for (const [ya, yb] of [[y0 + 0.1, y0 + 0.62], [y0 + 0.68, y0 + 1.2]]) {
+        const A = ya + 0.04, B = yb - 0.04;
+        screenPlane(c, (u, z) => iso(x0 + 0.315, A + u * (B - A), 21 + z * 10), MODES[id] ?? 'idle', t, Math.floor(y0 * 10 + ya * 3));
+      }
       if (id === 'tg' && MODES.tgSend === 'pos') for (let k = 0; k < 3; k++) {
         const ph = (t * 0.55 + k / 3) % 1, [px, py] = iso(x0 + 0.3, y0 + 0.6 - ph * 0.6, 32 + ph * 34);
         c.globalAlpha = 1 - ph; c.fillStyle = '#5ec2f2'; c.beginPath(); c.moveTo(px, py); c.lineTo(px + 6, py - 3); c.lineTo(px + 1.5, py + 2); c.closePath(); c.fill(); c.globalAlpha = 1;
@@ -1285,6 +1289,7 @@ function windowDesk(y0: number, id: string): Item {
 }
 function clusterDesk(y0: number, north: string, south: string): Item {
   const x0 = 1.3, w = 1.8, d = 1.4, ym = y0 + d / 2;
+  const pairs: Array<[number, number]> = [[x0 + 0.14, x0 + 0.86], [x0 + 0.94, x0 + 1.66]];
   return {
     x0, y0, x1: x0 + w, y1: y0 + d, draw: (c, t) => {
       shadow(c, x0, y0, w, d);
@@ -1293,7 +1298,6 @@ function clusterDesk(y0: number, north: string, south: string): Item {
       box(c, x0 + w - 0.66, ym + 0.08, 0.5, 0.55, 0, 15, '#24252a', '#1b1c20', '#2d2e34');
       if (THEME.paint) box(c, x0, y0, w, d, 15, 2.2, '#d9ac7a', '#a8774c', '#bf8d5f'); else box(c, x0, y0, w, d, 15, 2.2, '#f7f7f5', '#d6d5d1', '#e7e6e2');
       box(c, x0 + 0.06, ym - 0.03, w - 0.12, 0.06, 17.2, 6, '#d8cfc2', '#bfb6a9', '#cbc2b5');
-      const pairs: Array<[number, number]> = [[x0 + 0.14, x0 + 0.86], [x0 + 0.94, x0 + 1.66]];
       for (const [xa, xb] of pairs) {      // north trader's monitors (we see their backs)
         box(c, (xa + xb) / 2 - 0.05, ym - 0.32, 0.1, 0.1, 17.2, 4, '#1e1f23');
         box(c, xa, ym - 0.24, xb - xa, 0.08, 20, 12, '#2a2b30', '#33343a', '#2a2b30');
@@ -1301,14 +1305,18 @@ function clusterDesk(y0: number, north: string, south: string): Item {
       for (const [xa, xb] of pairs) {      // south trader's monitors (screens towards us)
         box(c, (xa + xb) / 2 - 0.05, ym + 0.2, 0.1, 0.1, 17.2, 4, '#1e1f23');
         box(c, xa, ym + 0.12, xb - xa, 0.07, 20, 12, '#1e1f23', '#141518', '#1e1f23');
-        const A = xa + 0.04, B = xb - 0.04;
-        screenPlane(c, (u, z) => iso(A + u * (B - A), ym + 0.195, 21 + z * 10), MODES[south] ?? 'idle', t, Math.floor(y0 * 10 + xa * 3));
       }
       void north;
       box(c, x0 + 0.6, y0 + 0.12, 0.6, 0.2, 17.2, 0.8, '#e3e3e1');
       box(c, x0 + 0.6, y0 + d - 0.32, 0.6, 0.2, 17.2, 0.8, '#e3e3e1');
       cyl(c, x0 + 0.25, y0 + 0.22, 17.2, 0.05, 3, '#ffffff', '#eeeeee');
       cyl(c, x0 + w - 0.25, y0 + d - 0.22, 17.2, 0.05, 3, '#f2c230', '#d9a91c');
+    },
+    anim: (c, t) => {
+      for (const [xa, xb] of pairs) {
+        const A = xa + 0.04, B = xb - 0.04;
+        screenPlane(c, (u, z) => iso(A + u * (B - A), ym + 0.195, 21 + z * 10), MODES[south] ?? 'idle', t, Math.floor(y0 * 10 + xa * 3));
+      }
     },
   };
 }
@@ -1459,6 +1467,7 @@ function baseItems(): Item[] {
 const moved = (it: Item, dx: number, dy: number): Item => ({
   x0: it.x0 + dx, y0: it.y0 + dy, x1: it.x1 + dx, y1: it.y1 + dy,
   draw: (c, t) => { c.save(); c.translate((dx - dy) * TW, (dx + dy) * TH); it.draw(c, t); c.restore(); },
+  ...(it.anim ? { anim: (c: C, t: number) => { c.save(); c.translate((dx - dy) * TW, (dx + dy) * TH); it.anim!(c, t); c.restore(); } } : {}),
 });
 const near = (it: Item, x: number, y: number) => Math.abs(it.x0 - x) < 0.06 && Math.abs(it.y0 - y) < 0.06;
 /** the three rooms: 0 = boss office (top), 1 = trading floor (middle), 2 = lobby / pantry / gym / lounge (bottom) */
@@ -2576,14 +2585,14 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const cv = ref.current, box0 = wrap.current; if (!cv || !box0) return;
     const c = cv.getContext('2d'); if (!c) return;
     let bgV: { z: number; tx: number; ty: number } | null = null, bgM = 0, bgW = 0, bgH = 0, lastView = '', viewMoved = 0;
-    let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true;
+    let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true, sprView = '';
     loadPhoto(() => { bgKey = ''; });
     const agents: Record<string, Agent> = {}; AGENTS = agents;
     let evAt = 0, mopAt = 0, shooAt = 0, skyCol = '';
     const cat: Cat = { room: 1, x: 7.5, y: 5.1, z: 0, vx: 0, vy: 0, dx: 1, dy: 0, path: [], spot: CAT_SPOTS[6], mode: 'sleep', until: Date.now() + 8000, hidden: 0, pending: null, hop: null, meow: 0 };
     CATREF = cat;
     const resize = () => {
-      const w = box0.clientWidth || W; dpr = THEME.pixel ? 1 : Math.min(3, window.devicePixelRatio || 1); cv.style.imageRendering = THEME.pixel ? 'pixelated' : '';
+      const w = box0.clientWidth || W; dpr = THEME.pixel ? 1 : Math.min(PERF.dprCap, window.devicePixelRatio || 1); cv.style.imageRendering = THEME.pixel ? 'pixelated' : '';
       const h = fullRef.current ? box0.clientHeight || w * TOTAL / W : w * TOTAL / W;
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); k = cv.width / W; css = w / W; bgKey = '';
       const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.12, (LH / TOTAL) * 0.99) : Math.min(1, LH / TOTAL);
@@ -2599,6 +2608,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       raf = requestAnimationFrame(frame);
       if (document.visibilityState !== 'visible') { last = tm; return; }
       const dt = Math.min(0.05, (tm - last) / 1000); last = tm;
+      SPR.built = 0;
+      // frame-rate watch: after a warm-up, if the last ~2 s averaged clearly under 60 fps at 3x, render at 2x instead
+      if (!PERF.since) PERF.since = tm + 4000;
+      if (tm > PERF.since && dt < 0.05) { PERF.n++; PERF.sum += dt; if (PERF.n >= 120) { const avg = PERF.sum / PERF.n; PERF.n = 0; PERF.sum = 0; if (avg > 0.0195 && dpr > 2 && PERF.dprCap > 2) { PERF.dprCap = 2; resize(); } } }
+      if (SPR.src !== items) { SPR.src = items; SPR.all = items.flat(); for (const it of SPR.all) STATIC_ITEMS.add(it); }
+      recheckSprites(tm / 1000, Date.now());
+      { const v = view.current, vk = `${v.z}:${v.tx}:${v.ty}:${k}`; if (vk !== sprView) { sprView = vk; SPR.moving = Date.now(); } }
       const t = tm / 1000, wall = Date.now(), S0 = stRef.current;
       const S: Record<string, Status> = { ...S0, ...(EV.cur?.courier && wall < EV.cur.until ? { kurir: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}), ...(EV.cur?.guest && wall < EV.cur.until ? { tamu: { label: 'TAMU', color: '#f2c230', sleep: false, tag: null } } : {}) };
       CAL = dataRef.current.cal ?? [];
@@ -2762,8 +2778,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (SHAPE === 'rooftop') { b.save(); b.translate(0, TOPM - RH); drawRoofDeck(b, nightNow); b.restore(); }
         bgKey = base; bgV = { z: V.z, tx: V.tx, ty: V.ty };
       }
-      c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = skyTop(nightNow); c.fillRect(0, 0, cv.width, cv.height);
-      if (bg && bgV) { const s2 = V.z / bgV.z; c.drawImage(bg, k * V.tx - s2 * (bgM + k * bgV.tx), k * V.ty - s2 * (bgM + k * bgV.ty), bgW * s2, bgH * s2); }
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      { // the background picture (sky + building) normally covers the whole canvas: only paint the flat sky where it does not
+        const s2 = bg && bgV ? V.z / bgV.z : 0, bx = bgV ? k * V.tx - s2 * (bgM + k * bgV.tx) : 0, by = bgV ? k * V.ty - s2 * (bgM + k * bgV.ty) : 0;
+        const covers = !!bg && !!bgV && bx <= 0 && by <= 0 && bx + bgW * s2 >= cv.width && by + bgH * s2 >= cv.height;
+        if (!covers) { c.fillStyle = skyTop(nightNow); c.fillRect(0, 0, cv.width, cv.height); }
+        if (bg && bgV) c.drawImage(bg, bx, by, bgW * s2, bgH * s2);
+      }
       if (nightNow && fireworksOn(wall)) { c.setTransform(k * V.z, 0, 0, k * V.z, k * V.tx, k * V.ty); drawFireworks(c, t); c.setTransform(1, 0, 0, 1, 0, 0); }
       // the top edge of the screen fades into one flat sky colour, and the phone's status bar gets exactly that colour: no visible edge under the clock
       if (fullRef.current) {
@@ -2828,7 +2849,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
             if (wall < cat.meow) { const [mx, my] = iso(cat.x, cat.y, cat.z); cc.font = '800 5px system-ui, sans-serif'; cc.textAlign = 'center'; cc.fillStyle = '#ffffff'; cc.strokeStyle = 'rgba(30,31,35,.8)'; cc.lineWidth = 1.6; const mt = cat.meowText ?? 'meong~'; cc.strokeText(mt, mx, my - 14); cc.fillText(mt, mx, my - 14); cc.textAlign = 'start'; }
           } });
         }
-        for (const it of isoSort(list)) it.draw(c, t);
+        { const res = k * V.z, ox = k * (V.tx + roomX(r) * V.z), oy = k * (V.ty + roomY(r) * V.z), settled = wall - SPR.moving > 250;
+          for (const it of isoSort(list)) drawItem(c, it, t, res, ox, oy, settled, wall); }
         for (const p of PEOPLE) {
           const a = agents[p.id], s = S[p.id]; if (!a || a.room !== r || wall < a.hiddenUntil) continue;
           const [sx, sy] = iso(a.x, a.y);
@@ -3419,7 +3441,8 @@ function drawLift(c: C, room: number, pos: number | null, door: number, night: b
   const win = wallB(x0, x1, 0, wz);
   c.save(); c.beginPath(); c.moveTo(win[0][0], win[0][1]); for (const q of win.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
   // the shaft behind the glass
-  const g = c.createLinearGradient(...iso(x0, sy0, wz), ...iso(x0, sy0, 0)); g.addColorStop(0, night ? '#1a1e27' : '#9aa6b2'); g.addColorStop(1, night ? '#262b36' : '#c4ccd4'); c.fillStyle = g; c.fillRect(-2000, -2000, 4000, 4000);
+  const g = c.createLinearGradient(...iso(x0, sy0, wz), ...iso(x0, sy0, 0)); g.addColorStop(0, night ? '#1a1e27' : '#9aa6b2'); g.addColorStop(1, night ? '#262b36' : '#c4ccd4'); c.fillStyle = g;
+  { const xs = win.map((q) => q[0]), ys = win.map((q) => q[1]); c.fillRect(Math.min(...xs) - 1, Math.min(...ys) - 1, Math.max(...xs) - Math.min(...xs) + 2, Math.max(...ys) - Math.min(...ys) + 2); }
   c.strokeStyle = night ? '#3a3f4a' : '#7d8894'; c.lineWidth = 0.8; for (const x of [x0 + 0.2, x1 - 0.2]) { const a = iso(x, sy0, -400), b = iso(x, sy0, 400); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   if (pos != null) {
     const zc = (room - pos) * RH, hC = 54, ix0 = x0 + 0.08, ix1 = x1 - 0.08;
@@ -3443,6 +3466,113 @@ function drawLift(c: C, room: number, pos: number | null, door: number, night: b
   c.strokeStyle = frame; c.lineWidth = 1; c.beginPath(); for (const q of [...win, win[0]]) c.lineTo(q[0], q[1]); c.stroke();
   { const a = iso(x0, 0, 58), b = iso(x1, 0, 58); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
   const [nx, ny] = iso((x0 + x1) / 2, 0, 70); c.fillStyle = '#141518'; c.fillRect(nx - 5, ny - 4, 10, 6); c.fillStyle = '#f2c230'; c.font = '700 4.5px ui-monospace, monospace'; c.textAlign = 'center'; c.fillText(`L${3 - room}`, nx, ny + 0.6); c.textAlign = 'start';
+}
+
+
+/* ---------- static furniture sprites (for a steady 60 fps) ----------
+ * Most furniture looks the same every frame. Each item is first "recorded" on a fake context: that tells whether its
+ * drawing depends on time (then it stays vector), and where it lands (its box). Static items are painted once into a
+ * small bitmap aligned to the device pixels, so pasting it each frame is pixel-exact; items are re-checked in the
+ * background and repainted when they change (night, data on a board…). */
+type SpriteRec = { sig: string; bb: [number, number, number, number]; ok: boolean };
+type Sprite = { sig: string; bb: [number, number, number, number]; cv: HTMLCanvasElement | null; key: string; px: number; py: number; res: number; ox: number; oy: number; dyn: boolean; changes: number[] };
+const STATIC_ITEMS = new WeakSet<Item>();
+const SPRITES = new WeakMap<Item, Sprite>();
+const SPR = { built: 0, moving: 0, check: 0, all: [] as Item[], src: null as Item[][] | null };
+/** canvas resolution cap: 3x on phones; drops to 2x by itself if the device cannot keep ~60 fps at 3x */
+const PERF = { dprCap: 3, n: 0, sum: 0, since: 0 };
+const nf = (v: unknown) => (typeof v === 'number' ? (Math.round(v * 1000) / 1000).toString() : typeof v === 'string' ? v : typeof v === 'boolean' ? String(v) : v && typeof v === 'object' && '__g' in (v as object) ? 'g' + (v as { __g: number }).__g : '?');
+function recordItem(it: Item, t: number): SpriteRec {
+  let m = [1, 0, 0, 1, 0, 0]; const stack: number[][] = []; const sig: string[] = []; let ok = true, lw = 1, maxLw = 1, blur = 0, gid = 0;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const P = (x: number, y: number, r = 0) => {
+    const X = m[0] * x + m[2] * y + m[4], Y = m[1] * x + m[3] * y + m[5], R = r * Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3]));
+    if (!Number.isFinite(X) || !Number.isFinite(Y)) return;
+    x0 = Math.min(x0, X - R); y0 = Math.min(y0, Y - R); x1 = Math.max(x1, X + R); y1 = Math.max(y1, Y + R);
+  };
+  const props: Record<string, unknown> = { lineWidth: 1, globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000', font: '10px sans-serif', textAlign: 'start', shadowBlur: 0 };
+  const grad = (...a: number[]) => { const g = { __g: ++gid, addColorStop: (o: number, col: string) => { sig.push(`cs${gid},${nf(o)},${col}`); } }; sig.push(`grad${gid}(${a.map(nf).join(',')})`); return g; };
+  const fns: Record<string, (...a: never[]) => unknown> = {
+    save: () => { stack.push([...m, lw]); }, restore: () => { const s0 = stack.pop(); if (s0) { m = s0.slice(0, 6); lw = s0[6]; } },
+    translate: (x: number, y: number) => { m = [m[0], m[1], m[2], m[3], m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; },
+    scale: (a: number, b: number) => { m = [m[0] * a, m[1] * a, m[2] * b, m[3] * b, m[4], m[5]]; },
+    rotate: (r: number) => { const c0 = Math.cos(r), s0 = Math.sin(r); m = [m[0] * c0 + m[2] * s0, m[1] * c0 + m[3] * s0, m[2] * c0 - m[0] * s0, m[3] * c0 - m[1] * s0, m[4], m[5]]; },
+    transform: (a: number, b: number, c: number, d: number, e: number, f: number) => { m = [m[0] * a + m[2] * b, m[1] * a + m[3] * b, m[0] * c + m[2] * d, m[1] * c + m[3] * d, m[0] * e + m[2] * f + m[4], m[1] * e + m[3] * f + m[5]]; },
+    setTransform: () => { ok = false; }, resetTransform: () => { ok = false; }, getTransform: () => { ok = false; return new DOMMatrix(); },
+    moveTo: (x: number, y: number) => P(x, y), lineTo: (x: number, y: number) => P(x, y),
+    quadraticCurveTo: (a: number, b: number, x: number, y: number) => { P(a, b); P(x, y); },
+    bezierCurveTo: (a: number, b: number, c: number, d: number, x: number, y: number) => { P(a, b); P(c, d); P(x, y); },
+    arcTo: (a: number, b: number, x: number, y: number) => { P(a, b); P(x, y); },
+    rect: (x: number, y: number, w: number, h: number) => { P(x, y); P(x + w, y + h); P(x + w, y); P(x, y + h); },
+    fillRect: (x: number, y: number, w: number, h: number) => { P(x, y); P(x + w, y + h); P(x + w, y); P(x, y + h); },
+    strokeRect: (x: number, y: number, w: number, h: number) => { P(x, y); P(x + w, y + h); P(x + w, y); P(x, y + h); },
+    roundRect: (x: number, y: number, w: number, h: number) => { P(x, y); P(x + w, y + h); P(x + w, y); P(x, y + h); },
+    arc: (x: number, y: number, r: number) => P(x, y, r), ellipse: (x: number, y: number, rx: number, ry: number) => P(x, y, Math.max(rx, ry)),
+    drawImage: (...a: never[]) => { const n = a as unknown as number[]; const img = a[0] as unknown as { width: number; height: number };
+      if (n.length === 3) { P(n[1], n[2]); P(n[1] + img.width, n[2] + img.height); } else if (n.length === 5) { P(n[1], n[2]); P(n[1] + n[3], n[2] + n[4]); } else { P(n[5], n[6]); P(n[5] + n[7], n[6] + n[8]); }
+      ok = ok && !!img && !(img instanceof HTMLVideoElement); },
+    fillText: () => { ok = false; }, strokeText: () => { ok = false; }, measureText: () => { ok = false; return { width: 0 }; },
+    createLinearGradient: (...a: never[]) => grad(...(a as unknown as number[])), createRadialGradient: (...a: never[]) => grad(...(a as unknown as number[])), createConicGradient: (...a: never[]) => grad(...(a as unknown as number[])),
+    createPattern: () => { ok = false; return null; }, getImageData: () => { ok = false; return null; }, putImageData: () => { ok = false; },
+  };
+  const ctx = new Proxy({}, {
+    get: (_, k: string) => {
+      if (k in fns) return (...a: never[]) => { sig.push(k + '(' + (a as unknown[]).map(nf).join(',') + ')'); return fns[k](...a); };
+      if (k in props) return props[k];
+      if (k === 'canvas') { ok = false; return null; }
+      return (...a: unknown[]) => { sig.push(k + '(' + a.map(nf).join(',') + ')'); };
+    },
+    set: (_, k: string, v) => { props[k] = v; sig.push(k + '=' + nf(v)); if (k === 'lineWidth' && typeof v === 'number') { lw = v; maxLw = Math.max(maxLw, v * Math.hypot(m[0], m[1])); } if (k === 'shadowBlur' && typeof v === 'number') blur = Math.max(blur, v); return true; },
+  }) as unknown as C;
+  try { it.draw(ctx, t); } catch { ok = false; }
+  const pad = 1 + maxLw + blur * 2;
+  return { sig: sig.join(';'), bb: [x0 - pad, y0 - pad, x1 + pad, y1 + pad], ok: ok && x1 > x0 && y1 > y0 };
+}
+/** draw one furniture item: a pixel-exact sprite when it is static and ready, the vector drawing otherwise */
+function drawItem(c: C, it: Item, t: number, res: number, ox: number, oy: number, settled: boolean, wall: number) {
+  pasteItem(c, it, t, res, ox, oy, settled, wall);
+  it.anim?.(c, t);
+}
+function pasteItem(c: C, it: Item, t: number, res: number, ox: number, oy: number, settled: boolean, wall: number) {
+  if (!STATIC_ITEMS.has(it)) { it.draw(c, t); return; }
+  let sp = SPRITES.get(it);
+  if (!sp) {
+    if (SPR.built >= 10) { it.draw(c, t); return; }
+    SPR.built++;
+    const a = recordItem(it, 0.37), b = recordItem(it, 2.91), d = recordItem(it, 7.13);
+    const dyn = !a.ok || a.sig !== b.sig || a.sig !== d.sig || (a.bb[2] - a.bb[0]) * (a.bb[3] - a.bb[1]) > 160_000;
+    sp = { sig: a.sig, bb: a.bb, cv: null, key: '', px: 0, py: 0, res: 0, ox: 0, oy: 0, dyn, changes: [] }; SPRITES.set(it, sp);
+  }
+  if (sp.dyn) { it.draw(c, t); return; }
+  const key = `${res.toFixed(4)}:${(((ox % 1) + 1) % 1).toFixed(2)}:${(((oy % 1) + 1) % 1).toFixed(2)}`;
+  if (sp.key !== key && settled && SPR.built < 10) {          // (re)paint aligned to the device pixel grid of the current view
+    SPR.built++;
+    const [bx0, by0, bx1, by1] = sp.bb, px = Math.floor(bx0 * res + ox), py = Math.floor(by0 * res + oy);
+    const w = Math.ceil(bx1 * res + ox) - px + 1, h = Math.ceil(by1 * res + oy) - py + 1;
+    if (w * h > 3_000_000 || w < 1 || h < 1) { sp.dyn = true; it.draw(c, t); return; }
+    const cv = sp.cv && sp.cv.width >= w && sp.cv.height >= h && sp.cv.width < w * 1.5 ? sp.cv : document.createElement('canvas');
+    if (cv !== sp.cv) { cv.width = w; cv.height = h; }
+    const g = cv.getContext('2d')!; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
+    g.setTransform(res, 0, 0, res, ox - px, oy - py); it.draw(g, t);
+    Object.assign(sp, { cv, key, px, py, res, ox, oy });
+  }
+  if (!sp.cv) { it.draw(c, t); return; }
+  // paste in world units: lands exactly on device pixel (px,py) for the view it was painted for; while pinching it just scales along
+  void wall;
+  c.drawImage(sp.cv, (sp.px - sp.ox) / sp.res, (sp.py - sp.oy) / sp.res, sp.cv.width / sp.res, sp.cv.height / sp.res);
+}
+/** re-check a few static items per frame; repaint the ones whose drawing changed; give up on ones that keep changing */
+function recheckSprites(t: number, wall: number) {
+  const all = SPR.all; if (!all.length) return;
+  for (let n = 0; n < 2; n++) {
+    const it = all[SPR.check++ % all.length], sp = SPRITES.get(it); if (!sp || sp.dyn) continue;
+    const r = recordItem(it, t);
+    if (r.sig !== sp.sig) {
+      sp.changes = sp.changes.filter((x) => wall - x < 30_000); sp.changes.push(wall);
+      if (!r.ok || sp.changes.length > 4) { sp.dyn = true; continue; }
+      sp.sig = r.sig; sp.bb = r.bb; sp.key = '';
+    }
+  }
 }
 
 function isoSort(list: Item[]): Item[] {
