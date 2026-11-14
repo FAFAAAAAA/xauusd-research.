@@ -192,6 +192,8 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
   const [s, setS] = useState<CompanySettings>(() => c?.settings ?? DEFAULT_COMPANY);
   const [edit, setEdit] = useState<Cost | null>(null);
   const [more, setMore] = useState(false);
+  const [bills, setBills] = useState(false);
+  const [pm, setPm] = useState(false);
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
   useEffect(() => { if (c?.settings) setS(c.settings); }, [c?.settings]);
   const tz = deviceTz(), cur = ymOf(now, tz), rate = c?.fx?.rate ?? null;
@@ -241,6 +243,30 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
     );
   }
 
+  /* ----- all bills ----- */
+  if (bills) {
+    return (
+      <div className="co cs" key="bills">
+        <div className="cs-head"><b>Tagihan</b><button type="button" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah</button></div>
+        <div className="cs-card">
+          {s.costs.length ? s.costs.map((x) => {
+            const due = unpaid(x), v = x.kind === 'install' ? x.idr / x.months : x.idr;
+            return (
+              <div key={x.id} className="cs-cost">
+                <button type="button" className="cs-cost-main" onClick={() => setEdit(x)}>
+                  <span className="cs-av" style={{ background: colorOf(x.id) }}>{cap(x.name).slice(0, 1)}</span>
+                  <span className="co-grow"><b>{cap(x.name)}</b><small className={due ? 'warn' : ''}>{due ? `Jatuh tempo ${days(due.d)}` : kindTxt(x)}</small></span>
+                  <span className="cs-amt">{idrT(v)}{rate ? <small>{usdT(v / rate)}</small> : null}</span>
+                </button>
+              </div>
+            );
+          }) : <p className="cs-empty">Belum ada tagihan.</p>}
+        </div>
+        <button type="button" className="co-btn ghost" onClick={() => setBills(false)}>Kembali</button>
+      </div>
+    );
+  }
+
   /* ----- overview ----- */
   const totalIdr = s.costs.reduce((a, x) => a + perMonth(x), 0);
   const upcoming = s.costs.map((x) => ({ x, n: nextDue(x) })).filter((q) => q.n).sort((a, b) => a.n!.d - b.n!.d)[0];
@@ -259,29 +285,22 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
               <small>Operasional / bulan</small>
               <b className="y">{idrT(totalIdr)}</b>
               {usd(totalIdr) ? <i>± {usd(totalIdr)}</i> : null}
-              <div className="wg-chips">
-                {s.costs.map((x) => { const d = unpaid(x); return (
-                  <button type="button" key={x.id} className={d ? 'due' : ''} onClick={() => setEdit(x)}>
-                    <em style={{ background: colorOf(x.id) }} />{cap(x.name)}<span>{usd(perMonth(x)) || idrT(perMonth(x))}</span>
-                  </button>
-                ); })}
-                <button type="button" className="add" aria-label="Tambah operasional" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋</button>
-              </div>
             </div>
-            <div className="wg-t">
+            <div className={`wg-t wg-mod ${pm ? 'open' : ''}`} role="button" tabIndex={0} onClick={() => setPm((v) => !v)}>
               <small>Modal</small>
               <b className="m">{modal}%</b>
               <div className="wg-foot"><i>Gaji {100 - modal}%</i>
-                <span className="wg-pm"><button type="button" aria-label="Kurangi" onClick={() => step(modal - 5)}>−</button><button type="button" aria-label="Tambah" onClick={() => step(modal + 5)}>+</button></span>
+                {pm ? <span className="wg-pm"><button type="button" aria-label="Kurangi" onClick={(ev) => { ev.stopPropagation(); step(modal - 5); }}>−</button><button type="button" aria-label="Tambah" onClick={(ev) => { ev.stopPropagation(); step(modal + 5); }}>+</button></span> : null}
               </div>
             </div>
-            <div className={`wg-t ${dueNow ? 'warn' : ''}`}>
-              <small>Tagihan berikutnya</small>
+            <div className={`wg-t wg-bill ${dueNow ? 'warn' : ''}`} role="button" tabIndex={0} onClick={() => setBills(true)}>
+              <button type="button" className="wg-add" aria-label="Tambah tagihan" onClick={(ev) => { ev.stopPropagation(); setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now }); }}>＋</button>
+              <small>Tagihan</small>
               {nx ? <>
                 <b className="nm">{cap(nx.x.name)}</b>
                 <i>{dayName(nx.d, tz)} · {days(nx.d)}</i>
                 <i className="amt">{usd(perMonth(nx.x)) || idrT(perMonth(nx.x))}</i>
-                {dueNow ? <button type="button" className="wg-paid" onClick={async () => { try { await setPaid(dueNow.x.id, dueNow.d!.ym, true); } catch (e2) { setErr((e2 as Error).message); } }}>✓ Sudah bayar</button> : null}
+                {dueNow ? <button type="button" className="wg-paid" onClick={async (ev) => { ev.stopPropagation(); try { await setPaid(dueNow.x.id, dueNow.d!.ym, true); } catch (e2) { setErr((e2 as Error).message); } }}>✓ Sudah bayar</button> : null}
               </> : <b className="nm">—</b>}
             </div>
             <div className="wg-t wide">
