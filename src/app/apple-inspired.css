@@ -1484,3 +1484,9 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .cs-amt small { display: block; text-align: right; font-size: 12px; color: var(--mute); font-weight: 500; }
 .wg-mod { cursor: pointer; transition: box-shadow .15s; } .wg-mod.open { box-shadow: inset 0 0 0 2px #4c6ef5; }
 .wg-add { width: 28px; height: 28px; font-size: 15px; top: 11px; right: 11px; }
+.wg-sq { position: relative; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; justify-content: flex-end; min-height: 112px; }
+.wg-sq.open { box-shadow: inset 0 0 0 2px var(--ink); }
+.wg-sq > b.nm { font-size: 18px; }
+.wg-ico { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 11px; background: #141416; color: #fff; display: grid; place-items: center; }
+.wg-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wg + .cs-card { margin-top: 10px; }

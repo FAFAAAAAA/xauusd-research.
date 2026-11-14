@@ -194,6 +194,7 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
   const [more, setMore] = useState(false);
   const [bills, setBills] = useState(false);
   const [pm, setPm] = useState(false);
+  const [nt, setNt] = useState(false);
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
   useEffect(() => { if (c?.settings) setS(c.settings); }, [c?.settings]);
   const tz = deviceTz(), cur = ymOf(now, tz), rate = c?.fx?.rate ?? null;
@@ -303,20 +304,26 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
                 {dueNow ? <button type="button" className="wg-paid" onClick={async (ev) => { ev.stopPropagation(); try { await setPaid(dueNow.x.id, dueNow.d!.ym, true); } catch (e2) { setErr((e2 as Error).message); } }}>✓ Sudah bayar</button> : null}
               </> : <b className="nm">—</b>}
             </div>
-            <div className="wg-t wide">
-              <small>Notifikasi</small>
-              <div className="wg-chips lt">
+            <button type="button" className={`wg-t wg-sq ${nt ? 'open' : ''}`} onClick={() => { setNt((v) => !v); setMore(false); }}>
+              <span className="wg-ico"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0" /></svg></span>
+              <small>Notifikasi</small><b className="nm">{[s.officeBills, s.tg.bills, s.tg.weekly, s.tg.monthly].filter(Boolean).length} aktif</b>
+            </button>
+            <button type="button" className={`wg-t wg-sq ${more ? 'open' : ''}`} onClick={() => { setMore((v) => !v); setNt(false); }}>
+              <span className="wg-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></span>
+              <small>Pengaturan</small><b className="nm">Lainnya</b>
+            </button>
+            {nt ? <div className="wg-t wide">
+              <div className="wg-chips lt" style={{ marginTop: 0 }}>
                 {([['officeBills', '🔔', 'Kantor'], ['bills', '✈️', 'Telegram'], ['weekly', '📅', 'Mingguan'], ['monthly', '📊', 'Bulanan']] as const).map(([k, ic, t]) => {
                   const on = k === 'officeBills' ? s.officeBills : s.tg[k];
                   return <button type="button" key={k} role="switch" aria-checked={on} className={on ? 'on' : ''} onClick={() => setS(k === 'officeBills' ? { ...s, officeBills: !on } : { ...s, tg: { ...s.tg, [k]: !on } })}>{ic} {t}</button>;
                 })}
               </div>
-            </div>
+            </div> : null}
           </div>
         );
       })()}
 
-      <button type="button" className="wg-more" onClick={() => setMore((v) => !v)}><span>Pengaturan lain</span><em>{more ? '⌃' : '›'}</em></button>
       {more ? <div className="cs-card">
         <label className="cs-field"><span>Mulai hitung</span><input type="month" value={s.since} onChange={(ev) => ev.target.value && setS({ ...s, since: ev.target.value })} /></label>
         <label className="cs-field"><span>Batas operasional</span><span className="cs-in"><i>Rp</i><input inputMode="numeric" defaultValue={s.budgetIdr ? s.budgetIdr.toLocaleString('id-ID') : ''} placeholder="Bebas" onBlur={(ev) => setS({ ...s, budgetIdr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} /></span></label>
