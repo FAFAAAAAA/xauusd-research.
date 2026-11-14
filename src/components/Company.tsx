@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { call, peek } from './client';
 import type { JournalTrade } from '@/lib/core/journal';
 import {
-  DEFAULT_COMPANY, addYm, companyReport, costIdrIn, dayName, dueAt, idrT, toIdr, usdT, ymName, ymOf,
+  DEFAULT_COMPANY, cleanCompany, addYm, companyReport, costIdrIn, dayName, dueAt, idrT, toIdr, usdT, ymName, ymOf,
   type CashMove, type CompanyReport as Report, type CompanySettings, type Cost, type Fx, type MonthBook,
 } from '@/lib/core/company';
 
@@ -34,7 +34,7 @@ export function useReport(data: CompanyData | null, now: number): Report | null 
   const c = useCompany();
   return useMemo(() => {
     if (!data) return null;
-    try { return companyReport({ ...data, settings: c?.settings ?? DEFAULT_COMPANY, fx: c?.fx ?? null, books: c?.books ?? {}, now, tz: deviceTz() }); } catch { return null; }
+    try { return companyReport({ ...data, settings: cleanCompany(c?.settings ?? DEFAULT_COMPANY), fx: c?.fx ?? null, books: c?.books ?? {}, now, tz: deviceTz() }); } catch { return null; }
     // the minute is enough
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, c, Math.floor(now / 60_000)]);
@@ -47,113 +47,39 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
   const r = useReport(data, now);
   const c = useCompany();
   const [tab, setTab] = useState<'w' | 'm'>('m');
-  const [slip, setSlip] = useState<string | null>(null);
-  const [all, setAll] = useState(false);
   if (!r) return <div className="co"><p className="co-empty">Memuat…</p></div>;
   const tz = deviceTz(), S = c?.settings ?? DEFAULT_COMPANY, m = r.cur, rate = r.rate;
-  const closedRows = r.months.filter((x) => x.closed).slice(-3).reverse();
-  const slipRow = slip ? r.months.find((x) => x.ym === slip) : null;
+  const capPct = Math.round(100 - S.salaryPct);
+  const ops = m.costs + m.fees;
+  const names = S.costs.filter((x) => costIdrIn(x, m.ym) > 0).map((x) => x.name).slice(0, 3).join(', ');
   return (
     <div className="co">
-      <div className="co-top"><h2>{tab === 'm' ? ymName(r.ym, true).split(' ')[0] : 'Minggu ini'}</h2><span className={`co-chip ${tab === 'm' ? 'open' : ''}`}>{tab === 'm' ? '● Buku terbuka' : `${dayName(r.week.from, tz)} – hari ini`}</span></div>
       <div className="co-seg" role="tablist">
         <button type="button" className={tab === 'w' ? 'on' : ''} onClick={() => setTab('w')}>Minggu</button>
         <button type="button" className={tab === 'm' ? 'on' : ''} onClick={() => setTab('m')}>Bulan</button>
       </div>
-
-      {tab === 'w' ? <>
-        <div className="co-card">
-          <div className="co-k">{r.week.revenue < 0 ? 'Rugi minggu ini' : 'Untung minggu ini'}</div>
-          <div className={`co-big ${cls(r.week.revenue)}`}>{usdT(r.week.revenue, true)}</div>
-          <div className="co-rp">{toIdr(r.week.revenue, rate)}</div>
-        </div>
-        <div className="co-tiles">
-          <div><span className="co-k">Trade</span><b>{r.week.trades}</b></div>
-          <div><span className="co-k">TP / SL</span><b><span className="up">{r.week.tp}</span> <i>/</i> <span className="dn">{r.week.sl}</span></b></div>
-        </div>
-      </> : <>
-        {r.noRate ? <p className="co-warn">Kurs Rupiah belum tersedia, biaya belum dihitung.</p> : null}
-        <div className="co-card">
-          <div className="co-k">Laba bersih</div>
-          <div className={`co-big ${cls(m.net)}`}>{usdT(m.net, true)}</div>
-          <div className="co-rp">{toIdr(m.net, rate)}</div>
-        </div>
-        <div className="co-tiles">
-          <div><span className="co-k">Pendapatan</span><b className={cls(m.revenue)}>{usdT(m.revenue)}</b></div>
-          <div><span className="co-k">Biaya</span><b className={m.costs + m.fees > 0 ? 'dn' : ''}>{usdT(m.costs + m.fees)}</b>
-            {r.budget.pct != null ? <><span className="co-mini"><i style={{ width: `${Math.min(100, r.budget.pct)}%`, background: r.budget.pct > 100 ? 'var(--down, #e5484d)' : undefined }} /></span><small>{Math.round(r.budget.pct)}% anggaran</small></> : null}</div>
-          <div><span className="co-k">Gaji · {S.salaryPct}%</span><b>{usdT(m.salary)}</b></div>
-          <div><span className="co-k">Tambah modal</span><b className={cls(m.capital)}>{usdT(m.capital)}</b></div>
-        </div>
-        <div className="co-card co-dark">
-          <div className="co-k">Sisa boleh ditarik</div>
-          <div className="co-big gold">{usdT(r.owed.allowed)}</div>
-          <div className="co-rp">{toIdr(r.owed.allowed, rate)}</div>
-          <div className="co-rows">
-            {r.owed.costs > 0.005 ? <div><span>Biaya</span><b>{usdT(r.owed.costs)}</b></div> : null}
-            <div><span>Gaji bulan ini</span><b>{usdT(r.owed.salaryNow)}</b></div>
-            {r.owed.salaryOld > 0.005 ? <div><span>Gaji belum diambil</span><b>{usdT(r.owed.salaryOld)}</b></div> : null}
-            {r.owed.advance > 0.005 ? <div><span>Kasbon</span><b className="dn">−{usdT(r.owed.advance)}</b></div> : null}
-            {r.owed.fee > 0.005 ? <div><span>Biaya penarikan</span><b>{usdT(r.owed.fee)}</b></div> : null}
-            <div><span>Sudah ditarik bulan ini</span><b>{usdT(r.owed.takenNow)}</b></div>
+      {r.noRate ? <p className="co-warn">Kurs Rupiah belum tersedia, operasional belum dihitung.</p> : null}
+      {tab === 'w' ? (
+        <div className="inv">
+          <div className="inv-top"><div><small>MINGGU INI</small><b>{dayName(r.week.from, tz)} – hari ini</b></div></div>
+          <div className="inv-lines">
+            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: 'var(--up-tint, #e8f6ee)' }}>📈</span><span><b>Pendapatan</b><small>{r.week.trades} trade · {r.week.tp} TP · {r.week.sl} SL</small></span></span><span className={`inv-v ${cls(r.week.revenue)}`}>{usdT(r.week.revenue, true)}</span></div>
           </div>
+          <div className="inv-cut"><i /><i /></div>
+          <div className="inv-total"><small>{r.week.revenue < 0 ? 'RUGI' : 'UNTUNG'}</small><div><b className={cls(r.week.revenue)}>{usdT(r.week.revenue)}</b><span>{toIdr(r.week.revenue, rate)}</span></div></div>
         </div>
-
-        {closedRows[0] ? <>
-          <h3 className="co-h">Slip gaji</h3>
-          <button type="button" className="co-card co-sliprow" onClick={() => setSlip(closedRows[0].ym)}>
-            <span className="co-ic in">💵</span>
-            <span className="co-grow"><span className="co-k">Gaji bersih {ymName(closedRows[0].ym, true).split(' ')[0]}</span><b>{usdT(closedRows[0].salary - closedRows[0].deduct)}</b></span>
-            <span className="co-chip closed">Ditutup ›</span>
-          </button>
-        </> : null}
-
-        {r.moves.length ? <>
-          <h3 className="co-h">Uang masuk & keluar {r.moves.length > 3 ? <button type="button" onClick={() => setAll((v) => !v)}>{all ? 'Ringkas' : 'Semua'}</button> : null}</h3>
-          <div className="co-card co-list">
-            {(all ? r.moves.slice(0, 40) : r.moves.slice(0, 3)).map((x) => (
-              <div key={x.id} className="co-li">
-                <span className={`co-ic ${x.kind === 'in' ? 'in' : 'out'}`}>{x.kind === 'in' ? '↓' : '↑'}</span>
-                <span className="co-grow"><b>{x.kind === 'in' ? 'Deposit' : 'Penarikan'}</b><small>{dayName(x.at, tz)}{x.market === 'forex' ? ' · MT5' : ''}</small></span>
-                <b className={x.kind === 'in' ? 'up' : ''}>{x.kind === 'in' ? '+' : '−'}{usdT(x.amount)}</b>
-              </div>
-            ))}
+      ) : (
+        <div className="inv">
+          <div className="inv-top"><div><small>INVOICE GAJI</small><b>{ymName(m.ym, true)}</b></div><span className="inv-badge">● Berjalan</span></div>
+          <div className="inv-lines">
+            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: 'var(--up-tint, #e8f6ee)' }}>📈</span><span><b>Pendapatan</b><small>Hasil trading</small></span></span><span className={`inv-v ${cls(m.revenue)}`}>{usdT(m.revenue, true)}</span></div>
+            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#fdecec' }}>🧾</span><span><b>Operasional</b><small>{names || 'Belum ada'}</small></span></span><span className="inv-v dn">−{usdT(ops)}</span></div>
+            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#eef1ff' }}>🏦</span><span><b>Pengembangan modal</b><small>{capPct}% dari laba</small></span></span><span className="inv-v mu">−{usdT(Math.max(0, m.net - m.salary))}</span></div>
           </div>
-        </> : null}
-
-        {closedRows.length ? <>
-          <h3 className="co-h">Bulan lalu</h3>
-          <div className="co-months">
-            {closedRows.map((x) => (
-              <button type="button" key={x.ym} onClick={() => setSlip(x.ym)}>
-                <small>{ymName(x.ym).toUpperCase()}</small>
-                <b className={cls(x.net)}>{usdT(x.net, true).replace('.00', '')}</b>
-                <i className={x.unclaimed > 0.005 ? 'warn' : x.salary > 0.005 ? 'up' : ''}>{x.unclaimed > 0.005 ? `${usdT(x.unclaimed)} belum diambil` : x.salary > 0.005 ? '✓ lunas' : 'tidak gajian'}</i>
-              </button>
-            ))}
-          </div>
-        </> : null}
-      </>}
-
-      {slipRow ? (
-        <div className="co-slip-bg" onClick={() => setSlip(null)}>
-          <div className="co-slip" onClick={(e) => e.stopPropagation()}>
-            <div className="co-slip-hd"><small>SLIP GAJI</small><b>{ymName(slipRow.ym, true)}</b></div>
-            <div className="co-rows light">
-              <div><span>Laba bersih</span><b>{usdT(slipRow.net, true)}</b></div>
-              <div><span>Gaji {S.salaryPct}%</span><b>{usdT(slipRow.salary)}</b></div>
-              <div><span>Potongan kasbon</span><b>{usdT(slipRow.deduct)}</b></div>
-            </div>
-            <div className="co-slip-net">
-              <span className="co-k">Gaji bersih</span>
-              <div className="co-big">{usdT(slipRow.salary - slipRow.deduct)}</div>
-              <div className="co-rp">{toIdr(slipRow.salary - slipRow.deduct, slipRow.rate ?? rate)}</div>
-              <span className="co-stamp">BUKU DITUTUP · {ymName(slipRow.ym).toUpperCase()}</span>
-            </div>
-            <button type="button" className="co-btn" onClick={() => setSlip(null)}>Tutup</button>
-          </div>
+          <div className="inv-cut"><i /><i /></div>
+          <div className="inv-total"><small>GAJI</small><div><b className="up">{usdT(m.salary)}</b><span>{toIdr(m.salary, rate)}</span></div></div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -220,7 +146,7 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
         </div>
         {nd ? <p className="cs-note">⏰ Bayar berikutnya <b>{dayName(nd.d, tz)}</b> · {days(nd.d)}</p> : null}
         {err ? <p className="co-warn">{err}</p> : null}
-        <button type="button" className="co-btn" disabled={busy || !ok} onClick={() => commit({ ...s, costs: exists ? s.costs.map((x) => (x.id === e.id ? e : x)) : [...s.costs, e] })}>{exists ? 'Simpan' : 'Tambah biaya'}</button>
+        <button type="button" className="co-btn" disabled={busy || !ok} onClick={() => commit({ ...s, costs: exists ? s.costs.map((x) => (x.id === e.id ? e : x)) : [...s.costs, e] })}>{exists ? 'Simpan' : 'Tambah operasional'}</button>
         <div className="co-row2">
           <button type="button" className="co-btn ghost" onClick={() => setEdit(null)}>Batal</button>
           {exists ? <button type="button" className="co-btn ghost dn" onClick={() => commit({ ...s, costs: s.costs.filter((x) => x.id !== e.id) })}>Hapus</button> : null}
@@ -236,13 +162,13 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
   return (
     <div className="co cs" key="list">
       <div className="cs-hero">
-        <span className="co-k">Biaya bulan ini</span>
+        <span className="co-k">Operasional bulan ini</span>
         <b>{idrT(totalIdr)}</b>
-        <small>{rate && totalIdr ? `± ${usdT(totalIdr / rate)} · ` : ''}{s.costs.length} biaya</small>
+        <small>{rate && totalIdr ? `± ${usdT(totalIdr / rate)} · ` : ''}{s.costs.length} item</small>
         {upcoming ? <div className="cs-next">Berikutnya: <b>{cap(upcoming.x.name)}</b> · {dayName(upcoming.n!.d, tz)} ({days(upcoming.n!.d)})</div> : null}
       </div>
 
-      <p className="cs-sl">Tagihan</p>
+      <p className="cs-sl">Operasional</p>
       <div className="cs-card">
         {s.costs.length ? s.costs.map((x) => {
           const due = unpaid(x);
@@ -256,15 +182,15 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
               {due ? <div className="cs-due"><span>Jatuh tempo {days(due.d)}</span><button type="button" onClick={async () => { try { await setPaid(x.id, due.ym, true); } catch (e2) { setErr((e2 as Error).message); } }}>✓ Sudah bayar</button></div> : null}
             </div>
           );
-        }) : <p className="cs-empty">Belum ada biaya. Tambahkan VPS, langganan, dan lainnya.</p>}
-        <button type="button" className="cs-add" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah biaya</button>
+        }) : <p className="cs-empty">Belum ada operasional. Tambahkan VPS, langganan, dan lainnya.</p>}
+        <button type="button" className="cs-add" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah operasional</button>
       </div>
 
-      <p className="cs-sl">Gaji</p>
+      <p className="cs-sl">Pengembangan modal</p>
       <div className="cs-tiles one">
-        <div><span className="co-k">Gaji dari laba</span><Stepper value={s.salaryPct} step={5} min={0} max={100} fmt={(n) => `${n}%`} onChange={(n) => setS({ ...s, salaryPct: n })} /></div>
+        <div><span className="co-k">Disisihkan dari laba</span><Stepper value={Math.round(100 - s.salaryPct)} step={5} min={0} max={100} fmt={(n) => `${n}%`} onChange={(n) => setS({ ...s, salaryPct: 100 - n })} /></div>
       </div>
-      <p className="cs-note">Contoh: laba $100 → gaji <b>{usdT(gaji)}</b>, <b>{usdT(ex - gaji)}</b> jadi modal.</p>
+      <p className="cs-note">Contoh: laba $100 → <b>{usdT(ex - gaji)}</b> modal, gaji <b>{usdT(gaji)}</b>.</p>
 
       <p className="cs-sl">Notifikasi</p>
       <div className="cs-card">
@@ -281,7 +207,7 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
       <button type="button" className="cs-more" onClick={() => setMore((v) => !v)}>{more ? 'Sembunyikan' : 'Pengaturan lain'} <span>{more ? '▴' : '▾'}</span></button>
       {more ? <div className="cs-card">
         <label className="cs-field"><span>Perusahaan mulai<small>Data sebelum bulan ini tidak dihitung</small></span><input type="month" value={s.since} onChange={(ev) => ev.target.value && setS({ ...s, since: ev.target.value })} /></label>
-        <label className="cs-field"><span>Batas biaya per bulan<small>0 = tanpa batas</small></span><span className="cs-in"><i>Rp</i><input inputMode="numeric" defaultValue={s.budgetIdr ? s.budgetIdr.toLocaleString('id-ID') : ''} placeholder="0" onBlur={(ev) => setS({ ...s, budgetIdr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} /></span></label>
+        <label className="cs-field"><span>Batas operasional per bulan<small>0 = tanpa batas</small></span><span className="cs-in"><i>Rp</i><input inputMode="numeric" defaultValue={s.budgetIdr ? s.budgetIdr.toLocaleString('id-ID') : ''} placeholder="0" onBlur={(ev) => setS({ ...s, budgetIdr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} /></span></label>
         <label className="cs-field"><span>Perkiraan biaya tarik (tetap)<small>Biaya jaringan per penarikan</small></span><span className="cs-in"><input inputMode="decimal" defaultValue={String(s.wdFee.fixed)} onBlur={(ev) => { const n = parseNum(ev.target.value); if (Number.isFinite(n)) setS({ ...s, wdFee: { ...s.wdFee, fixed: Math.max(0, n) } }); }} /><i>USDT</i></span></label>
         <label className="cs-field"><span>Perkiraan biaya tarik (%)<small>Selisih kurs saat jual ke Rupiah</small></span><span className="cs-in"><input inputMode="decimal" defaultValue={String(s.wdFee.pct)} onBlur={(ev) => { const n = parseNum(ev.target.value); if (Number.isFinite(n)) setS({ ...s, wdFee: { ...s.wdFee, pct: Math.max(0, Math.min(20, n)) } }); }} /><i>%</i></span></label>
       </div> : null}

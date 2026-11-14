@@ -269,8 +269,8 @@ export function monthlyText(r: CompanyReport, s: CompanySettings): string {
   const c = r.cur, o = r.owed;
   const lines = [
     `🏢 <b>Laporan perusahaan ${ymName(c.ym, true)}</b>`, '',
-    `Pendapatan: ${usdT(c.revenue, true)}`, `Biaya: ${usdT(-(c.costs + c.fees))}`, `<b>Laba bersih: ${usdT(c.net, true)}</b> ${toIdr(c.net, r.rate)}`,
-    '', `Gaji ${s.salaryPct}%: <b>${usdT(c.salary)}</b> ${toIdr(c.salary, r.rate)}`, `Tambah modal: ${usdT(c.capital, true)}`,
+    `Pendapatan: ${usdT(c.revenue, true)}`, `Operasional: ${usdT(-(c.costs + c.fees))}`, `<b>Laba bersih: ${usdT(c.net, true)}</b> ${toIdr(c.net, r.rate)}`,
+    '', `Gaji ${s.salaryPct}%: <b>${usdT(c.salary)}</b> ${toIdr(c.salary, r.rate)}`, `Pengembangan modal: ${usdT(c.capital, true)}`,
     `Boleh ditarik: <b>${usdT(o.allowed)}</b> ${toIdr(o.allowed, r.rate)}`, o.advance > 0.005 ? `Kasbon: ${usdT(o.advance)}` : '',
   ];
   return lines.filter((x, i, a) => x !== '' || a[i - 1] !== '').join('\n').trim();
