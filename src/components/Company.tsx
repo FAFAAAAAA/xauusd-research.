@@ -220,7 +220,7 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
         <div className="cs-card">
           <label className="cs-field"><span>Nama</span><input value={e.name} maxLength={40} placeholder="mis. VPS, Claude, Internet" onChange={(ev) => set({ name: ev.target.value })} /></label>
         </div>
-        <p className="cs-sl">Cara bayar</p>
+        <div className="cs-head"><b>Cara bayar</b></div>
         <div className="co-seg">
           {(['monthly', 'once', 'install'] as const).map((k) => <button type="button" key={k} className={e.kind === k ? 'on' : ''} onClick={() => set({ kind: k })}>{k === 'monthly' ? 'Tiap bulan' : k === 'once' ? 'Sekali' : 'Dicicil'}</button>)}
         </div>
@@ -230,7 +230,7 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
           <label className="cs-field"><span>{e.kind === 'once' ? 'Bulan bayar' : 'Mulai'}</span><input type="month" value={e.start} onChange={(ev) => set({ start: ev.target.value || e.start })} /></label>
           {e.kind !== 'once' ? <label className="cs-field"><span>Berhenti</span><input type="month" value={e.end ?? ''} onChange={(ev) => set({ end: ev.target.value || null })} /></label> : null}
         </div>
-        {nd ? <p className="cs-note">⏰ Bayar berikutnya <b>{dayName(nd.d, tz)}</b> · {days(nd.d)}</p> : null}
+        {nd ? <p className="cs-note">Bayar berikutnya <b>{dayName(nd.d, tz)}</b> · {days(nd.d)}</p> : null}
         {err ? <p className="co-warn">{err}</p> : null}
         <button type="button" className="co-btn" disabled={busy || !ok} onClick={() => commit({ ...s, costs: exists ? s.costs.map((x) => (x.id === e.id ? e : x)) : [...s.costs, e] })}>{exists ? 'Simpan' : 'Tambah operasional'}</button>
         <div className="co-row2">
@@ -248,13 +248,13 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
   return (
     <div className="co cs" key="list">
       <div className="cs-hero">
-        <span className="co-k">Operasional bulan ini</span>
+        <div className="cs-hero-top"><span>Operasional / bulan</span><em>{s.costs.length} item</em></div>
         <b>{idrT(totalIdr)}</b>
-        <small>{rate && totalIdr ? `± ${usdT(totalIdr / rate)} · ` : ''}{s.costs.length} item</small>
-        {upcoming ? <div className="cs-next">Berikutnya: <b>{cap(upcoming.x.name)}</b> · {dayName(upcoming.n!.d, tz)} ({days(upcoming.n!.d)})</div> : null}
+        {rate && totalIdr ? <small>± {usdT(totalIdr / rate)}</small> : null}
+        {upcoming ? <div className="cs-next"><span className="cs-next-dot" />{cap(upcoming.x.name)}<i>{dayName(upcoming.n!.d, tz)}</i><em>{days(upcoming.n!.d)}</em></div> : null}
       </div>
 
-      <p className="cs-sl">Operasional</p>
+      <div className="cs-head"><b>Operasional</b><button type="button" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah</button></div>
       <div className="cs-card">
         {s.costs.length ? s.costs.map((x) => {
           const due = unpaid(x);
@@ -262,29 +262,33 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
             <div key={x.id} className="cs-cost">
               <button type="button" className="cs-cost-main" onClick={() => setEdit(x)}>
                 <span className="cs-av" style={{ background: colorOf(x.id) }}>{cap(x.name).slice(0, 1)}</span>
-                <span className="co-grow"><b>{cap(x.name)}</b><small>{kindTxt(x)}</small></span>
+                <span className="co-grow"><b>{cap(x.name)}</b><small className={due ? 'warn' : ''}>{due ? `Jatuh tempo ${days(due.d)}` : kindTxt(x)}</small></span>
                 <span className="cs-amt">{idrT(x.kind === 'install' ? x.idr / x.months : x.idr)}</span>
               </button>
-              {due ? <div className="cs-due"><span>Jatuh tempo {days(due.d)}</span><button type="button" onClick={async () => { try { await setPaid(x.id, due.ym, true); } catch (e2) { setErr((e2 as Error).message); } }}>✓ Sudah bayar</button></div> : null}
+              {due ? <button type="button" className="cs-paid" onClick={async () => { try { await setPaid(x.id, due.ym, true); } catch (e2) { setErr((e2 as Error).message); } }}>✓ Sudah bayar</button> : null}
             </div>
           );
-        }) : <p className="cs-empty">Belum ada operasional. Tambahkan VPS, langganan, dan lainnya.</p>}
-        <button type="button" className="cs-add" onClick={() => setEdit({ id: newId(), name: '', idr: 0, kind: 'monthly', months: 12, day: Number(new Date(now).getDate()), start: cur, end: null, created: now })}>＋ Tambah operasional</button>
+        }) : <p className="cs-empty">Belum ada operasional.</p>}
       </div>
 
-      <p className="cs-sl">Pengembangan modal</p>
-      <div className="cs-tiles one">
-        <div><span className="co-k">Disisihkan dari laba</span><Stepper value={Math.round(100 - s.salaryPct)} step={5} min={0} max={100} fmt={(n) => `${n}%`} onChange={(n) => setS({ ...s, salaryPct: 100 - n })} /></div>
+      <div className="cs-head"><b>Pengembangan modal</b></div>
+      <div className="cs-card cs-split">
+        <div className="cs-split-top">
+          <div><small>Modal</small><b className="m">{Math.round(100 - s.salaryPct)}%</b></div>
+          <Stepper value={Math.round(100 - s.salaryPct)} step={5} min={0} max={100} fmt={() => ''} onChange={(n) => setS({ ...s, salaryPct: 100 - n })} />
+          <div className="r"><small>Gaji</small><b className="g">{Math.round(s.salaryPct)}%</b></div>
+        </div>
+        <div className="cs-split-bar"><i style={{ width: `${100 - s.salaryPct}%` }} /></div>
+        <small className="cs-split-ex">Laba $100 → modal {usdT(ex - gaji)} · gaji {usdT(gaji)}</small>
       </div>
-      <p className="cs-note">Contoh: laba $100 → <b>{usdT(ex - gaji)}</b> modal, gaji <b>{usdT(gaji)}</b>.</p>
 
-      <p className="cs-sl">Notifikasi</p>
+      <div className="cs-head"><b>Notifikasi</b></div>
       <div className="cs-card">
-        {([['officeBills', '🧾', 'Pengingat tagihan di kantor', '3 hari sebelum jatuh tempo'], ['bills', '✈️', 'Tagihan ke Telegram', 'Hari H, jam 09:00'], ['weekly', '📅', 'Ringkasan mingguan', 'Sabtu, jam 22:00'], ['monthly', '🗓️', 'Laporan bulanan', 'Hari terakhir, jam 22:00']] as const).map(([k, ic, t, sub]) => {
+        {([['officeBills', 'M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0', 'Pengingat di kantor', 'H-3 jatuh tempo'], ['bills', 'M22 2 11 13M22 2l-7 20-4-9-9-4z', 'Tagihan ke Telegram', 'Hari H · 09:00'], ['weekly', 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4', 'Ringkasan mingguan', 'Sabtu · 22:00'], ['monthly', 'M4 20V10M10 20V4M16 20v-7M22 20H2', 'Laporan bulanan', 'Akhir bulan · 22:00']] as const).map(([k, d, t, sub]) => {
           const on = k === 'officeBills' ? s.officeBills : s.tg[k];
           return (
             <button type="button" key={k} className="cs-row" role="switch" aria-checked={on} onClick={() => setS(k === 'officeBills' ? { ...s, officeBills: !on } : { ...s, tg: { ...s.tg, [k]: !on } })}>
-              <span className="cs-ic">{ic}</span><span className="co-grow"><b>{t}</b><small>{sub}</small></span><span className={`co-tg ${on ? 'on' : ''}`} />
+              <span className="cs-ic"><svg viewBox="0 0 24 24"><path d={d} /></svg></span><span className="co-grow"><b>{t}</b><small>{sub}</small></span><span className={`co-tg ${on ? 'on' : ''}`} />
             </button>
           );
         })}
