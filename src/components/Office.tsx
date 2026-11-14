@@ -335,6 +335,12 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     ];
     return ev(plans, 115, { random: false });
   }
+  if (kind === 'kucing') {
+    // Udin fills the cat's bowl
+    if (!freeFor(ctx, 'ob')) return null;
+    CATCALL.at = wall;
+    return ev({ ob: [{ act: { ...X.bowl, id: 'ev-kucing-ob', say: ['Pus, pus, makan dulu!', '#1e1f23'] }, dwell: S(10) }] }, 14, { random: false });
+  }
   if (kind === 'dadakan') {
     // the owner tapped "Rapat": everybody comes to the meeting table in the boss office right now
     const lead = freeFor(ctx, 'bos', true) ? 'bos' : freeFor(ctx, 'vet', true) ? 'vet' : freeFor(ctx, 'jaga', true) ? 'jaga' : null; if (!lead) return null;   // at night the security guard leads
@@ -413,15 +419,16 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   if (kind === 'kopi') {
     // Udin brings coffee to every trader at the desk
     if (!freeFor(ctx, 'ob')) return null;
-    const at = W5.filter((id) => ctx.agents[id] && ctx.agents[id].act.id.startsWith('seat-') && !ctx.agents[id].path.length && !ctx.S[id]?.sleep);
-    if (at.length < 2) return null;
+    const at = W5.filter((id) => freeFor(ctx, id, true));
+    if (!at.length) return null;
     const plans: Record<string, Step[]> = { ob: [{ act: { ...SPOTS.find((q) => q.id === 'coffee')!, id: 'ev-kopi-buat', label: 'BIKIN KOPI', prop: 'cup', say: ['Kopi buat semua!', '#1e1f23'] }, dwell: S(6) }] };
     for (const id of at) {
       const q = PEOPLE.find((x) => x.id === id)!.seat;
       plans.ob.push({ act: sp(`ev-kopi-${id}`, 1, 3.15, q.y + 0.6, 'nx', 'ANTAR KOPI', { prop: 'cup', say: ['Kopinya, mas/mbak', '#1e1f23'] }), dwell: S(4) });
-      plans[id] = [{ act: { ...q, id: `seat-${id}`, label: 'MINUM KOPI', prop: 'cup', say: [any1(['Makasih Din!', 'Mantap, pas ngantuk', 'Udin terbaik!']), '#2e9e5b'] }, dwell: S(8 + plans.ob.length * 4) }];
+      const k = plans.ob.length;
+      plans[id] = [{ act: { ...q, id: `seat-${id}`, label: 'NUNGGU KOPI' }, dwell: S(12 + k * 6) }, { act: { ...q, id: `seat-${id}`, label: 'MINUM KOPI', prop: 'cup', say: [any1(['Makasih Din!', 'Mantap, pas ngantuk', 'Udin terbaik!']), '#2e9e5b'] }, dwell: S(15) }];
     }
-    return ev(plans, 8 + at.length * 5, { random: false });
+    return ev(plans, 30 + at.length * 7, { random: false });
   }
   if (kind === 'tos' || kind === 'debat' || kind === 'lucu') {
     const who = workers().slice(0, 2); if (who.length < 2) return null;
@@ -463,8 +470,8 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   return null;
 }
-/** the "Rapat" button: asks scheduleEvents for an instant meeting */
-const MEETCALL = { at: 0 };
+/** the cat menu: asks scheduleEvents to start an event right now (res: 'ok' started, 'no' nobody free) */
+const CALL = { kind: '', at: 0, res: '' };
 const any1 = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
 const RANDOM_EVENTS: Array<[string, number]> = [['pizza', 1.2], ['ultah', 0.8], ['foto', 1], ['paket', 1], ['suruh', 1.2], ['catur', 1], ['pingpong', 1.2], ['gosip', 1.3], ['senam', 0.6], ['kopi', 1.1], ['tos', 0.9], ['debat', 1], ['lucu', 1], ['tamu', 0.9]];
 /** starts / ends office events: real-data ones (SL streak, NFP night, payday, bonus) first, otherwise a random one every few minutes */
@@ -488,7 +495,12 @@ function scheduleEvents(ctx: EvCtx) {
   // gold / BTC moving 1% or more in 15 minutes (at most once every 30 minutes)
   if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
   if (h === 23 && m < 4 && EV.done.rekap !== day) want.unshift('rekap');
-  if (MEETCALL.at && wall - MEETCALL.at < 8000) { MEETCALL.at = 0; want.unshift('dadakan'); } else MEETCALL.at = 0;
+  if (CALL.at) {
+    const k = CALL.kind, fresh = wall - CALL.at < 8000; CALL.at = 0;
+    const e = fresh ? makeEvent(k, ctx) : null;
+    if (e) { e.random = false; if (EV.cur) kick(EV.cur.ids); EV.cur = e; kick(e.ids); CALL.res = 'ok'; return; }
+    CALL.res = 'no';
+  }
   if (d.getDay() === 1 && h === 9 && m >= 30 && EV.done.rapat !== day) want.push('rapat');              // Monday weekly meeting
   if (h === 9 && m < 12 && d.getDay() > 0 && d.getDay() < 6 && EV.done.senam !== day) want.push('senam');
   for (const kind of want) {
@@ -1959,6 +1971,7 @@ const liftSpot = (room: number, id: string, up: boolean): Spot => (FLAT
   ? { id: `lift-${id}`, room, x: up ? 0.6 : NX - 0.6, y: DOOR_Y, face: up ? 'nx' : 'px', pose: 'stand', label: 'JALAN' }
   : { id: `lift-${id}`, room, x: lwX(room), y: LIFT_WAIT, face: 'ny', pose: 'stand', label: 'TUNGGU LIFT' });
 
+const fmtDay = (t: number) => { const d = new Date(t); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
   THEME = THEMES[theme] ?? THEMES.modern; setShape(shape); INK = THEME.ink ?? (THEME.paint ? 'rgba(80,45,25,.42)' : null); OL = THEME.pixel ? 'rgba(10,10,18,.9)' : OL; PSV = INK ? 1.62 : PS;
@@ -1986,6 +1999,17 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const [shots, setShots] = useState<Shot[]>([]);
   const [gallery, setGallery] = useState(false);
   const [big, setBig] = useState<Shot | null>(null);
+  // every TP in the journal is in the gallery: a photo when the app was open at that moment, otherwise a card
+  const moments = useMemo(() => {
+    const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
+    const have = new Set(shots.map((x) => x.id));
+    const cards = data.trades.filter((t) => t.result === 'tp' && t.closedAt && !have.has(`tp-${t.id}`)).map((t) => {
+      const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
+      const who = ({ snr: 'Na', btc: 'Ni', v2: 'Nu', nas: 'Ne' } as Record<string, string>)[t.strategy] ?? '';
+      return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, img: '', who, side: t.side };
+    });
+    return [...shots.map((x) => ({ ...x, who: '', side: '' })), ...cards].sort((a, b) => b.at - a.at);
+  }, [shots, data.trades]);
   const GKEY = 'office-galeri';
   useEffect(() => { try { setShots(JSON.parse(localStorage.getItem(GKEY) ?? '[]')); } catch { /* storage off */ } }, []);
   const snap = (id: string, text: string) => {
@@ -2000,13 +2024,35 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const shot: Shot = { id, at: Date.now(), text, img: o.toDataURL('image/jpeg', 0.72) };
       setShots((prev) => {
         if (prev.some((x) => x.id === id)) return prev;
-        const next = [shot, ...prev].slice(0, 24);
+        const next = [shot, ...prev].slice(0, 40);
         for (let n = next.length; n > 0; n--) { try { localStorage.setItem(GKEY, JSON.stringify(next.slice(0, n))); break; } catch { /* full: keep fewer */ } }
         return next;
       });
     } catch { /* drawing not allowed: skip */ }
   };
   const snapRef = useRef(snap); snapRef.current = snap;
+  // ---- the cat menu (top right): one button, many actions ----
+  const [menu, setMenu] = useState(false);
+  const [toast, setToast] = useState('');
+  const say = (t: string) => { setToast(t); window.setTimeout(() => setToast(''), 2600); };
+  const MENU: Array<[string, string, string]> = [
+    ['dadakan', '📢', 'Panggil rapat'], ['galeri', '🖼️', 'Galeri momen'], ['foto', '📷', 'Foto kantor'], ['kopi', '☕', 'Udin bagi kopi'],
+    ['pizza', '🍕', 'Pesan pizza'], ['senam', '🤸', 'Senam bareng'], ['kucing', '🐟', 'Kasih makan kucing'], ['ultah', '🎂', 'Pesta kejutan'], ['trade', '📈', 'Buka Trade'],
+  ];
+  const act = (k: string) => {
+    setMenu(false);
+    if (k === 'galeri') { setGallery(true); return; }
+    if (k === 'foto') { window.setTimeout(() => { snapRef.current(`foto-${Date.now()}`, 'Foto kantor'); say('📷 Tersimpan di Galeri momen'); }, 300); return; }
+    if (k === 'trade') { swipeRef.current?.(); return; }
+    CALL.kind = k; CALL.at = Date.now(); CALL.res = '';
+    const started: Record<string, string> = { dadakan: '📢 Semua dipanggil rapat!', kopi: '☕ Udin bikin kopi buat semua', pizza: '🍕 Pizza dipesan!', senam: '🤸 Ayo senam!', kucing: '🐟 Udin kasih makan kucing', ultah: '🎂 Pesta kejutan!' };
+    let n = 0;
+    const wait = window.setInterval(() => {
+      n++;
+      if (CALL.res === 'ok') { window.clearInterval(wait); say(started[k] ?? 'Oke!'); }
+      else if (CALL.res === 'no' || n > 10) { window.clearInterval(wait); say('Belum bisa, orangnya sibuk/pulang'); }
+    }, 300);
+  };
   useEffect(() => {
     // new take-profits (closed after the page opened, or in the last 15 minutes) get a photo a few seconds later, during the celebration
     const t0 = Date.now() - 15 * 60_000;
@@ -2393,19 +2439,27 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div></>}
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
-      {full ? <div className="office-btns">
-        <button type="button" className="office-meet" onClick={() => setGallery(true)} aria-label="Galeri momen">🖼️ {shots.length || ''}</button>
-        <button type="button" className="office-meet" onClick={() => { MEETCALL.at = Date.now(); }} aria-label="Panggil rapat">📢 Rapat</button>
-      </div> : null}
+      {full ? <>
+        <button type="button" className={'office-cat' + (menu ? ' on' : '')} onClick={() => setMenu((v) => !v)} aria-label="Menu kantor" aria-expanded={menu}>🐱</button>
+        {menu ? <div className="office-menu" data-noswipe>
+          {MENU.map(([k, icon, label]) => (
+            <button type="button" key={k} onClick={() => act(k)}><span>{icon}</span>{label}{k === 'galeri' && moments.length ? <em>{moments.length}</em> : null}</button>
+          ))}
+        </div> : null}
+        {toast ? <div className="office-toast">{toast}</div> : null}
+      </> : null}
       {gallery ? (
         <div className="office-gallery" onClick={() => { setGallery(false); setBig(null); }} data-noswipe>
           <div className="og-box" onClick={(e) => e.stopPropagation()}>
             <div className="og-head"><b>Galeri momen</b>
-              <button type="button" onClick={() => { setGallery(false); setTimeout(() => { snapRef.current(`foto-${Date.now()}`, 'Foto kantor'); setGallery(true); }, 350); }}>📷 Foto sekarang</button>
               <button type="button" onClick={() => { setGallery(false); setBig(null); }} aria-label="Tutup">✕</button></div>
             {big ? <div className="og-big" onClick={() => setBig(null)}><img src={big.img} alt={big.text} /><span>{big.text}</span></div>
-              : shots.length ? <div className="og-grid">{shots.map((x) => <button type="button" key={x.id} onClick={() => setBig(x)}><img src={x.img} alt={x.text} /><span>{x.text}</span></button>)}</div>
-              : <p className="og-empty">Belum ada foto. Setiap kali kena TP, kantor otomatis mengambil foto di sini.</p>}
+              : moments.length ? <>
+                <p className="og-sum">{moments.filter((x) => x.id.startsWith('tp-')).length} TP sejak awal · total {(() => { const v = data.trades.filter((t) => t.result === 'tp').reduce((a, t) => a + Number(t.pnl ?? 0), 0); return `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`; })()}</p>
+                <div className="og-grid">{moments.map((x) => x.img
+                  ? <button type="button" key={x.id} onClick={() => setBig(x)}><img src={x.img} alt={x.text} /><span>{x.text}</span><small>{fmtDay(x.at)}</small></button>
+                  : <div key={x.id} className="og-card"><b>🎉</b><strong>{x.text}</strong><span>{x.who ? `${x.who} · ` : ''}{x.side === 'BUY' ? 'BUY' : x.side === 'SELL' ? 'SELL' : ''}</span><small>{fmtDay(x.at)}</small></div>)}</div>
+              </> : <p className="og-empty">Belum ada TP. Setiap kali kena TP, kantor otomatis mengambil foto di sini.</p>}
           </div>
         </div>
       ) : null}
