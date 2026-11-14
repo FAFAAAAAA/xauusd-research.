@@ -2053,8 +2053,8 @@ function selfie(key: string, title: string, when: string, pid: string): string {
   if (typeof document === 'undefined') return '';
   try {
     const R = (k: string) => hash(`${key}:${k}`);
-    const Wd = 560, Hd = 420, cv = document.createElement('canvas'); cv.width = Wd; cv.height = Hd;
-    const c = cv.getContext('2d')!;
+    const Q = 2.4, Wd = 560, Hd = 420, cv = document.createElement('canvas'); cv.width = Wd * Q; cv.height = Hd * Q;
+    const c = cv.getContext('2d')!; c.scale(Q, Q); c.imageSmoothingQuality = 'high';
     // the scene behind them
     const scene = Math.floor(R('scene') * 4);
     if (scene === 0) {            // office wall with wood panels and the LIVE board
@@ -2076,31 +2076,30 @@ function selfie(key: string, title: string, when: string, pid: string): string {
       const g = c.createLinearGradient(0, 0, 0, Hd); g.addColorStop(0, '#0b1430'); g.addColorStop(1, '#25335c'); c.fillStyle = g; c.fillRect(0, 0, Wd, Hd);
       for (let k = 0; k < 14; k++) { const h = 80 + R(`n${k}`) * 180, x = k * 42 - 10; c.fillStyle = '#18213d'; c.fillRect(x, Hd * 0.8 - h, 36, h + 200); for (let w = 0; w < 18; w++) if (R(`w${k}${w}`) > 0.55) { c.fillStyle = '#ffd979'; c.fillRect(x + 5 + (w % 3) * 10, Hd * 0.8 - h + 8 + Math.floor(w / 3) * 16, 5, 7); } }
     }
-    // who: the trader in front, the rest of the team behind in a random order
+    // who: two neat rows, nobody hiding anybody; the TP trader in the middle in front, biggest
     const others = ['alt', 'big', 'xau', 'nas', 'tg', 'bos', 'vet', 'ob', 'jaga'].filter((id) => id !== pid).sort((a, b) => R(`o${a}`) - R(`o${b}`));
-    const back = others.slice(0, 5), mid = others.slice(5, 8);
+    const back = others.slice(0, 4), front = others.slice(4, 8);
     const draw = (id: string, X: number, Y: number, k: number, face: Face) => {
       const p = PEOPLE.find((q) => q.id === id); if (!p) return;
-      const pose: Pose = R(`p${id}`) > 0.75 ? 'jump' : 'stand';
+      const pose: Pose = R(`p${id}`) > 0.8 ? 'jump' : 'stand';
       const spot: Spot = { ...p.seat, id: 'selfie', pose, label: R(`l${id}`) > 0.35 ? 'SELEBRASI' : 'NGOBROL', prop: undefined, face };
       const a = { room: 0, pending: null, hiddenUntil: 0, x: 5, y: 5, vx: 0, vy: 0, face, path: [], act: spot, until: 0, dist: 0, speed: 1, carry: null, carryUntil: 0, patrol: 0, last: '', run: false,
         scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: '', angryAt: 0 } as unknown as Agent;
       const [sx, sy] = iso(5, 5);
-      c.save(); c.setTransform(k, 0, 0, k, X - sx * k, Y - sy * k);
+      c.save(); c.translate(X, Y); c.scale(k, k); c.translate(-sx, -sy);
       drawPerson(c, p, a, 0.4 + R(`t${id}`) * 3, { label: 'SELEBRASI', color: '#2ee59d', sleep: false, tp: true, tag: null }, null);
       c.restore();
     };
-    back.forEach((id, i) => draw(id, Wd * (0.1 + i * 0.2) + (R(`bx${id}`) - 0.5) * 20, Hd * 0.82, 3.2, R(`f${id}`) > 0.5 ? 'py' : 'px'));
-    mid.forEach((id, i) => draw(id, Wd * (0.2 + i * 0.3) + (R(`mx${id}`) - 0.5) * 24, Hd * 1.02, 3.9, R(`f${id}`) > 0.5 ? 'py' : 'px'));
-    const fx = Wd * (0.35 + R('front') * 0.3);
-    draw(pid || 'alt', fx, Hd * 1.32, 5.2, 'py');
+    back.forEach((id, i) => draw(id, Wd * (0.2 + i * 0.2), Hd * 0.74, 3.0, i < 2 ? 'px' : 'py'));
+    [0.1, 0.27, 0.73, 0.9].forEach((x, i) => front[i] && draw(front[i], Wd * x, Hd * 0.98, 3.6, x < 0.5 ? 'px' : 'py'));
+    draw(pid || 'alt', Wd * 0.5, Hd * 1.16, 4.6, R('tf') > 0.5 ? 'px' : 'py');
     // the selfie arm going to the camera, a flash and the caption
     c.strokeStyle = '#2a1d14'; c.lineWidth = 3;
     const fl = c.createRadialGradient(Wd * 0.1, Hd * 0.1, 0, Wd * 0.1, Hd * 0.1, Wd * 0.5); fl.addColorStop(0, 'rgba(255,255,255,.45)'); fl.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = fl; c.fillRect(0, 0, Wd, Hd);
     c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(0, Hd - 46, Wd, 46);
     c.fillStyle = '#fff'; c.font = '800 20px system-ui, sans-serif'; c.textBaseline = 'middle'; c.fillText(`🎉 ${title}`, 14, Hd - 23);
     c.textAlign = 'right'; c.font = '600 13px system-ui, sans-serif'; c.fillText(when, Wd - 14, Hd - 23);
-    SELFIE[key] = cv.toDataURL('image/jpeg', 0.86);
+    SELFIE[key] = cv.toDataURL('image/jpeg', 0.9);
   } catch { SELFIE[key] = ''; }
   return SELFIE[key];
 }
