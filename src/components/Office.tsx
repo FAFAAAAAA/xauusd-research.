@@ -18,7 +18,9 @@ export interface OfficeData {
   market?: Array<{ name: string; move: number }>;          // % change of gold / BTC over the last 15 minutes
   cal?: Array<{ title: string; at: number }>;               // big US news coming up (CPI, FOMC, NFP…)
   btc?: number | null;                                       // Bitcoin % change today (from the 00:00 UTC daily open), realtime
+  cashflow?: { crypto?: CashMove[]; forex?: CashMove[] };    // deposits / withdrawals / transfers reported by the bot and the EA
 }
+type CashMove = { id: string; at: number; amount: number; asset?: string; type?: string };
 export type ScreenLine = { k: string; v: string; color?: string; sub?: string; subColor?: string };
 
 /* ---------- geometry ---------- */
@@ -28,7 +30,7 @@ const OX = 12 + NY * TW, OY = WALL + 12;
 const iso = (x: number, y: number, z = 0): [number, number] => [OX + (x - y) * TW, OY + (x + y) * TH - z];
 const SILENT = 35 * 60_000;
 const TV = { x0: 4.4, x1: 10.3, z0: 34, z1: 92 };
-const ROSTER = { x0: 0.8, x1: 4.0, z0: 26, z1: 74 };   // the team board hangs in the owner's room
+const ROSTER = { x0: 0.8, x1: 4.0, z0: 18, z1: 76 };   // the team board hangs in the owner's room
 const PS = 1.14;                                     // character scale
 const RH = 290, ROOMS = 3;         // three rooms stacked (one scene height each)
 /* building shape: 'tower' (3 floors in one glass tower), 'zigzag' (cantilevered floors around a glass lift tube), 'rooftop' (tower + roof deck) */
@@ -69,6 +71,8 @@ const PEOPLE: Person[] = [
   { id: 'xau', name: 'Nu', role: 'XAU', seat: seat('xau', 1, 2.35, 5.95, 'nx'), hair: '#b8692b', skin: '#f5d2b3', shirt: '#f2c230', pants: '#4b4038', style: 'long' },
   { id: 'nas', name: 'Ne', role: 'NASDAQ', seat: seat('nas', 1, 2.35, 8.15, 'nx'), hair: '#3e2a1e', skin: '#ebbd94', shirt: '#4c7dff', pants: '#26272b', style: 'bun' },
   { id: 'tg', name: 'Noel', role: 'TELEGRAM', seat: seat('tg', 1, 2.35, 10.35, 'nx', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
+  { id: 'risk', name: 'Rina', role: 'RISIKO', seat: seat('risk', 1, 8.15, 4.2, 'py', 'CEK RISIKO'), hair: '#2b1d16', skin: '#f1c7a3', shirt: '#7b5cd6', pants: '#2a2b30', style: 'bun', glasses: true, lips: '#c06a62' },
+  { id: 'akun', name: 'Sari', role: 'AKUNTAN', seat: seat('akun', 1, 6.95, 4.2, 'py', 'PEMBUKUAN'), hair: '#4a2c1c', skin: '#efc39f', shirt: '#f08a3c', pants: '#3a3f4a', style: 'long', lips: '#c9615a' },
   { id: 'jaga', name: 'Pentoel', role: 'SECURITY', seat: seat('jaga', 2, 13.65, 3.2, 'px', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
   { id: 'ob', name: 'Udin', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
   { id: 'tamu', name: 'Tamu', role: 'KLIEN', seat: { ...seat('tamu', 2, 13.5, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#3a2a20', skin: '#efc9a4', shirt: '#3b4a6b', pants: '#2a2f3a', style: 'slick', tie: true, glasses: true },
@@ -107,8 +111,7 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'win1', x: 0.75, y: 3.2, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'win2', x: 0.75, y: 5.45, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'TELEPON', prop: 'phone' }] },
   { id: 'win3', x: 0.75, y: 7.7, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
-  { id: 'hot1', x: 6.95, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet', alt: [{ label: 'ZOOM MEETING' }, { label: 'CEK EMAIL' }] },
-  { id: 'hot2', x: 8.15, y: 4.2, face: 'py', pose: 'sit', label: 'KERJA BARENG', prop: 'laptop', zone: 'meet', alt: [{ label: 'BIKIN SLIDE' }, { label: 'ZOOM MEETING' }] },
+  // (the two front chairs of this table are Sari's and Rina's desks: finance & risk)
   { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
   { id: 'hot4', x: 8.15, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
   { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }] },
@@ -182,7 +185,7 @@ const CHAT: Record<string, string[]> = {
 /* ---------- office events: several people do one thing together for a while ---------- */
 type Step = { act: Spot; dwell: number };
 type Ev = { kind: string; start: number; until: number; plans: Record<string, Step[]>; ids: string[]; random: boolean; courier?: boolean; guest?: boolean; items?: (room: number, wall: number) => Item[] };
-const EV: { cur: Ev | null; next: number; done: Record<string, string> } = { cur: null, next: 0, done: {} };
+const EV: { cur: Ev | null; next: number; done: Record<string, string>; seen: string[]; seenLoaded?: boolean } = { cur: null, next: 0, done: {}, seen: [] };
 const inEvent = (id: string, wall: number) => !!EV.cur && wall < EV.cur.until && EV.cur.ids.includes(id);
 export const awayHours = (now: number) => { const h = new Date(now).getHours(); return h >= 23 || h < 7; };       // Marcel and Ny. Vetrycia go home
 const sp = (id: string, room: number, x: number, y: number, face: Face, label: string, more: Partial<Spot> = {}): Spot => ({ id, room, x, y, face, pose: 'stand', label, ...more });
@@ -192,7 +195,8 @@ function freeFor(ctx: EvCtx, id: string, busyOk = false) {
   const a = ctx.agents[id], s = ctx.S[id]; if (!a || !s) return false;
   if (s.sleep || s.label === 'BELUM AKTIF' || s.label === 'KIRIM PESAN' || s.label === 'ALARM') return false;
   if (!busyOk && s.label.startsWith('POSISI')) return false;
-  if ((id === 'bos' || id === 'vet') && awayHours(ctx.wall)) return false;
+  if ((id === 'bos' || id === 'vet' || id === 'akun') && awayHours(ctx.wall)) return false;
+  if (id === 'risk' && s.label !== 'RISIKO AMAN') return false;          // Rina is busy warning people
   return ctx.wall >= a.scoldUntil;
 }
 const TABLE2 = { x: 7.6, y: 5.4, z: 15 };      // the round table in the pantry
@@ -220,7 +224,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   if (kind === 'ultah' || kind === 'pizza') {
     const who = workers(); if (who.length < 2) return null;
-    const all = [...who, ...['ob', 'bos', 'vet'].filter((id) => freeFor(ctx, id))];
+    const all = [...who, ...['ob', 'bos', 'vet', 'akun', 'risk'].filter((id) => freeFor(ctx, id))];
     const seats = [sp('', 2, 7.6, 4.5, 'py', '', { pose: 'sit' }), sp('', 2, 7.6, 6.3, 'ny', '', { pose: 'sit' }), sp('', 2, 6.7, 5.4, 'px', '', { pose: 'sit' }), sp('', 2, 8.5, 5.4, 'nx', '', { pose: 'sit' }),
       sp('', 2, 6.1, 4.3, 'px', ''), sp('', 2, 6.1, 6.5, 'px', ''), sp('', 2, 8.95, 6.6, 'nx', ''), sp('', 2, 8.6, 3.95, 'py', '')];
     const plans: Record<string, Step[]> = {};
@@ -299,7 +303,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   if (kind === 'foto') {
     const cam = freeFor(ctx, 'tg') ? 'tg' : freeFor(ctx, 'ob') ? 'ob' : null; if (!cam) return null;
-    const who = [...['vet', 'bos'].filter((id) => freeFor(ctx, id)), ...workers().filter((id) => id !== cam), ...['ob', 'jaga'].filter((id) => id !== cam && freeFor(ctx, id))];
+    const who = [...['vet', 'bos'].filter((id) => freeFor(ctx, id)), ...workers().filter((id) => id !== cam), ...['ob', 'jaga', 'akun', 'risk'].filter((id) => id !== cam && freeFor(ctx, id))];
     if (who.length < 3) return null;
     const pos: Array<[number, number]> = [[6.4, 2.2], [5.4, 2.2], [7.4, 2.2], [4.4, 2.2], [8.4, 2.2], [5.9, 1.3], [6.9, 1.3], [4.9, 1.3], [7.9, 1.3]];
     const plans: Record<string, Step[]> = {};
@@ -323,7 +327,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   if (kind === 'rapat') {
     // Monday morning: weekly meeting in the boss office, Marcel reads last week's result (Binance, same as the TV)
     if (!freeFor(ctx, 'bos')) return null;
-    const who = workers(true); if (!who.length) return null;
+    const who = [...workers(true), ...['akun', 'risk'].filter((id) => freeFor(ctx, id, true))]; if (!who.length) return null;
     const wk = wall - 7 * 86_400_000;
     const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= wk && t.strategy !== 'v2' && t.strategy !== 'nas');
     const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
@@ -349,7 +353,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   if (kind === 'dadakan') {
     // the owner tapped "Rapat": everybody comes to the meeting table in the boss office right now
     const lead = freeFor(ctx, 'bos', true) ? 'bos' : freeFor(ctx, 'vet', true) ? 'vet' : freeFor(ctx, 'jaga', true) ? 'jaga' : null; if (!lead) return null;   // at night the security guard leads
-    const who = [...W5.filter((id) => freeFor(ctx, id, true)), ...['ob', 'jaga', 'vet'].filter((id) => id !== lead && freeFor(ctx, id, true))];
+    const who = [...W5.filter((id) => freeFor(ctx, id, true)), ...['akun', 'risk', 'ob', 'jaga', 'vet'].filter((id) => id !== lead && freeFor(ctx, id, true))];
     if (!who.length) return null;
     const day0 = new Date(wall); day0.setHours(0, 0, 0, 0);
     const fin = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'nas');
@@ -415,11 +419,80 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
   }
   if (kind === 'bonus' || kind === 'gajian') {
     if (!freeFor(ctx, 'bos')) return null;
-    const who = [...workers(true), ...['ob', 'jaga'].filter((id) => freeFor(ctx, id))]; if (!who.length) return null;
+    const who = [...workers(true), ...['akun', 'risk', 'ob', 'jaga'].filter((id) => freeFor(ctx, id))]; if (!who.length) return null;
     const word = kind === 'bonus' ? 'BONUS' : 'GAJI';
     const plans: Record<string, Step[]> = { bos: [{ act: sp('ev-bonus-safe', 0, 8.37, 1.45, 'ny', 'BUKA BRANKAS'), dwell: S(5) }, { act: sp('ev-bonus-bos', 0, 8.6, 2.6, 'py', `BAGI ${word}`, { prop: 'envelope', say: [kind === 'bonus' ? 'Profit bagus, ini bonus kalian!' : 'Gajian, gajian!', '#2e9e5b'] }), dwell: S(36) }] };
     who.slice(0, 7).forEach((id, i) => { const at = (label: string, more: Partial<Spot> = {}) => sp(`ev-bonus-${id}`, 0, 8.6, 3.5 + i * 0.8, 'ny', label, more); plans[id] = [{ act: at(`ANTRI ${word}`), dwell: S(10 + i * 3) }, { act: at(`DAPAT ${word}!`, { pose: 'jump', prop: 'envelope', say: ['Makasih bos!', '#2e9e5b'] }), dwell: S(6) }]; });
     return ev(plans, 46, { random: false });
+  }
+  if (kind === 'laporan') {
+    // 22:30 (or from the cat menu): Sari prints today's report and reads it to Marcel (Ny. Vetrycia listens in)
+    if (!freeFor(ctx, 'akun') || !freeFor(ctx, 'bos')) return null;
+    const b = biz(ctx.data, wall), tp = b.todayAll.filter((t) => t.result === 'tp').length, sl = b.todayAll.filter((t) => t.result === 'sl').length;
+    const pnl = b.todayAll.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+    const line1: [string, string] = b.todayAll.length ? [`Hari ini ${tp} TP, ${sl} SL, total ${usd2(pnl)}`, pnl >= 0 ? '#2e9e5b' : '#e5242b'] : ['Hari ini belum ada trade selesai, pak', '#1e1f23'];
+    const bal = [ctx.data.binance ? `Binance $${ctx.data.binance.wallet.toFixed(2)}` : '', ctx.data.mt5 ? `MT5 $${ctx.data.mt5.wallet.toFixed(2)}` : ''].filter(Boolean).join(', ');
+    const at = (label: string, more: Partial<Spot> = {}) => ({ ...X.ttd, id: 'ev-laporan-akun', label, prop: 'paper' as Prop, ...more });
+    const plans: Record<string, Step[]> = {
+      akun: [
+        { act: { ...SPOTS.find((q) => q.id === 'printer')!, id: 'ev-laporan-print', label: 'PRINT LAPORAN', prop: 'paper', alt: undefined }, dwell: S(5) },
+        { act: at('LAPORAN HARIAN', { say: ['Pak, laporan hari ini', '#1e1f23'] }), dwell: S(5) },
+        { act: at('LAPORAN HARIAN', { say: line1 }), dwell: S(7) },
+        { act: at('LAPORAN HARIAN', { say: [bal ? `Saldo: ${bal}` : 'Saldo belum dilaporkan bot', '#1e1f23'] }), dwell: S(7) },
+        { act: at('LAPORAN HARIAN', { say: [`Bulan ini ${usd2(b.monthPnl)} dari ${b.month.length} trade`, b.monthPnl >= 0 ? '#2e9e5b' : '#e5242b'] }), dwell: S(7) },
+        { act: at('LAPORAN HARIAN', { label: 'MINTA TTD', say: ['Mohon tanda tangan, pak', '#1e1f23'] }), dwell: S(5) },
+      ],
+      bos: [
+        { act: { ...PEOPLE.find((q) => q.id === 'bos')!.seat, id: 'seat-bos', label: 'TERIMA LAPORAN', prop: 'paper' }, dwell: S(26) },
+        { act: { ...PEOPLE.find((q) => q.id === 'bos')!.seat, id: 'seat-bos', label: 'TANDA TANGAN', prop: 'paper', say: [!b.todayAll.length ? 'Oke, besok semoga ada setup' : pnl > 0 ? 'Mantap! Simpan laporannya' : pnl < 0 ? 'Rugi wajar, asal sesuai aturan' : 'Impas, oke', '#1e1f23'] }, dwell: S(10) },
+      ],
+    };
+    if (freeFor(ctx, 'vet') && ctx.agents.vet.room === 0) plans.vet = [{ act: { ...PEOPLE[0].seat, id: 'ev-laporan-vet', label: 'DENGERIN LAPORAN', prop: 'tablet' }, dwell: S(30) }, { act: { ...PEOPLE[0].seat, id: 'ev-laporan-vet', label: pnl >= 0 ? 'SENANG' : 'NONTON DRAKOR', prop: 'tablet', say: [pnl > 0 ? 'Bagus, Sari! Hihi' : 'Sabar ya semua', PK] }, dwell: S(8) }];
+    return ev(plans, 48, { random: false });
+  }
+  if (kind === 'bulanan') {
+    // the 1st of the month, 10:00: Sari presents last month in the boss's meeting room
+    if (!freeFor(ctx, 'akun')) return null;
+    const b = biz(ctx.data, wall), done = b.last;
+    const tp = done.filter((t) => t.result === 'tp').length, sl = done.filter((t) => t.result === 'sl').length;
+    const wr = tp + sl ? Math.round((tp / (tp + sl)) * 100) : 0;
+    const byCoin: Record<string, number> = {};
+    for (const t of done) { const k = (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '') || (t.strategy === 'nas' ? 'NAS' : t.strategy === 'v2' ? 'XAU' : t.strategy.toUpperCase()); byCoin[k] = (byCoin[k] ?? 0) + Number(t.pnl ?? 0); }
+    const best = Object.entries(byCoin).sort((x, y) => y[1] - x[1])[0];
+    const who = [...workers(), ...['risk', 'vet'].filter((id) => freeFor(ctx, id))];        // not everybody: one lift for all
+    const seats = [2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' })));
+    const plans: Record<string, Step[]> = {};
+    who.slice(0, seats.length).forEach((id, i) => { plans[id] = [{ act: { ...seats[i], id: `ev-bulanan-${id}`, label: 'RAPAT BULANAN' }, dwell: S(80) }]; });
+    const at = (say: [string, string]) => sp('ev-bulanan-akun', 0, 3.0, 5.8, 'py', 'PRESENTASI BULANAN', { prop: 'laptop', say });
+    plans.akun = [
+      { act: at([`Laporan bulan ${b.pmName}`, '#1e1f23']), dwell: S(6) },
+      { act: at(done.length ? [`Total ${usd2(b.lastPnl)} dari ${done.length} trade`, b.lastPnl >= 0 ? '#2e9e5b' : '#e5242b'] : ['Bulan lalu belum ada trade selesai', '#1e1f23']), dwell: S(8) },
+      { act: at(done.length ? [`TP ${tp}, SL ${sl}, win rate ${wr}%`, '#1e1f23'] : ['Bulan ini semoga lebih ramai', '#1e1f23']), dwell: S(8) },
+      { act: at(best ? [`Terbaik: ${best[0]} ${usd2(best[1])}`, best[1] >= 0 ? '#2e9e5b' : '#e5242b'] : ['Sekian, terima kasih', '#1e1f23']), dwell: S(8) },
+      { act: at(['Sekian laporannya, terima kasih', '#1e1f23']), dwell: S(10) },
+    ];
+    if (freeFor(ctx, 'bos', true)) plans.bos = [{ act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'DENGERIN LAPORAN'), dwell: S(48) }, { act: sp('ev-bulanan-bos', 0, 3.0, 10.4, 'ny', 'TEPUK TANGAN', { say: [b.lastPnl >= 0 ? 'Kerja bagus, tim!' : 'Bulan ini kita perbaiki!', '#1e1f23'] }), dwell: S(20) }];
+    return ev(plans, 110, { random: false });
+  }
+  if (kind === 'modal') {
+    // money came in (or went out): Sari runs to Marcel with the news, he puts it in the safe, the team cheers
+    const c = newCash(ctx.data, wall); if (!c) return null;
+    const inn = c.amount > 0, amt = `${inn ? '+' : '−'}$${Math.abs(c.amount).toFixed(2)}`;
+    const boss = freeFor(ctx, 'bos', true) ? 'bos' : null;
+    const herald = freeFor(ctx, 'akun', true) ? 'akun' : freeFor(ctx, 'jaga', true) ? 'jaga' : null; if (!herald) return null;
+    const plans: Record<string, Step[]> = {};
+    plans[herald] = boss
+      ? [{ act: { ...X.ttd, id: `ev-modal-${herald}`, label: inn ? 'LAPOR MODAL MASUK' : 'LAPOR PENARIKAN', prop: 'envelope', say: [inn ? `Pak! Modal masuk ${amt}!` : `Pak, ada penarikan ${amt}`, inn ? '#2e9e5b' : '#1e1f23'] }, dwell: S(8) }, { act: { ...X.ttd, id: `ev-modal-${herald}`, label: 'CATAT DI BUKU', prop: 'paper', say: ['Sudah saya catat, pak', '#1e1f23'] }, dwell: S(8) }]
+      : [{ act: sp(`ev-modal-${herald}`, 1, 9.0, 3.2, 'ny', inn ? 'UMUMKAN MODAL' : 'UMUMKAN PENARIKAN', { prop: 'envelope', say: [inn ? `Modal masuk ${amt}!` : `Penarikan ${amt}`, '#2e9e5b'] }), dwell: S(16) }];
+    if (boss) plans.bos = [
+      { act: { ...PEOPLE.find((q) => q.id === 'bos')!.seat, id: 'seat-bos', label: 'KAGET SENANG', say: [inn ? 'Mantap! Amunisi nambah!' : 'Profit diambil, sip!', '#2e9e5b'] }, dwell: S(7) },
+      { act: sp('ev-modal-safe', 0, 8.37, 1.45, 'ny', inn ? 'SIMPAN DI BRANKAS' : 'BUKA BRANKAS', { prop: 'envelope' }), dwell: S(8) },
+      { act: sp('ev-modal-safe', 0, 8.37, 1.45, 'ny', 'BRANKAS', { say: [inn ? 'Disiplin, jangan dihambur!' : 'Sisanya tetap kerja ya!', '#1e1f23'] }), dwell: S(6) },
+    ];
+    for (const id of workers(true).slice(0, 4)) plans[id] = [{ act: { ...PEOPLE.find((q) => q.id === id)!.seat, label: 'NUNGGU KABAR' }, dwell: S(9) }, { act: { ...PEOPLE.find((q) => q.id === id)!.seat, label: inn ? 'SELEBRASI MODAL' : 'TEPUK TANGAN', pose: 'jump', say: [any1(inn ? ['Asik, modal nambah!', 'Gas trading!', 'Mantap!'] : ['Selamat bos!', 'Cair!', 'Asik!']), '#2e9e5b'] }, dwell: S(6) }];
+    if (freeFor(ctx, 'risk', true)) plans.risk = [{ act: { ...PEOPLE.find((q) => q.id === 'risk')!.seat, label: 'HITUNG ULANG RISIKO', prop: 'laptop', say: ['Risiko per trade ikut saldo baru ya', '#1e1f23'] }, dwell: S(14) }];
+    EV.seen = [...EV.seen, c.id].slice(-50); try { localStorage.setItem('office-cash-seen', JSON.stringify(EV.seen)); } catch { /* ignore */ }
+    return ev(plans, 34, { random: false });
   }
   if (kind === 'kopi') {
     // Udin brings coffee to every trader at the desk
@@ -558,6 +631,20 @@ const SCRIPTS: Script[] = [
     [0, 'Toel! Tadi tidur ya?!', RD, { label: 'KESAL' }], [1, 'Nggak pak! Merem doang…', BK, { label: 'GUGUP' }], [0, 'SAMA AJA!', RD], [1, 'Siap salah pak!', BK, { label: 'MALU' }]] },
   { key: 'bola', roles: ['w', 'jaga'], label: 'NGOBROL', lines: [
     [0, 'Pak Toel, semalam nonton bola?', BK], [1, 'Nonton! Gol menit terakhir!', GR, { label: 'SENANG', pose: 'jump' }], [0, 'Gila sih itu!', GR, { label: 'KETAWA' }], [1, 'Kayak TP pas mau SL', BK, { label: 'KETAWA', pose: 'stand' }]] },
+  { key: 'struk', roles: ['akun', 'bos'], label: 'NGOBROL', lines: [
+    [0, 'Pak, struk golf ini masuk biaya kantor?', BK, { label: 'TANYA STRUK' }], [1, 'Iya dong, itu meeting!', BK], [0, 'Meeting sama siapa, pak?', BK], [1, '…sama bola golf', BK, { label: 'MALU' }], [0, 'Saya catat biaya pribadi ya, pak', GR, { label: 'KETAWA' }]] },
+  { key: 'kwitansi', roles: ['akun', 'w'], label: 'DEBAT', fight: true, exit: [null, 'NGAMBEK'], lines: [
+    [0, '{1}, kwitansi jajan kemarin mana?', BK], [1, 'Hilang… hehe', BK, { label: 'GUGUP' }], [0, 'Nggak ada kwitansi, nggak diganti!', RD, { label: 'BERANTEM' }], [1, 'Ih, cuma gorengan!', RD, { label: 'BERANTEM' }], [0, 'Aturan tetap aturan!', RD]] },
+  { key: 'kalkulator', roles: ['akun', 'risk'], label: 'NGOBROL', lines: [
+    [0, 'Rin, angka nolnya kebanyakan nih', BK, { label: 'BINGUNG' }], [1, 'Untung atau rugi?', BK], [0, 'Untung!', GR, { label: 'SENANG' }], [1, 'Itu bukan masalah, Sar!', GR, { label: 'KETAWA' }], [0, 'Hehe iya ya', BK, { label: 'KETAWA' }]] },
+  { key: 'geser', roles: ['risk', 'w'], label: 'TEGURAN', lines: [
+    [0, '{1}, SL kamu nggak digeser kan?', BK, { label: 'INTEROGASI' }], [1, 'Nggak dong bu! Otomatis', BK, { label: 'GUGUP' }], [0, 'Yakin? Coba lihat…', BK], [1, 'Tuh kan, aman', GR], [0, 'Bagus. Disiplin itu kunci', GR, { label: 'SENANG' }]] },
+  { key: 'allin', roles: ['w', 'risk'], label: 'DEBAT', fight: true, exit: ['NGAMBEK', null], lines: [
+    [0, 'Bu, gimana kalau risiko 10% biar cepat kaya?', BK, { label: 'MIKIR' }], [1, 'APA?! Mau saldo habis?!', RD, { label: 'MARAH' }], [0, 'Kan cuma ide…', BK, { label: 'GUGUP' }], [1, 'Ide buruk! Satu SL beruntun habis!', RD], [0, 'Iya, iya…', BK, { label: 'NGAMBEK' }]] },
+  { key: 'belanja', roles: ['vet', 'akun'], label: 'NGOBROL', lines: [
+    [0, 'Sari, belanja online saya masuk biaya kantor ya', PK, { label: 'SENANG' }], [1, 'Ehm… bu…', BK, { label: 'GUGUP' }], [0, 'Bercanda! Hihi', PK, { label: 'KETAWA' }], [1, 'Fiuh…', BK, { label: 'LEGA' }]] },
+  { key: 'naksir2', roles: ['jaga', 'akun'], label: 'NGOBROL', lines: [
+    [0, 'Mbak Sari, pulang bareng?', BK, { label: 'NAKSIR' }], [1, 'Pak Toel kan jaga malam', BK], [0, 'Oh iya… lupa', BK, { label: 'MALU' }], [1, 'Hihi', PK, { label: 'KETAWA' }]] },
   { key: 'telpon', roles: ['w'], label: 'TELPON MAMA', lines: [
     [0, 'Halo ma… iya udah makan', BK], [0, 'Iya, kerjanya lancar kok', BK], [0, 'Nanti pulang ma. Dah!', GR, { label: 'SENANG' }]] },
 ];
@@ -571,7 +658,7 @@ const MEET: Record<number, Array<Array<[number, number, Face]>>> = {
 };
 type Scene = { s: Script; who: string[]; spots: Spot[]; t0: number; talking: boolean; i: number; next: number; meet: string };
 const SC: { list: Scene[]; next: number; grudge: Record<string, number> } = { list: [], next: 0, grudge: {} };
-const shortName = (id: string) => ({ ob: 'Din', jaga: 'Toel', bos: 'Marcel', vet: 'Bu' } as Record<string, string>)[id] ?? PEOPLE.find((p) => p.id === id)?.name ?? '';
+const shortName = (id: string) => ({ ob: 'Din', jaga: 'Toel', bos: 'Marcel', vet: 'Bu', akun: 'Sar', risk: 'Rin' } as Record<string, string>)[id] ?? PEOPLE.find((p) => p.id === id)?.name ?? '';
 const pairKey = (a: string, b: string) => [a, b].sort().join('|');
 function sceneFree(ctx: EvCtx, id: string) {
   const a = ctx.agents[id]; if (!a || !freeFor(ctx, id)) return false;
@@ -671,6 +758,9 @@ function scheduleEvents(ctx: EvCtx) {
   // gold / BTC moving 1% or more in 15 minutes (at most once every 30 minutes)
   if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
   if (h === 23 && m < 4 && EV.done.rekap !== day) want.unshift('rekap');
+  if (h === 22 && m >= 30 && m < 45 && EV.done.laporan !== day) want.push('laporan');               // Sari's daily report
+  if (d.getDate() === 1 && h === 10 && m < 30 && EV.done.bulanan !== day) want.push('bulanan');     // monthly meeting
+  if (newCash(data, wall)) want.unshift('modal');                                                     // deposit / withdrawal
   if (CALL.at) {
     const k = CALL.kind, fresh = wall - CALL.at < 8000; CALL.at = 0;
     const e = fresh ? makeEvent(k, ctx) : null;
@@ -686,7 +776,7 @@ function scheduleEvents(ctx: EvCtx) {
     if (EV.cur) kick(EV.cur.ids);
     EV.cur = e; kick(e.ids);
     if (kind === 'dadakan') return;
-    EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : day;
+    if (kind !== 'modal') EV.done[kind] = kind === 'darurat' ? String(closed[0].id) : kind === 'pasar' ? String(wall) : day;
     return;
   }
   if (!EV.cur && wall >= EV.next) {
@@ -705,6 +795,34 @@ function scheduleEvents(ctx: EvCtx) {
 export type Status = { label: string; color: string; sleep: boolean; tag?: { text: string; color: string } | null; tp?: boolean; sl?: boolean };
 const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
 const weekendMt5 = (t: number) => { const d = new Date(t), wd = d.getUTCDay(), h = d.getUTCHours(); return wd === 6 || (wd === 0 && h < 22) || (wd === 5 && h >= 21); };
+/* ---------- the business side: numbers Sari (accountant) and Rina (risk manager) work with, all from the journal ---------- */
+const isMt5Trade = (t: JournalTrade) => t.strategy === 'v2' || t.strategy === 'nas';
+const usd2 = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
+export function biz(data: OfficeData, now: number) {
+  const day0 = new Date(now); day0.setHours(0, 0, 0, 0);
+  const m0 = new Date(now); m0.setHours(0, 0, 0, 0); m0.setDate(1);
+  const pm0 = new Date(m0); pm0.setMonth(pm0.getMonth() - 1);
+  const closed = data.trades.filter((t) => t.result !== 'open' && t.closedAt).sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0));
+  const cr = closed.filter((t) => !isMt5Trade(t));
+  let streak = 0; for (const t of cr) { if (t.result === 'sl') streak++; else break; }       // stop losses in a row (Binance bot)
+  const sum = (xs: JournalTrade[]) => xs.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+  const today = cr.filter((t) => (t.closedAt ?? 0) >= day0.getTime());
+  const todayAll = closed.filter((t) => (t.closedAt ?? 0) >= day0.getTime());
+  const month = closed.filter((t) => (t.closedAt ?? 0) >= m0.getTime());
+  const last = closed.filter((t) => (t.closedAt ?? 0) >= pm0.getTime() && (t.closedAt ?? 0) < m0.getTime());
+  const todayB = sum(today), wallet = data.binance?.wallet ?? 0;
+  const todayPct = wallet - todayB > 0 ? (todayB / (wallet - todayB)) * 100 : 0;          // today's result vs the balance at the start of the day
+  const openN = data.trades.filter((t) => t.result === 'open').length;
+  const level: 'RISIKO AMAN' | 'WASPADA' | 'BAHAYA' = streak >= 5 || todayPct <= -10 ? 'BAHAYA' : streak >= 3 || todayPct <= -5 ? 'WASPADA' : 'RISIKO AMAN';
+  const why = streak >= 3 ? `SL ${streak}× beruntun` : todayPct <= -5 ? `Hari ini ${todayPct.toFixed(1)}%` : '';
+  return { streak, todayB, todayPct, todayAll, openN, level, why, wallet, month, monthPnl: sum(month), last, lastPnl: sum(last), pmName: pm0.toLocaleString('id-ID', { month: 'long' }) };
+}
+/** a deposit / withdrawal from the last 3 hours that the office has not celebrated yet */
+function newCash(data: OfficeData, now: number): CashMove | null {
+  if (!EV.seenLoaded) { EV.seenLoaded = true; try { EV.seen = JSON.parse(localStorage.getItem('office-cash-seen') ?? '[]') ?? []; } catch { /* private mode */ } }
+  const all = [...(data.cashflow?.crypto ?? []), ...(data.cashflow?.forex ?? [])].filter((c) => c && now - c.at < 3 * 3_600_000 && now >= c.at && Math.abs(c.amount) >= 1 && !EV.seen.includes(c.id));
+  return all.sort((a, b) => a.at - b.at)[0] ?? null;
+}
 export function statuses(data: OfficeData, now: number): Record<string, Status> {
   const open = data.trades.filter((t) => t.result === 'open');
   const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
@@ -739,6 +857,17 @@ export function statuses(data: OfficeData, now: number): Record<string, Status> 
     bos: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
     vet: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
     ob: { label: 'SIAGA', color: '#58a6ff', sleep: false, tag: null },
+    ...(() => {
+      if (!data.binance && !data.mt5) return {};
+      const b = biz(data, now);
+      const tp = b.todayAll.filter((t) => t.result === 'tp').length, sl = b.todayAll.filter((t) => t.result === 'sl').length;
+      const pnl = b.todayAll.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+      return {
+        risk: { label: b.level, color: b.level === 'BAHAYA' ? '#ff5a5f' : b.level === 'WASPADA' ? '#f5a524' : '#2ee59d', sleep: false,
+          tag: b.why ? { text: `⚠ ${b.why}`, color: b.level === 'BAHAYA' ? '#ff6b6b' : '#f5a524' } : null },
+        akun: { label: 'PEMBUKUAN', color: '#f08a3c', sleep: false, tag: tp + sl ? { text: `📒 ${tp} TP · ${sl} SL ${usd2(pnl)}`, color: pnl >= 0 ? '#2ee59d' : '#ff6b6b' } : null },
+      } as Record<string, Status>;
+    })(),
   };
 }
 
@@ -1350,7 +1479,7 @@ function armchair(c: C, x: number, y: number, col: string, dark: string, massage
 function baseItems(): Item[] {
   const it: Item[] = [];
   for (const [y0, id] of [[0.9, 'alt'], [3.1, 'big'], [5.3, 'xau'], [7.5, 'nas'], [9.7, 'tg']] as Array<[number, string]>) it.push(windowDesk(y0, id));
-  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin' || p.id === 'tamu') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
+  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin' || p.id === 'tamu' || p.id === 'risk' || p.id === 'akun') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(13.65, 3.2, 'px', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
@@ -2189,8 +2318,8 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
   if (p.id === 'tamu') return { act: sp('ev-tamu-out', 2, 13.5, 0.7, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 60_000 };
   if (p.id === 'kurir') return { act: sp('ev-kurir-out', FLAT ? 2 : a.room, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 60_000 };
   // Marcel and Ny. Vetrycia go home at night (the bots keep working overtime), and clock in again in the morning
-  if ((p.id === 'bos' || p.id === 'vet') && awayHours(now)) return { act: sp(`pulang-${p.id}`, 2, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 120_000 };
-  if ((p.id === 'bos' || p.id === 'vet') && a.act.id === `pulang-${p.id}`) { a.queue = [{ act: { ...p.seat, label: p.id === 'vet' ? 'NONTON DRAKOR' : 'NGITUNG CUAN', prop: p.id === 'vet' ? 'tablet' : undefined }, dwell: rnd(20, 30) }]; return { act: { ...X.absen, id: `absen-${p.id}`, label: 'ABSEN PAGI' }, dwell: rnd(2.5, 4) }; }
+  if ((p.id === 'bos' || p.id === 'vet' || p.id === 'akun') && awayHours(now)) return { act: sp(`pulang-${p.id}`, 2, LIFT.x, LIFT.y, 'ny', 'PULANG', { prop: 'vanish' }), dwell: 120_000 };
+  if ((p.id === 'bos' || p.id === 'vet' || p.id === 'akun') && a.act.id === `pulang-${p.id}`) { a.queue = [{ act: { ...p.seat, label: p.id === 'vet' ? 'NONTON DRAKOR' : p.id === 'akun' ? 'PEMBUKUAN' : 'NGITUNG CUAN', prop: p.id === 'vet' ? 'tablet' : p.id === 'akun' ? 'laptop' : undefined }, dwell: rnd(20, 30) }]; return { act: { ...X.absen, id: `absen-${p.id}`, label: 'ABSEN PAGI' }, dwell: rnd(2.5, 4) }; }
   if (p.id === 'ob') {           // Udin the office boy: cleaning, coffee for the boss, water gallons, feeding the cat
     const h = new Date(now).getHours(), late = h >= 21 || h < 6, bos = all.bos;
     if (a.act.id !== p.seat.id && r < 0.25) return { act: p.seat, dwell: rnd(8, 16) };
@@ -2212,6 +2341,42 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
       a.patrol = 2; return { act: PATROL[0], dwell: rnd(1.5, 3) };
     }
     a.patrol = 0; return { act: { ...p.seat, label: Math.random() < 0.5 ? 'CEK CCTV' : 'JAGA' }, dwell: rnd(18, 35) };
+  }
+  if (p.id === 'akun') {     // Sari the accountant: books every trade, prints reports, asks Marcel to sign
+    const bos = all.bos;
+    if (a.act.id !== p.seat.id && r < 0.6) return { act: { ...p.seat, label: any1(['PEMBUKUAN', 'INPUT JURNAL', 'HITUNG PNL', 'CEK SALDO', 'REKONSILIASI']), prop: 'laptop' }, dwell: rnd(25, 45) };
+    if (r < 0.3) return { act: { ...SPOTS.find((q) => q.id === 'printer')!, id: 'akun-print', label: 'PRINT LAPORAN', prop: 'paper', alt: undefined }, dwell: rnd(5, 8) };
+    if (r < 0.42 && bos && bos.act.id === 'seat-bos' && !bos.path.length && !taken.has('ttd') && !awayHours(now)) return { act: { ...X.ttd, id: 'ttd', label: 'MINTA TTD', say: [any1(['Pak, tanda tangan laporan ya', 'Pak, ACC pengeluaran kopi', 'Pak, ini kwitansi golf…']), '#1e1f23'] }, dwell: rnd(5, 7) };
+    if (r < 0.5) return { act: { ...SPOTS.find((q) => q.id === 'tv')!, id: 'akun-tv', label: 'CEK SALDO DI TV' }, dwell: rnd(5, 8) };
+    if (r < 0.62) return { act: pick(SPOTS.filter((q) => ['coffee', 'water', 'water2', 'eat3', 'eat4', 'win2'].includes(q.id))), dwell: rnd(8, 14) };
+    return { act: { ...p.seat, label: 'PEMBUKUAN', prop: 'laptop' }, dwell: rnd(25, 45) };
+  }
+  if (p.id === 'risk') {     // Rina the risk manager: watches losing streaks and today's drawdown; walks the floor warning people when it gets bad
+    const lvl = s?.label ?? 'RISIKO AMAN';
+    if (lvl !== 'RISIKO AMAN') {
+      const why = (s?.tag?.text ?? '').replace(/^⚠\s*/, '');
+      const bos = all.bos;
+      // tell the boss once per new warning (when he is in)
+      if (bos && !awayHours(now) && a.celebrated !== `lapor:${why}`) {
+        a.celebrated = `lapor:${why}`;
+        if (!bos.queue?.length && !bos.act.whip) bos.queue = [{ act: { ...PEOPLE.find((q) => q.id === 'bos')!.seat, label: 'DAPAT LAPORAN RISIKO', say: [lvl === 'BAHAYA' ? 'APA?! Semua fokus, ikuti aturan!' : 'Hmm… pantau terus, Rin', lvl === 'BAHAYA' ? '#e5242b' : '#1e1f23'] }, dwell: rnd(10, 14) }];
+        return { act: { ...X.ttd, id: 'risk-lapor', label: 'LAPOR RISIKO', prop: 'tablet', say: [`Pak! ${why}!`, '#e5242b'] }, dwell: rnd(6, 8) };
+      }
+      if (a.act.id.startsWith('seat-') || r < 0.55) {
+        const who = shuffle(WORKERS.filter((id) => id !== 'tg' && all[id] && !S[id]?.sleep && S[id]?.label !== 'LIBUR'))[0];
+        if (who) {
+          const v = all[who];
+          if (v && !v.queue?.length && !inEvent(who, now)) v.queue = [{ act: { ...PEOPLE.find((q) => q.id === who)!.seat, label: 'DENGERIN RISK', say: [any1(['Siap bu Rina!', 'Iya bu, disiplin!', 'Oke, SL nggak digeser']), '#1e1f23'] }, dwell: rnd(8, 12) }];
+          return { act: { ...near(who, 'PERINGATAN RISIKO'), prop: 'tablet', say: [any1([`${why}, hati-hati!`, 'Jangan geser SL ya!', 'Ingat RR 1:2, jangan balas dendam!', 'Cek rem bot, jangan panik!']), lvl === 'BAHAYA' ? '#e5242b' : '#b7791f'] }, dwell: rnd(6, 9) };
+        }
+      }
+      return { act: { ...p.seat, label: 'HITUNG RISIKO', prop: 'tablet' }, dwell: rnd(12, 20) };
+    }
+    if (a.act.id !== p.seat.id && r < 0.6) return { act: { ...p.seat, label: any1(['CEK RISIKO', 'HITUNG EKSPOSUR', 'CEK DRAWDOWN', 'CEK SL/TP']), prop: 'laptop' }, dwell: rnd(25, 45) };
+    if (r < 0.25) return { act: { ...SPOTS.find((q) => q.id === 'tv')!, id: 'risk-tv', label: 'PANTAU POSISI' }, dwell: rnd(6, 10) };
+    if (r < 0.4) { const w = shuffle(WORKERS.filter((id) => id !== 'tg' && S[id]?.label.startsWith('POSISI')))[0]; if (w) return { act: { ...near(w, 'CEK POSISI'), prop: 'tablet' }, dwell: rnd(5, 8) }; }
+    if (r < 0.55) return { act: pick(SPOTS.filter((q) => ['coffee', 'water', 'win1', 'win3', 'stretch', 'rest2'].includes(q.id))), dwell: rnd(8, 14) };
+    return { act: { ...p.seat, label: 'CEK RISIKO', prop: 'laptop' }, dwell: rnd(25, 45) };
   }
   if (p.id === 'vet') {      // the big boss only eats, sleeps and watches Korean dramas, and breaks it up when Marcel yells at someone
     const m = all.bos;
@@ -2469,7 +2634,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const [toast, setToast] = useState('');
   const say = (t: string) => { setToast(t); window.setTimeout(() => setToast(''), 2600); };
   const MENU: Array<[string, string, string]> = [
-    ['dadakan', '📢', 'Panggil rapat'], ['galeri', '🖼️', 'Galeri momen'], ['foto', '📷', 'Foto kantor'], ['kopi', '☕', 'Udin bagi kopi'],
+    ['dadakan', '📢', 'Panggil rapat'], ['laporan', '📊', 'Minta laporan'], ['galeri', '🖼️', 'Galeri momen'], ['foto', '📷', 'Foto kantor'], ['kopi', '☕', 'Udin bagi kopi'],
     ['pizza', '🍕', 'Pesan pizza'], ['senam', '🤸', 'Senam bareng'], ['kucing', '🐟', 'Kasih makan kucing'], ['ultah', '🎂', 'Pesta kejutan'], ['trade', '📈', 'Buka Trade'],
   ];
   const act = (k: string) => {
@@ -2478,7 +2643,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     if (k === 'foto') { window.setTimeout(() => { snapRef.current(`foto-${Date.now()}`, 'Foto kantor'); say('📷 Tersimpan di Galeri momen'); }, 300); return; }
     if (k === 'trade') { swipeRef.current?.(); return; }
     CALL.kind = k; CALL.at = Date.now(); CALL.res = '';
-    const started: Record<string, string> = { dadakan: '📢 Semua dipanggil rapat!', kopi: '☕ Udin bikin kopi buat semua', pizza: '🍕 Pizza dipesan!', senam: '🤸 Ayo senam!', kucing: '🐟 Udin kasih makan kucing', ultah: '🎂 Pesta kejutan!' };
+    const started: Record<string, string> = { laporan: '📊 Sari bawa laporan ke Marcel', dadakan: '📢 Semua dipanggil rapat!', kopi: '☕ Udin bikin kopi buat semua', pizza: '🍕 Pizza dipesan!', senam: '🤸 Ayo senam!', kucing: '🐟 Udin kasih makan kucing', ultah: '🎂 Pesta kejutan!' };
     let n = 0;
     const wait = window.setInterval(() => {
       n++;
@@ -2907,7 +3072,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         const tps = mine.filter((t) => t.result === 'tp'), sls = mine.filter((t) => t.result === 'sl'), openN = mine.filter((t) => t.result === 'open').length;
         const all = mine.filter((t) => t.result !== 'open').reduce((a, t) => a + Number(t.pnl ?? 0), 0);
         const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-        const JOB: Record<string, string> = { bos: 'Owner', vet: 'Big Bos', alt: 'Trader koin alt (Binance)', big: 'Trader BTC (Binance)', xau: 'Trader emas XAU (MT5)', nas: 'Trader NASDAQ (MT5)', tg: 'Kirim sinyal ke Telegram', jaga: 'Satpam', ob: 'Office boy', kurir: 'Kurir', tamu: 'Tamu' };
+        const JOB: Record<string, string> = { bos: 'Owner', vet: 'Big Bos', alt: 'Trader koin alt (Binance)', big: 'Trader BTC (Binance)', xau: 'Trader emas XAU (MT5)', nas: 'Trader NASDAQ (MT5)', tg: 'Kirim sinyal ke Telegram', risk: 'Manajer risiko', akun: 'Akuntan', jaga: 'Satpam', ob: 'Office boy', kurir: 'Kurir', tamu: 'Tamu' };
         return (
           <div className="office-card-bg" onClick={() => setCard(null)} data-noswipe>
             <div className="office-card" onClick={(e) => e.stopPropagation()}>
@@ -2916,6 +3081,20 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
               <b className="oc-name">{p.name}</b>
               <span className="oc-job">{JOB[card.id] ?? p.role}</span>
               <div className="oc-now"><i style={{ background: s0?.color ?? '#9aa' }} />{card.what || s0?.label || '—'}{s0 && s0.label !== card.what && strat ? <em> · {s0.label}</em> : null}</div>
+              {card.id === 'risk' || card.id === 'akun' ? (() => {
+                const b = biz(data, now);
+                return card.id === 'risk' ? <div className="oc-stats">
+                  <div><small>Status</small><b className={b.level === 'RISIKO AMAN' ? 'up' : 'dn'}>{b.level === 'RISIKO AMAN' ? 'Aman' : b.level === 'WASPADA' ? 'Waspada' : 'Bahaya'}</b></div>
+                  <div><small>SL beruntun</small><b className={b.streak >= 3 ? 'dn' : ''}>{b.streak}</b></div>
+                  <div><small>Hari ini</small><b className={b.todayPct > 0 ? 'up' : b.todayPct < 0 ? 'dn' : ''}>{`${b.todayPct > 0 ? '+' : b.todayPct < 0 ? '−' : ''}${Math.abs(b.todayPct).toFixed(1)}%`}</b></div>
+                  <div><small>Posisi</small><b>{b.openN}</b></div>
+                </div> : <div className="oc-stats">
+                  <div><small>Hari ini</small><b className={b.todayAll.length ? (b.todayAll.reduce((a, t) => a + Number(t.pnl ?? 0), 0) >= 0 ? 'up' : 'dn') : ''}>{money(b.todayAll.reduce((a, t) => a + Number(t.pnl ?? 0), 0))}</b></div>
+                  <div><small>Bulan ini</small><b className={b.monthPnl > 0 ? 'up' : b.monthPnl < 0 ? 'dn' : ''}>{money(b.monthPnl)}</b></div>
+                  <div><small>Binance</small><b>{data.binance ? `$${data.binance.wallet.toFixed(2)}` : '—'}</b></div>
+                  <div><small>MT5</small><b>{data.mt5 ? `$${data.mt5.wallet.toFixed(2)}` : '—'}</b></div>
+                </div>;
+              })() : null}
               {strat ? <div className="oc-stats">
                 <div><small>Hari ini</small><b className={today > 0 ? 'up' : today < 0 ? 'dn' : ''}>{money(today)}</b></div>
                 <div><small>Posisi</small><b>{openN}</b></div>
