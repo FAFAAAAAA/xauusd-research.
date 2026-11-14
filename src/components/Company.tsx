@@ -47,6 +47,8 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
   const r = useReport(data, now);
   const c = useCompany();
   const [tab, setTab] = useState<'w' | 'm'>('m');
+  const [info, setInfo] = useState(false);
+  const [bEdit, setBEdit] = useState<string | null>(null), [bBusy, setBBusy] = useState(false);
   if (!r) return <div className="co"><p className="co-empty">Memuat…</p></div>;
   const tz = deviceTz(), S = c?.settings ?? DEFAULT_COMPANY, m = r.cur, rate = r.rate;
   const capPct = Math.round(100 - S.salaryPct);
@@ -74,19 +76,75 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
           <small>Tarik bulan ini</small>
           <b>{usdT(Math.max(0, r.owed.avail))}</b>
           <div className="inv-hero-sub">
-            <div><small>Gaji</small><b>{usdT(m.salary)}</b><i>{toIdr(m.salary, rate)}</i></div>
-            <div><small>Operasional</small><b>{usdT(ops)}</b></div>
+            <div><small>Pendapatan</small><b className="inc">{usdT(m.revenue)}</b></div>
+            <div><small>Pengembangan modal</small><b>{usdT(Math.max(0, m.net - m.salary))}</b><i>{capPct}% dari laba</i></div>
+            <div><small>Gaji</small><b className="sal">{usdT(m.salary)}</b><i>{toIdr(m.salary, rate)}</i></div>
+            <div><small>Operasional</small><b>{usdT(ops)}</b><i>{names || '—'}</i></div>
           </div>
-          {r.owed.takenNow > 0.005 ? <p className="inv-hero-note">Sudah ditarik {usdT(r.owed.takenNow)} bulan ini</p> : null}
-        </div>
-        <div className="inv">
-          <div className="inv-lines">
-            <div className="inv-ln big"><span className="inv-k"><span className="inv-ic" style={{ background: 'var(--up-tint, #e8f6ee)' }}>📈</span><span><b>Pendapatan</b><small>Hasil trading</small></span></span><span className={`inv-v ${cls(m.revenue)}`}>{usdT(m.revenue, true)}</span></div>
-            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#fdecec' }}>🧾</span><span><b>Operasional</b><small>{names || 'Belum ada'}</small></span></span><span className="inv-v dn">−{usdT(ops)}</span></div>
-            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#eef1ff' }}>🏦</span><span><b>Pengembangan modal</b><small>{capPct}% dari laba</small></span></span><span className="inv-v mu">−{usdT(Math.max(0, m.net - m.salary))}</span></div>
-            <div className="inv-ln"><span className="inv-k"><span className="inv-ic" style={{ background: '#fff6d6' }}>💵</span><span><b>Gaji</b></span></span><span className="inv-v up">{usdT(m.salary)}</span></div>
+          <div className="inv-hero-foot">
+            <span>{r.owed.takenNow > 0.005 ? `Sudah ditarik ${usdT(r.owed.takenNow)}` : 'Belum ada penarikan'}</span>
+            <button type="button" className="inv-info" aria-label="Lihat rumus hitungan" onClick={() => setInfo(true)}>i</button>
           </div>
         </div>
+
+        {(() => {
+          const used = r.budget.used, lim = S.budgetIdr, pct = lim > 0 ? Math.min(100, (used / lim) * 100) : 0, over = lim > 0 && used > lim;
+          const R = 34, C = 2 * Math.PI * R;
+          const items = S.costs.map((x) => ({ x, v: costIdrIn(x, m.ym) })).filter((q) => q.v > 0);
+          return (
+            <div className="bud">
+              <div className="bud-h"><div><small>ANGGARAN OPERASIONAL</small><b>{ymName(m.ym, true).split(' ')[0]}</b></div>
+                {bEdit == null ? <button type="button" className="bud-edit" onClick={() => setBEdit(lim ? lim.toLocaleString('id-ID') : '')}>{lim ? 'Ubah' : 'Atur'}</button> : null}</div>
+              {bEdit != null ? (
+                <div className="bud-form">
+                  <span>Rp</span><input inputMode="numeric" autoFocus value={bEdit} placeholder="600.000" onChange={(e) => { const n = Math.round(Number(e.target.value.replace(/[^0-9]/g, '')) || 0); setBEdit(n ? n.toLocaleString('id-ID') : ''); }} />
+                  <button type="button" disabled={bBusy} onClick={async () => { setBBusy(true); try { await saveCompany({ ...S, budgetIdr: Number((bEdit || '0').replace(/[^0-9]/g, '')) }); setBEdit(null); } catch { /* keep the form */ } finally { setBBusy(false); } }}>Simpan</button>
+                  <button type="button" className="ghost" onClick={() => setBEdit(null)}>Batal</button>
+                </div>
+              ) : lim > 0 ? (
+                <div className="bud-main">
+                  <div className="bud-ring">
+                    <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r={R} fill="none" stroke="var(--sunk)" strokeWidth="9" /><circle cx="40" cy="40" r={R} fill="none" stroke={over ? 'var(--co-dn)' : pct > 85 ? '#f2a33a' : 'var(--co-up)'} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${(pct / 100) * C} ${C}`} transform="rotate(-90 40 40)" /></svg>
+                    <b>{Math.round((used / lim) * 100)}%</b>
+                  </div>
+                  <div className="bud-nums">
+                    <div><small>Terpakai</small><b>{idrT(used)}</b></div>
+                    <div><small>{over ? 'Lewat' : 'Sisa'}</small><b className={over ? 'dn' : 'up'}>{idrT(Math.abs(lim - used))}</b></div>
+                    <div className="bud-of">dari {idrT(lim)}</div>
+                  </div>
+                </div>
+              ) : <p className="bud-empty">Belum ada anggaran. Ketuk <b>Atur</b> untuk menentukan batas operasional per bulan.</p>}
+              {items.length && bEdit == null ? <div className="bud-items">{items.map(({ x, v }) => (
+                <div key={x.id}><span className="bud-dot" />{x.name}<b>{idrT(v)}</b></div>
+              ))}</div> : null}
+            </div>
+          );
+        })()}
+
+        {info ? (
+          <div className="inv-pop-bg" onClick={() => setInfo(false)}>
+            <div className="inv-pop" onClick={(e) => e.stopPropagation()}>
+              <div className="inv-pop-h"><b>Cara hitung</b><button type="button" onClick={() => setInfo(false)} aria-label="Tutup">✕</button></div>
+              <div className="inv-steps">
+                <div><span>Pendapatan</span><b className="up">{usdT(m.revenue)}</b></div>
+                <div><span><em>−</em>Operasional</span><b className="dn">{usdT(ops)}</b></div>
+                <div className="eq"><span><em>=</em>Laba bersih</span><b>{usdT(m.net)}</b></div>
+                <div><span><em>−</em>Pengembangan modal {capPct}%</span><b>{usdT(Math.max(0, m.net - m.salary))}</b></div>
+                <div className="eq"><span><em>=</em>Gaji</span><b className="up">{usdT(m.salary)}</b></div>
+              </div>
+              <div className="inv-formula">
+                <small>TARIK BULAN INI</small>
+                <div>Gaji <em>+</em> Operasional <em>=</em> <b>{usdT(Math.max(0, r.owed.avail))}</b></div>
+              </div>
+              <ul className="inv-notes">
+                <li>Pendapatan = untung/rugi semua trade Binance yang selesai bulan ini (fee sudah termasuk).</li>
+                <li>Operasional ditulis dalam Rupiah, diubah ke dolar dengan kurs otomatis{rate ? ` (± ${idrT(rate)} per $1)` : ''}.</li>
+                <li>Kalau bulan sebelumnya rugi, rugi itu ditutup dulu sebelum ada gaji lagi.</li>
+                <li>Saat menarik dari Binance, tambah ± {usdT(S.wdFee.fixed + (S.wdFee.pct / 100) * Math.max(0, r.owed.avail))} untuk biaya penarikan.</li>
+              </ul>
+            </div>
+          </div>
+        ) : null}
       </>      )}
     </div>
   );
