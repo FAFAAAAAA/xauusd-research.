@@ -225,17 +225,15 @@ export default function TradePage() {
         cashflow={(market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? []}
         openSlot={<>
           {/* Bitcoin today, above the open positions: % from today's daily open (00:00 UTC), tap for the chart */}
-          <section className="group">
+          {market === 'crypto' ? <section className="group">
             <div className="hcards">
-              <button className="hcard opencard btcday" onClick={() => setBtcOpen(true)}>
+              <button className="hcard opencard btcday" aria-label="Bitcoin" onClick={() => setBtcOpen(true)}>
                 <span className="hc-side op-badge btc-badge">₿</span>
-                <span className="op-left">
-                  <strong className="hc-name">Bitcoin</strong>
-                </span>
+                <span className="op-left" />
                 <span className={`op-pnl ${!btc ? 'mute' : btc.pct > 0 ? 'pos' : btc.pct < 0 ? 'neg' : ''}`}>{btc ? pctText(btc.pct) : '—'}</span>
               </button>
             </div>
-          </section>
+          </section> : null}
           {openSection}
         </>}
         openPnl={openTotal}

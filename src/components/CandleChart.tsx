@@ -17,7 +17,6 @@ export const CANDLE_UP = '#2962FF', CANDLE_DOWN = '#F23645';
 /* Drawings (trend lines and horizontal lines) are kept per symbol on this device (localStorage), so they come back
  * after the app is closed and show on every timeframe. Times are stored as real UTC ms, prices as numbers. */
 type Drawings = { t: Array<[number, number, number, number]>; h: number[] };
-const DRAW_COL = '#2962FF';
 const loadDraw = (k: string): Drawings => { try { const v = JSON.parse(localStorage.getItem(`chart-draw:${k}`) || 'null'); if (v && Array.isArray(v.t) && Array.isArray(v.h)) return v; } catch { /* storage off */ } return { t: [], h: [] }; };
 const saveDraw = (k: string, d: Drawings) => { try { localStorage.setItem(`chart-draw:${k}`, JSON.stringify(d)); } catch { /* storage off */ } };
 
@@ -113,6 +112,9 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
   const [draw, setDraw] = useState<Drawings>(() => (drawKey && typeof window !== 'undefined' ? loadDraw(drawKey) : { t: [], h: [] }));
   const drawn = useRef<{ lines: ISeriesApi<'Line'>[]; hl: IPriceLine[] }>({ lines: [], hl: [] });
   const update = (d: Drawings) => { setDraw(d); if (drawKey) saveDraw(drawKey, d); };
+  const drawRef = useRef(draw); drawRef.current = draw;
+  // lines are black (the theme's ink colour: black in light mode, white in dark mode so they stay visible)
+  const ink = () => (box.current ? getComputedStyle(box.current).getPropertyValue('--ink').trim() : '') || '#000000';
   // bar grid of the current timeframe: trend points snap to it so the line sits on real candles
   const barMs = () => { const n = candles.length; if (n < 2) return 60_000; const g: number[] = []; for (let i = Math.max(1, n - 50); i < n; i++) g.push(candles[i].time - candles[i - 1].time); g.sort((a, b) => a - b); return g[g.length >> 1] || 60_000; };
   const snap = (ms: number) => { const b = barMs(), first = candles[0]?.time ?? ms; return first + Math.round((ms - first) / b) * b; };
@@ -137,11 +139,11 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       if (x2 < t0) continue;
       if (x1 < t0) { y1 = y1 + ((y2 - y1) * (t0 - x1)) / (x2 - x1); x1 = t0; }
       const s1 = snap(x1), s2 = snap(x2); if (s1 === s2) continue;
-      const l = c.addLineSeries({ color: DRAW_COL, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, pointMarkersVisible: false, autoscaleInfoProvider: () => null });
+      const l = c.addLineSeries({ color: ink(), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, pointMarkersVisible: false, autoscaleInfoProvider: () => null });
       l.setData([{ time: shift(s1), value: y1 }, { time: shift(s2), value: y2 }]);
       drawn.current.lines.push(l);
     }
-    for (const p of draw.h) drawn.current.hl.push(s.createPriceLine({ price: p, color: DRAW_COL, lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: '' }));
+    for (const p of draw.h) drawn.current.hl.push(s.createPriceLine({ price: p, color: ink(), lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: '' }));
     return () => {
       const cc = chart.current, ss = series.current;
       if (cc) for (const l of drawn.current.lines) { try { cc.removeSeries(l); } catch { /* chart gone */ } }
@@ -161,15 +163,7 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
         update({ ...draw, t: [...draw.t, [anchor[0], anchor[1], pt[0], pt[1]]] }); setAnchor(null); setMode(''); return;
       }
       // eraser: the line nearest to the tap (within 14 px) goes
-      const s = series.current; if (!s) return;
-      const X = (ms: number) => c.timeScale().timeToCoordinate(shift(snap(ms))), Y = (pr: number) => s.priceToCoordinate(pr);
-      let best = { d: 14, kind: '', i: -1 };
-      draw.h.forEach((pr, i) => { const y = Y(pr); if (y != null && Math.abs(y - p.point!.y) < best.d) best = { d: Math.abs(y - p.point!.y), kind: 'h', i }; });
-      draw.t.forEach(([a, pa, b, pb], i) => {
-        const x1 = X(a), y1 = Y(pa), x2 = X(b), y2 = Y(pb); if (x1 == null || x2 == null || y1 == null || y2 == null) return;
-        const dx = x2 - x1, dy = y2 - y1, L = dx * dx + dy * dy || 1, u = Math.max(0, Math.min(1, ((p.point!.x - x1) * dx + (p.point!.y - y1) * dy) / L));
-        const d = Math.hypot(p.point!.x - (x1 + u * dx), p.point!.y - (y1 + u * dy)); if (d < best.d) best = { d, kind: 't', i };
-      });
+      const best = hitTest(p.point.x, p.point.y); if (!best) return;
       if (best.kind === 'h') update({ ...draw, h: draw.h.filter((_, i) => i !== best.i) });
       if (best.kind === 't') update({ ...draw, t: draw.t.filter((_, i) => i !== best.i) });
     };
@@ -179,6 +173,63 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
     return () => { c.unsubscribeClick(onClick); c.unsubscribeDblClick(onDbl); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, anchor, draw, candles, drawKey]);
+  /** the drawn line under a point of the chart (within 14 px): a horizontal line, or a trend line (end 0 / 1 = near an end point, -1 = its body) */
+  function hitTest(px: number, py: number): { kind: 'h' | 't'; i: number; end: number } | null {
+    const c = chart.current, s = series.current, d0 = drawRef.current; if (!c || !s) return null;
+    const X = (ms: number) => c.timeScale().timeToCoordinate(shift(snap(ms))), Y = (pr: number) => s.priceToCoordinate(pr);
+    let best: { d: number; kind: 'h' | 't'; i: number; end: number } | null = null;
+    d0.h.forEach((pr, i) => { const y = Y(pr); if (y != null && Math.abs(y - py) < (best?.d ?? 14)) best = { d: Math.abs(y - py), kind: 'h', i, end: -1 }; });
+    d0.t.forEach(([a, pa, b, pb], i) => {
+      const x1 = X(a), y1 = Y(pa), x2 = X(b), y2 = Y(pb); if (x1 == null || x2 == null || y1 == null || y2 == null) return;
+      const e1 = Math.hypot(px - x1, py - y1), e2 = Math.hypot(px - x2, py - y2);
+      if (Math.min(e1, e2) < (best?.d ?? 16)) { best = { d: Math.min(e1, e2), kind: 't', i, end: e1 <= e2 ? 0 : 1 }; return; }
+      const dx = x2 - x1, dy = y2 - y1, L = dx * dx + dy * dy || 1, u = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / L));
+      const d = Math.hypot(px - (x1 + u * dx), py - (y1 + u * dy)); if (d < (best?.d ?? 14)) best = { d, kind: 't', i, end: -1 };
+    });
+    return best;
+  }
+  // drag a line: press on it (no tool active) and move; the chart does not pan while a line is held
+  const drag = useRef<{ kind: 'h' | 't'; i: number; end: number; x0: number; y0: number; orig: Drawings } | null>(null);
+  useEffect(() => {
+    const el = box.current; if (!el || !drawKey) return;
+    const at = (e: { clientX: number; clientY: number }) => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top] as const; };
+    const timeAt = (x: number) => { const c = chart.current; const lg = c?.timeScale().coordinateToLogical(x); if (lg == null || !candles.length) return null; const i = Math.round(lg), last = candles.length - 1; return i <= last ? candles[Math.max(0, i)].time : candles[last].time + (i - last) * barMs(); };
+    const priceAt = (y: number) => { const v = series.current?.coordinateToPrice(y); return v == null ? null : Number(v); };
+    const down = (e: PointerEvent) => {
+      if (mode) return;
+      const [x, y] = at(e); const h = hitTest(x, y); if (!h) return;
+      drag.current = { ...h, x0: x, y0: y, orig: JSON.parse(JSON.stringify(drawRef.current)) };
+      chart.current?.applyOptions({ handleScroll: false, handleScale: false });
+      try { el.setPointerCapture(e.pointerId); } catch { /* old browser */ }
+      e.stopPropagation(); e.preventDefault();
+    };
+    const move = (e: PointerEvent) => {
+      const g = drag.current; if (!g) return;
+      e.stopPropagation(); e.preventDefault();
+      const [x, y] = at(e); const p1 = priceAt(y), p0 = priceAt(g.y0), t1 = timeAt(x), t0 = timeAt(g.x0); if (p1 == null || p0 == null || t1 == null || t0 == null) return;
+      const d: Drawings = { t: g.orig.t.map((q) => [...q] as [number, number, number, number]), h: [...g.orig.h] };
+      if (g.kind === 'h') d.h[g.i] = p1;
+      else if (g.end === 0) { d.t[g.i][0] = t1; d.t[g.i][1] = p1; }
+      else if (g.end === 1) { d.t[g.i][2] = t1; d.t[g.i][3] = p1; }
+      else { const dt = t1 - t0, dp = p1 - p0, o = g.orig.t[g.i]; d.t[g.i] = [o[0] + dt, o[1] + dp, o[2] + dt, o[3] + dp]; }
+      setDraw(d);
+    };
+    const up = (e: PointerEvent) => {
+      if (!drag.current) return;
+      drag.current = null; e.stopPropagation();
+      chart.current?.applyOptions({ handleScroll: true, handleScale: true });
+      if (drawKey) saveDraw(drawKey, drawRef.current);
+    };
+    // the chart listens to mouse / touch events: stop them while a line is held so it does not pan
+    const block = (e: Event) => { if (drag.current) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); } };
+    el.addEventListener('pointerdown', down, true); el.addEventListener('pointermove', move, true); el.addEventListener('pointerup', up, true); el.addEventListener('pointercancel', up, true);
+    for (const k of ['mousedown', 'mousemove', 'touchstart', 'touchmove']) el.addEventListener(k, block, { capture: true, passive: false });
+    return () => {
+      el.removeEventListener('pointerdown', down, true); el.removeEventListener('pointermove', move, true); el.removeEventListener('pointerup', up, true); el.removeEventListener('pointercancel', up, true);
+      for (const k of ['mousedown', 'mousemove', 'touchstart', 'touchmove']) el.removeEventListener(k, block, { capture: true } as EventListenerOptions);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, candles, drawKey, timezone]);
   const pick = (m: typeof mode) => { setAnchor(null); setMode((cur) => (cur === m ? '' : m)); };
   const hint = mode === 'trend' ? (anchor ? 'Ketuk titik kedua' : 'Ketuk titik pertama') : mode === 'hline' ? 'Ketuk harga untuk garis' : mode === 'erase' ? 'Ketuk garis yang mau dihapus' : '';
 
