@@ -56,11 +56,11 @@ interface Spot { id: string; room: number; x: number; y: number; face: Face; pos
 interface Person {
   id: string; name: string; role: string; seat: Spot;
   hair: string; skin: string; shirt: string; pants: string; style: 'short' | 'long' | 'bun' | 'cap' | 'slick' | 'curly';
-  cap?: string; glasses?: boolean; headset?: boolean; tie?: boolean;
+  cap?: string; glasses?: boolean; headset?: boolean; tie?: boolean; hijab?: string; mole?: boolean; lips?: string;
 }
 const seat = (id: string, room: number, x: number, y: number, face: Face, label = 'MEMANTAU'): Spot => ({ id: `seat-${id}`, room, x, y, face, pose: 'sit', label });
 const PEOPLE: Person[] = [
-  { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'NONTON DRAKOR'), hair: '#4a1422', skin: '#f3cfb0', shirt: '#8e2c48', pants: '#7a2440', style: 'long', glasses: true },
+  { id: 'vet', name: 'Ny. Vetrycia', role: 'BIG BOS', seat: seat('vet', 0, 2.2, 3.4, 'px', 'NONTON DRAKOR'), hair: '#3a2418', skin: '#f5d4bf', shirt: '#9a8590', pants: '#6e5a66', style: 'long', hijab: '#d9d3c8', mole: true, lips: '#c9615a' },
   { id: 'bos', name: 'Marcel', role: 'OWNER', seat: seat('bos', 0, 6.4, 4.0, 'py', 'NGITUNG CUAN'), hair: '#1a1a1a', skin: '#e9b98f', shirt: '#24262c', pants: '#1c1d22', style: 'slick', glasses: true, tie: true },
   { id: 'alt', name: 'Na', role: 'ALT', seat: seat('alt', 1, 2.35, 1.55, 'nx'), hair: '#5a3825', skin: '#f3cba5', shirt: '#e5484d', pants: '#2c3e66', style: 'short' },
   { id: 'big', name: 'Ni', role: 'BTC', seat: seat('big', 1, 2.35, 3.75, 'nx'), hair: '#1b1b1b', skin: '#d9a477', shirt: '#2fb67c', pants: '#34363c', style: 'cap', cap: '#1f2024' },
@@ -1631,7 +1631,7 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
   const R = 6.2;
   const big = p.id === 'vet', HS = INK ? (big ? 1.5 : 1.3) : big ? 1.6 : 1.2, NECK = INK ? 0.5 : 0;     // head scale (Ny. Vetrycia keeps her big head)
   const headOn = () => { c.save(); c.translate(hx, hy + 5 - NECK); c.scale(HS, HS); c.translate(-hx, -(hy + 5)); };
-  if (p.style === 'long') { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); if (INK) { c.moveTo(hx - 5.9, hy - 1.2); c.bezierCurveTo(hx - 7.2, hy + 9, hx - 4.2, hy + 10.5, hx, hy + 10.5); c.bezierCurveTo(hx + 4.2, hy + 10.5, hx + 7.2, hy + 9, hx + 5.9, hy - 1.2); c.closePath(); } else c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
+  if (p.style === 'long' && !p.hijab) { headOn(); c.fillStyle = sh(p.hair, 0.9); c.beginPath(); if (INK) { c.moveTo(hx - 5.9, hy - 1.2); c.bezierCurveTo(hx - 7.2, hy + 9, hx - 4.2, hy + 10.5, hx, hy + 10.5); c.bezierCurveTo(hx + 4.2, hy + 10.5, hx + 7.2, hy + 9, hx + 5.9, hy - 1.2); c.closePath(); } else c.roundRect(hx - 6.2, hy - 1, 12.4, front ? 9.5 : 12, 3); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } c.restore(); }
   const ty = hip - torso + breathe * 0.3;
   const tg = c.createLinearGradient(-4.6, 0, 4.6, 0); tg.addColorStop(0, sh(p.shirt, front ? 1.08 : 0.9)); tg.addColorStop(1, shirtD);
   if (!INK) { c.fillStyle = tg; c.beginPath(); c.roundRect(-4.6 + lean * 0.5, ty, 9.2, torso + 0.6, [3.2, 3.2, 1.6, 1.6]); c.fill(); }
@@ -1781,13 +1781,39 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     else c.arc(hx, hy, R, 0, 7);
   };
   if (INK && front) { c.fillStyle = sh(p.skin, 0.93); c.beginPath(); c.ellipse(hx - R * 0.86, hy + 1, 1.1, 1.6, 0, 0, 7); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.45; c.stroke(); }
+  if (p.hijab) {      // the scarf behind and around the face, falling over the shoulders
+    const hj = p.hijab, g2 = c.createLinearGradient(hx - R * 1.4, 0, hx + R * 1.4, 0); g2.addColorStop(0, sh(hj, front ? 1.04 : 0.92)); g2.addColorStop(1, sh(hj, 0.86));
+    c.fillStyle = g2; c.beginPath();
+    c.moveTo(hx, hy - R * 1.28);
+    c.bezierCurveTo(hx + R * 1.3, hy - R * 1.28, hx + R * 1.3, hy + R * 0.3, hx + R * 1.2, hy + R * 0.9);
+    c.bezierCurveTo(hx + R * 1.32, hy + R * 1.2, hx + R * 1.25, hy + R * 1.55, hx + R * 0.8, hy + R * 1.65);
+    c.quadraticCurveTo(hx, hy + R * 1.85, hx - R * 0.8, hy + R * 1.65);
+    c.bezierCurveTo(hx - R * 1.25, hy + R * 1.55, hx - R * 1.32, hy + R * 1.2, hx - R * 1.2, hy + R * 0.9);
+    c.bezierCurveTo(hx - R * 1.3, hy + R * 0.3, hx - R * 1.3, hy - R * 1.28, hx, hy - R * 1.28);
+    c.closePath(); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.55; c.stroke(); }
+    c.strokeStyle = sh(hj, 0.78); c.lineWidth = 0.4;              // soft folds
+    for (const k of [-0.6, 0.6]) { c.beginPath(); c.moveTo(hx + R * k, hy + R * 1.1); c.quadraticCurveTo(hx + R * (k + 0.1), hy + R * 1.4, hx + R * (k - 0.05), hy + R * 1.62); c.stroke(); }
+  }
   c.fillStyle = hg; head(); c.fill();
   if (INK) { c.strokeStyle = OL; c.lineWidth = 0.55; c.stroke(); c.save(); head(); c.clip(); c.fillStyle = 'rgba(150,80,60,.12)'; c.beginPath(); c.ellipse(hx - 3.5, hy + 3, 3, 4.5, 0, 0, 7); c.fill(); c.restore(); }
   const angry = (p.id === 'bos' && whipT != null) || (p.id === 'vet' && !!a.act.whip && !walking && !!a.bubble && Date.now() < a.bubble.until);
   if (angry) { c.fillStyle = 'rgba(255,60,40,.28)'; c.beginPath(); c.arc(hx, hy, R, 0, 7); c.fill(); }
   c.save(); c.beginPath(); if (INK) c.rect(hx - 3 * R, hy - 3 * R, 6 * R, 6 * R); else c.arc(hx, hy, R + 0.7, 0, 7); c.clip();
   c.fillStyle = p.hair;
-  if (INK && p.style === 'cap') {
+  if (p.hijab) {
+    const hj = p.hijab;
+    if (front) {
+      // the scarf frames the face: an oval opening, the edge a little lower on the forehead
+      c.fillStyle = sh(hj, 1.02); c.beginPath();
+      c.moveTo(hx - R * 1.06, hy + R * 0.75);
+      c.bezierCurveTo(hx - R * 1.22, hy - R * 1.42, hx + R * 1.22, hy - R * 1.42, hx + R * 1.06, hy + R * 0.75);
+      c.lineTo(hx + R * 0.86, hy + R * 0.62);
+      c.bezierCurveTo(hx + R * 0.92, hy - R * 0.1, hx + R * 0.5, hy - R * 0.5, hx, hy - R * 0.5);
+      c.bezierCurveTo(hx - R * 0.5, hy - R * 0.5, hx - R * 0.92, hy - R * 0.1, hx - R * 0.86, hy + R * 0.62);
+      c.closePath(); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); }
+      c.strokeStyle = sh(hj, 0.82); c.lineWidth = 0.35; c.beginPath(); c.moveTo(hx - R * 0.6, hy - R * 0.85); c.quadraticCurveTo(hx, hy - R * 1.05, hx + R * 0.6, hy - R * 0.85); c.stroke();
+    } else { c.fillStyle = sh(hj, 0.92); head(); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } }
+  } else if (INK && p.style === 'cap') {
     const cc = p.cap ?? '#1e1f23';
     c.fillStyle = cc; c.beginPath(); c.moveTo(hx - R * 1.0, hy - R * 0.2); c.bezierCurveTo(hx - R * 1.05, hy - R * 1.45, hx + R * 1.05, hy - R * 1.45, hx + R * 1.0, hy - R * 0.2); c.closePath(); c.fill(); c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke();
     c.fillStyle = sh(cc, 0.75); c.beginPath(); c.moveTo(hx - R * 0.3, hy - R * 0.32); c.quadraticCurveTo(hx + (front ? R * 1.5 : -R * 1.5), hy - R * 0.38, hx + (front ? R * 1.4 : -R * 1.4), hy - R * 0.1); c.lineTo(hx - R * 0.1, hy - R * 0.12); c.closePath(); c.fill(); c.stroke();
@@ -1813,9 +1839,9 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     }
   } else { c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, 2 * R - (p.style === 'cap' ? 2.5 : 1.3)); if (p.style === 'cap') { c.fillStyle = p.cap ?? '#1e1f23'; c.fillRect(hx - R - 1, hy - R - 1, 2 * R + 2, R - 0.5); } }
   c.restore();
-  if (INK && p.style !== 'cap') { c.fillStyle = 'rgba(255,255,255,.22)'; c.beginPath(); c.ellipse(hx - 1.5, hy - 4.6, 2.8, 0.8, -0.25, 0, 7); c.fill(); }      // hair shine
+  if (INK && p.style !== 'cap' && !p.hijab) { c.fillStyle = 'rgba(255,255,255,.22)'; c.beginPath(); c.ellipse(hx - 1.5, hy - 4.6, 2.8, 0.8, -0.25, 0, 7); c.fill(); }      // hair shine
   if (p.style === 'cap' && !INK) { c.fillStyle = p.cap ?? '#1e1f23'; c.beginPath(); c.ellipse(hx + (front ? 4.5 : -4.5), hy - 1.4, 3.6, 1.1, 0, 0, 7); c.fill(); }
-  if (p.style === 'bun') { c.fillStyle = p.hair; c.beginPath(); c.arc(hx - 1, hy - R - (INK ? 2.2 : 0.6), 2.6, 0, 7); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } }
+  if (p.style === 'bun' && !p.hijab) { c.fillStyle = p.hair; c.beginPath(); c.arc(hx - 1, hy - R - (INK ? 2.2 : 0.6), 2.6, 0, 7); c.fill(); if (INK) { c.strokeStyle = OL; c.lineWidth = 0.5; c.stroke(); } }
   if (p.headset) { c.strokeStyle = '#1e1f23'; c.lineWidth = 1; c.beginPath(); c.arc(hx, hy, R + 0.6, Math.PI * 1.05, Math.PI * 1.95); c.stroke(); c.fillStyle = '#1e1f23'; c.beginPath(); c.arc(hx - R + 0.4, hy + 0.5, 1.8, 0, 7); c.fill(); }
   if (front && pose !== 'sleep' && pose !== 'nap') {
     const blink = (t * 1000 + hash(p.id) * 4000) % 4000 < 120;
@@ -1880,7 +1906,9 @@ function drawPerson(c: C, p: Person, a: Agent, t: number, st: Status, whipT: num
     else if (xp === 'ngomong') { const o = Math.abs(Math.sin(t * 11)); c.fillStyle = '#5a1a1a'; c.beginPath(); c.ellipse(hx + 1.4, hy + 3.2, 1.0, 0.25 + o * 0.75, 0, 0, 7); c.fill(); }
     else if (xp === 'fokus') { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(hx + 0.5, hy + 3.3); c.lineTo(hx + 2.3, hy + 3.2); c.stroke(); }
     else if (xp === 'ngantuk') { const y = Math.sin(t * 0.9 + hash(p.id) * 5); c.fillStyle = '#5a1a1a'; c.beginPath(); c.ellipse(hx + 1.4, hy + 3.4, 0.6 + Math.max(0, y) * 0.5, 0.4 + Math.max(0, y) * 0.9, 0, 0, 7); c.fill(); }
+    else if (p.lips) { c.fillStyle = p.lips; c.beginPath(); c.moveTo(hx + 0.2, hy + 3.2); c.quadraticCurveTo(hx + 1.4, hy + 2.6, hx + 2.6, hy + 3.2); c.quadraticCurveTo(hx + 1.4, hy + 4.3, hx + 0.2, hy + 3.2); c.fill(); }
     else { c.strokeStyle = '#7a3b2e'; c.lineWidth = 0.6; c.beginPath(); c.arc(hx + 1.4, hy + 3, 0.9, 0.2, Math.PI - 0.2); c.stroke(); }
+    if (p.mole) { c.fillStyle = '#5a3a2a'; c.beginPath(); c.arc(hx - 2.1, hy + 1.7, 0.3, 0, 7); c.fill(); }
     // little signs next to the head: sweat when worried, sparkles when happy, "!" when surprised, z when sleepy
     if (xp === 'cemas') { const w = (t * 0.8 + hash(p.id)) % 1; c.fillStyle = `rgba(120,190,255,${1 - w * 0.6})`; c.beginPath(); c.ellipse(hx - 4.2, hy - 1 + w * 3, 0.7, 1.1, 0, 0, 7); c.fill(); }
     if (xp === 'ketawa' || (xp === 'senang' && Math.sin(t * 1.3 + hash(p.id) * 7) > 0.6)) for (let k = 0; k < 2; k++) { const w = (t * 0.9 + k * 0.5) % 1, sx2 = hx + 6.5 + k * 1.6, sy2 = hy - 4 - w * 3; c.fillStyle = `rgba(255,210,60,${1 - w})`; c.beginPath(); for (let q = 0; q < 4; q++) { const ang = (q * Math.PI) / 2; c.lineTo(sx2 + Math.cos(ang) * 1.3, sy2 + Math.sin(ang) * 1.3); c.lineTo(sx2 + Math.cos(ang + Math.PI / 4) * 0.4, sy2 + Math.sin(ang + Math.PI / 4) * 0.4); } c.closePath(); c.fill(); }
