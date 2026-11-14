@@ -77,12 +77,19 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
       const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
       const portrait = window.innerHeight >= window.innerWidth;
       const scr = Math.max(window.screen.height, window.screen.width);
-      const short = standalone && portrait && scr - window.innerHeight > 20;
-      root.classList.toggle('app-tall', short);
-      if (short) root.style.setProperty('--app-h', `${scr}px`); else root.style.removeProperty('--app-h');
+      // installed app, portrait: always the full screen height. iOS sometimes reports the full height and sometimes one status bar
+      // less (after coming back from the background, opening a sheet…); switching between the two made the strip come and go.
+      const tall = standalone && portrait;
+      root.classList.toggle('app-tall', tall);
+      if (tall) root.style.setProperty('--app-h', `${Math.max(scr, window.innerHeight)}px`); else root.style.removeProperty('--app-h');
     };
-    set(); window.addEventListener('resize', set);
-    return () => { window.removeEventListener('resize', set); root.classList.remove('app-tall'); root.style.removeProperty('--app-h'); };
+    set();
+    const later = () => { set(); window.setTimeout(set, 250); window.setTimeout(set, 900); };
+    window.addEventListener('resize', later); window.addEventListener('orientationchange', later); window.addEventListener('pageshow', later); document.addEventListener('visibilitychange', later);
+    return () => {
+      window.removeEventListener('resize', later); window.removeEventListener('orientationchange', later); window.removeEventListener('pageshow', later); document.removeEventListener('visibilitychange', later);
+      root.classList.remove('app-tall'); root.style.removeProperty('--app-h');
+    };
   }, [full]);
   const cls = full ? 'office-home' : 'office-dock';
   const View = (p: { data: OfficeData; screen: ScreenLine[] }) => <Office data={p.data} now={now} screen={p.screen} full={full} onSwipe={onSwipe} />;
