@@ -99,6 +99,19 @@ export function BotControlCard() {
         <i className={`co-tg ${c.paused ? '' : 'on'}`} />
       </button>
 
+      {(() => {
+        const bal = typeof d.balance === 'number' ? d.balance : null;
+        const brake = bal ? Math.max(10, Math.floor((bal * 0.5) / 10) * 10) : 0;
+        const safe: Partial<Record<BotKey, BotVal>> = { risk_mode: 'percent', risk_percent: 2, max_positions: 4, buy_enabled: true, max_buy_positions: 2,
+          stop_balance_usdt: brake, max_loss_streak: 7, leverage_auto: true, margin_isolated: true };
+        return (
+          <button type="button" className="bc-safe" onClick={() => { setSet({ ...set, ...safe }); setOpen(null); }}>
+            <span className="bc-safe-ic">✓</span>
+            <span><b>Pakai setelan aman</b><small>Risiko 2% saldo · 4 SELL + 2 BUY{brake ? ` · rem saldo $${brake} (50% dari $${Math.round(bal!)})` : ''} · leverage otomatis · Isolated</small></span>
+          </button>
+        );
+      })()}
+
       <Sec id="risk" title="Risiko" sum={riskSum}>
         <div className="bc-row"><span className="bc-l">Cara hitung<Hint k="risk_mode" /></span>
           <span className="bc-seg">{(['percent', 'usdt'] as const).map((m) => <button key={m} type="button" className={mode === m ? 'on' : ''} onClick={() => put('risk_mode', m)}>{m === 'percent' ? '% saldo' : 'USD tetap'}</button>)}</span></div>
@@ -118,7 +131,7 @@ export function BotControlCard() {
         <Step k="max_loss_streak" label="Rem beruntun" unit=" SL" by={1} lo={0} hi={30} dflt={7} />
         <div className="bc-row"><span className="bc-l">Kalah beruntun<small>{streak > 0 && ls >= streak ? 'REM AKTIF — bot tidak buka posisi baru' : `dari ${streak || '—'}`}</small></span>
           <span className="bc-step"><b className={streak > 0 && ls >= streak ? 'dn' : ''}>{ls}</b>
-            <button type="button" className="bc-mini" disabled={busy || !ls} onClick={() => send({ ...c, reset: true }, 'Reset dikirim — bot menghitung dari 0 lagi')}>Reset</button></span></div>
+            <button type="button" className="bc-mini" disabled={busy || !ls} onClick={() => send({ ...c, reset: true }, 'Hitungan kalah beruntun di-nol-kan')}>Nol-kan</button></span></div>
       </Sec>
 
       <Sec id="lev" title="Leverage & margin" sum={`${lev ? 'otomatis' : `${v<number>('leverage', 5)}x`} · ${v<boolean>('margin_isolated', true) ? 'Isolated' : 'Cross'}`}>

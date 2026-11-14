@@ -1532,3 +1532,6 @@ button.tgt-card { display: block; width: 100%; text-align: left; font: inherit; 
 .bc-add button { border: 0; border-radius: 10px; padding: 0 14px; font: inherit; font-size: 14px; font-weight: 700; background: #141416; color: #fff; cursor: pointer; }
 .bc-foot { margin: 0; font-size: 11.5px; color: var(--mute); }
 .bc-card .bc-row:first-child { border-top: 0; }
+.bc-safe { display: flex; align-items: center; gap: 12px; width: 100%; border: 1px dashed #16a35a; border-radius: 16px; padding: 12px 14px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.bc-safe b { display: block; font-size: 15px; } .bc-safe small { display: block; font-size: 12px; color: var(--mute); margin-top: 2px; }
+.bc-safe-ic { width: 32px; height: 32px; border-radius: 50%; background: #16a35a; color: #fff; display: grid; place-items: center; font-weight: 800; flex: none; }

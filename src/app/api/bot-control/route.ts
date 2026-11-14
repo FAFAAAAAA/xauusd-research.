@@ -9,6 +9,7 @@ export async function GET() {
   return api(async (db) => ({
     control: cleanBotControl(await repo.getAppSetting<BotControl | null>(db, 'bot_control', null) ?? DEFAULT_BOT_CONTROL),
     seen: await repo.getAppSetting<BotSeen | null>(db, 'bot_control_seen', null),
+    balance: (await repo.getAppSetting<{ wallet?: number } | null>(db, 'binance_balance', null))?.wallet ?? null,
   }));
 }
 export async function PUT(req: Request) {
