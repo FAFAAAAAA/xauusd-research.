@@ -1030,3 +1030,19 @@ body:has(.office-home)::after { display: none; }
 .og-back { display: block; margin: 12px auto 0; border: 0; background: none; font: 700 13px system-ui, sans-serif; color: #4c6a86; }
 .og-empty { font: 500 13px/1.4 system-ui, sans-serif; color: #6a625b; text-align: center; padding: 18px 6px; margin: 0; }
 @media (prefers-reduced-motion: reduce) { .og-img { animation: none; } }
+
+/* tap a person: their card */
+.office-card-bg { position: absolute; inset: 0; z-index: 28; display: flex; align-items: center; justify-content: center; background: rgba(8,10,16,.35); padding: 16px; }
+.office-card { position: relative; width: 100%; max-width: 300px; background: #fffaf2; border-radius: 18px; padding: 18px 16px 14px; box-shadow: 0 10px 30px rgba(0,0,0,.35); text-align: center; color: #2a2320; animation: om-in .18s ease-out; }
+.oc-x { position: absolute; right: 10px; top: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: #2a2b30; color: #fff; font: 700 12px system-ui, sans-serif; }
+.oc-face { width: 92px; height: 92px; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.2); display: block; margin: 0 auto 8px; }
+.oc-name { display: block; font: 800 19px system-ui, sans-serif; }
+.oc-job { display: block; font: 600 12px system-ui, sans-serif; color: #8a8178; margin-top: 2px; }
+.oc-now { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; background: #f1e9dc; border-radius: 999px; padding: 5px 11px; font: 700 12px ui-monospace, Menlo, monospace; }
+.oc-now i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.oc-now em { font-style: normal; color: #8a8178; }
+.oc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.oc-stats div { background: #fff; border: 1px solid #efe5d6; border-radius: 12px; padding: 8px 6px; }
+.oc-stats small { display: block; font: 600 11px system-ui, sans-serif; color: #8a8178; }
+.oc-stats b { display: block; font: 800 16px system-ui, sans-serif; margin-top: 2px; }
+.oc-stats .up { color: #1f9d57; } .oc-stats .dn { color: #d63a3f; }

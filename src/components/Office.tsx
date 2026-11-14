@@ -2123,6 +2123,9 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const wrap = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLCanvasElement>(null);
   const st = useMemo(() => statuses(data, now), [data, now]);
+  // tap a person: a small card with their face, name, job, status and results
+  const [card, setCard] = useState<{ id: string; what: string } | null>(null);
+  const cardRef = useRef(setCard); cardRef.current = setCard;
   const dataRef = useRef(data); dataRef.current = data;
   const stRef = useRef(st); stRef.current = st;
   const scrRef = useRef(screen); scrRef.current = screen;
@@ -2265,7 +2268,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const r = cv.getBoundingClientRect(), x = clientX - r.left, y = clientY - r.top;
       let best = '', bd = 1e9;
       for (const tg of TAGHIT) { const inTag = x >= tg.x && x <= tg.x + tg.w && y >= tg.y && y <= tg.y + tg.h; const d = inTag ? 0 : Math.hypot(x - tg.ax, y - (tg.ay - 22)); if (d < bd) { bd = d; best = tg.id; } }
-      if (best && bd < 34) { SEL.id = best; SEL.until = Date.now() + 5000; }
+      if (best && bd < 34) { const a = AGENTS[best]; cardRef.current({ id: best, what: a ? (a.path.length ? 'JALAN' : a.act.label) : '' }); }
     };
     let tap: { x: number; y: number; t: number } | null = null;
     cv.addEventListener('touchstart', (e) => { tap = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null; }, { passive: true });
@@ -2300,7 +2303,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     let bgV: { z: number; tx: number; ty: number } | null = null, bgM = 0, bgW = 0, bgH = 0, lastView = '', viewMoved = 0;
     let k = 1, css = 1, dpr = 1, bg: HTMLCanvasElement | null = null, bgKey = '', raf = 0, last = performance.now(), visible = true;
     loadPhoto(() => { bgKey = ''; });
-    const agents: Record<string, Agent> = {};
+    const agents: Record<string, Agent> = {}; AGENTS = agents;
     let evAt = 0, mopAt = 0, shooAt = 0, skyCol = '';
     const cat: Cat = { room: 1, x: 7.5, y: 5.1, z: 0, vx: 0, vy: 0, dx: 1, dy: 0, path: [], spot: CAT_SPOTS[6], mode: 'sleep', until: Date.now() + 8000, hidden: 0, pending: null, hop: null, meow: 0 };
     CATREF = cat;
@@ -2581,6 +2584,35 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full ? null : <><div className="office-clock"><b>{clock}</b><span>{day}</span></div>
       <div className="office-count"><i />{active} karyawan aktif</div></>}
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
+      {card ? (() => {
+        const p = PEOPLE.find((q) => q.id === card.id); if (!p) return null;
+        const s0 = st[card.id];
+        const strat = ({ alt: 'snr', big: 'btc', xau: 'v2', nas: 'nas' } as Record<string, string>)[card.id];
+        const mine = strat ? data.trades.filter((t) => t.strategy === strat) : [];
+        const day0 = new Date(now); day0.setHours(0, 0, 0, 0);
+        const today = mine.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime()).reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+        const tps = mine.filter((t) => t.result === 'tp'), sls = mine.filter((t) => t.result === 'sl'), openN = mine.filter((t) => t.result === 'open').length;
+        const all = mine.filter((t) => t.result !== 'open').reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+        const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
+        const JOB: Record<string, string> = { bos: 'Owner', vet: 'Big Bos', alt: 'Trader koin alt (Binance)', big: 'Trader BTC (Binance)', xau: 'Trader emas XAU (MT5)', nas: 'Trader NASDAQ (MT5)', tg: 'Kirim sinyal ke Telegram', jaga: 'Satpam', ob: 'Office boy', kurir: 'Kurir', tamu: 'Tamu' };
+        return (
+          <div className="office-card-bg" onClick={() => setCard(null)} data-noswipe>
+            <div className="office-card" onClick={(e) => e.stopPropagation()}>
+              <button type="button" className="oc-x" onClick={() => setCard(null)} aria-label="Tutup">✕</button>
+              <img className="oc-face" src={portrait(card.id)} alt="" />
+              <b className="oc-name">{p.name}</b>
+              <span className="oc-job">{JOB[card.id] ?? p.role}</span>
+              <div className="oc-now"><i style={{ background: s0?.color ?? '#9aa' }} />{card.what || s0?.label || '—'}{s0 && s0.label !== card.what && strat ? <em> · {s0.label}</em> : null}</div>
+              {strat ? <div className="oc-stats">
+                <div><small>Hari ini</small><b className={today > 0 ? 'up' : today < 0 ? 'dn' : ''}>{money(today)}</b></div>
+                <div><small>Posisi</small><b>{openN}</b></div>
+                <div><small>TP / SL</small><b><span className="up">{tps.length}</span> / <span className="dn">{sls.length}</span></b></div>
+                <div><small>Total</small><b className={all > 0 ? 'up' : all < 0 ? 'dn' : ''}>{money(all)}</b></div>
+              </div> : null}
+            </div>
+          </div>
+        );
+      })() : null}
       {full ? <>
         <button type="button" className={'office-cat' + (menu ? ' on' : '')} onClick={() => setMenu((v) => !v)} aria-label="Menu kantor" aria-expanded={menu}>
           <svg viewBox="0 0 64 64" width="36" height="36" aria-hidden>
@@ -2771,6 +2803,7 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
 
 /** name tags are small (name only); tap a person to see what they are doing. Important moments always show in full. */
 const SEL = { id: '', until: 0 };
+let AGENTS: Record<string, Agent> = {};
 let TAGHIT: Array<{ id: string; x: number; y: number; w: number; h: number; ax: number; ay: number }> = [];
 function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>, wall: number, toScreen: (x: number, y: number, room: number) => [number, number], cw: number, unit: number, ts = 1) {
   type Tag = { id: string; full: boolean; x: number; y: number; w: number; h: number; ax: number; ay: number; name: string; label: string; color: string; extra?: { text: string; color: string } | null; bubble?: Agent['bubble'] };
@@ -2798,8 +2831,8 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
     const seated = !walking && ['sit', 'bean', 'sleep', 'nap'].includes(a.act.pose);
     const ay = hidden ? ay0 - 4 : ay0 - ((seated ? (INK ? 31 : 27) : INK ? 37 : 32) + (p.id === 'vet' ? 7 : 0)) * PSV * unit;
     const important = busy || /^(MARAH|NGEJAR|SELEBRASI|DIMARAHI|MELERAI|ALARM|KIRIM PESAN|POSISI)/.test(label) || !!(s.tag && !busy);
-    const full = important || p.id === 'bos' || p.id === 'vet' || (SEL.id === p.id && wall < SEL.until);      // the bosses always show name + activity
-    c.font = full ? nameF : smallF; const nw = c.measureText(full ? p.name : label).width;
+    void important; const full = false;      // no names on the tags (tap a person for their card)
+    c.font = full ? nameF : smallF; const nw = c.measureText(full ? p.name : label + (s.tag && !busy ? ` ${s.tag.text}` : '')).width;
     c.font = stF; const extraTxt = s.tag && !busy ? ` ${s.tag.text}` : ''; const lw = full ? c.measureText(label + extraTxt).width + 6 * ts : 0;
     const w = full ? Math.max(nw, lw) + 7 * ts : nw + 10 * ts, h = full ? 17 * ts : 9.5 * ts;
     tags.push({ id: p.id, full, x: ax - w / 2, y: ay - h - 2, w, h, ax, ay, name: p.name, label, color, extra: busy ? null : s.tag, bubble: a.bubble && wall < a.bubble.until ? a.bubble : null });
@@ -2823,6 +2856,7 @@ function drawTags(c: C, agents: Record<string, Agent>, S: Record<string, Status>
       c.fillStyle = THEME.paint ? 'rgba(255,247,232,.88)' : 'rgba(18,19,23,.72)'; c.beginPath(); c.roundRect(tg.x, tg.y, tg.w, tg.h, tg.h / 2); c.fill();
       c.fillStyle = tg.color; c.beginPath(); c.arc(tg.x + 4.2 * ts, tg.y + tg.h / 2, 1.5 * ts, 0, 7); c.fill();
       c.font = smallF; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillStyle = THEME.paint ? '#4a2e1e' : '#ffffff'; c.fillText(tg.label, tg.x + 7 * ts, tg.y + tg.h / 2 + 0.3);
+      if (tg.extra) { c.fillStyle = tg.extra.color === '#2ee59d' ? '#1f9d57' : tg.extra.color; c.fillText(` ${tg.extra.text}`, tg.x + 7 * ts + c.measureText(tg.label).width, tg.y + tg.h / 2 + 0.3); }
       if (tg.bubble) {
         c.font = `800 ${7 * ts}px -apple-system, system-ui, sans-serif`;
         const bw = c.measureText(tg.bubble.text).width + 10 * ts, right = tg.x + tg.w + 3 + bw <= cw, bx = right ? tg.x + tg.w + 3 : tg.x - bw - 3, by = tg.y - 2;
