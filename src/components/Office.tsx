@@ -1971,6 +1971,37 @@ const liftSpot = (room: number, id: string, up: boolean): Spot => (FLAT
   ? { id: `lift-${id}`, room, x: up ? 0.6 : NX - 0.6, y: DOOR_Y, face: up ? 'nx' : 'px', pose: 'stand', label: 'JALAN' }
   : { id: `lift-${id}`, room, x: lwX(room), y: LIFT_WAIT, face: 'ny', pose: 'stand', label: 'TUNGGU LIFT' });
 
+/** a smiling portrait (head + shoulders) of one of the team, drawn with the same code as in the office; cached as a data URL */
+const PORTRAIT: Record<string, string> = {};
+function portrait(id: string): string {
+  if (PORTRAIT[id] !== undefined) return PORTRAIT[id];
+  const p = PEOPLE.find((q) => q.id === id); if (!p || typeof document === 'undefined') return '';
+  try {
+    // 1) draw the whole person big on a clear canvas, 2) find the head (top of the drawing), 3) frame head + shoulders on a sunburst
+    const B = 700, big = document.createElement('canvas'); big.width = B; big.height = B;
+    const b = big.getContext('2d')!;
+    const spot: Spot = { ...p.seat, id: 'portrait', pose: 'stand', label: 'SELEBRASI TP', prop: undefined, face: 'py' };
+    const a = { room: 0, pending: null, hiddenUntil: 0, x: 5, y: 5, vx: 0, vy: 0, face: 'py', path: [], act: spot, until: 0, dist: 0, speed: 1, carry: null, carryUntil: 0, patrol: 0, last: '', run: false,
+      scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: '', angryAt: 0 } as unknown as Agent;
+    const [sx, sy] = iso(5, 5), k = 4;
+    b.setTransform(k, 0, 0, k, B / 2 - sx * k, B * 0.95 - sy * k);
+    drawPerson(b, p, a, 1.3, { label: 'SELEBRASI', color: '#2ee59d', sleep: false, tp: true, tag: null }, null);
+    const px = b.getImageData(0, 0, B, B).data;
+    let top = -1, l = B, r = 0;
+    for (let y = 0; y < B && top < 0; y++) for (let x = 0; x < B; x++) if (px[(y * B + x) * 4 + 3] > 40) { top = y; break; }
+    if (top < 0) throw new Error('empty');
+    const band = Math.min(B, top + 120);
+    for (let y = top; y < band; y++) for (let x = 0; x < B; x++) if (px[(y * B + x) * 4 + 3] > 40) { if (x < l) l = x; if (x > r) r = x; }
+    const side = Math.max(r - l, 120) * 1.25, cx = (l + r) / 2, y0 = top - side * 0.08;
+    const W0 = 240, cv = document.createElement('canvas'); cv.width = W0; cv.height = W0;
+    const c = cv.getContext('2d')!;
+    const g = c.createLinearGradient(0, 0, 0, W0); g.addColorStop(0, '#fff3d6'); g.addColorStop(1, '#ffd98a'); c.fillStyle = g; c.fillRect(0, 0, W0, W0);
+    c.fillStyle = 'rgba(255,255,255,.55)'; for (let q = 0; q < 12; q++) { const an = (q / 12) * Math.PI * 2; c.beginPath(); c.moveTo(W0 / 2, W0 * 0.4); c.arc(W0 / 2, W0 * 0.4, W0, an, an + 0.18); c.closePath(); c.fill(); }
+    c.drawImage(big, cx - side / 2, y0, side, side, 0, 0, W0, W0);
+    PORTRAIT[id] = cv.toDataURL('image/png');
+  } catch { PORTRAIT[id] = ''; }
+  return PORTRAIT[id];
+}
 const fmtDay = (t: number) => { const d = new Date(t); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 /* ---------- component ---------- */
 export default function Office({ data, now, screen = [], full = false, onSwipe, theme = 'lukis', shape = 'tower' }: { data: OfficeData; now: number; screen?: ScreenLine[]; full?: boolean; onSwipe?: () => void; theme?: string; shape?: string }) {
@@ -2005,10 +2036,11 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const have = new Set(shots.map((x) => x.id));
     const cards = data.trades.filter((t) => t.result === 'tp' && t.closedAt && !have.has(`tp-${t.id}`)).map((t) => {
       const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
-      const who = ({ snr: 'Na', btc: 'Ni', v2: 'Nu', nas: 'Ne' } as Record<string, string>)[t.strategy] ?? '';
-      return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, img: '', who, side: t.side };
+      const pid = ({ snr: 'alt', btc: 'big', v2: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? '';
+      const who = PEOPLE.find((q) => q.id === pid)?.name ?? '';
+      return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, img: '', who, side: t.side, pid };
     });
-    return [...shots.map((x) => ({ ...x, who: '', side: '' })), ...cards].sort((a, b) => b.at - a.at);
+    return [...shots.map((x) => ({ ...x, who: '', side: '', pid: '' })), ...cards].sort((a, b) => b.at - a.at);
   }, [shots, data.trades]);
   const GKEY = 'office-galeri';
   useEffect(() => { try { setShots(JSON.parse(localStorage.getItem(GKEY) ?? '[]')); } catch { /* storage off */ } }, []);
@@ -2440,7 +2472,20 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       <div className="office-count"><i />{active} karyawan aktif</div></>}
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
       {full ? <>
-        <button type="button" className={'office-cat' + (menu ? ' on' : '')} onClick={() => setMenu((v) => !v)} aria-label="Menu kantor" aria-expanded={menu}>🐱</button>
+        <button type="button" className={'office-cat' + (menu ? ' on' : '')} onClick={() => setMenu((v) => !v)} aria-label="Menu kantor" aria-expanded={menu}>
+          <svg viewBox="0 0 64 64" width="52" height="52" aria-hidden>
+            <path d="M12 30 L10 8 L26 19 Z" fill="#f29a3a" stroke="#5a3a24" strokeWidth="2" strokeLinejoin="round" /><path d="M15 25 L14 14 L22 20 Z" fill="#ffc9b5" />
+            <path d="M52 30 L54 8 L38 19 Z" fill="#f29a3a" stroke="#5a3a24" strokeWidth="2" strokeLinejoin="round" /><path d="M49 25 L50 14 L42 20 Z" fill="#ffc9b5" />
+            <ellipse cx="32" cy="37" rx="23" ry="19" fill="#f6a94a" stroke="#5a3a24" strokeWidth="2" />
+            <path d="M24 20 q2 6 0 10 M32 18 v10 M40 20 q-2 6 0 10" stroke="#d9782a" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+            <ellipse cx="32" cy="45" rx="11" ry="7.5" fill="#fff4e6" />
+            {menu ? <><path d="M19 35 q4 -4 8 0" stroke="#2a1d14" strokeWidth="2.4" fill="none" strokeLinecap="round" /><path d="M37 35 q4 -4 8 0" stroke="#2a1d14" strokeWidth="2.4" fill="none" strokeLinecap="round" /></>
+              : <><ellipse className="cat-eye" cx="23" cy="35" rx="3.6" ry="4.4" fill="#2a1d14" /><ellipse className="cat-eye" cx="41" cy="35" rx="3.6" ry="4.4" fill="#2a1d14" /><circle cx="24.3" cy="33.4" r="1.3" fill="#fff" /><circle cx="42.3" cy="33.4" r="1.3" fill="#fff" /></>}
+            <path d="M30 41 h4 l-2 2.4 Z" fill="#e86a7a" /><path d="M32 43.5 q-2.5 3 -5 1 M32 43.5 q2.5 3 5 1" stroke="#5a3a24" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            <ellipse cx="17" cy="42" rx="3.4" ry="2" fill="#ff9a9a" opacity=".6" /><ellipse cx="47" cy="42" rx="3.4" ry="2" fill="#ff9a9a" opacity=".6" />
+            <path d="M8 40 h8 M8 44 l8 -1.5 M56 40 h-8 M56 44 l-8 -1.5" stroke="#5a3a24" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        </button>
         {menu ? <div className="office-menu" data-noswipe>
           {MENU.map(([k, icon, label]) => (
             <button type="button" key={k} onClick={() => act(k)}><span>{icon}</span>{label}{k === 'galeri' && moments.length ? <em>{moments.length}</em> : null}</button>
@@ -2458,7 +2503,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
                 <p className="og-sum">{moments.filter((x) => x.id.startsWith('tp-')).length} TP sejak awal · total {(() => { const v = data.trades.filter((t) => t.result === 'tp').reduce((a, t) => a + Number(t.pnl ?? 0), 0); return `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`; })()}</p>
                 <div className="og-grid">{moments.map((x) => x.img
                   ? <button type="button" key={x.id} onClick={() => setBig(x)}><img src={x.img} alt={x.text} /><span>{x.text}</span><small>{fmtDay(x.at)}</small></button>
-                  : <div key={x.id} className="og-card"><b>🎉</b><strong>{x.text}</strong><span>{x.who ? `${x.who} · ` : ''}{x.side === 'BUY' ? 'BUY' : x.side === 'SELL' ? 'SELL' : ''}</span><small>{fmtDay(x.at)}</small></div>)}</div>
+                  : <div key={x.id} className="og-card">{x.pid && portrait(x.pid) ? <img className="og-face" src={portrait(x.pid)} alt={x.who} /> : <b>🎉</b>}<strong>{x.text}</strong><span>{x.who ? `${x.who} · ` : ''}{x.side === 'BUY' ? 'BUY' : x.side === 'SELL' ? 'SELL' : ''}</span><small>{fmtDay(x.at)}</small></div>)}</div>
               </> : <p className="og-empty">Belum ada TP. Setiap kali kena TP, kantor otomatis mengambil foto di sini.</p>}
           </div>
         </div>
