@@ -1,7 +1,8 @@
 // Company report (office accountant): synthetic TEST data only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { companyReport, cleanCompany, DEFAULT_COMPANY, costIdrIn, type CompanyInput } from '../src/lib/core/company';
+import { companyReport, cleanCompany, DEFAULT_COMPANY as D0, costIdrIn, type CompanyInput } from '../src/lib/core/company';
+const DEFAULT_COMPANY = { ...D0, since: '2026-01' };
 import type { JournalTrade } from '../src/lib/core/journal';
 
 const TZ = 'Asia/Seoul';
@@ -59,4 +60,10 @@ test('costs: once / installments / end month; bills from 3 days before until pai
   assert.equal(companyReport(base({ settings: s })).bills.length, 1);                                    // 17 Nov is 2 days away
   assert.equal(companyReport(base({ settings: s, now: at(2026, 11, 13) })).bills.length, 0);            // 4 days away
   assert.equal(companyReport(base({ settings: cleanCompany({ ...s, paid: { vps: ['2026-11'] } }) })).bills.length, 0);
+});
+
+test('the company starts in its start month: older trades, costs and money moves are left out', () => {
+  const s = cleanCompany({ ...D0, since: '2026-11', wdFee: { fixed: 0, pct: 0 }, costs: [{ id: 'vps', name: 'VPS', idr: 160000, kind: 'monthly', day: 30, start: '2026-10', created: at(2026, 10, 1) }] });
+  const r = companyReport(base({ settings: s, trades: [tr(at(2026, 10, 5), -50), tr(at(2026, 11, 5), 100)], cashflow: { crypto: [{ id: 'w', at: at(2026, 10, 20), amount: -40 }] } }));
+  assert.equal(r.months.length, 1); near(r.cur.revenue, 100); near(r.cur.costs, 10); near(r.owed.costs, 10); assert.equal(r.moves.length, 0);
 });

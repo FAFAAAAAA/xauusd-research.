@@ -99,18 +99,6 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
           </div>
         </div>
 
-        <h3 className="co-h">Neraca</h3>
-        <div className="co-card">
-          <div className="co-eq">
-            <div><small>Aset</small><b>{usdT(r.sheet.assets)}</b></div><em>=</em>
-            <div><small>Kewajiban</small><b>{usdT(r.sheet.liabilities)}</b></div><em>+</em>
-            <div><small>Ekuitas</small><b>{usdT(r.sheet.equity)}</b></div>
-          </div>
-          {r.sheet.diff == null ? null : Math.abs(r.sheet.diff) <= Math.max(1, Math.abs(r.sheet.expected ?? 0) * 0.005)
-            ? <div className="co-ok">✓ Seimbang</div>
-            : <div className="co-ok warn">Selisih {usdT(r.sheet.diff, true)} dengan saldo Binance</div>}
-        </div>
-
         {closedRows[0] ? <>
           <h3 className="co-h">Slip gaji</h3>
           <button type="button" className="co-card co-sliprow" onClick={() => setSlip(closedRows[0].ym)}>
@@ -292,6 +280,7 @@ export function CompanySettingsView({ now, onDone }: { now: number; onDone: () =
 
       <button type="button" className="cs-more" onClick={() => setMore((v) => !v)}>{more ? 'Sembunyikan' : 'Pengaturan lain'} <span>{more ? '▴' : '▾'}</span></button>
       {more ? <div className="cs-card">
+        <label className="cs-field"><span>Perusahaan mulai<small>Data sebelum bulan ini tidak dihitung</small></span><input type="month" value={s.since} onChange={(ev) => ev.target.value && setS({ ...s, since: ev.target.value })} /></label>
         <label className="cs-field"><span>Batas biaya per bulan<small>0 = tanpa batas</small></span><span className="cs-in"><i>Rp</i><input inputMode="numeric" defaultValue={s.budgetIdr ? s.budgetIdr.toLocaleString('id-ID') : ''} placeholder="0" onBlur={(ev) => setS({ ...s, budgetIdr: Math.max(0, Math.round(parseNum(ev.target.value) || 0)) })} /></span></label>
         <label className="cs-field"><span>Perkiraan biaya tarik (tetap)<small>Biaya jaringan per penarikan</small></span><span className="cs-in"><input inputMode="decimal" defaultValue={String(s.wdFee.fixed)} onBlur={(ev) => { const n = parseNum(ev.target.value); if (Number.isFinite(n)) setS({ ...s, wdFee: { ...s.wdFee, fixed: Math.max(0, n) } }); }} /><i>USDT</i></span></label>
         <label className="cs-field"><span>Perkiraan biaya tarik (%)<small>Selisih kurs saat jual ke Rupiah</small></span><span className="cs-in"><input inputMode="decimal" defaultValue={String(s.wdFee.pct)} onBlur={(ev) => { const n = parseNum(ev.target.value); if (Number.isFinite(n)) setS({ ...s, wdFee: { ...s.wdFee, pct: Math.max(0, Math.min(20, n)) } }); }} /><i>%</i></span></label>

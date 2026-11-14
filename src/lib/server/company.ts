@@ -7,7 +7,7 @@ import { DEFAULT_COMPANY, billText, cleanCompany, closableMonths, companyInput, 
 
 /* Company (office accountant) on the server: settings, the Rupiah rate and closed books live in app_settings.
  * The rate comes from free public exchange-rate services, at most every 6 hours; each month keeps its last rate (locked once the month is over). */
-const SET = 'company_settings', FX = 'fx_idr', BOOKS = 'company_books_v2';      // v2: books closed without the MT5 trial
+const SET = 'company_settings', FX = 'fx_idr', BOOKS = 'company_books_v3';      // v3: company starts Nov 2026, without the MT5 trial
 type Get = (url: string, init?: { signal?: AbortSignal }) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
 
 async function fetchIdr(get: Get): Promise<number | null> {

@@ -22,11 +22,12 @@ export interface CompanySettings {
   officeBills: boolean;
   mt5: 'off' | 'prop' | 'own';          // off: MT5 is still a trial, left out of the company; prop: only its profit / payouts count; own: its balance is the owner's money
   startBinance: number;                 // Binance balance before the first recorded trade (for the balance-sheet check)
+  since: string;                        // the company starts this month (YYYY-MM): trades, money moves and costs before it are left out
   mt5v?: 2;                             // set once the owner chose the MT5 mode himself (older saved settings → MT5 off)
 }
 export const DEFAULT_COMPANY: CompanySettings = {
   target: 200, salaryPct: 30, budgetIdr: 0, wdFee: { fixed: 1, pct: 1 }, costs: [], paid: {},
-  tg: { monthly: true, weekly: true, bills: true }, officeBills: true, mt5: 'off', startBinance: 199.02,
+  tg: { monthly: true, weekly: true, bills: true }, officeBills: true, mt5: 'off', startBinance: 199.02, since: '2026-11',
 };
 export interface Fx { rate: number | null; at: number; byMonth: Record<string, number> }     // Rupiah per 1 USD
 export interface MonthBook { ym: string; revenue: number; costs: number; fees: number; costIdr: number; rate: number | null; trades: number; tp: number; sl: number }
@@ -58,7 +59,7 @@ export function cleanCompany(raw: unknown): CompanySettings {
     wdFee: { fixed: num(wd.fixed, 0, 1000, d.wdFee.fixed), pct: num(wd.pct, 0, 20, d.wdFee.pct) },
     costs, paid,
     tg: { monthly: tg.monthly !== false, weekly: tg.weekly !== false, bills: tg.bills !== false },
-    officeBills: b.officeBills !== false, mt5: b.mt5v === 2 && (b.mt5 === 'own' || b.mt5 === 'prop') ? b.mt5 : 'off', /* saved before 15 Nov (no mt5v) → off */ startBinance: num(b.startBinance, 0, 1e9, d.startBinance), mt5v: b.mt5v === 2 ? 2 : undefined,
+    officeBills: b.officeBills !== false, mt5: b.mt5v === 2 && (b.mt5 === 'own' || b.mt5 === 'prop') ? b.mt5 : 'off', /* saved before 15 Nov (no mt5v) → off */ startBinance: num(b.startBinance, 0, 1e9, d.startBinance), mt5v: b.mt5v === 2 ? 2 : undefined, since: typeof b.since === 'string' && YM.test(b.since) ? b.since : '2026-11',
   };
 }
 
@@ -133,7 +134,15 @@ export function moneyMoves(inp: Pick<CompanyInput, 'cashflow' | 'settings' | 'no
 }
 /** the input as the company sees it: MT5 trades left out while MT5 is a trial */
 export function companyInput<T extends CompanyInput>(inp: T): T {
-  return inp.settings.mt5 === 'off' ? { ...inp, trades: inp.trades.filter((t) => !isMt5(t)), mt5: null } : inp;
+  const S = inp.settings, from = ymStart(S.since, inp.tz);
+  const keep = (at: number | null | undefined) => at == null || at >= from;      // open trades / no date: kept
+  return {
+    ...inp,
+    trades: inp.trades.filter((t) => keep(t.closedAt) && (S.mt5 !== 'off' || !isMt5(t))),
+    mt5: S.mt5 === 'off' ? null : inp.mt5,
+    cashflow: { crypto: (inp.cashflow?.crypto ?? []).filter((c) => c && c.at >= from), forex: (inp.cashflow?.forex ?? []).filter((c) => c && c.at >= from) },
+    settings: { ...S, costs: S.costs.map((c) => (c.start < S.since ? { ...c, start: S.since } : c)).filter((c) => !c.end || c.end >= S.since) },
+  };
 }
 /** months whose books can be closed now (first activity … last month) */
 export function closableMonths(inp: CompanyInput): string[] {
