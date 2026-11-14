@@ -1938,7 +1938,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       const LH = W * h / w, z = FLAT ? Math.min(1.2, LH / TOTAL) : SHAPE === 'zigzag' ? Math.min(W / (W + 76), (LH / TOTAL) * 1.1) : fullRef.current ? Math.min(1.08, (LH / TOTAL) * 0.98) : Math.min(1, LH / TOTAL);
       const atHome = Math.abs(view.current.z - homeRef.current.z) < 0.01;
       const cx1 = roomX(1) + OX + (NX - NY) * TW * 0.5;
-      lhRef.current = LH; homeRef.current = { z, tx: FLAT ? Math.min(0, Math.max(W - CW * z, W / 2 - cx1 * z)) : (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 };
+      lhRef.current = LH; homeRef.current = { z, tx: FLAT ? Math.min(0, Math.max(W - CW * z, W / 2 - cx1 * z)) : (W - W * z) / 2, ty: (LH - TOTAL * z) / 2 - (fullRef.current && !FLAT ? 14 : 0) };   // full screen: a little higher
       if (atHome) Object.assign(view.current, homeRef.current);
     };
     resize();
