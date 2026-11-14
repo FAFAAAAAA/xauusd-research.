@@ -3062,18 +3062,24 @@ function drawPositions(c: C, list: Pos[], t: number) {
     { let nf = 6.6; c.font = mono(700, nf); while (nf > 4 && c.measureText('tidak ada posisi').width > w - 8) { nf -= 0.2; c.font = mono(700, nf); } } c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText('tidak ada posisi', w / 2, 13 + (h - 13) / 2); c.textAlign = 'left';
   } else {
     // one line per position: side, name, floating P&L
-    const top = 15, max = list.length * 8 <= h - top - 2 ? list.length : Math.max(1, Math.floor((h - top - 7) / 7.8)), rows = list.slice(0, max), rh = Math.min(11, (h - top - (list.length > max ? 8 : 2)) / rows.length);
+    // rows share the space below the header: up to 8 positions fit (5 alts + 2 BTC buys + gold), the text shrinks a little as rows are added
+    const top = 14.2, MAXR = 8, more = list.length > MAXR, rows = list.slice(0, more ? MAXR - 1 : MAXR);
+    const avail = h - top - 1.5 - (more ? 5 : 0), rh = Math.min(9, avail / rows.length);
+    // one font size for every row, small enough that the longest name (1000SHIB…) and its P&L fit side by side
+    let fs = Math.min(6.4, rh * 0.8);
+    const fits = (f: number) => rows.every((p) => { c.font = mono(800, f * 0.97); const pw = c.measureText(p.pnl == null ? '—' : usd(p.pnl)).width; c.font = mono(800, f); return c.measureText(p.name).width <= w - 10 - pw - 6; });
+    while (fs > 3.6 && !fits(fs)) fs -= 0.2;
     rows.forEach((p, i) => {
       const y = top + rh * (i + 0.5);
       if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.045)'; c.fillRect(3, y - rh / 2, w - 6, rh); }
-      c.font = mono(800, 6.4); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 4, y);
-      const pnlTxt = p.pnl == null ? '—' : usd(p.pnl); c.font = mono(800, 6.2); const pw = c.measureText(pnlTxt).width;
-      c.font = mono(800, 6.4); c.fillStyle = '#ffffff';
+      c.font = mono(800, fs); c.fillStyle = p.side === 'BUY' ? '#2ee59d' : '#ff6b6b'; c.fillText(p.side === 'BUY' ? 'B' : 'S', 4, y);
+      const pnlTxt = p.pnl == null ? '—' : usd(p.pnl); c.font = mono(800, fs * 0.97); const pw = c.measureText(pnlTxt).width;
+      c.font = mono(800, fs); c.fillStyle = '#ffffff';
       let name = p.name; while (name.length > 2 && c.measureText(name).width > w - 10 - pw - 6) name = name.slice(0, -1);
       c.fillText(name, 10, y);
-      c.textAlign = 'right'; c.font = mono(800, 6.2); c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(p.pnl == null ? '—' : usd(p.pnl), w - 4, y); c.textAlign = 'left';
+      c.textAlign = 'right'; c.font = mono(800, fs * 0.97); c.fillStyle = p.pnl == null ? '#6f93b8' : p.pnl >= 0 ? '#2ee59d' : '#ff6b6b'; c.fillText(pnlTxt, w - 4, y); c.textAlign = 'left';
     });
-    if (list.length > max) { c.font = mono(600, 4.4); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText(`+${list.length - max} lagi`, w / 2, h - 4); c.textAlign = 'left'; }
+    if (more) { c.font = mono(600, 4.2); c.fillStyle = '#6f93b8'; c.textAlign = 'center'; c.fillText(`+${list.length - rows.length} lagi`, w / 2, h - 3.2); c.textAlign = 'left'; }
   }
   c.textBaseline = 'alphabetic'; c.restore();
 }
