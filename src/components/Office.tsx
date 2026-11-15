@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JournalTrade } from '@/lib/core/journal';
 import { Sheet } from './Status';
+import { call } from './client';
 import { CompanyReport, CompanySettingsView, useCompany, useReport } from './Company';
 import { idrT, costIdrIn, usdT, type CashMove } from '@/lib/core/company';
 
@@ -2584,6 +2585,16 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const report = useReport(data.trades.length || data.binance ? data : null, now);
   const [coSet, setCoSet] = useState(false);
   const [billHide, setBillHide] = useState<string[]>([]);
+  // bot status lamp (Kontrol bot heartbeat: the bot checks the website every ~60 s)
+  const [bot, setBot] = useState<{ at: number; paused: boolean } | null>(null);
+  useEffect(() => {
+    if (!full) return;
+    let dead = false;
+    const get = () => call<{ seen: { at: number; applied: { paused: boolean } | null } | null }>('/api/bot-control')
+      .then((x) => { if (!dead) setBot(x.seen ? { at: x.seen.at, paused: !!x.seen.applied?.paused } : null); }).catch(() => {});
+    get(); const t = setInterval(get, 60_000);
+    return () => { dead = true; clearInterval(t); };
+  }, [full]);
   useEffect(() => {      // opening the app again shows the bill reminders again (and the accountant repeats them)
     const vis = () => { if (document.visibilityState === 'visible') { setBillHide([]); BILL_SAID.clear(); } };
     document.addEventListener('visibilitychange', vis);
@@ -3090,6 +3101,11 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
       {card?.id === 'akun' ? <Sheet title="Laporan Perusahaan" onClose={() => setCard(null)}><CompanyReport data={data} now={now} /></Sheet> : null}
       {coSet ? <Sheet title="Perusahaan" onClose={() => setCoSet(false)}><CompanySettingsView now={now} onDone={() => { setCoSet(false); say('🏢 Pengaturan perusahaan disimpan'); }} /></Sheet> : null}
+      {full && bot ? (() => {
+        const age = Date.now() - bot.at, on = age < 5 * 60_000, s0 = Math.round(age / 1000);
+        const t = s0 < 60 ? `${s0} dtk` : s0 < 3600 ? `${Math.round(s0 / 60)} mnt` : `${Math.round(s0 / 3600)} jam`;
+        return <a href="/settings" className={`office-bot ${on ? (bot.paused ? 'pause' : 'on') : 'off'}`} data-noswipe aria-label="Status bot, ketuk untuk Kontrol bot"><i />{on ? (bot.paused ? 'Bot dijeda' : 'Bot aktif') : 'Bot tidak ada kabar'}<em>{t}</em></a>;
+      })() : null}
       {full && bills.some((b) => !billHide.includes(b.key)) ? <div className="office-bill" data-noswipe>
         {bills.filter((b) => !billHide.includes(b.key)).map((b) => (
           <button type="button" key={b.key} onClick={() => setBillHide((h) => [...h, b.key])} aria-label={`Tagihan ${b.name}, ketuk untuk sembunyikan`}>

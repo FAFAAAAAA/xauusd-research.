@@ -76,3 +76,49 @@ export function cleanApplied(x: unknown): BotApplied | null {
   for (const k of BOT_KEYS) { const v = cleanBotVal(k, c[k]); if (v !== undefined) cfg[k] = v; }
   return { cfg, paused: o.paused === true, lossStreak: Math.max(0, Math.round(num(o.lossStreak)) || 0), version: String(o.version ?? '').slice(0, 20) };
 }
+
+export interface BotLogEntry { at: number; items: string[] }
+const LABELS: Record<BotKey, string> = {
+  risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko USD', max_positions: 'Maks SELL', max_buy_positions: 'Maks BUY', buy_enabled: 'BUY',
+  stop_balance_usdt: 'Rem saldo', max_loss_streak: 'Rem beruntun', leverage_auto: 'Leverage otomatis', leverage: 'Leverage', margin_isolated: 'Margin Isolated',
+  daily_summary: 'Ringkasan', summary_hours_kst: 'Jam ringkasan', exclude: 'Koin dikecualikan',
+};
+export function showBotVal(k: BotKey, x: BotVal | undefined): string {
+  if (x === undefined) return 'config VPS';
+  if (typeof x === 'boolean') return x ? 'nyala' : 'mati';
+  if (Array.isArray(x)) return x.length ? x.map(String).map((s) => (k === 'summary_hours_kst' ? `${s.padStart(2, '0')}:00` : s.replace(/USDT$/, ''))).join(', ') : 'tidak ada';
+  if (k === 'risk_percent') return `${String(x).replace('.', ',')}%`;
+  if (k === 'risk_usdt' || k === 'stop_balance_usdt') return `$${String(x).replace('.', ',')}`;
+  if (k === 'risk_mode') return x === 'usdt' ? 'USD tetap' : '% saldo';
+  if (k === 'leverage') return `${x}x`;
+  return String(x);
+}
+/** human-readable list of what changed between two saved controls (for the history list) */
+export function botChanges(prev: BotControl, next: BotControl): string[] {
+  const out: string[] = [];
+  if (prev.paused !== next.paused) out.push(next.paused ? 'Trading dijeda' : 'Trading dilanjutkan');
+  for (const k of BOT_KEYS) {
+    if (JSON.stringify(prev.set[k] ?? null) === JSON.stringify(next.set[k] ?? null)) continue;
+    out.push(`${LABELS[k]}: ${showBotVal(k, prev.set[k])} → ${showBotVal(k, next.set[k])}`);
+  }
+  if (next.resetAt > prev.resetAt) out.push('Kalah beruntun di-nol-kan');
+  return out;
+}
+
+/** live Binance SELL (SNR) trades compared with the backtest (2020–2026, 4 SELL + 2 BUY): TP 42 %, +0.21 R per trade, R spread ≈ 1.45 */
+export const BACKTEST_SNR = { tpPct: 42, avgR: 0.21, sdR: 1.45 };
+export interface LiveCheck { n: number; tp: number; sl: number; tpPct: number; avgR: number; totalR: number; verdict: 'few' | 'ok' | 'low' | 'high' }
+export function liveCheck(trades: Array<{ strategy: string; side: string; entry: number; sl: number; lot: number; pnl: number | null; result: string; closedAt: number | null }>): LiveCheck {
+  const R: number[] = []; let tp = 0, sl = 0;
+  for (const t of trades) {
+    if (t.strategy !== 'snr' || t.side !== 'SELL' || !t.closedAt || t.pnl == null || t.result === 'open') continue;
+    const risk = Math.abs(t.entry - t.sl) * t.lot;
+    if (!(risk > 0)) continue;
+    R.push(Number(t.pnl) / risk);
+    if (t.result === 'tp') tp++; else if (t.result === 'sl') sl++;
+  }
+  const n = R.length, totalR = R.reduce((a, b) => a + b, 0), avgR = n ? totalR / n : 0;
+  const se = BACKTEST_SNR.sdR / Math.sqrt(Math.max(1, n));
+  const verdict = n < 30 ? 'few' : avgR < BACKTEST_SNR.avgR - 2 * se ? 'low' : avgR > BACKTEST_SNR.avgR + 2 * se ? 'high' : 'ok';
+  return { n, tp, sl, tpPct: n ? (tp / n) * 100 : 0, avgR, totalR, verdict };
+}

@@ -264,7 +264,7 @@ export const toIdr = (usd: number, rate: number | null) => (rate ? `± ${idrT(Ma
 /** Telegram texts (HTML) */
 export function weeklyText(r: CompanyReport, tz: string): string {
   const w = r.week;
-  return `📊 <b>Ringkasan minggu ini</b> (${dayName(w.from, tz)} – sekarang)\n\n${w.revenue >= 0 ? 'Untung' : 'Rugi'}: <b>${usdT(w.revenue, true)}</b> ${toIdr(w.revenue, r.rate)}\n${w.trades} trade selesai · ${w.tp} TP · ${w.sl} SL`;
+  return `📊 <b>Ringkasan minggu ini</b> (${dayName(w.from, tz)} – Minggu)\n\n${w.revenue >= 0 ? 'Untung' : 'Rugi'}: <b>${usdT(w.revenue, true)}</b> ${toIdr(w.revenue, r.rate)}\n${w.trades} trade selesai · ${w.tp} TP · ${w.sl} SL`;
 }
 export function monthlyText(r: CompanyReport, s: CompanySettings): string {
   const c = r.cur, o = r.owed;
