@@ -207,12 +207,11 @@ export function BotControlCard() {
           ) : null}
         </div>
       ) : null}
-      <div className="bx-grid">
-        <button type="button" className={`bx-t wide ${open === 'ex' ? 'open' : ''}`} onClick={() => setOpen(open === 'ex' ? null : 'ex')}>
-          <small>Koin dikecualikan</small><i>{excl.length ? excl.map((x) => x.replace(/USDT$/, '')).join(', ') : 'tidak ada'} ›</i>
-        </button>
-        <button type="button" className={`bx-t wide ${open === 'log' ? 'open' : ''}`} onClick={() => setOpen(open === 'log' ? null : 'log')}>
-          <small>Riwayat setelan</small><i>{d.log?.length ? `terakhir ${ago(now - d.log[0].at)}` : 'belum ada'} ›</i>
+      <div className="bx-more">
+        <button type="button" className={open === 'ex' ? 'on' : ''} onClick={() => setOpen(open === 'ex' ? null : 'ex')}>Koin{excl.length ? ` · ${excl.length}` : ''}</button>
+        <button type="button" className={open === 'log' ? 'on' : ''} onClick={() => setOpen(open === 'log' ? null : 'log')}>Riwayat</button>
+        <button type="button" className="bx-sos-dot" aria-label="Darurat: tutup semua posisi" onClick={() => setSos(sos ? 0 : 1)}>
+          <svg viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.8a8 8 0 1 0 11.4 0" /></svg>
         </button>
       </div>
 
@@ -226,21 +225,17 @@ export function BotControlCard() {
         </div>
       ) : null}
       {!dirty && Object.keys(c.set).length ? <button type="button" className="bc-reset" disabled={busy} onClick={async () => { const r = await send({ ...c, set: {} }, 'Semua setelan kembali ke config VPS'); if (r) setSet({}); }}>Kembalikan semua ke config VPS</button> : null}
-      <div className={`bx-sos ${sos ? 'open' : ''}`}>
-        {sos === 0 ? <><button type="button" className="bx-sos-btn" onClick={() => setSos(1)}>⚠ Tutup semua posisi (darurat)</button>
-          {ap && (ap.version || '') < '2026.11.15.2' ? <p className="bc-sub" style={{ marginTop: 6 }}>Tombol ini butuh bot versi 2026.11.15.2 — update snr_bot.py di VPS dulu.</p> : null}</> : (
-          <>
-            <b>Tutup semua posisi bot sekarang?</b>
-            <p>{sos === 1 ? 'Semua posisi yang dibuka bot ditutup dengan harga pasar (untung atau rugi saat ini), lalu bot dijeda. Ini melanggar aturan keluar hanya di TP/SL — pakai hanya saat darurat, misalnya berita besar.' : 'Yakin? Ini tidak bisa dibatalkan setelah bot menerimanya (±1 menit).'}</p>
-            <div className="bx-sos-row">
-              <button type="button" className="ghost" onClick={() => setSos(0)}>Batal</button>
-              {sos === 1 ? <button type="button" onClick={() => setSos(2)}>Lanjut</button>
-                : <button type="button" disabled={busy} onClick={async () => { const r = await send({ ...c, closeAll: true, confirm: 'TUTUP SEMUA' }, 'Perintah darurat terkirim — bot menutup semua posisi dalam ±1 menit'); if (r) setSos(0); }}>Ya, tutup semua</button>}
-            </div>
-          </>
-        )}
-      </div>
-      <p className="bc-foot">Perkiraan dari backtest untuk 4 SELL + 2 BUY; hasil nyata biasanya lebih kecil. API key & akun hanya bisa diubah di VPS.</p>
+      {sos ? (
+        <div className="bx-sos open">
+          <b>Tutup semua posisi bot?</b>
+          <p>{sos === 1 ? 'Ditutup harga pasar, lalu bot dijeda.' : 'Yakin? Tidak bisa dibatalkan.'}</p>
+          <div className="bx-sos-row">
+            <button type="button" className="ghost" onClick={() => setSos(0)}>Batal</button>
+            {sos === 1 ? <button type="button" onClick={() => setSos(2)}>Lanjut</button>
+              : <button type="button" disabled={busy} onClick={async () => { const r = await send({ ...c, closeAll: true, confirm: 'TUTUP SEMUA' }, 'Perintah darurat terkirim — bot menutup semua posisi dalam ±1 menit'); if (r) setSos(0); }}>Ya, tutup semua</button>}
+          </div>
+        </div>
+      ) : null}
     </div>
       </Sheet> : null}
     </>
