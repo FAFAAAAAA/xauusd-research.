@@ -3104,7 +3104,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         }
       }
       if (nightNow) {
-        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(6,10,28,.26)'; c.fillRect(0, 0, cv.width, cv.height); c.restore();
+        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = 'rgba(6,10,28,.14)'; c.fillRect(0, 0, cv.width, cv.height); c.restore();   // night: lighter rooms (owner, 15 Nov)
         c.globalCompositeOperation = 'lighter';
         const glow = (x: number, y: number, z: number, r: number, col: string) => { const [gx, gy] = iso(x, y, z); const g = c.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(gx - r, gy - r, 2 * r, 2 * r); };
         for (let r = 0; r < ROOMS; r++) {
