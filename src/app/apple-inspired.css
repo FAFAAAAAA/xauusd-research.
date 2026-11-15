@@ -1612,3 +1612,4 @@ input.bx-slider { height: 6px !important; min-height: 0 !important; padding: 0 !
 .at-grid > .at-tile:last-of-type:nth-of-type(odd) b { margin: 0; }
 .at-grid > .at-tile:last-of-type:nth-of-type(odd) small { margin-left: auto; }
 input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f7cf45 55%, #ff6b70 100%) !important; }
+.bx-ver { margin: -4px 4px 0; font-size: 12.5px; color: var(--mute); } .bx-ver b { color: var(--ink); }
