@@ -35,7 +35,7 @@
 //| bukan jaminan hasil nyata.                                         |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.02"
+#property version   "1.03"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -46,7 +46,7 @@ input string InpXauSymbol    = "XAUUSD";   // Nama simbol emas di broker ini
 input bool   InpUseLvl       = true;       // Jalankan v1 Level (emas, simbol sama dengan v1 XAU)
 input bool   InpUseNas       = true;       // Jalankan v1 NAS (Nasdaq)
 input string InpNasSymbol    = "NDX100";   // Nama simbol Nasdaq di broker ini (FundingPips: NDX100, Exness: USTEC)
-input double InpRiskPercent  = 2.0;        // Risiko per trade (% dari ukuran akun)
+input double InpRiskPercent  = 0.75;       // Risiko per trade (% dari ukuran akun). Saran: challenge 0,5-0,75, funded 0,4
 input bool   InpTrade        = true;       // true = pasang order; false = hanya tulis sinyal ke log
 
 input group "Aturan prop firm"
@@ -57,6 +57,7 @@ input double InpMaxLossPct   = 10.0;       // Batas rugi total prop firm (%)
 input double InpBufferPct    = 1.0;        // EA berhenti sekian % SEBELUM batas (jarak aman)
 input int    InpMinTradingDays = 3;        // Minimal hari trading per fase (FundingPips 2 Step Standard = 3)
 input int    InpNewsMinutes  = 0;          // Tidak buka posisi X menit sebelum/sesudah berita USD berdampak tinggi (challenge 0, funded 5)
+input int    InpFridayCloseUtc = -1;       // Akun yang melarang posisi akhir pekan: jam UTC hari Jumat untuk menutup semua posisi EA (mis. 20). -1 = mati
 
 input group "Teknis"
 input double InpXauMaxSpread = 0.60;       // Emas: lewati entry jika spread (harga) di atas ini
@@ -281,7 +282,11 @@ double WorstEquity()
       bool buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
       if(sl <= 0) continue;                                            // manual position without SL: cannot be measured
       double px = buy ? SymbolInfoDouble(sym, SYMBOL_BID) : SymbolInfoDouble(sym, SYMBOL_ASK), p = 0;
-      if(OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, sym, vol, px, sl, p) && p < 0) w += p;
+      double loss = 0;
+      if(OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, sym, vol, px, sl, p) && p < 0) loss = -p;
+      double d = buy ? px - sl : sl - px;                              // v1.03: also the conservative per-lot estimate (FundingPips tick value bug)
+      if(d > 0) loss = MathMax(loss, LossPerLot(sym, d) * vol);
+      w -= loss;
    }
    return w;
 }
@@ -306,7 +311,23 @@ void PropUpdate()
    {
       string k = PGv(StringFormat("dayref_%d", d));
       if(GlobalVariableCheck(k)) gDayRef = GlobalVariableGet(k);
-      else { gDayRef = MathMax(bal, eq); GlobalVariableSet(k, gDayRef); }
+      else
+      {
+         // v1.03: if the EA starts in the middle of the day, rebuild the balance at the start of the server day from today's deals
+         double startBal = bal;
+         datetime d0 = (datetime)((long)d * 86400);
+         if(HistorySelect(d0, TimeCurrent() + 60))
+            for(int i = 0; i < HistoryDealsTotal(); i++)
+            {
+               ulong dl = HistoryDealGetTicket(i);
+               if((datetime)HistoryDealGetInteger(dl, DEAL_TIME) < d0) continue;
+               long ty = HistoryDealGetInteger(dl, DEAL_TYPE);
+               if(ty != DEAL_TYPE_BUY && ty != DEAL_TYPE_SELL) continue;      // deposits / withdrawals are not trading results
+               startBal -= HistoryDealGetDouble(dl, DEAL_PROFIT) + HistoryDealGetDouble(dl, DEAL_SWAP) + HistoryDealGetDouble(dl, DEAL_COMMISSION);
+            }
+         gDayRef = MathMax(MathMax(bal, eq), startBal);
+         GlobalVariableSet(k, gDayRef);
+      }
       gDayKey = d;
       gDayStop = GlobalVariableCheck(PGv(StringFormat("daystop_%d", d)));
    }
@@ -335,6 +356,22 @@ void PropUpdate()
    }
 }
 
+//--- v1.03: accounts without weekend holding: from Friday InpFridayCloseUtc:00 UTC close every EA position and open nothing new until Monday
+bool WeekendBlock()
+{
+   if(InpFridayCloseUtc < 0) return false;
+   long utc = (long)TimeGMT(); int wd = (int)(((utc / 86400) + 4) % 7);   // 0 = Sunday
+   int hr = (int)((utc % 86400) / 3600);
+   return (wd == 5 && hr >= InpFridayCloseUtc) || wd == 6 || wd == 0;
+}
+void WeekendClose()
+{
+   if(!WeekendBlock()) return;
+   bool any = false;
+   for(int i = PositionsTotal() - 1; i >= 0; i--) { ulong tk = PositionGetTicket(i); if(tk != 0 && IsOurs(PositionGetInteger(POSITION_MAGIC))) any = true; }
+   if(any) { Print("PROP EA: akhir pekan - semua posisi EA ditutup (InpFridayCloseUtc)."); CloseOurs("akhir pekan"); }
+}
+
 //--- high-impact USD news within InpNewsMinutes of now (MT5 economic calendar, server time). Not available in the Strategy Tester.
 bool NewsNear(string &what)
 {
@@ -355,6 +392,7 @@ void OpenTrade(CTrade &t, string sym, int s, double sl, double maxSpread, string
 {
    string news = "";
    if(NewsNear(news)) { PrintFormat("%s: lewati, berita USD berdampak tinggi dalam %d menit (%s).", comment, InpNewsMinutes, news); return; }
+   if(WeekendBlock()) { PrintFormat("%s: lewati, akhir pekan (InpFridayCloseUtc).", comment); return; }
    double ask = SymbolInfoDouble(sym, SYMBOL_ASK), bid = SymbolInfoDouble(sym, SYMBOL_BID);
    if(ask - bid > maxSpread) { PrintFormat("%s: lewati, spread %.2f > %.2f", comment, ask - bid, maxSpread); return; }
    double price = s > 0 ? ask : bid;
@@ -599,22 +637,23 @@ void LvlCheck()
    }
    if(cand[0] == 0 && cand[1] == 0) return;
    // trend (aturan 1) from H4 / D1 built in UTC from H1, closed by the H1 close
-   long dayStart = (openUtc / 86400) * 86400;
-   if(dayStart != gl_day)
+   long dayStart = (openUtc / 86400) * 86400;                        // UTC day of the signal (2nd-signal rule)
+   long dCut = (closeUtc / 86400) * 86400;                             // D1 candles completed by the H1 close
+   if(dCut != gl_day)
    {
       gl_dayOk = false;
       MqlRates h1d[]; ArraySetAsSeries(h1d, false);
       int nhd = CopyRates(XS, PERIOD_H1, 0, 26000, h1d);
-      if(nhd < 5000) { Print("v1 Level: riwayat H1 ", XS, " kurang (", nhd, ")."); return; }
-      Bar d1[]; int nd = BuildUtc(h1d, nhd, off, 86400, (datetime)dayStart, d1);
+      if(nhd < 5000) { Print("v1 Level: riwayat H1 ", XS, " kurang (", nhd, ")."); gl_lastH1 = 0; return; }
+      Bar d1[]; int nd = BuildUtc(h1d, nhd, off, 86400, (datetime)dCut, d1);
       if(nd < 210) return;
       gl_d50 = EmaLast(d1, nd, 50, D1_WIN); gl_d200 = EmaLast(d1, nd, 200, D1_WIN); gl_lcd = d1[nd - 1].c;
-      gl_day = dayStart; gl_dayOk = true;
+      gl_day = dCut; gl_dayOk = true;
    }
    if(!gl_dayOk) return;
    MqlRates h1[]; ArraySetAsSeries(h1, false);
    int nh = CopyRates(XS, PERIOD_H1, 0, 6000, h1);
-   if(nh < 4100) { Print("v1 Level: riwayat H1 ", XS, " kurang (", nh, ")."); return; }
+   if(nh < 4100) { Print("v1 Level: riwayat H1 ", XS, " kurang (", nh, ")."); gl_lastH1 = 0; return; }
    Bar h4[]; int n4 = BuildUtc(h1, nh, off, 14400, (datetime)closeUtc, h4);
    if(n4 < 210) return;
    double e50 = EmaLast(h4, n4, 50, H4_WIN), e200 = EmaLast(h4, n4, 200, H4_WIN), lc4 = h4[n4 - 1].c;
@@ -749,7 +788,7 @@ void Status()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
-   string s = StringFormat("PROP EA v1.02 | risiko %.2f%% | v1 XAU %s · v1 Level %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
+   string s = StringFormat("PROP EA v1.03 | risiko %.2f%% | v1 XAU %s · v1 Level %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
                            InpUseXau ? "ON" : "off", InpUseLvl ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS);
    if(PropOn())
    {
@@ -816,6 +855,7 @@ void PushCashflow()
 void Run()
 {
    PropUpdate();
+   WeekendClose();
    PushBalance();
    HistCheck();
    if(InpUseXau && InpTrade) XauBreakeven();
