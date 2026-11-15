@@ -82,6 +82,8 @@ const PEOPLE: Person[] = [
   { id: 'kurir', name: 'Kurir', role: 'KURIR', seat: { ...seat('kurir', 2, 11.65, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#222', skin: '#e2b48a', shirt: '#e5484d', pants: '#2a2b30', style: 'cap', cap: '#c0392b' },
 ];
 const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
+/** pastel bubble behind each cat-menu icon */
+const MENU_TINT: Record<string, string> = { perusahaan: '#dbeafe', dadakan: '#ffe4e6', laporan: '#dcfce7', galeri: '#fef3c7', foto: '#e0e7ff', kopi: '#fde68a', pizza: '#fecaca', senam: '#cffafe', kucing: '#bae6fd', ultah: '#fbcfe8', trade: '#d1fae5' };
 const LIFT = { x: 11.65, y: 0.6 };
 const LIFT_WAIT = 1.6;             // where people wait in front of the lift doors
 const CAB_Y = -0.7;                // the cabin runs in a shaft behind the back wall (seen through a glass panel)
@@ -3207,7 +3209,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         </button>
         {menu ? <div className="office-menu" data-noswipe>
           {MENU.map(([k, icon, label]) => (
-            <button type="button" key={k} onClick={() => act(k)}><span>{icon}</span>{label}{k === 'galeri' && moments.length ? <em>{moments.length}</em> : null}</button>
+            <button type="button" key={k} onClick={() => act(k)}><span style={{ background: MENU_TINT[k] ?? '#f3ede4' }}>{icon}</span>{label}{k === 'galeri' && moments.length ? <em>{moments.length}</em> : null}</button>
           ))}
         </div> : null}
         {toast ? <div className="office-toast">{toast}</div> : null}

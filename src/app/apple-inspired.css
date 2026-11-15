@@ -1667,3 +1667,11 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .bx-rv { background: var(--surface, #fff); box-shadow: inset 0 0 0 1px var(--line); border-radius: 18px; padding: 14px; }
 .bx-rv b { font-size: 14.5px; }
 .bx-sos-row button.dark { background: #141416; color: #fff; }
+/* cat menu: soft cream, rounded Fredoka font, pastel icon bubbles */
+@font-face { font-family: 'Fredoka'; font-weight: 600; font-display: swap; src: url(/fonts/fredoka-latin-600-normal.woff2) format('woff2'); }
+.office-menu { background: #fffaf0; border-radius: 26px; padding: 8px; gap: 2px; min-width: 236px; box-shadow: 0 14px 34px rgba(80,50,20,.25); }
+.office-menu button { gap: 12px; padding: 7px 12px 7px 7px; border-radius: 18px; font: 600 16.5px 'Fredoka', ui-rounded, system-ui, sans-serif; color: #4a3426; letter-spacing: .005em; }
+.office-menu button:nth-child(odd) { background: rgba(255,236,206,.45); }
+.office-menu button:active { background: rgba(255,214,160,.6); transform: scale(.98); }
+.office-menu span { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; font-size: 20px; flex: none; }
+.office-menu em { background: #ff8fa3; font: 600 12.5px 'Fredoka', ui-rounded, system-ui, sans-serif; padding: 2px 9px; }
