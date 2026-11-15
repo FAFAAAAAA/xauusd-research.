@@ -20,7 +20,7 @@ type Live = { wallet: number; upnl: number; at: number; pos?: Record<string, num
 export interface OfficeData {
   trades: JournalTrade[]; binance?: Live; mt5?: Live;
   market?: Array<{ name: string; move: number }>;          // % change of gold / BTC over the last 15 minutes
-  cal?: Array<{ title: string; at: number }>;               // big US news coming up (CPI, FOMC, NFP…)
+  cal?: Array<{ title: string; at: number; impact?: 'high' | 'medium'; name?: string }>;               // big US news coming up (CPI, FOMC, NFP…)
   btc?: number | null;                                       // Bitcoin % change today (from the 00:00 UTC daily open), realtime
   cashflow?: { crypto?: CashMove[]; forex?: CashMove[] };    // deposits / withdrawals / transfers reported by the bot and the EA
 }
@@ -773,7 +773,7 @@ function scheduleEvents(ctx: EvCtx) {
   if (BILLS.length && !inEventKind('tagihan') && BILLS.some((b) => !BILL_SAID.has(b.key))) want.push('tagihan');   // bills due: the accountant tells the boss (once per app open)
   // big US news on the calendar: watch the TV from 2 minutes before until 10 minutes after the release
   // (no calendar: the old rule, first Friday evening = US jobs report)
-  const cal = data.cal ?? [];
+  const cal = (data.cal ?? []).filter((e) => (e.impact ?? 'high') === 'high');    // the team watches TV for red news only
   if (cal.length ? cal.some((e) => wall > e.at - 2 * 60_000 && wall < e.at + 10 * 60_000) : d.getDay() === 5 && d.getDate() <= 7 && (h === 21 && m >= 15 || h === 22)) want.push('berita');
   // gold / BTC moving 1% or more in 15 minutes (at most once every 30 minutes)
   if ((data.market ?? []).some((x) => Math.abs(x.move) >= 1) && wall - Number(EV.done.pasar ?? 0) > 30 * 60_000) want.unshift('pasar');
@@ -3141,7 +3141,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {coSet ? <Sheet title="Perusahaan" onClose={() => setCoSet(false)}><CompanySettingsView now={now} onDone={() => { setCoSet(false); say('🏢 Pengaturan perusahaan disimpan'); }} /></Sheet> : null}
       {full && ctl ? (() => {
         // big US news within 2 hours: a reminder chip with a one-tap pause / resume of the bot
-        const e = (data.cal ?? []).filter((x) => x.at > now - 15 * 60_000 && x.at - now < 2 * 3_600_000).sort((a, b) => a.at - b.at)[0];
+        const e = (data.cal ?? []).filter((x) => (x.impact ?? 'high') === 'high' && x.at > now - 15 * 60_000 && x.at - now < 2 * 3_600_000).sort((a, b) => a.at - b.at)[0];
         if (!e) return null;
         const min = Math.round((e.at - now) / 60_000), paused = ctl.paused === true;
         const when = min > 0 ? (min >= 60 ? `${Math.floor(min / 60)} j ${min % 60} mnt lagi` : `${min} mnt lagi`) : 'sedang rilis';
@@ -3353,7 +3353,7 @@ function drawPositions(c: C, list: Pos[], t: number) {
 }
 
 /* small wall boards: the H4 candle countdown (trading floor) and the clock + date (lobby) */
-let CAL: Array<{ title: string; at: number }> = [];
+let CAL: Array<{ title: string; at: number; impact?: 'high' | 'medium' }> = [];
 let BTCP: number | null = null;
 /** company numbers for the office (set by the component): bills due and this month's salary */
 let BILLS: Array<{ key: string; name: string; idr: number; daysLeft: number }> = [];
@@ -3373,14 +3373,41 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
     const hm = `${String(d.getHours()).padStart(2, '0')}${d.getSeconds() % 2 ? ':' : ' '}${String(d.getMinutes()).padStart(2, '0')}`;
     const day = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'][d.getDay()];
     const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'][d.getMonth()];
-    // small board above the kitchen: countdown to the next big US news (only within 3 days; otherwise the menu stays)
-    const nx = CAL.find((e) => e.at > wall - 10 * 60_000);
-    if (nx && nx.at - wall < 3 * 86_400_000) board(7.15, 8.9, 40, 62, (w, h) => {
-      const left = nx.at - wall, soon = left < 15 * 60_000, live = left <= 0;
-      c.font = '700 3.4px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('BERITA', w / 2, 4.5);
-      c.font = '800 7.4px ui-monospace, Menlo, monospace'; c.fillStyle = soon && Math.floor(t * 3) % 2 ? '#ff5a5a' : '#f2c230'; c.fillText(nx.title, w / 2, h * 0.48);
-      c.font = '700 3.5px ui-monospace, Menlo, monospace'; c.fillStyle = live ? '#ff5a5a' : '#ffffff'; c.fillText(live ? 'SEDANG RILIS' : inTime(left), w / 2, h * 0.82);
-    });
+    // news board above the drinks vending machine: the next big US news (NFP, CPI, FOMC, PCE, Powell) from the Forex Factory calendar,
+    // a red header, the event name, its day + time and a countdown; marquee lights run round the frame when it is close
+    {
+      const nx = CAL.find((e) => e.at > wall - 10 * 60_000);
+      const near = nx && nx.at - wall < 7 * 86_400_000 ? nx : null;
+      board(2.55, 4.05, 54, 82, (w, h) => {
+        const left = near ? near.at - wall : 0, soon = !!near && left < 15 * 60_000, live = !!near && left <= 0, blink = Math.floor(t * 3) % 2 === 0;
+        const fit = (txt: string, wt: number, max: number, min: number, room: number) => { let f = max; c.font = `${wt} ${f}px ui-monospace, Menlo, monospace`; while (f > min && c.measureText(txt).width > room) { f -= 0.2; c.font = `${wt} ${f}px ui-monospace, Menlo, monospace`; } };
+        // header strip: BERITA USD + three impact dots
+        const red = !near || near.impact !== 'medium';      // Forex Factory colour: red = high, yellow = medium
+        c.fillStyle = red ? (live || (soon && blink) ? '#e5242b' : '#b3262b') : (live || (soon && blink) ? '#f2b705' : '#c98f00'); c.fillRect(0, 0, w, 6.2);
+        c.textAlign = 'left'; fit('BERITA USD', 800, 3.3, 2.4, w - 9); c.fillStyle = '#ffffff'; c.fillText('BERITA USD', 1.6, 3.3);
+        for (let k = 0; k < 3; k++) { c.fillStyle = near && (red || k < 2) ? '#ffffff' : 'rgba(255,255,255,.3)'; c.beginPath(); c.arc(w - 5.6 + k * 1.9, 3.1, 0.65, 0, 7); c.fill(); }
+        c.textAlign = 'center';
+        if (!near) {
+          fit('TENANG', 800, 6, 3.5, w - 3); c.fillStyle = '#2ee59d'; c.fillText('TENANG', w / 2, h * 0.5);
+          fit('tak ada berita besar', 700, 2.6, 1.8, w - 2); c.fillStyle = '#86aed3'; c.fillText('tak ada berita besar', w / 2, h * 0.78);
+        } else {
+          fit(near.title, 800, 7.4, 2.6, w - 3); c.fillStyle = soon && blink ? '#ff5a5a' : red ? '#ff8a80' : '#f2c230'; c.fillText(near.title, w / 2, h * 0.43);
+          const d0 = new Date(near.at), dn = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'][d0.getDay()];
+          const when = `${dn} ${String(d0.getHours()).padStart(2, '0')}:${String(d0.getMinutes()).padStart(2, '0')}`;
+          fit(when, 700, 2.9, 2, w - 3); c.fillStyle = '#86aed3'; c.fillText(when, w / 2, h * 0.64);
+          const cd = live ? 'SEDANG RILIS' : inTime(left);
+          fit(cd, 800, 3.1, 2, w - 3); c.fillStyle = live ? (blink ? '#ff5a5a' : '#ffffff') : '#ffffff'; c.fillText(cd, w / 2, h * 0.85);
+        }
+        // marquee lights round the frame (running when the news is within 2 hours)
+        const run = !!near && left < 2 * 3_600_000, N = 18;
+        for (let k = 0; k < N; k++) {
+          const u = k / N, per = 2 * (w + h), d = u * per;
+          const [lx, ly] = d < w ? [d, -1.3] : d < w + h ? [w + 1.3, d - w] : d < 2 * w + h ? [w - (d - w - h), h + 1.3] : [-1.3, h - (d - 2 * w - h)];
+          const on = run ? (k + Math.floor(t * 6)) % 3 === 0 : k % 2 === 0;
+          c.fillStyle = on ? (run ? '#ffd23f' : 'rgba(255,210,63,.55)') : 'rgba(255,210,63,.15)'; c.beginPath(); c.arc(lx, ly, 0.55, 0, 7); c.fill();
+        }
+      });
+    }
     const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
     const h4 = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
     board(7.2, 11.8, 98, 150, (w, h) => {
