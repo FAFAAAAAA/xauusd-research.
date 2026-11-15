@@ -9,7 +9,7 @@ export type BotKey =
   | 'stop_balance_usdt' | 'max_loss_streak' | 'leverage_auto' | 'leverage' | 'margin_isolated'
   | 'daily_summary' | 'summary_hours_kst' | 'exclude';
 export type BotVal = number | boolean | string | number[] | string[];
-export interface BotControl { set: Partial<Record<BotKey, BotVal>>; paused: boolean; resetAt: number; updatedAt: number }
+export interface BotControl { set: Partial<Record<BotKey, BotVal>>; paused: boolean; resetAt: number; closeAllAt: number; updatedAt: number }
 export interface BotApplied { cfg: Partial<Record<BotKey, BotVal>>; paused: boolean; lossStreak: number; version: string }
 export interface BotSeen { at: number; applied: BotApplied | null }
 
@@ -31,7 +31,7 @@ export const BOT_SPEC: Record<BotKey, Spec> = {
   exclude: { t: 'syms' },
 };
 export const BOT_KEYS = Object.keys(BOT_SPEC) as BotKey[];
-export const DEFAULT_BOT_CONTROL: BotControl = { set: {}, paused: false, resetAt: 0, updatedAt: 0 };
+export const DEFAULT_BOT_CONTROL: BotControl = { set: {}, paused: false, resetAt: 0, closeAllAt: 0, updatedAt: 0 };
 
 const num = (x: unknown) => (typeof x === 'number' ? x : typeof x === 'string' && x.trim() ? Number(x) : NaN);
 export const SYM_RE = /^[A-Z0-9]{2,20}USDT$/;
@@ -66,7 +66,7 @@ export function cleanBotControl(x: unknown, now = Date.now()): BotControl {
   }
   if (o.riskPercent != null && !('risk_mode' in raw) && set.risk_percent != null) set.risk_mode = 'percent';
   const t = (v: unknown) => (Number.isFinite(num(v)) && num(v) > 0 ? num(v) : 0);
-  return { set, paused: o.paused === true, resetAt: t(o.resetAt), updatedAt: t(o.updatedAt) || now };
+  return { set, paused: o.paused === true, resetAt: t(o.resetAt), closeAllAt: t(o.closeAllAt), updatedAt: t(o.updatedAt) || now };
 }
 
 export function cleanApplied(x: unknown): BotApplied | null {
@@ -102,6 +102,7 @@ export function botChanges(prev: BotControl, next: BotControl): string[] {
     out.push(`${LABELS[k]}: ${showBotVal(k, prev.set[k])} → ${showBotVal(k, next.set[k])}`);
   }
   if (next.resetAt > prev.resetAt) out.push('Kalah beruntun di-nol-kan');
+  if (next.closeAllAt > prev.closeAllAt) out.push('DARURAT: tutup semua posisi bot');
   return out;
 }
 

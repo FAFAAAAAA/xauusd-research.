@@ -44,7 +44,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.15'
+BOT_VERSION = '2026.11.15.2'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -565,6 +565,10 @@ class Bot:
             if reset_at > (time.time() - 900) * 1000 and self.st.get('loss_streak', 0):
                 self.st['loss_streak'] = 0; self.st['brake_sent'] = 0; changes.append('hitungan kalah beruntun di-reset ke 0')
             save_state(self.st)
+        close_at = c.get('closeAllAt') if isinstance(c.get('closeAllAt'), (int, float)) else 0
+        if close_at and close_at > self.st.get('close_all_at', 0):            # EMERGENCY from the website (confirmed twice in the app)
+            self.st['close_all_at'] = close_at; save_state(self.st)
+            if close_at > (time.time() - 600) * 1000: self.close_all()            # only a press from the last 10 minutes counts
         if reload:
             try: self.load_symbols()
             except RuntimeError as e: log.warning('Muat ulang koin gagal: %s', e)
@@ -572,6 +576,23 @@ class Bot:
             log.info('Setelan dari website: %s', '; '.join(changes))
             if not quiet: notify(self.cfg, 'Setelan dari website dipakai: ' + '; '.join(changes) + '.')
             fetch_control(self.cfg, self.applied())   # tell the website what is used now
+
+    def close_all(self):
+        """close every position THIS bot opened, at market (reduce-only), then cancel their TP/SL; manual positions are not touched"""
+        own = dict(self.st.get('positions') or {})
+        log.error('DARURAT dari website: tutup %d posisi bot sekarang.', len(own))
+        if self.cfg['dry_run'] or not own:
+            notify(self.cfg, 'DARURAT dari website: tidak ada posisi bot yang terbuka. Bot dijeda (tidak buka posisi baru).', 'error'); return
+        try: live = self.positions()
+        except RuntimeError as e:
+            notify(self.cfg, f'DARURAT: daftar posisi tidak terbaca ({e}). TUTUP MANUAL di Binance!', 'error'); return
+        done = []
+        for sym, p in own.items():
+            side = p.get('side', 'SELL'); amt = live.get(sym, 0)
+            if (amt > 0) if side == 'BUY' else (amt < 0):
+                self.close_now(sym, abs(amt), side); done.append(sym.replace('USDT', ''))
+        time.sleep(3); self.manage()                                       # books the closes (manual) and cancels the leftover TP/SL
+        notify(self.cfg, f"DARURAT dari website: {len(done)} posisi ditutup{' (' + ', '.join(done) + ')' if done else ''}. Bot dijeda — lanjutkan dari Atur → Kontrol bot.", 'error')
 
     def run(self):
         self.api.sync_time(); self.load_symbols()

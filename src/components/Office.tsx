@@ -2584,10 +2584,14 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const ref = useRef<HTMLCanvasElement>(null);
   // the technician's status = the bot's heartbeat (Kontrol bot: the bot checks the website every ~60 s)
   const [bot, setBot] = useState<{ at: number; paused: boolean } | null>(null);
+  const [ctl, setCtl] = useState<Record<string, unknown> | null>(null);       // saved Kontrol bot (for the news chip's pause button)
+  const [newsBusy, setNewsBusy] = useState(false);
+  const getBot = useRef<() => void>(() => {});
   useEffect(() => {
     let dead = false;
-    const get = () => call<{ seen: { at: number; applied: { paused: boolean } | null } | null }>('/api/bot-control')
-      .then((x) => { if (!dead) setBot(x.seen ? { at: x.seen.at, paused: !!x.seen.applied?.paused } : null); }).catch(() => {});
+    const get = () => call<{ control: Record<string, unknown>; seen: { at: number; applied: { paused: boolean } | null } | null }>('/api/bot-control')
+      .then((x) => { if (!dead) { setBot(x.seen ? { at: x.seen.at, paused: !!x.seen.applied?.paused } : null); setCtl(x.control ?? null); } }).catch(() => {});
+    getBot.current = get;
     get(); const t = setInterval(get, 60_000);
     return () => { dead = true; clearInterval(t); };
   }, []);
@@ -3118,6 +3122,24 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
       {card?.id === 'akun' ? <Sheet title="Laporan Perusahaan" onClose={() => setCard(null)}><CompanyReport data={data} now={now} /></Sheet> : null}
       {coSet ? <Sheet title="Perusahaan" onClose={() => setCoSet(false)}><CompanySettingsView now={now} onDone={() => { setCoSet(false); say('🏢 Pengaturan perusahaan disimpan'); }} /></Sheet> : null}
+      {full && ctl ? (() => {
+        // big US news within 2 hours: a reminder chip with a one-tap pause / resume of the bot
+        const e = (data.cal ?? []).filter((x) => x.at > now - 15 * 60_000 && x.at - now < 2 * 3_600_000).sort((a, b) => a.at - b.at)[0];
+        if (!e) return null;
+        const min = Math.round((e.at - now) / 60_000), paused = ctl.paused === true;
+        const when = min > 0 ? (min >= 60 ? `${Math.floor(min / 60)} j ${min % 60} mnt lagi` : `${min} mnt lagi`) : 'sedang rilis';
+        const toggle = async () => {
+          setNewsBusy(true);
+          try { await call('/api/bot-control', { method: 'PUT', json: { ...ctl, paused: !paused } }); say(paused ? '▶️ Bot dilanjutkan' : '⏸ Bot dijeda sampai kamu lanjutkan'); getBot.current(); }
+          catch { say('Gagal mengirim ke bot'); } finally { setNewsBusy(false); }
+        };
+        return (
+          <div className={`office-news ${bills.some((b) => !billHide.includes(b.key)) ? 'up' : ''}`} data-noswipe>
+            <span>📅 <b>{e.title}</b> · {when}</span>
+            <button type="button" disabled={newsBusy} className={paused ? 'on' : ''} onClick={toggle}>{paused ? 'Lanjutkan bot' : 'Jeda bot'}</button>
+          </div>
+        );
+      })() : null}
       {full && bills.some((b) => !billHide.includes(b.key)) ? <div className="office-bill" data-noswipe>
         {bills.filter((b) => !billHide.includes(b.key)).map((b) => (
           <button type="button" key={b.key} onClick={() => setBillHide((h) => [...h, b.key])} aria-label={`Tagihan ${b.name}, ketuk untuk sembunyikan`}>
