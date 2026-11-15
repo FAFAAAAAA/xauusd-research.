@@ -3113,31 +3113,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
           if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
           if (r === 2) { glow(8.0, 0.4, 30, 30, 'rgba(255,200,90,.18)'); glow(4.8, 8.8, 20, 34, 'rgba(255,200,90,.12)'); }
-          // pendant lamps (silhouette: cord + shade) with a soft cone of light down to a warm pool on the floor (night only)
-          const ZT = 150, ZS = 116;
-          for (const [lx, ly] of LAMPS[r] ?? []) {
-            const [cx, cy] = iso(lx, ly, ZT), [sx, sy] = iso(lx, ly, ZS), [fx, fy] = iso(lx, ly, 0), half = 0.9 * TW;
-            c.globalCompositeOperation = 'source-over';
-            const cord = c.createLinearGradient(cx, cy, sx, sy); cord.addColorStop(0, 'rgba(20,22,28,0)'); cord.addColorStop(1, 'rgba(20,22,28,.9)');
-            c.strokeStyle = cord; c.lineWidth = 0.5; c.beginPath(); c.moveTo(cx, cy); c.lineTo(sx, sy); c.stroke();
-            c.fillStyle = '#1b1d23'; c.beginPath(); c.moveTo(sx - 1.2, sy); c.lineTo(sx + 1.2, sy); c.lineTo(sx + 3.6, sy + 3.4); c.lineTo(sx - 3.6, sy + 3.4); c.closePath(); c.fill();
-            c.fillStyle = '#ffe9b8'; c.beginPath(); c.ellipse(sx, sy + 3.4, 3.6, 1, 0, 0, 7); c.fill();
-            c.globalCompositeOperation = 'lighter';
-            const cg = c.createLinearGradient(sx, sy + 3.4, fx, fy); cg.addColorStop(0, 'rgba(255,226,170,.17)'); cg.addColorStop(0.7, 'rgba(255,214,150,.05)'); cg.addColorStop(1, 'rgba(255,214,150,0)');
-            c.fillStyle = cg; c.beginPath(); c.moveTo(sx - 3.4, sy + 3.4); c.lineTo(sx + 3.4, sy + 3.4); c.lineTo(fx + half, fy); c.lineTo(fx - half, fy); c.closePath(); c.fill();
-            c.save(); c.translate(fx, fy); c.scale(1, 0.5); const pg = c.createRadialGradient(0, 0, 0, 0, 0, half * 1.15); pg.addColorStop(0, 'rgba(255,214,150,.2)'); pg.addColorStop(1, 'rgba(255,214,150,0)'); c.fillStyle = pg; c.fillRect(-half * 1.2, -half * 1.2, half * 2.4, half * 2.4); c.restore();
-            glow(lx, ly, ZS - 3, 10, 'rgba(255,236,190,.45)');
-          }
-          // screens light the wall around them a little: a ring of light, clear in the middle so the screens themselves look unchanged
-          const ring = (x: number, z: number, rad: number, rgb: string, al: number) => { const [gx, gy] = iso(x, 0, z); const g = c.createRadialGradient(gx, gy, 0, gx, gy, rad); g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(0.5, `rgba(${rgb},0)`); g.addColorStop(0.68, `rgba(${rgb},${al})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(gx - rad, gy - rad, 2 * rad, 2 * rad); };
-          if (r === 1) {
-            const ps = posRef.current, fl = ps.reduce((sum, p) => sum + (p.pnl ?? 0), 0);
-            const rgb = !ps.length ? '90,150,255' : fl > 0 ? '46,229,157' : fl < 0 ? '255,90,90' : '90,150,255';
-            const br = ps.length ? 0.8 + 0.2 * Math.sin(t * 2) : 1;      // breathes gently while positions are open
-            ring(8.25, TV.z1 + 29, 52, rgb, 0.24 * br);
-            ring(7.35, (TV.z0 + TV.z1) / 2, 70, '80,150,255', 0.12);
-          }
-          if (r === 2) { ring(9.5, 124, 60, '160,200,255', 0.14); ring(8.0, 51, 28, '255,220,160', 0.12); }
         }
         c.globalCompositeOperation = 'source-over';
       }
@@ -3385,8 +3360,6 @@ let BILLS: Array<{ key: string; name: string; idr: number; daysLeft: number }> =
 const BILL_SAID = new Set<string>();
 let GAJI: number | null = null, NETM: number | null = null;
 const inEventKind = (k: string) => !!EV.cur && EV.cur.kind === k;
-/** ceiling lamps per room (floor positions), for the night light cones */
-const LAMPS: Record<number, Array<[number, number]>> = { 0: [[3.0, 8.0], [7.2, 4.6], [11.6, 7.6]], 1: [[3.0, 5.6], [7.6, 5.4], [11.6, 7.2]], 2: [[5.0, 8.8], [8.6, 8.6], [11.8, 6.4]] };
 const inTime = (ms: number) => { const mn = Math.ceil(ms / 60_000); if (mn < 60) return `${mn} MENIT LAGI`; const hr = Math.floor(mn / 60); if (hr < 48) return `${hr} JAM LAGI`; return `${Math.floor(hr / 24)} HARI LAGI`; };
 function drawBoards(c: C, room: number, wall: number, t: number) {
   const board = (x0: number, x1: number, z0: number, z1: number, fn: (w: number, h: number) => void) => {
