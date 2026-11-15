@@ -69,7 +69,7 @@ function Group({ id, title, sub, children }: { id: string; title: string; sub?: 
       <button type="button" className="ap-btn" id={id} onClick={() => setOpen(true)} aria-label={`${title}${sub ? ` — ${sub}` : ''}`}>
         <span className="ap-ic" style={{ background: GRAD[id] ?? 'linear-gradient(160deg,#3a3a40,#141416)' }}>
           <svg viewBox="0 0 24 24"><path d={ICON[id] ?? 'M12 12h.01'} /></svg>
-          {dot ? <em className={dot} /> : null}
+          {dot === 'warn' ? <em className={dot} /> : null}
         </span>
         <small>{SHORT[id] ?? title}</small>
       </button>
