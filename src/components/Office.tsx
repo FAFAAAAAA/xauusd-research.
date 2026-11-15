@@ -3373,40 +3373,64 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
     const hm = `${String(d.getHours()).padStart(2, '0')}${d.getSeconds() % 2 ? ':' : ' '}${String(d.getMinutes()).padStart(2, '0')}`;
     const day = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'][d.getDay()];
     const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'][d.getMonth()];
-    // news board above the drinks vending machine: the next big US news (NFP, CPI, FOMC, PCE, Powell) from the Forex Factory calendar,
-    // a red header, the event name, its day + time and a countdown; marquee lights run round the frame when it is close
+    // news board above the drinks vending machine: the next USD red / yellow news from the Forex Factory calendar (refreshed every 30 min,
+    // countdown live every frame). Modern glass panel: impact pill, big name, day + time chip, countdown with a progress bar.
+    // At night it glows softly on the wall and spills a little light onto the vending machine below.
     {
       const nx = CAL.find((e) => e.at > wall - 10 * 60_000);
       const near = nx && nx.at - wall < 7 * 86_400_000 ? nx : null;
-      board(2.55, 4.05, 54, 82, (w, h) => {
-        const left = near ? near.at - wall : 0, soon = !!near && left < 15 * 60_000, live = !!near && left <= 0, blink = Math.floor(t * 3) % 2 === 0;
-        const fit = (txt: string, wt: number, max: number, min: number, room: number) => { let f = max; c.font = `${wt} ${f}px ui-monospace, Menlo, monospace`; while (f > min && c.measureText(txt).width > room) { f -= 0.2; c.font = `${wt} ${f}px ui-monospace, Menlo, monospace`; } };
-        // header strip: BERITA USD + three impact dots
-        const red = !near || near.impact !== 'medium';      // Forex Factory colour: red = high, yellow = medium
-        c.fillStyle = red ? (live || (soon && blink) ? '#e5242b' : '#b3262b') : (live || (soon && blink) ? '#f2b705' : '#c98f00'); c.fillRect(0, 0, w, 6.2);
-        c.textAlign = 'left'; fit('BERITA USD', 800, 3.3, 2.4, w - 9); c.fillStyle = '#ffffff'; c.fillText('BERITA USD', 1.6, 3.3);
-        for (let k = 0; k < 3; k++) { c.fillStyle = near && (red || k < 2) ? '#ffffff' : 'rgba(255,255,255,.3)'; c.beginPath(); c.arc(w - 5.6 + k * 1.9, 3.1, 0.65, 0, 7); c.fill(); }
-        c.textAlign = 'center';
-        if (!near) {
-          fit('TENANG', 800, 6, 3.5, w - 3); c.fillStyle = '#2ee59d'; c.fillText('TENANG', w / 2, h * 0.5);
-          fit('tak ada berita besar', 700, 2.6, 1.8, w - 2); c.fillStyle = '#86aed3'; c.fillText('tak ada berita besar', w / 2, h * 0.78);
-        } else {
-          fit(near.title, 800, 7.4, 2.6, w - 3); c.fillStyle = soon && blink ? '#ff5a5a' : red ? '#ff8a80' : '#f2c230'; c.fillText(near.title, w / 2, h * 0.43);
-          const d0 = new Date(near.at), dn = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'][d0.getDay()];
-          const when = `${dn} ${String(d0.getHours()).padStart(2, '0')}:${String(d0.getMinutes()).padStart(2, '0')}`;
-          fit(when, 700, 2.9, 2, w - 3); c.fillStyle = '#86aed3'; c.fillText(when, w / 2, h * 0.64);
-          const cd = live ? 'SEDANG RILIS' : inTime(left);
-          fit(cd, 800, 3.1, 2, w - 3); c.fillStyle = live ? (blink ? '#ff5a5a' : '#ffffff') : '#ffffff'; c.fillText(cd, w / 2, h * 0.85);
-        }
-        // marquee lights round the frame (running when the news is within 2 hours)
-        const run = !!near && left < 2 * 3_600_000, N = 18;
-        for (let k = 0; k < N; k++) {
-          const u = k / N, per = 2 * (w + h), d = u * per;
-          const [lx, ly] = d < w ? [d, -1.3] : d < w + h ? [w + 1.3, d - w] : d < 2 * w + h ? [w - (d - w - h), h + 1.3] : [-1.3, h - (d - 2 * w - h)];
-          const on = run ? (k + Math.floor(t * 6)) % 3 === 0 : k % 2 === 0;
-          c.fillStyle = on ? (run ? '#ffd23f' : 'rgba(255,210,63,.55)') : 'rgba(255,210,63,.15)'; c.beginPath(); c.arc(lx, ly, 0.55, 0, 7); c.fill();
-        }
-      });
+      const red = !near || near.impact !== 'medium';
+      const left = near ? near.at - wall : 0, soon = !!near && left < 15 * 60_000, live = !!near && left <= 0, blink = Math.floor(t * 3) % 2 === 0;
+      const acc = !near ? '#2ee59d' : red ? '#ff4d4f' : '#ffc53d', accRgb = !near ? '46,229,157' : red ? '255,77,79' : '255,197,61';
+      const X0 = 2.2, X1 = 4.1, Z0 = 56, Z1 = 96;
+      if (PHASE === 'malam') {   // soft glow round the panel + a light spill down the wall
+        const [gx, gy] = iso((X0 + X1) / 2, 0, (Z0 + Z1) / 2), pulse = soon ? 0.75 + 0.25 * Math.sin(t * 6) : 1;
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const g = c.createRadialGradient(gx, gy, 4, gx, gy, 46); g.addColorStop(0, `rgba(${accRgb},${0.22 * pulse})`); g.addColorStop(0.5, `rgba(${accRgb},${0.08 * pulse})`); g.addColorStop(1, `rgba(${accRgb},0)`);
+        c.fillStyle = g; c.fillRect(gx - 50, gy - 50, 100, 100);
+        const [sx, sy] = iso((X0 + X1) / 2, 0.35, 30), g2 = c.createRadialGradient(sx, sy, 2, sx, sy, 34); g2.addColorStop(0, 'rgba(140,190,255,.12)'); g2.addColorStop(1, 'rgba(140,190,255,0)');
+        c.fillStyle = g2; c.fillRect(sx - 36, sy - 36, 72, 72);
+        c.restore();
+      }
+      const [ox, oy] = iso(X0, 0, Z1), w = (X1 - X0) * TW, h = Z1 - Z0;
+      c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
+      const rr = (x: number, y: number, ww: number, hh: number, r: number) => { c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + ww - r, y); c.quadraticCurveTo(x + ww, y, x + ww, y + r); c.lineTo(x + ww, y + hh - r); c.quadraticCurveTo(x + ww, y + hh, x + ww - r, y + hh); c.lineTo(x + r, y + hh); c.quadraticCurveTo(x, y + hh, x, y + hh - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath(); };
+      // frame + glass
+      rr(-1.6, -1.6, w + 3.2, h + 3.2, 3.2); c.fillStyle = '#1a1c22'; c.fill();
+      rr(0, 0, w, h, 2.4); const bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#16233a'); bg.addColorStop(1, '#0a0f1a'); c.fillStyle = bg; c.fill();
+      c.save(); rr(0, 0, w, h, 2.4); c.clip();
+      c.fillStyle = 'rgba(255,255,255,.05)'; c.beginPath(); c.moveTo(0, 0); c.lineTo(w * 0.55, 0); c.lineTo(w * 0.2, h); c.lineTo(0, h); c.closePath(); c.fill();   // glass shine
+      c.fillStyle = acc; c.fillRect(0, 0, w, 0.9);                                                                                                          // accent line
+      c.restore();
+      c.textBaseline = 'middle';
+      const font = (wt: number, f: number) => `${wt} ${f}px -apple-system, system-ui, sans-serif`;
+      const fit = (txt: string, wt: number, max: number, min: number, room: number) => { let f = max; c.font = font(wt, f); while (f > min && c.measureText(txt).width > room) { f -= 0.2; c.font = font(wt, f); } };
+      // impact pill (left) + USD (right)
+      const pill = !near ? 'SEPI' : red ? 'TINGGI' : 'SEDANG';
+      c.font = font(800, 2.9); const pw = c.measureText(pill).width + 5.4;
+      rr(2.2, 3, pw, 4.6, 2.3); c.fillStyle = `rgba(${accRgb},${live || (soon && blink) ? 0.45 : 0.2})`; c.fill();
+      c.fillStyle = acc; c.beginPath(); c.arc(4.1, 5.3, 0.8, 0, 7); c.fill();
+      c.textAlign = 'left'; c.fillStyle = '#ffffff'; c.fillText(pill, 5.4, 5.4);
+      c.textAlign = 'right'; c.font = font(800, 2.9); c.fillStyle = 'rgba(255,255,255,.55)'; c.fillText('USD', w - 2.2, 5.4);
+      c.textAlign = 'center';
+      if (!near) {
+        fit('TENANG', 800, 7.5, 4, w - 4); c.fillStyle = '#2ee59d'; c.fillText('TENANG', w / 2, h * 0.47);
+        fit('tidak ada berita 7 hari', 600, 2.8, 1.8, w - 4); c.fillStyle = 'rgba(255,255,255,.55)'; c.fillText('tidak ada berita 7 hari', w / 2, h * 0.68);
+      } else {
+        fit(near.title, 800, 8.6, 3, w - 4); c.fillStyle = soon && blink ? '#ff6b6b' : '#ffffff'; c.fillText(near.title, w / 2, h * 0.39);
+        const d0 = new Date(near.at), dn = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][d0.getDay()];
+        const when = `${dn} · ${String(d0.getHours()).padStart(2, '0')}:${String(d0.getMinutes()).padStart(2, '0')}`;
+        c.font = font(700, 2.9); const ww = c.measureText(when).width + 5;
+        rr(w / 2 - ww / 2, h * 0.53, ww, 4.6, 2.3); c.fillStyle = 'rgba(255,255,255,.08)'; c.fill();
+        c.fillStyle = 'rgba(214,228,255,.85)'; c.fillText(when, w / 2, h * 0.53 + 2.4);
+        const cd = live ? 'SEDANG RILIS' : inTime(left);
+        fit(cd, 800, 3.6, 2.2, w - 4); c.fillStyle = live ? (blink ? acc : '#ffffff') : acc; c.fillText(cd, w / 2, h * 0.77);
+        // progress bar: fills up over the last 24 hours before the release
+        const pr = live ? 1 : Math.max(0, Math.min(1, 1 - left / 86_400_000));
+        rr(3, h - 4.2, w - 6, 1.4, 0.7); c.fillStyle = 'rgba(255,255,255,.1)'; c.fill();
+        if (pr > 0.02) { rr(3, h - 4.2, (w - 6) * pr, 1.4, 0.7); c.fillStyle = acc; c.fill(); }
+      }
+      c.textAlign = 'left'; c.textBaseline = 'alphabetic'; c.restore();
     }
     const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
     const h4 = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
