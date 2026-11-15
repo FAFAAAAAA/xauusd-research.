@@ -3378,7 +3378,7 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
       const red = !near || near.impact !== 'medium';
       const left = near ? near.at - wall : 0, soon = !!near && left < 15 * 60_000, live = !!near && left <= 0, blink = Math.floor(t * 3) % 2 === 0;
       const acc = !near ? '#2ee59d' : red ? '#ff4d4f' : '#ffc53d', accRgb = !near ? '46,229,157' : red ? '255,77,79' : '255,197,61';
-      const K = 1.18, X0 = 4.1 - 1.9 * K, X1 = 4.1, Z0 = 53, Z1 = 53 + 40 * K;     // 1.18× bigger, same layout; clear gap under the floor above
+      const K = 1.08, X0 = 4.1 - 1.9 * K, X1 = 4.1, Z0 = 53, Z1 = 53 + 40 * K;     // 1.08× bigger, same layout; clear gap under the floor above
       if (PHASE === 'malam') {   // soft glow round the panel + a light spill down the wall
         const [gx, gy] = iso((X0 + X1) / 2, 0, (Z0 + Z1) / 2), pulse = soon ? 0.75 + 0.25 * Math.sin(t * 6) : 1;
         c.save(); c.globalCompositeOperation = 'lighter';
@@ -3427,20 +3427,20 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
     }
     const H4 = 4 * 3_600_000, left = H4 - (wall % H4);
     const h4 = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
-    board(7.2, 11.8, 98, 150, (w, h) => {
-      c.font = '800 17px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(hm, w / 2, h * 0.3);
-      c.font = '700 5.2px ui-monospace, Menlo, monospace'; c.fillStyle = '#f2c230'; c.fillText(`${day}, ${d.getDate()} ${mon} ${d.getFullYear()}`, w / 2, h * 0.58);
+    board(6.95, 12.05, 104, 164, (w, h) => {
+      c.font = '800 19.5px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffff'; c.fillText(hm, w / 2, h * 0.3);
+      c.font = '700 6px ui-monospace, Menlo, monospace'; c.fillStyle = '#f2c230'; c.fillText(`${day}, ${d.getDate()} ${mon} ${d.getFullYear()}`, w / 2, h * 0.58);
       c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(6, h * 0.7, w - 12, 0.6);
       // bottom row: Bitcoin's % today on the left (green up, red down), then the H4 countdown
       // sizes are fitted to the board so the three parts never touch (−12.34% is the widest case)
       if (BTCP != null) {
-        let f = 5.6; const txt = `${BTCP > 0 ? '+' : BTCP < 0 ? '−' : ''}${Math.abs(BTCP).toFixed(2)}%`;
+        let f = 6.4; const txt = `${BTCP > 0 ? '+' : BTCP < 0 ? '−' : ''}${Math.abs(BTCP).toFixed(2)}%`;
         c.font = `800 ${f}px ui-monospace, Menlo, monospace`; while (f > 3.6 && c.measureText(txt).width > w * 0.3) { f -= 0.2; c.font = `800 ${f}px ui-monospace, Menlo, monospace`; }
         c.fillStyle = BTCP > 0 ? '#2ee59d' : BTCP < 0 ? '#ff5a5a' : '#ffffff'; c.fillText(txt, w * 0.18, h * 0.84);
         c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(w * 0.355, h * 0.76, 0.6, h * 0.16);
       }
-      c.font = '700 4px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('H4', BTCP != null ? w * 0.43 : w * 0.24, h * 0.84);
-      { let f = BTCP != null ? 6.2 : 7; c.font = `800 ${f}px ui-monospace, Menlo, monospace`; while (BTCP != null && f > 4 && c.measureText(h4).width > w * 0.44) { f -= 0.2; c.font = `800 ${f}px ui-monospace, Menlo, monospace`; }
+      c.font = '700 4.6px ui-monospace, Menlo, monospace'; c.fillStyle = '#86aed3'; c.fillText('H4', BTCP != null ? w * 0.43 : w * 0.24, h * 0.84);
+      { let f = BTCP != null ? 7.1 : 8; c.font = `800 ${f}px ui-monospace, Menlo, monospace`; while (BTCP != null && f > 4 && c.measureText(h4).width > w * 0.44) { f -= 0.2; c.font = `800 ${f}px ui-monospace, Menlo, monospace`; }
         c.fillStyle = left < 60_000 && Math.floor(t * 4) % 2 ? '#ffffff' : '#f2c230'; c.fillText(h4, BTCP != null ? w * 0.72 : w * 0.62, h * 0.84); }
     });
   }
