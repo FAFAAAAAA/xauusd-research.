@@ -766,7 +766,7 @@ function scheduleEvents(ctx: EvCtx) {
   const closed = data.trades.filter((t) => t.result !== 'open' && t.closedAt).sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0));
   if (closed.length >= 3 && closed.slice(0, 3).every((t) => t.result === 'sl') && wall - (closed[0].closedAt ?? 0) < 30 * 60_000 && EV.done.darurat !== String(closed[0].id)) want.push('darurat');
   const today = new Date(wall); today.setHours(0, 0, 0, 0);
-  const tdy = closed.filter((t) => (t.closedAt ?? 0) >= today.getTime());
+  const tdy = closed.filter((t) => (t.closedAt ?? 0) >= today.getTime() && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');   // bonus = office money (Binance only)
   if (tdy.filter((t) => t.result === 'tp').length >= 2 && tdy.reduce((s, t) => s + Number(t.pnl ?? 0), 0) > 0 && EV.done.bonus !== day && h >= 8 && h < 22) want.push('bonus');
   const lastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getDate() === 1;
   if (lastDay && h === 22 && m >= 15 && m < 45 && EV.done.gajian !== day) want.push('gajian');            // payday: the last day, after the monthly meeting
@@ -827,9 +827,10 @@ export function biz(data: OfficeData, now: number) {
   let streak = 0; for (const t of cr) { if (t.result === 'sl') streak++; else break; }       // stop losses in a row (Binance bot)
   const sum = (xs: JournalTrade[]) => xs.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
   const today = cr.filter((t) => (t.closedAt ?? 0) >= day0.getTime());
-  const todayAll = closed.filter((t) => (t.closedAt ?? 0) >= day0.getTime());
-  const month = closed.filter((t) => (t.closedAt ?? 0) >= m0.getTime());
-  const last = closed.filter((t) => (t.closedAt ?? 0) >= pm0.getTime() && (t.closedAt ?? 0) < m0.getTime());
+  // office money = Binance only; MT5 (prop firm) trades keep their characters and the positions screen but not the P&L (owner, 15 Nov 2026)
+  const todayAll = cr.filter((t) => (t.closedAt ?? 0) >= day0.getTime());
+  const month = cr.filter((t) => (t.closedAt ?? 0) >= m0.getTime());
+  const last = cr.filter((t) => (t.closedAt ?? 0) >= pm0.getTime() && (t.closedAt ?? 0) < m0.getTime());
   const todayB = sum(today), wallet = data.binance?.wallet ?? 0;
   const todayPct = wallet - todayB > 0 ? (todayB / (wallet - todayB)) * 100 : 0;          // today's result vs the balance at the start of the day
   const openN = data.trades.filter((t) => t.result === 'open').length;
