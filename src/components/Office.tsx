@@ -3111,8 +3111,9 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
             const WA = 0.075;
             c.fillStyle = `rgba(255,212,120,${WA})`; c.beginPath(); for (const [x, y] of [[0, 0], [NX, 0], [NX, NY], [0, NY]] as const) { const [px, py] = iso(x, y, 0); c.lineTo(px, py); } c.closePath(); c.fill();
             const [wx, wy] = iso(0, 0, 0); c.save(); c.translate(wx, wy); c.transform(1, 0.5, 0, 1, 0, 0);
-            const wg = c.createLinearGradient(0, 0, 0, -175); wg.addColorStop(0, `rgba(255,212,120,${WA})`); wg.addColorStop(0.62, `rgba(255,212,120,${WA})`); wg.addColorStop(1, 'rgba(255,212,120,0)');
-            c.fillStyle = wg; c.fillRect(0, -175, NX * TW, 175); c.restore();
+            // stays well below the floor slab of the room above (no band of light across the next floor)
+            const wg = c.createLinearGradient(0, 0, 0, -130); wg.addColorStop(0, `rgba(255,212,120,${WA})`); wg.addColorStop(0.55, `rgba(255,212,120,${WA})`); wg.addColorStop(1, 'rgba(255,212,120,0)');
+            c.fillStyle = wg; c.fillRect(0, -130, NX * TW, 130); c.restore();
           }
         }
         c.globalCompositeOperation = 'source-over';
