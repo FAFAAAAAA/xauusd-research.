@@ -202,19 +202,6 @@ export function BotControlCard() {
         </div>
       ) : null}
 
-      {d.live ? (() => {
-        const L = d.live, msg = L.verdict === 'few' ? `Baru ${L.n} trade · dinilai setelah ±30` : L.verdict === 'low' ? 'Di bawah backtest — perlu dicek' : L.verdict === 'high' ? 'Di atas backtest' : 'Sesuai backtest';
-        return (
-          <div className="bx-live">
-            <div className="bx-lh"><b>Hasil nyata vs backtest</b><em className={`v-${L.verdict}`}>{msg}</em></div>
-            <div className="bx-lg">
-              <div><small>Trade SELL</small><b>{L.n}</b><i>{L.tp} TP · {L.sl} SL</i></div>
-              <div><small>TP</small><b>{Math.round(L.tpPct)}%</b><i>backtest 42%</i></div>
-              <div><small>Rata-rata</small><b className={L.avgR >= 0 ? 'up' : 'dn'}>{L.avgR >= 0 ? '+' : ''}{nf(Math.round(L.avgR * 100) / 100)}R</b><i>backtest +0,21R</i></div>
-            </div>
-          </div>
-        );
-      })() : null}
       {err ? <div className="error">{err}</div> : null}
       {pending ? <p className="bc-now">Menunggu bot memakai setelan baru…</p> : null}
       {dirty ? (

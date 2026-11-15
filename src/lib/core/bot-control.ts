@@ -105,20 +105,3 @@ export function botChanges(prev: BotControl, next: BotControl): string[] {
   return out;
 }
 
-/** live Binance SELL (SNR) trades compared with the backtest (2020–2026, 4 SELL + 2 BUY): TP 42 %, +0.21 R per trade, R spread ≈ 1.45 */
-export const BACKTEST_SNR = { tpPct: 42, avgR: 0.21, sdR: 1.45 };
-export interface LiveCheck { n: number; tp: number; sl: number; tpPct: number; avgR: number; totalR: number; verdict: 'few' | 'ok' | 'low' | 'high' }
-export function liveCheck(trades: Array<{ strategy: string; side: string; entry: number; sl: number; lot: number; pnl: number | null; result: string; closedAt: number | null }>): LiveCheck {
-  const R: number[] = []; let tp = 0, sl = 0;
-  for (const t of trades) {
-    if (t.strategy !== 'snr' || t.side !== 'SELL' || !t.closedAt || t.pnl == null || t.result === 'open') continue;
-    const risk = Math.abs(t.entry - t.sl) * t.lot;
-    if (!(risk > 0)) continue;
-    R.push(Number(t.pnl) / risk);
-    if (t.result === 'tp') tp++; else if (t.result === 'sl') sl++;
-  }
-  const n = R.length, totalR = R.reduce((a, b) => a + b, 0), avgR = n ? totalR / n : 0;
-  const se = BACKTEST_SNR.sdR / Math.sqrt(Math.max(1, n));
-  const verdict = n < 30 ? 'few' : avgR < BACKTEST_SNR.avgR - 2 * se ? 'low' : avgR > BACKTEST_SNR.avgR + 2 * se ? 'high' : 'ok';
-  return { n, tp, sl, tpPct: n ? (tp / n) * 100 : 0, avgR, totalR, verdict };
-}

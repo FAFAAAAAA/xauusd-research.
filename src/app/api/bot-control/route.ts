@@ -1,6 +1,6 @@
 import { api } from '@/lib/server/api';
 import * as repo from '@/lib/server/repo';
-import { botChanges, liveCheck, cleanBotControl, DEFAULT_BOT_CONTROL, type BotControl, type BotLogEntry, type BotSeen } from '@/lib/core/bot-control';
+import { botChanges, cleanBotControl, DEFAULT_BOT_CONTROL, type BotControl, type BotLogEntry, type BotSeen } from '@/lib/core/bot-control';
 
 export const dynamic = 'force-dynamic';
 type Db = Parameters<Parameters<typeof api>[0]>[0];
@@ -11,7 +11,6 @@ async function state(db: Db) {
     seen: await repo.getAppSetting<BotSeen | null>(db, 'bot_control_seen', null),
     balance: (await repo.getAppSetting<{ wallet?: number } | null>(db, 'binance_balance', null))?.wallet ?? null,
     log: await repo.getAppSetting<BotLogEntry[]>(db, 'bot_control_log', []),
-    live: liveCheck(await repo.getAppSetting<Parameters<typeof liveCheck>[0]>(db, 'live_journal', [])),
   };
 }
 

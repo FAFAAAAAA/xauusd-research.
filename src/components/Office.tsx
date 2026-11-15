@@ -75,6 +75,7 @@ const PEOPLE: Person[] = [
   { id: 'tg', name: 'Admin Telegram', role: 'TELEGRAM', seat: seat('tg', 1, 2.35, 10.35, 'nx', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
   { id: 'risk', name: 'Manajer Risiko', role: 'RISIKO', seat: seat('risk', 1, 8.15, 4.2, 'py', 'CEK RISIKO'), hair: '#2b1d16', skin: '#f1c7a3', shirt: '#7b5cd6', pants: '#2a2b30', style: 'bun', glasses: true, lips: '#c06a62' },
   { id: 'akun', name: 'Akuntan', role: 'AKUNTAN', seat: seat('akun', 1, 6.95, 4.2, 'py', 'PEMBUKUAN'), hair: '#4a2c1c', skin: '#efc39f', shirt: '#f08a3c', pants: '#3a3f4a', style: 'long', lips: '#c9615a' },
+  { id: 'it', name: 'Teknisi', role: 'TEKNISI', seat: seat('it', 1, 8.15, 6.0, 'ny', 'PANTAU BOT'), hair: '#1f1a17', skin: '#e8b98f', shirt: '#334155', pants: '#1f2937', style: 'short', glasses: true, headset: true },
   { id: 'jaga', name: 'Satpam', role: 'SECURITY', seat: seat('jaga', 2, 13.65, 3.2, 'px', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
   { id: 'ob', name: 'Office Boy', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
   { id: 'tamu', name: 'Klien', role: 'KLIEN', seat: { ...seat('tamu', 2, 13.5, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#3a2a20', skin: '#efc9a4', shirt: '#3b4a6b', pants: '#2a2f3a', style: 'slick', tie: true, glasses: true },
@@ -115,7 +116,6 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'win3', x: 0.75, y: 7.7, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   // (the two front chairs of this table are Sari's and Rina's desks: finance & risk)
   { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
-  { id: 'hot4', x: 8.15, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
   { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }] },
   { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
   { id: 'rest1', x: 13.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
@@ -1493,7 +1493,7 @@ function armchair(c: C, x: number, y: number, col: string, dark: string, massage
 function baseItems(): Item[] {
   const it: Item[] = [];
   for (const [y0, id] of [[0.9, 'alt'], [3.1, 'big'], [5.3, 'xau'], [7.5, 'nas'], [9.7, 'tg']] as Array<[number, string]>) it.push(windowDesk(y0, id));
-  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin' || p.id === 'tamu' || p.id === 'risk' || p.id === 'akun') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
+  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin' || p.id === 'tamu' || p.id === 'risk' || p.id === 'akun' || p.id === 'it') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(13.65, 3.2, 'px', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
@@ -2356,6 +2356,17 @@ function choose(p: Person, S: Record<string, Status>, a: Agent, taken: Set<strin
     }
     a.patrol = 0; return { act: { ...p.seat, label: Math.random() < 0.5 ? 'CEK CCTV' : 'JAGA' }, dwell: rnd(18, 35) };
   }
+  if (p.id === 'it') {       // the technician watches the bot's heartbeat (Kontrol bot); runs around when it goes silent
+    if (s?.label === 'BOT MATI') {
+      if (r < 0.5) return { act: { ...p.seat, label: 'BOT MATI!', prop: 'laptop', say: [any1(['Bot nggak ada kabar! Cek VPS!', 'VPS mati? Cek Command Prompt!', 'Bot berhenti, cek C:\\snrbot!']), '#e5242b'] }, dwell: rnd(10, 16) };
+      return { act: { ...SPOTS.find((q) => q.id === 'tv')!, id: 'it-tv', label: 'CEK SERVER', prop: 'tablet' }, dwell: rnd(6, 9) };
+    }
+    if (s?.label === 'BOT DIJEDA') return { act: { ...p.seat, label: 'BOT DIJEDA', prop: 'laptop' }, dwell: rnd(25, 45) };
+    if (a.act.id !== p.seat.id && r < 0.6) return { act: { ...p.seat, label: any1(['PANTAU BOT', 'CEK VPS', 'CEK KONEKSI', 'BACA LOG BOT']), prop: 'laptop' }, dwell: rnd(25, 45) };
+    if (r < 0.25) return { act: { ...SPOTS.find((q) => q.id === 'tv')!, id: 'it-tv', label: 'CEK SERVER' }, dwell: rnd(5, 8) };
+    if (r < 0.4) return { act: pick(SPOTS.filter((q) => ['coffee', 'water', 'win1', 'stretch'].includes(q.id))), dwell: rnd(8, 14) };
+    return { act: { ...p.seat, label: 'PANTAU BOT', prop: 'laptop' }, dwell: rnd(25, 45) };
+  }
   if (p.id === 'akun') {     // Sari the accountant: books every trade, prints reports, asks Marcel to sign
     const bos = all.bos;
     if (a.act.id !== p.seat.id && r < 0.6) return { act: { ...p.seat, label: any1(['PEMBUKUAN', 'INPUT JURNAL', 'HITUNG PNL', 'CEK SALDO', 'REKONSILIASI']), prop: 'laptop' }, dwell: rnd(25, 45) };
@@ -2571,7 +2582,23 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const swipeRef = useRef(onSwipe); swipeRef.current = onSwipe;
   const wrap = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLCanvasElement>(null);
-  const st = useMemo(() => statuses(data, now), [data, now]);
+  // the technician's status = the bot's heartbeat (Kontrol bot: the bot checks the website every ~60 s)
+  const [bot, setBot] = useState<{ at: number; paused: boolean } | null>(null);
+  useEffect(() => {
+    let dead = false;
+    const get = () => call<{ seen: { at: number; applied: { paused: boolean } | null } | null }>('/api/bot-control')
+      .then((x) => { if (!dead) setBot(x.seen ? { at: x.seen.at, paused: !!x.seen.applied?.paused } : null); }).catch(() => {});
+    get(); const t = setInterval(get, 60_000);
+    return () => { dead = true; clearInterval(t); };
+  }, []);
+  const st = useMemo(() => {
+    const b = bot, age = b ? now - b.at : Infinity;
+    const it: Status = !b ? { label: 'BELUM AKTIF', color: '#8a8f98', sleep: false, tag: null }
+      : age > 5 * 60_000 ? { label: 'BOT MATI', color: '#ff5a5f', sleep: false, tag: { text: `⚠ ${Math.round(age / 60_000)} mnt tanpa kabar`, color: '#ff6b6b' } }
+      : b.paused ? { label: 'BOT DIJEDA', color: '#f5a524', sleep: false, tag: null }
+      : { label: 'BOT AKTIF', color: '#2ee59d', sleep: false, tag: null };
+    return { ...statuses(data, now), it } as Record<string, Status>;
+  }, [data, now, bot]);
   // tap a person: a small card with their face, name, job, status and results
   const [card, setCard] = useState<{ id: string; what: string } | null>(null);
   const cardRef = useRef(setCard); cardRef.current = setCard;
@@ -2585,16 +2612,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const report = useReport(data.trades.length || data.binance ? data : null, now);
   const [coSet, setCoSet] = useState(false);
   const [billHide, setBillHide] = useState<string[]>([]);
-  // bot status lamp (Kontrol bot heartbeat: the bot checks the website every ~60 s)
-  const [bot, setBot] = useState<{ at: number; paused: boolean } | null>(null);
-  useEffect(() => {
-    if (!full) return;
-    let dead = false;
-    const get = () => call<{ seen: { at: number; applied: { paused: boolean } | null } | null }>('/api/bot-control')
-      .then((x) => { if (!dead) setBot(x.seen ? { at: x.seen.at, paused: !!x.seen.applied?.paused } : null); }).catch(() => {});
-    get(); const t = setInterval(get, 60_000);
-    return () => { dead = true; clearInterval(t); };
-  }, [full]);
   useEffect(() => {      // opening the app again shows the bill reminders again (and the accountant repeats them)
     const vis = () => { if (document.visibilityState === 'visible') { setBillHide([]); BILL_SAID.clear(); } };
     document.addEventListener('visibilitychange', vis);
@@ -3101,11 +3118,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {full && FLAT && onSwipe ? <button type="button" className="office-trade" onClick={() => swipeRef.current?.()}>Trade ›</button> : null}
       {card?.id === 'akun' ? <Sheet title="Laporan Perusahaan" onClose={() => setCard(null)}><CompanyReport data={data} now={now} /></Sheet> : null}
       {coSet ? <Sheet title="Perusahaan" onClose={() => setCoSet(false)}><CompanySettingsView now={now} onDone={() => { setCoSet(false); say('🏢 Pengaturan perusahaan disimpan'); }} /></Sheet> : null}
-      {full && bot ? (() => {
-        const age = Date.now() - bot.at, on = age < 5 * 60_000, s0 = Math.round(age / 1000);
-        const t = s0 < 60 ? `${s0} dtk` : s0 < 3600 ? `${Math.round(s0 / 60)} mnt` : `${Math.round(s0 / 3600)} jam`;
-        return <a href="/settings" className={`office-bot ${on ? (bot.paused ? 'pause' : 'on') : 'off'}`} data-noswipe aria-label="Status bot, ketuk untuk Kontrol bot"><i />{on ? (bot.paused ? 'Bot dijeda' : 'Bot aktif') : 'Bot tidak ada kabar'}<em>{t}</em></a>;
-      })() : null}
       {full && bills.some((b) => !billHide.includes(b.key)) ? <div className="office-bill" data-noswipe>
         {bills.filter((b) => !billHide.includes(b.key)).map((b) => (
           <button type="button" key={b.key} onClick={() => setBillHide((h) => [...h, b.key])} aria-label={`Tagihan ${b.name}, ketuk untuk sembunyikan`}>
@@ -3123,7 +3135,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         const tps = mine.filter((t) => t.result === 'tp'), sls = mine.filter((t) => t.result === 'sl'), openN = mine.filter((t) => t.result === 'open').length;
         const all = mine.filter((t) => t.result !== 'open').reduce((a, t) => a + Number(t.pnl ?? 0), 0);
         const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-        const JOB: Record<string, string> = { bos: 'Owner', vet: 'Big Bos', alt: 'Trader koin alt (Binance)', big: 'Trader BTC (Binance)', xau: 'Trader emas XAU (MT5)', nas: 'Trader NASDAQ (MT5)', tg: 'Kirim sinyal ke Telegram', risk: 'Manajer risiko', akun: 'Akuntan', jaga: 'Satpam', ob: 'Office boy', kurir: 'Kurir', tamu: 'Tamu' };
+        const JOB: Record<string, string> = { bos: 'Owner', vet: 'Big Bos', alt: 'Trader koin alt (Binance)', big: 'Trader BTC (Binance)', xau: 'Trader emas XAU (MT5)', nas: 'Trader NASDAQ (MT5)', tg: 'Kirim sinyal ke Telegram', risk: 'Manajer risiko', akun: 'Akuntan', it: 'Teknisi: jaga bot Binance & VPS', jaga: 'Satpam', ob: 'Office boy', kurir: 'Kurir', tamu: 'Tamu' };
         return (
           <div className="office-card-bg" onClick={() => setCard(null)} data-noswipe>
             <div className="office-card" onClick={(e) => e.stopPropagation()}>
