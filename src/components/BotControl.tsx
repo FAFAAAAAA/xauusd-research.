@@ -117,7 +117,8 @@ export function BotControlCard() {
         <b>Kontrol bot</b>
         <span className={`bc-dot ${online ? (ap?.paused ? 'pause' : 'on') : 'off'}`}>{online ? `${ap?.paused ? 'Jeda' : 'Aktif'} · ${ago(now - seen.at).replace(' lalu', '')}` : seen ? 'Tidak ada kabar' : 'Belum terhubung'}</span>
       </div>
-      {!seen ? <p className="bc-sub">Ganti snr_bot.py di VPS dengan versi terbaru agar bot bisa diatur dari sini.</p> : null}
+      {!seen ? <p className="bc-sub">Ganti snr_bot.py di VPS dengan versi terbaru agar bot bisa diatur dari sini.</p>
+        : <p className="bx-ver">Bot versi <b>{ap?.version || 'lama'}</b>{(ap?.version || '') >= '2026.11.15.2' ? ' · terbaru' : ' · ada versi baru 2026.11.15.2'}</p>}
 
       <button type="button" className={`bx-run ${c.paused ? 'is' : ''}`} role="switch" aria-checked={!c.paused} disabled={busy} onClick={() => send({ ...c, paused: !c.paused }, c.paused ? 'Trading dilanjutkan' : 'Trading dijeda')}>
         <span><b>{c.paused ? 'Trading dijeda' : 'Trading berjalan'}</b><small>{c.paused ? 'Tidak buka posisi baru · posisi terbuka tetap jalan' : 'Bot boleh membuka posisi baru'}</small></span>
