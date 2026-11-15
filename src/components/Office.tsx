@@ -3378,7 +3378,7 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
       const red = !near || near.impact !== 'medium';
       const left = near ? near.at - wall : 0, soon = !!near && left < 15 * 60_000, live = !!near && left <= 0, blink = Math.floor(t * 3) % 2 === 0;
       const acc = !near ? '#2ee59d' : red ? '#ff4d4f' : '#ffc53d', accRgb = !near ? '46,229,157' : red ? '255,77,79' : '255,197,61';
-      const X0 = 2.2, X1 = 4.1, Z0 = 56, Z1 = 96;
+      const K = 1.45, X0 = 4.1 - 1.9 * K, X1 = 4.1, Z0 = 56, Z1 = 56 + 40 * K;     // 1.45× bigger, same layout (owner: text easier to read)
       if (PHASE === 'malam') {   // soft glow round the panel + a light spill down the wall
         const [gx, gy] = iso((X0 + X1) / 2, 0, (Z0 + Z1) / 2), pulse = soon ? 0.75 + 0.25 * Math.sin(t * 6) : 1;
         c.save(); c.globalCompositeOperation = 'lighter';
@@ -3388,8 +3388,8 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
         c.fillStyle = g2; c.fillRect(sx - 36, sy - 36, 72, 72);
         c.restore();
       }
-      const [ox, oy] = iso(X0, 0, Z1), w = (X1 - X0) * TW, h = Z1 - Z0;
-      c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0);
+      const [ox, oy] = iso(X0, 0, Z1), w = (X1 - X0) * TW / K, h = (Z1 - Z0) / K;
+      c.save(); c.translate(ox, oy); c.transform(1, 0.5, 0, 1, 0, 0); c.scale(K, K);
       const rr = (x: number, y: number, ww: number, hh: number, r: number) => { c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + ww - r, y); c.quadraticCurveTo(x + ww, y, x + ww, y + r); c.lineTo(x + ww, y + hh - r); c.quadraticCurveTo(x + ww, y + hh, x + ww - r, y + hh); c.lineTo(x + r, y + hh); c.quadraticCurveTo(x, y + hh, x, y + hh - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath(); };
       // frame + glass
       rr(-1.6, -1.6, w + 3.2, h + 3.2, 3.2); c.fillStyle = '#1a1c22'; c.fill();
