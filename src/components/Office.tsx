@@ -1230,7 +1230,6 @@ function drawStatic(c: C, night: boolean, room: number) {
         if (night ? lit > 0.45 : lit > 0.7) poly(c, wallL(b.y + 0.06 + (k % 2) * b.w * 0.45, b.y + 0.1 + (k % 2) * b.w * 0.45, 17 + Math.floor(k / 2) * 9, 20 + Math.floor(k / 2) * 9), night ? '#ffd27a' : '#e9eef3');
       }
     }
-    poly(c, [iso(0, y0 + 0.2, wh - 7), iso(0, y0 + 0.55, wh - 7), iso(0, y0 + 1.3, 13), iso(0, y0 + 0.95, 13)], 'rgba(255,255,255,.08)');
     c.restore();
     poly(c, wallL(y0, y1, 13, 15), 'rgba(255,255,255,.18)');
     poly(c, wallL(y0 - 0.06, y1 + 0.06, 10, 13), THEME.paint ? '#8a5a36' : '#2f3036');
@@ -3110,7 +3109,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         for (let r = 0; r < ROOMS; r++) {
           c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
-          if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); }
         }
         c.globalCompositeOperation = 'source-over';
       }
