@@ -11,8 +11,8 @@ v1 SNR bot — Binance USDⓈ-M Futures (support break SELL for altcoins). Same 
   Portfolio: at most MAX_POSITIONS open positions, 1 per coin; several signals at once -> random order (as in the backtest).
 
 BUY part (v1 BTC rules, 9 Nov 2026, on the largest coins: BTC ETH SOL BNB XRP DOGE; config buy_enabled / buy_coins / max_buy_positions):
-  BUY      = an H4 candle CLOSES above the highest high of the 50 H4 candles before it (first close beyond) and the last completed
-             D1 close is above EMA200 (D1).   SL = H4 close - 1.0 x ATR14(D1);  TP = entry + 2 x (entry - SL).   Max 2 BUY positions.
+  BUY      = an H4 candle CLOSES above the highest high of the 50 H4 candles before it (first close beyond) and that H4 close
+             is above EMA200 (H4) (was EMA200 D1 until 2026.11.15.3).   SL = H4 close - 1.0 x ATR14(D1);  TP = entry + 2 x (entry - SL).   Max 2 BUY positions.
 
 Remote settings (website Atur -> Kontrol bot, checked every ~60 s): risk %, max SELL / BUY positions and Pause (no new positions).
   The website never sends orders; the bot applies these values itself. Empty on the website = use snr_bot_config.json.
@@ -44,7 +44,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.15.2'
+BOT_VERSION = '2026.11.15.3'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -76,7 +76,7 @@ DEFAULT_COINS = ['GMTUSDT', 'FILUSDT', '1000SHIBUSDT', 'SANDUSDT', 'DOTUSDT', 'G
                  'WLDUSDT', 'AAVEUSDT', 'NEOUSDT', '1000PEPEUSDT', 'LUNA2USDT', 'ARBUSDT', 'IMXUSDT', 'THETAUSDT', 'FTMUSDT', 'KSMUSDT',
                  '1000LUNCUSDT', '1INCHUSDT', 'ROSEUSDT', 'ARKMUSDT', 'ANKRUSDT', 'HOTUSDT']   # FTMUSDT is skipped automatically when delisted
 PV, KEEP, SLK, RR, H4_LIMIT, D1_LIMIT = 5, 10, 0.5, 2.0, 600, 400
-BUY_N, BUY_SLK, BUY_D1_LIMIT = 50, 1.0, 1000
+BUY_N, BUY_SLK, BUY_D1_LIMIT, BUY_H4_LIMIT = 50, 1.0, 400, 1000
 H4 = 4 * 3600
 
 log = logging.getLogger('snr')
@@ -181,16 +181,15 @@ def snr_signal(h4):
 
 def buy_signal(h4, d1):
     """v1 BTC (identical to the website adapter metode_crypto_donchian): the LAST closed H4 candle closes above the highest high of the
-    50 H4 candles before it while the candle before it did not, and the last completed D1 close is above EMA200 (D1).
+    50 H4 candles before it while the candle before it did not, and that H4 close is above EMA200 (H4).
     Returns (level, atr14_d1) or None."""
-    if len(h4) < BUY_N + 2 or len(d1) < 210: return None
+    if len(h4) < 210 or len(d1) < 20: return None
     k = len(h4) - 1
     hh = lambda j: max(r[2] for r in h4[j - BUY_N:j])
     lvl = hh(k)
     if not h4[k][4] > lvl: return None
     if h4[k - 1][4] > hh(k - 1): return None                   # not the first close beyond the channel
-    closes = [r[4] for r in d1]
-    if not closes[-1] > ema_last(closes, 200): return None
+    if not h4[k][4] > ema_last([r[4] for r in h4], 200): return None      # trend: H4 close above EMA200 (H4)
     atr = None; dd = d1[-400:]
     for i in range(1, len(dd)):
         pc = dd[i - 1][4]; tr = max(dd[i][2] - dd[i][3], abs(dd[i][2] - pc), abs(dd[i][3] - pc))
@@ -351,7 +350,7 @@ class Bot:
             time.sleep(0.15)
         for sym in getattr(self, 'buy_coins', []):
             try:
-                h4 = closed_klines(self.api, sym, '4h', BUY_N + 10, now_s)
+                h4 = closed_klines(self.api, sym, '4h', BUY_H4_LIMIT, now_s)
                 if not h4 or h4[-1][0] + H4 > now_s + 5 or now_s - (h4[-1][0] + H4) > 600: continue
                 d1 = closed_klines(self.api, sym, '1d', BUY_D1_LIMIT, now_s)
                 s = buy_signal(h4, d1)

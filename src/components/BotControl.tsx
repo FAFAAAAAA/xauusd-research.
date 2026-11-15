@@ -114,7 +114,7 @@ export function BotControlCard() {
   ];
 
   const ver = ap?.version || '';
-  const latest = ver >= '2026.11.15.2';
+  const latest = ver >= '2026.11.15.3';
   const riskTxt = mode === 'usdt' ? `$${nf(v<number>('risk_usdt', 5))}` : `${nf(riskPct)}%`;
   return (
     <>
