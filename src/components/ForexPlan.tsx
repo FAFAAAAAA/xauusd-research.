@@ -16,14 +16,14 @@ const PROP: Array<[string, string]> = [['Risiko 0,5%', '82% lulus'], ['Risiko 0,
 export default function ForexPlan() {
   const max = Math.max(...YEARS.map((y) => Math.abs(y[1])));
   return (
-    <section className="group stack si fxplan" aria-label="Plan forex gabungan">
+    <section className="group stack si fxplan" aria-label="FX3 gabungan forex">
       <div className="si-tags">
         <span className="si-side b">BUY & SELL</span>
-        <span className="si-coins">Plan forex gabungan · v1 XAU + v1 Level + v1 NAS</span>
+        <span className="si-coins">FX3 · v1 XAU + v1 Level + v1 NAS</span>
         <span className="si-tf">RR 1:2</span>
       </div>
       <div className="si-card">
-        <p className="si-h">Gabungan <span>2018–2026 · Exness + swap</span></p>
+        <p className="si-h">FX3 riset <span>2018–2026 · Exness + swap</span></p>
         <div className="si-facts">{FACTS.map(([a, b]) => <span key={a}><span className="k">{a}</span><strong>{b}</strong></span>)}</div>
         <div className="si-years fx9" aria-label="Hasil per tahun">
           {YEARS.map(([y, v]) => (

@@ -73,19 +73,21 @@ export default function Analytics() {
   const [year, setYear] = useState<string | null>(null); // null = newest, 'ALL' = all years
   const [rr, setRr] = useState(2);
 
-  const configs = d?.sessions?.length ? strategyConfigs(d.sessions) : [];
+  const plan = market === 'forex' && d?.sessions?.length ? planRows(d.sessions) : null;
+  const configs = d?.sessions?.length ? [...(plan?.length ? [{ key: PLAN_KEY, label: PLAN_LABEL, created: 0 }] : []), ...strategyConfigs(d.sessions)] : [];
   const [cfg, setCfg] = useState<string | null>(null);
   const [tab, setTab] = useState<'hasil' | 'jalan' | 'kelola'>('hasil');
   const cfgSel = cfg && configs.some((c) => c.key === cfg) ? cfg : configs[0]?.key ?? null;
-  const cfgSessions: any[] = d?.sessions?.length ? d.sessions.filter((s: any) => configKey(s) === cfgSel) : [];
-  const pairs = pairSummaries(cfgSessions, rr);
+  const isPlan = cfgSel === PLAN_KEY;
+  const cfgSessions: any[] = d?.sessions?.length && !isPlan ? d.sessions.filter((s: any) => configKey(s) === cfgSel) : [];
+  const pairs = isPlan ? [] : pairSummaries(cfgSessions, rr);
   const [pair, setPair] = useState<string | null>(null);
   const pairSel = pair && pairs.some((p) => p.symbol === pair) ? pair : pairs[0]?.symbol ?? null;
-  const rows = yearRows(cfgSessions.filter((s: any) => symOf(s) === pairSel));
+  const rows = isPlan ? plan ?? [] : yearRows(cfgSessions.filter((s: any) => symOf(s) === pairSel));
   const yearSel = year && (year === 'ALL' || rows.some((r) => r.label === year)) ? year : rows[0]?.label ?? null;
-  const cellOf = (r: { cells: any[] }, x: number) => r.cells.find((c: any) => rrNum(c) === x);
-  const pick = (y: string | null, x: number): any[] => y === 'ALL' ? rows.map((r) => cellOf(r, x)).filter(Boolean)
-    : (() => { const r = rows.find((q) => q.label === y); const c = r ? cellOf(r, x) ?? r.cells[0] : null; return c ? [c] : []; })();
+  const cellsOf = (r: { cells: any[] }, x: number): any[] => isPlan ? r.cells.filter((c: any) => rrNum(c) === x) : r.cells.filter((c: any) => rrNum(c) === x).slice(0, 1);
+  const pick = (y: string | null, x: number): any[] => y === 'ALL' ? rows.flatMap((r) => cellsOf(r, x))
+    : (() => { const r = rows.find((q) => q.label === y); if (!r) return []; const c = cellsOf(r, x); return c.length ? c : r.cells.slice(0, 1); })();
   const picked = pick(yearSel, rr);
   const key = picked.map((c) => String(c.id)).join(',');
   const urlFor = (k: string) => `/api/analytics${k ? `?session=${k}` : ''}`;
@@ -97,7 +99,7 @@ export default function Analytics() {
   const curRr = picked.length ? rrNum(picked[0]) : rr;
   const curYear = yearSel === 'ALL' ? `Semua tahun (${picked.length})` : yearSel;
   // calendar months covered by the chosen results (sum of their tested periods) → average result per month
-  const monthsTested = picked.reduce((a: number, c: any) => a + Math.max(0, (tsMs(c.period_end) - tsMs(c.period_start)) / 86_400_000 || 0), 0) / 30.44;
+  const monthsTested = periodDays(picked) / 30.44;
   const perMonth = monthsTested > 0 ? sum.pnl / monthsTested : null;
 
   const load = useCallback(() => {
@@ -122,7 +124,7 @@ export default function Analytics() {
     setPair(sym); setYear(pairs.length > 1 ? 'ALL' : null); setDetail(null); setTradeLimit(10);
     setTimeout(() => document.getElementById('pair-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   };
-  const pairLabel = instrumentLabel(pairSel);
+  const pairLabel = isPlan ? 'FX3' : instrumentLabel(pairSel);
 
   const m = d?.overall;
   const trades = useMemo(() => closedTrades(d?.trades ?? []), [d?.trades]);
@@ -139,7 +141,7 @@ export default function Analytics() {
       {hasRuns ? <div className="backtest-controls">
         <button className="research-filter" onClick={() => { setTab('hasil'); setFilterOpen(true); }} aria-haspopup="dialog" aria-label="Pilih strategi, tahun dan risk reward">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg>
-          <span>{pairSel ?? 'XAUUSD'} <i>·</i> {curYear} <i>·</i> 1:{curRr}</span>
+          <span>{isPlan ? 'FX3' : pairSel ?? 'XAUUSD'} <i>·</i> {curYear} <i>·</i> 1:{curRr}</span>
         </button>
         <button className="research-view icon-only" onClick={() => setActionsOpen(true)} aria-haspopup="dialog" aria-label="Opsi backtest" title="Hasil, jalankan, dan kelola"><ResearchIcon name="options" /></button>
       </div> : null}
@@ -184,7 +186,7 @@ export default function Analytics() {
               <span className="label">Risk : Reward</span>
               <div className="rr3">
                 {[1, 2, 3].map((x) => {
-                  const cells = yearSel === 'ALL' ? rows.map((r) => cellOf(r, x)).filter(Boolean) : rows.filter((r) => r.label === yearSel).map((r) => cellOf(r, x)).filter(Boolean);
+                  const cells = yearSel === 'ALL' ? rows.flatMap((r) => cellsOf(r, x)) : rows.filter((r) => r.label === yearSel).flatMap((r) => cellsOf(r, x));
                   const p = cells.length ? cells.reduce((a: number, c: any) => a + Number(c.pnl ?? 0), 0) : null;
                   return (
                     <button key={x} className={`rrbtn ${p == null ? '' : p > 0 ? 'up' : p < 0 ? 'down' : ''}`} aria-pressed={curRr === x && picked.length > 0} disabled={!cells.length} onClick={() => choose(yearSel, x)}>
@@ -212,7 +214,7 @@ export default function Analytics() {
                 </section>
                 {m && fresh ? (() => {
                   // trade frequency over the tested calendar time of the chosen results (sum of their periods)
-                  const days = picked.reduce((a: number, s: any) => a + Math.max(0, (tsMs(s.period_end) - tsMs(s.period_start)) / 86_400_000 || 0), 0);
+                  const days = periodDays(picked);
                   const f = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
                   return <StatsBento s={bs} extra={<>
                     <div className="b-tile"><span className="b-k">Rata-rata / bulan</span><span className={`b-v ${tone(perMonth)}`}>{perMonth == null ? '—' : money(perMonth)}</span></div>
@@ -295,7 +297,7 @@ export default function Analytics() {
                   <a className="btn block" href={`/api/analytics/export?kind=trades${key ? `&session=${key}` : ''}`}>Unduh trade (CSV)</a>
                 <ReportButton filename={`backtest-${String(pairSel ?? 'xauusd').toLowerCase()}-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, symbol: pairLabel, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: methodByStrategy(String(cfgSel ?? '').split('|')[0])?.rules ?? (String(cfgSel ?? '').startsWith('breakout v0.8')
+                  rules: isPlan ? 'FX3 = v1 XAU (SL ke entry di +1R) + v1 Level + v1 NAS, digabung dalam satu hasil · RR sama untuk ketiganya' : methodByStrategy(String(cfgSel ?? '').split('|')[0])?.rules ?? (String(cfgSel ?? '').startsWith('breakout v0.8')
                     ? 'v0.7 (v0.6 + Pola N H1/H4) + Breakout Base: base ≥ 3 candle (overlap ≥ 50%, tinggi ≤ 1,5×ATR) di H4 (breakout jam 07–17 UTC) dan H1 (harga sudah bergerak ≥ 1×ATR searah sebelum base) · entry setelah close M15 keluar base · SL batas base ∓ 0,3×ATR · BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1 · tiap bagian slot sendiri'
                     : String(cfgSel ?? '').startsWith('breakout v0.7')
                     ? 'v0.6 (breakout H1 40 candle, range New York, level H1 2–3×, candle momentum, searah tren H4 & D1) + Pola N: A-B-C di H1/H4 (swing = pantulan 3×ATR, C di atas A untuk BUY), entry setelah close M15 menembus B · BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1 · SL di C · v0.6 dan Pola N punya slot sendiri'
@@ -448,13 +450,38 @@ function TradeDetailBody({ d, tz, symbol }: { d: any; tz: string; symbol: string
   );
 }
 
-type PairStatus = { symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
+type PairStatus = { id: string; symbol: string; label: string; years: number[]; done: number; fail: number; skip: number; state: 'wait' | 'run' | 'done'; cur?: number; note?: string; proc?: number };
 // Website cleaned up (owner's choice, 7 Nov 2026): only the best gold strategy is offered and shown, named "v1 XAU"
 // (= metode volbreak-v5, internal key v2). All other strategies stay in the code and their results stay in the
 // database, they are only hidden (other pairs get their own best strategy later).
-const STRAT_ORDER = ['metode_volbreak', 'metode_nas_donchian', 'metode_snr_sell', 'metode_crypto_donchian', 'metode_bz'];
+const STRAT_ORDER = ['metode_volbreak', 'metode_level', 'metode_nas_donchian', 'metode_snr_sell', 'metode_crypto_donchian', 'metode_bz'];
 // crypto: only v1 SNR for now (owner, 7 Nov 2026); v1 BTC / v2 ALT stay in the code
-const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5', 'metode nas-donchian-v1', 'metode snr-sell-v1', 'metode crypto-donchian-v1', 'metode bz-v1']);
+const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5', 'metode level-v3', 'metode nas-donchian-v1', 'metode snr-sell-v1', 'metode crypto-donchian-v1', 'metode bz-v1']);
+// FX3 = the combined forex plan (owner, 15 Nov 2026): v1 XAU (SL → entry at +1R) + v1 Level + v1 NAS (no SL → entry), one result per year.
+const PLAN_KEY = 'FX3';
+const PLAN_LABEL = 'FX3 · v1 XAU + v1 Level + v1 NAS';
+const PLAN_PARTS = [
+  { strategy: 'metode volbreak-v5', adapter: 'metode_volbreak', sym: 'XAUUSD', be: 'on', label: 'v1 XAU' },
+  { strategy: 'metode level-v3', adapter: 'metode_level', sym: 'XAUUSD', be: 'off', label: 'v1 Level' },
+  { strategy: 'metode nas-donchian-v1', adapter: 'metode_nas_donchian', sym: 'USATECHIDXUSD', be: 'off', label: 'v1 NAS' },
+] as const;
+/** Year rows of FX3: years where all three parts have a result (newest config of each part); cells = the parts' sessions (RR 1:1/1:2/1:3). */
+function planRows(sessions: any[]) {
+  const parts = PLAN_PARTS.map((p) => {
+    const ps = sessions.filter((s: any) => String(s.strategy ?? '') === p.strategy && symOf(s) === p.sym);
+    const k = ps.length ? strategyConfigs(ps)[0].key : null;
+    return k ? yearRows(ps.filter((s: any) => configKey(s) === k)) : null;
+  });
+  if (parts.some((r) => !r)) return null;
+  const labels = parts[0]!.map((r) => r.label).filter((l) => /^\d{4}$/.test(l) && parts.every((r) => r!.some((x) => x.label === l)));
+  return labels.map((l) => ({ label: l, sort: Number(l), cells: parts.flatMap((r) => r!.find((x) => x.label === l)!.cells) })).sort((a, b) => b.sort - a.sort);
+}
+/** Days covered by the chosen results, each period counted once (FX3 has three results per period). */
+function periodDays(cells: any[]) {
+  const seen = new Set<string>(); let days = 0;
+  for (const c of cells) { const k = `${c.period_start}|${c.period_end}`; if (seen.has(k)) continue; seen.add(k); days += Math.max(0, (tsMs(c.period_end) - tsMs(c.period_start)) / 86_400_000 || 0); }
+  return days;
+}
 const onlyVisible = (x: any) => (x?.sessions ? { ...x, sessions: x.sessions.filter((s: any) => VISIBLE_STRATEGIES.has(String(s.strategy ?? ''))) } : x);
 const STRAT_LABEL: Record<string, string> = {
   ...Object.fromEntries(METHODS.map((m) => [m.adapterKey, m.label])),
@@ -506,13 +533,20 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
         .sort((a: any, b: any) => STRAT_ORDER.indexOf(a.adapter_key) - STRAT_ORDER.indexOf(b.adapter_key));
       setStrategies(usable);
       setSel(null);
-      if (usable[0]) setF((x) => ({ ...x, strategy: usable.some((u: any) => u.id === x.strategy) ? x.strategy : usable[0].id }));
+      if (usable[0]) setF((x) => ({ ...x, strategy: x.strategy === PLAN_KEY && market === 'forex' ? x.strategy : usable.some((u: any) => u.id === x.strategy) ? x.strategy : usable[0].id }));
     }).catch(() => {});
   }, [market]);
+  const isPlanRun = f.strategy === PLAN_KEY;
   const strat = strategies.find((x: any) => x.id === f.strategy);
+  const planJobs = isPlanRun ? PLAN_PARTS.map((p) => {
+    const sv = strategies.find((x: any) => x.adapter_key === p.adapter);
+    const tf = methodByKey(p.adapter)?.baseTf || 'M15';
+    const m = markets.find((q: any) => q.symbol === p.sym && q.tf === tf && q.source_id);
+    return sv && m ? { p, sv, m, tf } : null;
+  }) : [];
   const baseTf: string = (strat && methodByKey(strat.adapter_key)?.baseTf) || 'M15';   // the strategy decides its own base timeframe
   const sets = markets.filter((m) => m.tf === baseTf && m.source_id && marketOfSymbol(m.symbol) === market);
-  const chosen = sets.filter((m) => sel == null || sel.includes(m.symbol));
+  const chosen = isPlanRun ? planJobs.filter(Boolean).map((j) => j!.m) : sets.filter((m) => sel == null || sel.includes(m.symbol));
   // each strategy starts with its own pair(s) selected (v1 XAU → XAUUSD, v1 NAS → US100); the user can still pick others
   const stratPairs: string[] | null = (strat ? methodByKey(String(strat.adapter_key))?.pairs : undefined) ?? null;
   useEffect(() => {
@@ -535,33 +569,40 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
     const next = base.includes(sym) ? base.filter((x) => x !== sym) : [...base, sym];
     return next.length === sets.length ? null : next;
   });
-  const body = (m: any, from: string, to: string) => ({ params,
-    source_id: m.source_id, strategy_version_id: f.strategy || null, from, to, rr: [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null, capital: f.capital.trim() ? Number(f.capital) : null,
+  const body = (m: any, from: string, to: string, sid: string = f.strategy, be: string = f.be) => ({ params,
+    source_id: m.source_id, strategy_version_id: sid || null, from, to, rr: [1, 2, 3], risk_usd: f.risk.trim() ? Number(f.risk) : null, capital: f.capital.trim() ? Number(f.capital) : null,
     costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), swapLong: Number(f.swapLong) || 0, swapShort: Number(f.swapShort) || 0, ambiguityPolicy: f.ambiguity },
-    breakeven: f.be, no_costs: noCost,
+    breakeven: be, no_costs: noCost,
   });
+  // one job = one strategy on one pair (FX3: v1 XAU, v1 Level, v1 NAS, each with its own SL → entry rule)
+  type Job = { m: any; sid: string; be: string; label: string; cfg: string };
+  const jobs: Job[] = isPlanRun
+    ? planJobs.filter(Boolean).map((j) => ({ m: j!.m, sid: j!.sv.id, be: j!.p.be, label: `${j!.p.label} · ${j!.m.label.replace(/ \(.*\)$/, '')}`,
+        cfg: `${j!.sv.strategy_key} ${j!.sv.version}|${j!.tf !== 'M15' ? `|${j!.tf}` : ''}${noCost || j!.p.sym !== 'XAUUSD' ? '' : swapTag(Number(f.swapLong) || 0, Number(f.swapShort) || 0)}${optTag(j!.p.be, noCost)}` }))
+    : chosen.map((m) => ({ m, sid: f.strategy, be: f.be, label: m.label, cfg: cfgKey }));
 
   const run = async () => {
     setBusy(true); setErr(null); stop.current = false;
-    const st: PairStatus[] = chosen.map((m) => {
+    const st: PairStatus[] = jobs.map((j, ji) => {
+      const m = j.m;
       const ys = custom ? [0] : yearsFor(m);
-      const have = existingFor(cfgKey, m.symbol);
+      const have = existingFor(j.cfg, m.symbol);
       const todo = custom ? ys : ys.filter((y) => !(skipDone && have.includes(String(y))));
-      return { symbol: m.symbol, label: m.label, years: todo, done: 0, fail: 0, skip: ys.length - todo.length, state: 'wait' };
+      return { id: `${ji}`, symbol: m.symbol, label: j.label, years: todo, done: 0, fail: 0, skip: ys.length - todo.length, state: 'wait' };
     });
     setProg(st.map((x) => ({ ...x })));
     // 4 pairs at a time (each pair's years stay in order) — many-coin crypto runs were too slow one request at a time
     const queue = [...st];
     const worker = async () => { for (let p = queue.shift(); p; p = queue.shift()) await runPair(p); };
     const runPair = async (p: PairStatus) => {
-      const m = chosen.find((x) => x.symbol === p.symbol)!;
+      const j = jobs[Number(p.id)]; const m = j.m;
       if (stop.current) return;
       p.state = 'run';
       for (const y of p.years) {
         if (stop.current) break;
         p.cur = y; setProg(st.map((x) => ({ ...x })));
         try {
-          await call<any>('/api/backtest/run', { method: 'POST', json: custom ? body(m, `${f.from}T00:00:00Z`, `${f.to}T00:00:00Z`) : body(m, `${y}-01-01T00:00:00Z`, `${y + 1}-01-01T00:00:00Z`) });
+          await call<any>('/api/backtest/run', { method: 'POST', json: custom ? body(m, `${f.from}T00:00:00Z`, `${f.to}T00:00:00Z`, j.sid, j.be) : body(m, `${y}-01-01T00:00:00Z`, `${y + 1}-01-01T00:00:00Z`, j.sid, j.be) });
           p.done++;
         } catch (e) {
           const msg = (e as Error).message;
@@ -573,7 +614,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
     };
     await Promise.all(Array.from({ length: Math.min(4, st.length) }, worker));
     setBusy(false);
-    onDone(cfgKey);
+    onDone(isPlanRun ? PLAN_KEY : cfgKey);
   };
   const total = prog?.reduce((a, p) => a + p.years.length, 0) ?? 0;
   const finished = prog?.reduce((a, p) => a + (p.proc ?? 0), 0) ?? 0;
@@ -586,11 +627,12 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       <h3><span className="n">1</span>Strategi</h3>
       {strategies.length ? (
         <label className="field"><span className="sr-only">Strategi</span><select value={f.strategy} onChange={set('strategy')} aria-label="Strategi">
+          {market === 'forex' ? <option value={PLAN_KEY}>{PLAN_LABEL}</option> : null}
           {strategies.map((s) => <option key={s.id} value={s.id}>{STRAT_LABEL[s.adapter_key] ?? `${s.strategy_key} ${s.version}`}</option>)}
         </select></label>
       ) : <Loading what="strategi" variant="list" />}
       </div>
-      <div className="form-sec">
+      {isPlanRun ? <div className="form-sec"><h3><span className="n">2</span>Pair</h3><p className="mute small">FX3 otomatis: v1 XAU + v1 Level di XAUUSD, v1 NAS di US100. SL ke entry di +1R hanya untuk v1 XAU. Hasil gabungan hanya untuk tahun yang ketiganya ada (US100 mulai 2017).</p></div> : <div className="form-sec">
         <div className="row between"><h3><span className="n">2</span>Pair <span className="mute" style={{ fontWeight: 400 }}>{chosen.length}/{sets.length}</span></h3>
           <button className="btn sm ghost" onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>
         <div className="chips wide">
@@ -600,7 +642,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
             </button>
           ))}
         </div>
-      </div>
+      </div>}
       <div className="form-sec">
       <h3><span className="n">3</span>Periode</h3>
       {!custom ? (
@@ -625,8 +667,8 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       </div>
       <div className="form-sec">
       <h3><span className="n">5</span>Aturan trade</h3>
-      <div className="picker"><span className="label">Pindah SL ke entry setelah +1R</span>
-        <Seg full label="SL ke entry" options={[['strategy', 'Bawaan'], ['on', 'Ya'], ['off', 'Tidak']] as const} value={f.be as 'strategy' | 'on' | 'off'} onChange={(v) => setF((x) => ({ ...x, be: v }))} /></div>
+      {isPlanRun ? null : <div className="picker"><span className="label">Pindah SL ke entry setelah +1R</span>
+        <Seg full label="SL ke entry" options={[['strategy', 'Bawaan'], ['on', 'Ya'], ['off', 'Tidak']] as const} value={f.be as 'strategy' | 'on' | 'off'} onChange={(v) => setF((x) => ({ ...x, be: v }))} /></div>}
       <label className="switch">{crypto ? 'Tanpa biaya (fee, slippage, funding = 0)' : 'Tanpa biaya (spread, komisi, swap = 0)'}<input type="checkbox" checked={noCost} onChange={(e) => setF((x) => ({ ...x, nocost: e.target.checked ? '1' : '0' }))} /></label>
       <details className="more">
         <summary>{noCost ? 'Lainnya' : 'Biaya & lainnya'}</summary>
@@ -649,7 +691,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       {busy
         ? <button className="btn block" onClick={() => { stop.current = true; }}><Spinner />Berhenti setelah tahun ini</button>
         : <button className="btn primary block" onClick={run} disabled={!f.strategy || !chosen.length || (!custom && !list.length)}>
-            {custom ? `Jalankan ${chosen.length} pair` : `Jalankan ${chosen.length} pair · ${y1 === y2 ? y1 : `${y1}–${y2}`}`}
+            {isPlanRun ? `Jalankan FX3 · ${y1 === y2 ? y1 : `${y1}–${y2}`}` : custom ? `Jalankan ${chosen.length} pair` : `Jalankan ${chosen.length} pair · ${y1 === y2 ? y1 : `${y1}–${y2}`}`}
           </button>}
       {err ? <div className="error">{err}</div> : null}
       {prog ? (
@@ -658,7 +700,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
           <div className="wlbar progress" aria-hidden><span style={{ width: `${(finished / Math.max(1, total)) * 100}%` }} /></div>
           <div className="list">
             {prog.map((p) => (
-              <div key={p.symbol} className="item">
+              <div key={p.id} className="item">
                 <span className="t">{p.label}</span>
                 <span className={`end small ${p.fail ? 'neg' : p.state === 'done' ? 'pos' : 'mute'}`} style={{ flex: '1 1 auto', minWidth: 0 }}>
                   {p.state === 'wait' ? (p.years.length ? `Menunggu · ${p.years.length} tahun` : 'Sudah ada, dilewati')
