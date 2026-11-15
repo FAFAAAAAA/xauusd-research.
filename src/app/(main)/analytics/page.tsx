@@ -9,7 +9,6 @@ import { StatsBento, useResultStats } from '@/components/StatsBento';
 import { ReportButton } from '@/components/ReportImage';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
 import LiveTradeChart from '@/components/LiveTradeChart';
-import ForexPlan from '@/components/ForexPlan';
 import { marketOfAdapter, marketOfStrategy, marketOfSymbol, type Market } from '@/lib/core/markets';
 import { INSTRUMENTS, instrumentLabel } from '@/lib/core/instruments';
 import { METHODS, methodByKey, methodByStrategy } from '@/lib/core/strategy/methods-meta';
@@ -137,7 +136,6 @@ export default function Analytics() {
     <div className="stack">
       <PageHead title="Backtest" />
       <MarketSwitch value={market} onChange={(m) => { setMarket(m); setCfg(null); setPair(null); setYear(null); }} />
-      {market === 'forex' && tab === 'hasil' ? <ForexPlan /> : null}
       {hasRuns ? <div className="backtest-controls">
         <button className="research-filter" onClick={() => { setTab('hasil'); setFilterOpen(true); }} aria-haspopup="dialog" aria-label="Pilih strategi, tahun dan risk reward">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg>

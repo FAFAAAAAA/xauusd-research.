@@ -1710,7 +1710,3 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .si-bar i.neg { background: var(--down); }
 .si-yr strong { font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .si-yr small { font-size: 10.5px; color: var(--mute); }
-
-.si-years.fx9 { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 3px; }
-.si-years.fx9 strong { font-size: 10px; }
-.si-years.fx9 small { font-size: 10px; }
