@@ -231,8 +231,15 @@ function EaSetup({ tz }: { tz: string }) {
     try { const r = await call<any>('/api/ea/key', { method: 'POST' }); setKey(r.key); load(); } catch (e) { setErr((e as Error).message); }
   };
   const last = info?.lastReport as { at: number; event: string } | null;
+  const [botV, setBotV] = useState<string | null>(null);
+  useEffect(() => { call<any>('/api/bot-control').then((x) => setBotV(x?.seen?.applied?.version || null)).catch(() => {}); }, []);
+  const newest = '2026.11.15.2';
   return (
-    <Group id="ea" title="EA MT5 & bot Binance (otomatis)" sub={info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
+    <Group id="ea" title="EA MT5 & bot Binance (otomatis)" sub={botV ? `Bot v${botV}${botV >= newest ? ' · terbaru' : ' · ada update'}` : info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
+      <div className={`at-ver ${botV && botV >= newest ? 'ok' : 'old'}`}>
+        <span><small>Bot Binance di VPS</small><b>{botV ? `versi ${botV}` : 'versi belum diketahui'}</b></span>
+        <em>{botV && botV >= newest ? 'Terbaru' : `Terbaru: ${newest}`}</em>
+      </div>
       <div className="row">
         <a className="btn sm primary" href="/ea/XAU_v2_EA_v114.mq5" download>Unduh EA v1 XAU (XAU_v2_EA_v114.mq5)</a>
         <a className="btn sm primary" href="/ea/NAS_v1_EA_v100.mq5" download>Unduh EA v1 NAS (NAS_v1_EA_v100.mq5)</a>

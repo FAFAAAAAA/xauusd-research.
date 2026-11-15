@@ -1613,3 +1613,7 @@ input.bx-slider { height: 6px !important; min-height: 0 !important; padding: 0 !
 .at-grid > .at-tile:last-of-type:nth-of-type(odd) small { margin-left: auto; }
 input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f7cf45 55%, #ff6b70 100%) !important; }
 .bx-ver { margin: -4px 4px 0; font-size: 12.5px; color: var(--mute); } .bx-ver b { color: var(--ink); }
+.at-ver { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--sunk); border-radius: 16px; padding: 12px 14px; }
+.at-ver small { display: block; font-size: 12px; color: var(--mute); } .at-ver b { font-size: 16px; }
+.at-ver em { font-style: normal; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; }
+.at-ver.ok em { background: #e8f6ee; color: #16a35a; } .at-ver.old em { background: #fff4e6; color: #b45309; }
