@@ -3399,8 +3399,6 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
       rr(-1.6, -1.6, w + 3.2, h + 3.2, 3.2); c.fillStyle = '#1a1c22'; c.fill();
       rr(0, 0, w, h, 2.4); const bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#16233a'); bg.addColorStop(1, '#0a0f1a'); c.fillStyle = bg; c.fill();
       c.save(); rr(0, 0, w, h, 2.4); c.clip();
-      c.fillStyle = 'rgba(255,255,255,.05)'; c.beginPath(); c.moveTo(0, 0); c.lineTo(w * 0.55, 0); c.lineTo(w * 0.2, h); c.lineTo(0, h); c.closePath(); c.fill();   // glass shine
-      c.fillStyle = acc; c.fillRect(0, 0, w, 0.9);                                                                                                          // accent line
       c.restore();
       c.textBaseline = 'middle';
       const font = (wt: number, f: number) => `${wt} ${f}px -apple-system, system-ui, sans-serif`;
@@ -3428,10 +3426,6 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
         const hms = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
         const cd = live ? 'SEDANG RILIS' : sameDay ? hms : inTime(left);
         fit(cd, 800, sameDay && !live ? 5.2 : 3.6, 2.2, w - 4); c.fillStyle = live ? (blink ? acc : '#ffffff') : acc; c.fillText(cd, w / 2, h * 0.77);
-        // progress bar: fills up over the last 24 hours before the release
-        const pr = live ? 1 : Math.max(0, Math.min(1, 1 - left / 86_400_000));
-        rr(3, h - 4.2, w - 6, 1.4, 0.7); c.fillStyle = 'rgba(255,255,255,.1)'; c.fill();
-        if (pr > 0.02) { rr(3, h - 4.2, (w - 6) * pr, 1.4, 0.7); c.fillStyle = acc; c.fill(); }
       }
       c.textAlign = 'left'; c.textBaseline = 'alphabetic'; c.restore();
     }
