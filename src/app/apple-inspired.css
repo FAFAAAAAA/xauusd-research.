@@ -1597,3 +1597,18 @@ input.bx-slider { height: 6px !important; min-height: 0 !important; padding: 0 !
 .office-news span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .office-news b { color: #f5c542; }
 .office-news button { flex: none; border: 0; border-radius: 11px; padding: 7px 11px; font: inherit; font-size: 12.5px; font-weight: 800; background: #f5a524; color: #2a1a00; cursor: pointer; }
 .office-news button.on { background: #6ff0a8; color: #0b2a18; }
+/* Atur: tiles that open sheets */
+.at-h { margin: 14px 4px -2px; font-size: 13px; font-weight: 800; color: var(--mute); letter-spacing: .02em; }
+.at-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.at-tile { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 104px; border: 0; border-radius: 20px; padding: 14px; background: var(--surface, #fff); box-shadow: inset 0 0 0 1px var(--line); font: inherit; color: inherit; text-align: left; cursor: pointer; transition: transform .12s; }
+.at-tile:active { transform: scale(.97); }
+.at-tile b { margin-top: auto; font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; }
+.at-tile small { font-size: 12px; color: var(--mute); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.at-ic { width: 34px; height: 34px; border-radius: 11px; background: #141416; color: #fff; display: grid; place-items: center; margin-bottom: 12px; }
+.at-ic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.at-body { display: grid; gap: 12px; }
+.at-grid > .at-tile:last-of-type:nth-of-type(odd) { grid-column: 1 / -1; min-height: 0; flex-direction: row; align-items: center; gap: 12px; }
+.at-grid > .at-tile:last-of-type:nth-of-type(odd) .at-ic { margin: 0; }
+.at-grid > .at-tile:last-of-type:nth-of-type(odd) b { margin: 0; }
+.at-grid > .at-tile:last-of-type:nth-of-type(odd) small { margin-left: auto; }
+input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f7cf45 55%, #ff6b70 100%) !important; }

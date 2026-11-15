@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { call, fmt, peek } from '@/components/client';
-import { CopyButton, ErrorBox, Loading, PageHead, Seg, Spinner, Status, copyText, toast } from '@/components/Status';
+import { CopyButton, ErrorBox, Loading, PageHead, Seg, Sheet, Spinner, Status, copyText, toast } from '@/components/Status';
 import { FileText } from '@/components/FileText';
 import { BotControlCard } from '@/components/BotControl';
 import { TIMEFRAMES } from '@/lib/core/types';
@@ -20,36 +20,53 @@ export default function Settings() {
     <div className="stack">
       <PageHead title="Atur" />
       <BotControlCard />
-      <span className="section-title">Sinyal & koneksi</span>
-      <Telegram s={s} reload={load} />
-      <FeedSetup tz={s.timezone} />
-      <TradingView s={s} />
-      <EaSetup tz={s.timezone} />
-      <span className="section-title">Aplikasi</span>
-      <General s={s} reload={load} />
-      <span className="section-title">Lanjutan</span>
-      <details className="group">
-        <summary><span><h2>Lanjutan</h2><span className="s">Data riset, zona, impor, log error</span></span></summary>
-        <div className="body">
-          <HistoricalData />
-          <Zones />
-          <OtherImports />
-          <Errors />
-        </div>
-      </details>
+      <p className="at-h">Koneksi</p>
+      <div className="at-grid">
+        <Telegram s={s} reload={load} />
+        <EaSetup tz={s.timezone} />
+        <FeedSetup tz={s.timezone} />
+        <TradingView s={s} />
+      </div>
+      <p className="at-h">Lainnya</p>
+      <div className="at-grid">
+        <General s={s} reload={load} />
+        <HistoricalData />
+        <Zones />
+        <OtherImports />
+        <Errors />
+      </div>
     </div>
   );
 }
 
-/** Collapsible section; opens automatically when the URL hash matches its id (e.g. /settings#data). */
+/* simple line icons for the settings tiles */
+const ICON: Record<string, string> = {
+  telegram: 'M22 2 11 13M22 2l-7 20-4-9-9-4z',
+  ea: 'M4 7h16v10H4zM9 17v3M15 17v3M8 11h.01M16 11h.01M12 3v4',
+  sinyal: 'M13 2 3 14h9l-1 8 10-12h-9z',
+  tradingview: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  tampilan: 'M12 3a9 9 0 1 0 9 9c0-1-1-1.5-2-1.5h-2a2 2 0 0 1-1-3.7A9 9 0 0 0 12 3zM7.5 10.5h.01M10.5 7h.01M15 7.5h.01',
+  data: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+  zona: 'M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  'impor-tv': 'M12 3v12M7 10l5 5 5-5M4 21h16',
+  error: 'M12 3 2 21h20L12 3zM12 10v5M12 18h.01',
+};
+const SHORT: Record<string, string> = { telegram: 'Telegram', ea: 'EA & bot', sinyal: 'Sinyal XAU', tradingview: 'TradingView', tampilan: 'Tampilan', data: 'Data harga', zona: 'Zona manual', 'impor-tv': 'Impor TV', error: 'Catatan error' };
+
+/** Settings tile: a square with an icon, a name and its status; tap opens the full section in a bottom sheet.
+ *  Opens automatically when the URL hash matches its id (e.g. /settings#data). */
 function Group({ id, title, sub, children }: { id: string; title: string; sub?: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   useEffect(() => { if (typeof window !== 'undefined' && window.location.hash === `#${id}`) setOpen(true); }, [id]);
   return (
-    <details className="group" id={id} open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-      <summary><span><h2>{title}</h2>{sub ? <span className="s">{sub}</span> : null}</span></summary>
-      <div className="body">{children}</div>
-    </details>
+    <>
+      <button type="button" className="at-tile" id={id} onClick={() => setOpen(true)}>
+        <span className="at-ic"><svg viewBox="0 0 24 24"><path d={ICON[id] ?? 'M12 12h.01'} /></svg></span>
+        <b>{SHORT[id] ?? title}</b>
+        {sub ? <small>{sub}</small> : null}
+      </button>
+      {open ? <Sheet title={title} onClose={() => { setOpen(false); if (window.location.hash === `#${id}`) history.replaceState(null, '', window.location.pathname); }}><div className="at-body">{children}</div></Sheet> : null}
+    </>
   );
 }
 
