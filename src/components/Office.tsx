@@ -3423,8 +3423,11 @@ function drawBoards(c: C, room: number, wall: number, t: number) {
         c.font = font(700, 2.9); const ww = c.measureText(when).width + 5;
         rr(w / 2 - ww / 2, h * 0.53, ww, 4.6, 2.3); c.fillStyle = 'rgba(255,255,255,.08)'; c.fill();
         c.fillStyle = 'rgba(214,228,255,.85)'; c.fillText(when, w / 2, h * 0.53 + 2.4);
-        const cd = live ? 'SEDANG RILIS' : inTime(left);
-        fit(cd, 800, 3.6, 2.2, w - 4); c.fillStyle = live ? (blink ? acc : '#ffffff') : acc; c.fillText(cd, w / 2, h * 0.77);
+        // same day (or under 24 h): a ticking h:mm:ss countdown; further away: "2 HARI LAGI" / "30 JAM LAGI"
+        const sameDay = new Date(near.at).toDateString() === new Date(wall).toDateString() || left < 86_400_000;
+        const hms = `${Math.floor(left / 3_600_000)}:${String(Math.floor((left % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`;
+        const cd = live ? 'SEDANG RILIS' : sameDay ? hms : inTime(left);
+        fit(cd, 800, sameDay && !live ? 5.2 : 3.6, 2.2, w - 4); c.fillStyle = live ? (blink ? acc : '#ffffff') : acc; c.fillText(cd, w / 2, h * 0.77);
         // progress bar: fills up over the last 24 hours before the release
         const pr = live ? 1 : Math.max(0, Math.min(1, 1 - left / 86_400_000));
         rr(3, h - 4.2, w - 6, 1.4, 0.7); c.fillStyle = 'rgba(255,255,255,.1)'; c.fill();
