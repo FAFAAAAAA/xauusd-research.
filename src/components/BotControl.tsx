@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { call, peek } from './client';
-import { Loading, Spinner, toast } from './Status';
+import { Loading, Sheet, Spinner, toast } from './Status';
 import { BOT_KEYS, SYM_RE, type BotKey, type BotVal } from '@/lib/core/bot-control';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -34,7 +34,8 @@ export function BotControlCard() {
   const [now, setNow] = useState(() => Date.now());
   const [open, setOpen] = useState<string | null>(null);
   const [sym, setSym] = useState('');
-  const [sos, setSos] = useState(0);   // emergency close: 0 = closed, 1 = first confirmation, 2 = second
+  const [sos, setSos] = useState(0);
+  const [sheet, setSheet] = useState(false);   // emergency close: 0 = closed, 1 = first confirmation, 2 = second
   const load = useCallback(() => call<any>('/api/bot-control').then((x) => { setD(x); setNow(Date.now()); }).catch((e) => setErr(e.message)), []);
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
   const c = d?.control, seen = d?.seen, ap = seen?.applied;
@@ -111,20 +112,28 @@ export function BotControlCard() {
     ['sum', '✈', 'Ringkasan', v<boolean>('daily_summary', true) ? hours.map((h) => String(h).padStart(2, '0')).join(' & ') : 'Mati', 'Telegram'],
   ];
 
+  const ver = ap?.version || '';
+  const latest = ver >= '2026.11.15.2';
+  const riskTxt = mode === 'usdt' ? `$${nf(v<number>('risk_usdt', 5))}` : `${nf(riskPct)}%`;
   return (
-    <div className="bx">
-      <div className="bx-top">
-        <b>Kontrol bot</b>
-        <span className={`bc-dot ${online ? (ap?.paused ? 'pause' : 'on') : 'off'}`}>{online ? `${ap?.paused ? 'Jeda' : 'Aktif'} · ${ago(now - seen.at).replace(' lalu', '')}` : seen ? 'Tidak ada kabar' : 'Belum terhubung'}</span>
+    <>
+      <div className="bxs">
+        <div className="bxs-top">
+          <span><b>Bot Binance</b><small>{seen ? `versi ${ver || 'lama'} · ${latest ? 'terbaru' : 'ada update'}` : 'belum terhubung'}</small></span>
+          <em className={online ? (ap?.paused ? 'pause' : 'on') : 'off'}>{online ? `${ap?.paused ? 'Jeda' : 'Aktif'} · ${ago(now - seen.at).replace(' lalu', '')}` : seen ? 'Tidak ada kabar' : 'Belum terhubung'}</em>
+        </div>
+        <div className="bxs-sum">
+          <div><small>Risiko</small><b>{riskTxt}</b></div>
+          <div><small>Posisi</small><b>{v<number>('max_positions', 3)} + {v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 2) : 0}</b></div>
+          <div><small>Rem</small><b>{stopBal > 0 ? fmtUsd(stopBal) : 'Mati'}</b></div>
+        </div>
+        <div className="bxs-btn">
+          <button type="button" className="ps" disabled={busy} onClick={() => send({ ...c, paused: !c.paused }, c.paused ? 'Trading dilanjutkan' : 'Trading dijeda')}>{c.paused ? '▶ Lanjutkan' : '❚❚ Jeda'}</button>
+          <button type="button" className="go" onClick={() => setSheet(true)}>Atur bot ›{dirty ? <i /> : null}</button>
+        </div>
       </div>
-      {!seen ? <p className="bc-sub">Ganti snr_bot.py di VPS dengan versi terbaru agar bot bisa diatur dari sini.</p>
-        : <p className="bx-ver">Bot versi <b>{ap?.version || 'lama'}</b>{(ap?.version || '') >= '2026.11.15.2' ? ' · terbaru' : ' · ada versi baru 2026.11.15.2'}</p>}
-
-      <button type="button" className={`bx-run ${c.paused ? 'is' : ''}`} role="switch" aria-checked={!c.paused} disabled={busy} onClick={() => send({ ...c, paused: !c.paused }, c.paused ? 'Trading dilanjutkan' : 'Trading dijeda')}>
-        <span><b>{c.paused ? 'Trading dijeda' : 'Trading berjalan'}</b><small>{c.paused ? 'Tidak buka posisi baru · posisi terbuka tetap jalan' : 'Bot boleh membuka posisi baru'}</small></span>
-        <i className={`co-tg ${c.paused ? '' : 'on'}`} />
-      </button>
-
+      {sheet ? <Sheet title="Atur bot" onClose={() => setSheet(false)}>
+    <div className="bx">
       {bal ? (
         <div className="bx-hero">
           <small>Perkiraan 12 bulan · dari {fmtUsd(bal)}</small>
@@ -134,7 +143,7 @@ export function BotControlCard() {
           <div className="bx-stats">
             <div><small>Rugi / SL</small><b className="dn">−${nf(Math.round(riskUsd * 100) / 100)}</b></div>
             <div><small>Untung / TP</small><b className="up">+${nf(Math.round(riskUsd * 200) / 100)}</b></div>
-            <div><small>Turun maks</small><b className="yl">−{Math.round(ex.dd)}%</b></div>
+            <div><small>Turun maks</small><b className="yl">−{Math.round(ex.dd)}%</b><i>−{fmtUsd(bal * ex.dd / 100)}</i></div>
           </div>
         </div>
       ) : null}
@@ -156,16 +165,11 @@ export function BotControlCard() {
             <span className="bx-ic">{ic}</span><small>{t}</small><b>{b}</b><i>{i}</i>
           </button>
         ))}
-        <button type="button" className={`bx-t wide ${open === 'ex' ? 'open' : ''}`} onClick={() => setOpen(open === 'ex' ? null : 'ex')}>
-          <small>Koin dikecualikan</small><i>{excl.length ? excl.map((x) => x.replace(/USDT$/, '')).join(', ') : 'tidak ada'} ›</i>
-        </button>
-        <button type="button" className={`bx-t wide ${open === 'log' ? 'open' : ''}`} onClick={() => setOpen(open === 'log' ? null : 'log')}>
-          <small>Riwayat setelan</small><i>{d.log?.length ? `terakhir ${ago(now - d.log[0].at)}` : 'belum ada'} ›</i>
-        </button>
       </div>
 
       {open ? (
-        <div className="bc-card bx-detail">
+        <div className="bc-card bx-detail" key={open}>
+          <div className="bx-dh"><b>{({ pos: 'Posisi', brake: 'Rem', lev: 'Leverage & margin', sum: 'Ringkasan Telegram', ex: 'Koin dikecualikan', log: 'Riwayat setelan' } as Record<string, string>)[open]}</b><button type="button" aria-label="Tutup" onClick={() => setOpen(null)}>✕</button></div>
           {open === 'pos' ? <>
             <Step k="max_positions" label="Maks posisi SELL" by={1} lo={1} hi={6} dflt={3} />
             <Toggle k="buy_enabled" label="BUY (BTC, ETH, SOL, …)" dflt />
@@ -203,6 +207,14 @@ export function BotControlCard() {
           ) : null}
         </div>
       ) : null}
+      <div className="bx-grid">
+        <button type="button" className={`bx-t wide ${open === 'ex' ? 'open' : ''}`} onClick={() => setOpen(open === 'ex' ? null : 'ex')}>
+          <small>Koin dikecualikan</small><i>{excl.length ? excl.map((x) => x.replace(/USDT$/, '')).join(', ') : 'tidak ada'} ›</i>
+        </button>
+        <button type="button" className={`bx-t wide ${open === 'log' ? 'open' : ''}`} onClick={() => setOpen(open === 'log' ? null : 'log')}>
+          <small>Riwayat setelan</small><i>{d.log?.length ? `terakhir ${ago(now - d.log[0].at)}` : 'belum ada'} ›</i>
+        </button>
+      </div>
 
       {err ? <div className="error">{err}</div> : null}
       {pending ? <p className="bc-now">Menunggu bot memakai setelan baru…</p> : null}
@@ -230,5 +242,7 @@ export function BotControlCard() {
       </div>
       <p className="bc-foot">Perkiraan dari backtest untuk 4 SELL + 2 BUY; hasil nyata biasanya lebih kecil. API key & akun hanya bisa diubah di VPS.</p>
     </div>
+      </Sheet> : null}
+    </>
   );
 }

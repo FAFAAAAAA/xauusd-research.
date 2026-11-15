@@ -20,15 +20,15 @@ export default function Settings() {
     <div className="stack">
       <PageHead title="Atur" />
       <BotControlCard />
-      <p className="at-h">Koneksi</p>
-      <div className="at-grid">
+      <p className="at-h">KONEKSI</p>
+      <div className="at-apps">
         <Telegram s={s} reload={load} />
         <EaSetup tz={s.timezone} />
         <FeedSetup tz={s.timezone} />
         <TradingView s={s} />
       </div>
-      <p className="at-h">Lainnya</p>
-      <div className="at-grid">
+      <p className="at-h">LAINNYA</p>
+      <div className="at-apps">
         <General s={s} reload={load} />
         <HistoricalData />
         <Zones />
@@ -51,19 +51,27 @@ const ICON: Record<string, string> = {
   'impor-tv': 'M12 3v12M7 10l5 5 5-5M4 21h16',
   error: 'M12 3 2 21h20L12 3zM12 10v5M12 18h.01',
 };
-const SHORT: Record<string, string> = { telegram: 'Telegram', ea: 'EA & bot', sinyal: 'Sinyal XAU', tradingview: 'TradingView', tampilan: 'Tampilan', data: 'Data harga', zona: 'Zona manual', 'impor-tv': 'Impor TV', error: 'Catatan error' };
+const GRAD: Record<string, string> = {
+  telegram: 'linear-gradient(160deg,#5ac8fa,#1e90d6)', ea: 'linear-gradient(160deg,#3a3a40,#141416)', sinyal: 'linear-gradient(160deg,#ffcc4d,#f2930d)',
+  tradingview: 'linear-gradient(160deg,#7d93ff,#4058e6)', tampilan: 'linear-gradient(160deg,#c7c7cc,#8e8e93)', data: 'linear-gradient(160deg,#5fd3c3,#22a091)',
+  zona: 'linear-gradient(160deg,#d17bf0,#9b3fd1)', 'impor-tv': 'linear-gradient(160deg,#8fdcff,#3aa9e6)', error: 'linear-gradient(160deg,#ff7b72,#e5322b)',
+};
+const SHORT: Record<string, string> = { telegram: 'Telegram', ea: 'EA & bot', sinyal: 'Sinyal XAU', tradingview: 'TradingView', tampilan: 'Tampilan', data: 'Data harga', zona: 'Zona', 'impor-tv': 'Impor TV', error: 'Error' };
 
 /** Settings tile: a square with an icon, a name and its status; tap opens the full section in a bottom sheet.
  *  Opens automatically when the URL hash matches its id (e.g. /settings#data). */
 function Group({ id, title, sub, children }: { id: string; title: string; sub?: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   useEffect(() => { if (typeof window !== 'undefined' && window.location.hash === `#${id}`) setOpen(true); }, [id]);
+  const dot = !sub ? null : /ada update|masalah|gagal/i.test(sub) ? 'warn' : /aktif|terbaru|siap|terakhir|terkirim|berhasil/i.test(sub) && !/belum/i.test(sub) ? 'ok' : null;
   return (
     <>
-      <button type="button" className="at-tile" id={id} onClick={() => setOpen(true)}>
-        <span className="at-ic"><svg viewBox="0 0 24 24"><path d={ICON[id] ?? 'M12 12h.01'} /></svg></span>
-        <b>{SHORT[id] ?? title}</b>
-        {sub ? <small>{sub}</small> : null}
+      <button type="button" className="ap-btn" id={id} onClick={() => setOpen(true)} aria-label={`${title}${sub ? ` — ${sub}` : ''}`}>
+        <span className="ap-ic" style={{ background: GRAD[id] ?? 'linear-gradient(160deg,#3a3a40,#141416)' }}>
+          <svg viewBox="0 0 24 24"><path d={ICON[id] ?? 'M12 12h.01'} /></svg>
+          {dot ? <em className={dot} /> : null}
+        </span>
+        <small>{SHORT[id] ?? title}</small>
       </button>
       {open ? <Sheet title={title} onClose={() => { setOpen(false); if (window.location.hash === `#${id}`) history.replaceState(null, '', window.location.pathname); }}><div className="at-body">{children}</div></Sheet> : null}
     </>
