@@ -1679,3 +1679,4 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .office-menu button { gap: 9px; padding: 4px 10px 4px 4px; border-radius: 14px; font-size: 14px; }
 .office-menu span { width: 30px; height: 30px; border-radius: 10px; font-size: 16px; }
 .office-menu em { font-size: 11px; padding: 1px 7px; }
+.office-menu-bg { position: absolute; inset: 0; z-index: 24; background: rgba(20,14,8,.12); }

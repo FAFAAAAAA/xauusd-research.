@@ -3220,6 +3220,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
             <path d="M8 40 h8 M8 44 l8 -1.5 M56 40 h-8 M56 44 l-8 -1.5" stroke="#5a3a24" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
         </button>
+        {menu ? <div className="office-menu-bg" data-noswipe onClick={() => setMenu(false)} onTouchStart={(e) => { e.stopPropagation(); }} aria-hidden /> : null}
         {menu ? <div className="office-menu" data-noswipe>
           {MENU.map(([k, icon, label]) => (
             <button type="button" key={k} onClick={() => act(k)}><span style={{ background: MENU_TINT[k] ?? '#f3ede4' }}>{icon}</span>{label}{k === 'galeri' && moments.length ? <em>{moments.length}</em> : null}</button>
