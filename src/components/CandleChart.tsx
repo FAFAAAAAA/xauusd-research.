@@ -24,8 +24,8 @@ const saveDraw = (k: string, d: Drawings) => { try { localStorage.setItem(`chart
  * Candlestick chart. lightweight-charts renders in UTC, so times are
  * shifted by the display timezone offset (DST-aware per candle) for the axis only.
  */
-export default function CandleChart({ candles, zones = [], markers = [], timezone = 'UTC', fitKey, position, drawKey }:
-  { candles: Candle[]; zones?: ChartZone[]; markers?: ChartMarker[]; timezone?: string; fitKey?: string; position?: TradePosition; drawKey?: string }) {
+export default function CandleChart({ candles, zones = [], markers = [], timezone = 'UTC', fitKey, position, drawKey, initialBars }:
+  { candles: Candle[]; zones?: ChartZone[]; markers?: ChartMarker[]; timezone?: string; fitKey?: string; position?: TradePosition; drawKey?: string; initialBars?: number }) {
   const box = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
   const series = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -67,7 +67,12 @@ export default function CandleChart({ candles, zones = [], markers = [], timezon
       .map((x) => ({ time: shift(x.time), position: x.position === 'above' ? 'aboveBar' as const : 'belowBar' as const, shape: x.shape, color: box.current ? (getComputedStyle(box.current).getPropertyValue('--ink').trim() || '#1b2433') : '#1b2433', text: x.text }))
       .sort((a, b) => a.time - b.time);
     s.setMarkers(m);
-    if (!position && fitKey !== lastFit.current) { chart.current?.timeScale().fitContent(); lastFit.current = fitKey; }
+    if (!position && fitKey !== lastFit.current) {
+      // open on the latest candles (zoomed in); older history stays a swipe away
+      if (initialBars && candles.length > initialBars) chart.current?.timeScale().setVisibleLogicalRange({ from: candles.length - initialBars, to: candles.length + 4 });
+      else chart.current?.timeScale().fitContent();
+      lastFit.current = fitKey;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles, markers, timezone, fitKey]);
 
