@@ -75,13 +75,14 @@ const PEOPLE: Person[] = [
   { id: 'tg', name: 'Admin Telegram', role: 'TELEGRAM', seat: seat('tg', 1, 2.35, 10.35, 'nx', 'BALAS CHAT'), hair: '#6b3e26', skin: '#f0c49c', shirt: '#229ed9', pants: '#2c2f36', style: 'curly', headset: true },
   { id: 'risk', name: 'Manajer Risiko', role: 'RISIKO', seat: seat('risk', 1, 8.15, 4.2, 'py', 'CEK RISIKO'), hair: '#2b1d16', skin: '#f1c7a3', shirt: '#7b5cd6', pants: '#2a2b30', style: 'bun', glasses: true, lips: '#c06a62' },
   { id: 'akun', name: 'Akuntan', role: 'AKUNTAN', seat: seat('akun', 1, 6.95, 4.2, 'py', 'PEMBUKUAN'), hair: '#4a2c1c', skin: '#efc39f', shirt: '#f08a3c', pants: '#3a3f4a', style: 'long', lips: '#c9615a' },
+  { id: 'bz', name: 'BZ', role: 'BZ', seat: { ...seat('bz', 1, 6.95, 6.0, 'ny', 'PANTAU SQUEEZE'), prop: 'laptop' }, hair: '#7a4a2a', skin: '#f0c7a0', shirt: '#14b8a6', pants: '#1f3a44', style: 'curtain', glasses: true },
   { id: 'it', name: 'Teknisi', role: 'TEKNISI', seat: seat('it', 1, 8.15, 6.0, 'ny', 'PANTAU BOT'), hair: '#1f1a17', skin: '#e8b98f', shirt: '#334155', pants: '#1f2937', style: 'short', glasses: true, headset: true },
   { id: 'jaga', name: 'Satpam', role: 'SECURITY', seat: seat('jaga', 2, 13.65, 3.2, 'px', 'CEK CCTV'), hair: '#222', skin: '#c99064', shirt: '#2f3b55', pants: '#1f2533', style: 'cap', cap: '#1f2a44' },
   { id: 'ob', name: 'Office Boy', role: 'OB', seat: { ...seat('ob', 2, 6.2, 1.9, 'ny', 'SIAP SEDIA'), pose: 'stand' }, hair: '#2a1d14', skin: '#d6a074', shirt: '#7fa7c4', pants: '#3b4a5a', style: 'short' },
   { id: 'tamu', name: 'Klien', role: 'KLIEN', seat: { ...seat('tamu', 2, 13.5, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#3a2a20', skin: '#efc9a4', shirt: '#3b4a6b', pants: '#2a2f3a', style: 'slick', tie: true, glasses: true },
   { id: 'kurir', name: 'Kurir', role: 'KURIR', seat: { ...seat('kurir', 2, 11.65, 0.95, 'py', 'DATANG'), pose: 'stand' }, hair: '#222', skin: '#e2b48a', shirt: '#e5484d', pants: '#2a2b30', style: 'cap', cap: '#c0392b' },
 ];
-const WORKERS = ['alt', 'big', 'xau', 'nas', 'tg'];
+const WORKERS = ['alt', 'big', 'bz', 'xau', 'nas', 'tg'];
 /** pastel bubble behind each cat-menu icon */
 const MENU_TINT: Record<string, string> = { perusahaan: '#dbeafe', dadakan: '#ffe4e6', laporan: '#dcfce7', galeri: '#fef3c7', foto: '#e0e7ff', kopi: '#fde68a', pizza: '#fecaca', senam: '#cffafe', kucing: '#bae6fd', ultah: '#fbcfe8', trade: '#d1fae5' };
 const LIFT = { x: 11.65, y: 0.6 };
@@ -116,8 +117,7 @@ const S1: Array<Omit<Spot, 'room'>> = [
   { id: 'win1', x: 0.75, y: 3.2, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }, { label: 'FOTO PEMANDANGAN', prop: 'hp' }, { label: 'MELAMUN' }] },
   { id: 'win2', x: 0.75, y: 5.45, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'TELEPON', prop: 'phone' }] },
   { id: 'win3', x: 0.75, y: 7.7, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }, { label: 'CEK CUACA', prop: 'hp' }] },
-  // (the two front chairs of this table are Sari's and Rina's desks: finance & risk)
-  { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
+  // (the chairs of this table are the desks of Sari (finance), Rina (risk), BZ (Bollinger squeeze SELL) and the technician)
   { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }, { label: 'VIDEO CALL', prop: 'hp' }, { label: 'PESAN OJOL', prop: 'hp' }] },
   { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN', alt: [{ label: 'YOGA SEBENTAR' }, { label: 'SENAM LEHER' }] },
   { id: 'rest1', x: 13.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
@@ -157,7 +157,7 @@ const PACE: Array<[number, number, number]> = [[0, 4.0, 3.2], [0, 9.0, 3.6], [0,
 /** Ny. Vetrycia's face while she watches a drama: changes every few seconds */
 const vetMood = (t: number) => (['SEDIH', 'MAKAN POPCORN', 'NANGIS', 'KETAWA'] as const)[Math.floor(t / 4.5) % 4];
 const VET_SORRY = ['Ampun bu!', 'Siap bu!', 'Maaf bu…', 'Iya bu bos!'];
-const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', xau: 'nas', nas: 'xau', tg: 'alt' };
+const PARTNER: Record<string, string> = { alt: 'big', big: 'alt', bz: 'alt', xau: 'nas', nas: 'xau', tg: 'alt' };
 const YELL = ['KERJA!!', 'PROFIT MANA?!', 'JANGAN SANTAI!', 'CEPAT!!', 'GAJI POTONG!', 'BALIK KE MEJA!', 'LEMBUR KAMU!'];
 const SL_YELL = ['KENA SL LAGI?!', 'RUGI TERUS!', 'MAU DIPECAT?!'];
 const SORRY = ['Ampun bos!', 'Iya bos!', 'Siap bos!', 'Maaf bos…'];
@@ -676,7 +676,7 @@ const MEET: Record<number, Array<Array<[number, number, Face]>>> = {
 };
 type Scene = { s: Script; who: string[]; spots: Spot[]; t0: number; talking: boolean; i: number; next: number; meet: string };
 const SC: { list: Scene[]; next: number; grudge: Record<string, number> } = { list: [], next: 0, grudge: {} };
-const shortName = (id: string) => ({ ob: 'Mas OB', jaga: 'Pak Satpam', bos: 'Marcel', vet: 'Bu', akun: 'Mbak Akuntan', risk: 'Bu Risk', alt: 'ALT', big: 'BTC', xau: 'XAU', nas: 'NASDAQ', tg: 'Admin' } as Record<string, string>)[id] ?? PEOPLE.find((p) => p.id === id)?.name ?? '';
+const shortName = (id: string) => ({ ob: 'Mas OB', jaga: 'Pak Satpam', bos: 'Marcel', vet: 'Bu', akun: 'Mbak Akuntan', risk: 'Bu Risk', alt: 'ALT', big: 'BTC', bz: 'BZ', xau: 'XAU', nas: 'NASDAQ', tg: 'Admin' } as Record<string, string>)[id] ?? PEOPLE.find((p) => p.id === id)?.name ?? '';
 const pairKey = (a: string, b: string) => [a, b].sort().join('|');
 function sceneFree(ctx: EvCtx, id: string) {
   const a = ctx.agents[id]; if (!a || !freeFor(ctx, id)) return false;
@@ -868,6 +868,7 @@ export function statuses(data: OfficeData, now: number): Record<string, Status> 
   return {
     alt: one('snr', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
     big: one('btc', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
+    bz: one('bz', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
     xau: one('v2', mOn, data.mt5, wk, () => 'xau'),
     nas: one('nas', mOn, data.mt5, wk, () => 'nas'),
     tg: !data.binance && !data.mt5 ? { label: 'BELUM AKTIF', color: '#8a8f98', sleep: false, tag: null }
@@ -1495,7 +1496,7 @@ function armchair(c: C, x: number, y: number, col: string, dark: string, massage
 function baseItems(): Item[] {
   const it: Item[] = [];
   for (const [y0, id] of [[0.9, 'alt'], [3.1, 'big'], [5.3, 'xau'], [7.5, 'nas'], [9.7, 'tg']] as Array<[number, string]>) it.push(windowDesk(y0, id));
-  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin' || p.id === 'tamu' || p.id === 'risk' || p.id === 'akun' || p.id === 'it') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
+  for (const p of PEOPLE) { if (p.id === 'jaga' || p.id === 'bos' || p.id === 'vet' || p.id === 'kantin' || p.id === 'tamu' || p.id === 'risk' || p.id === 'akun' || p.id === 'it' || p.id === 'bz') continue; it.push(...chair(p.seat.x, p.seat.y, p.seat.face)); }
   it.push(...chair(10.5, 5.3, 'py', '#1e1f23'), ...chair(13.65, 3.2, 'px', '#1e1f23'));
   for (const [x, y, f] of [[6.7, 5.4, 'px'], [8.5, 5.4, 'nx'], [7.6, 6.3, 'ny'], [7.6, 4.5, 'py']] as const) it.push(...chair(x, y, f, '#1e1f23'));
   it.push({ x0: 3.6, y0: 0.2, x1: 5.4, y1: 1.15, draw: (c, t) => {
@@ -2553,7 +2554,7 @@ function selfie(key: string, title: string, when: string, pid: string): string {
       c.textAlign = 'left'; c.textBaseline = 'alphabetic';
     }
     // who: two neat rows, nobody hiding anybody; the TP trader in the middle in front, biggest
-    const others = ['alt', 'big', 'xau', 'nas', 'tg', 'bos', 'vet', 'ob', 'jaga'].filter((id) => id !== pid).sort((a, b) => R(`o${a}`) - R(`o${b}`));
+    const others = ['alt', 'big', 'bz', 'xau', 'nas', 'tg', 'bos', 'vet', 'ob', 'jaga'].filter((id) => id !== pid).sort((a, b) => R(`o${a}`) - R(`o${b}`));
     const back = others.slice(0, 4), front = others.slice(4, 8);
     const draw = (id: string, X: number, Y: number, k: number, face: Face) => {
       const p = PEOPLE.find((q) => q.id === id); if (!p) return;
@@ -2644,7 +2645,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
     return data.trades.filter((t) => t.result === 'tp' && t.closedAt).map((t) => {
       const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
-      const pid = ({ snr: 'alt', btc: 'big', v2: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
+      const pid = ({ snr: 'alt', btc: 'big', bz: 'bz', v2: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
       const who = PEOPLE.find((q) => q.id === pid)?.name ?? '';
       return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, who, side: String(t.side ?? ''), pid };
     }).sort((a, b) => b.at - a.at);
@@ -3165,14 +3166,14 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
       {card && card.id !== 'akun' ? (() => {
         const p = PEOPLE.find((q) => q.id === card.id); if (!p) return null;
         const s0 = st[card.id];
-        const strat = ({ alt: 'snr', big: 'btc', xau: 'v2', nas: 'nas' } as Record<string, string>)[card.id];
+        const strat = ({ alt: 'snr', big: 'btc', bz: 'bz', xau: 'v2', nas: 'nas' } as Record<string, string>)[card.id];
         const mine = strat ? data.trades.filter((t) => t.strategy === strat) : [];
         const day0 = new Date(now); day0.setHours(0, 0, 0, 0);
         const today = mine.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime()).reduce((a, t) => a + Number(t.pnl ?? 0), 0);
         const tps = mine.filter((t) => t.result === 'tp'), sls = mine.filter((t) => t.result === 'sl'), openN = mine.filter((t) => t.result === 'open').length;
         const all = mine.filter((t) => t.result !== 'open').reduce((a, t) => a + Number(t.pnl ?? 0), 0);
         const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
-        const JOB: Record<string, string> = { bos: 'Owner', vet: 'Big Bos', alt: 'Trader koin alt (Binance)', big: 'Trader BTC (Binance)', xau: 'Trader emas XAU (MT5)', nas: 'Trader NASDAQ (MT5)', tg: 'Kirim sinyal ke Telegram', risk: 'Manajer risiko', akun: 'Akuntan', it: 'Teknisi: jaga bot Binance & VPS', jaga: 'Satpam', ob: 'Office boy', kurir: 'Kurir', tamu: 'Tamu' };
+        const JOB: Record<string, string> = { bos: 'Owner', vet: 'Big Bos', alt: 'Trader koin alt (Binance)', big: 'Trader BTC (Binance)', bz: 'Trader Bollinger squeeze SELL, semua koin (Binance)', xau: 'Trader emas XAU (MT5)', nas: 'Trader NASDAQ (MT5)', tg: 'Kirim sinyal ke Telegram', risk: 'Manajer risiko', akun: 'Akuntan', it: 'Teknisi: jaga bot Binance & VPS', jaga: 'Satpam', ob: 'Office boy', kurir: 'Kurir', tamu: 'Tamu' };
         return (
           <div className="office-card-bg" onClick={() => setCard(null)} data-noswipe>
             <div className="office-card" onClick={(e) => e.stopPropagation()}>

@@ -5,7 +5,7 @@
  * Secrets and account switches (API key, testnet, dry_run, report key) are NOT remote on purpose: they stay on the VPS.
  */
 export type BotKey =
-  | 'risk_mode' | 'risk_percent' | 'risk_usdt' | 'max_positions' | 'max_buy_positions' | 'buy_enabled'
+  | 'risk_mode' | 'risk_percent' | 'risk_usdt' | 'max_positions' | 'max_buy_positions' | 'buy_enabled' | 'bz_enabled' | 'max_bz_positions'
   | 'stop_balance_usdt' | 'max_loss_streak' | 'leverage_auto' | 'leverage' | 'margin_isolated'
   | 'daily_summary' | 'summary_hours_kst' | 'exclude';
 export type BotVal = number | boolean | string | number[] | string[];
@@ -21,6 +21,8 @@ export const BOT_SPEC: Record<BotKey, Spec> = {
   max_positions: { t: 'num', lo: 1, hi: 6, dp: 0 },
   max_buy_positions: { t: 'num', lo: 0, hi: 4, dp: 0 },
   buy_enabled: { t: 'bool' },
+  bz_enabled: { t: 'bool' },
+  max_bz_positions: { t: 'num', lo: 0, hi: 4, dp: 0 },
   stop_balance_usdt: { t: 'num', lo: 0, hi: 100000, dp: 0 },
   max_loss_streak: { t: 'num', lo: 0, hi: 30, dp: 0 },
   leverage_auto: { t: 'bool' },
@@ -79,7 +81,7 @@ export function cleanApplied(x: unknown): BotApplied | null {
 
 export interface BotLogEntry { at: number; items: string[] }
 const LABELS: Record<BotKey, string> = {
-  risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko USD', max_positions: 'Maks SELL', max_buy_positions: 'Maks BUY', buy_enabled: 'BUY',
+  risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko USD', max_positions: 'Maks SELL', max_buy_positions: 'Maks BUY', buy_enabled: 'BUY', bz_enabled: 'BZ', max_bz_positions: 'Maks BZ',
   stop_balance_usdt: 'Rem saldo', max_loss_streak: 'Rem beruntun', leverage_auto: 'Leverage otomatis', leverage: 'Leverage', margin_isolated: 'Margin Isolated',
   daily_summary: 'Ringkasan', summary_hours_kst: 'Jam ringkasan', exclude: 'Koin dikecualikan',
 };

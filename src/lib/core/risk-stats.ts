@@ -10,7 +10,11 @@ export interface RiskStats {
   maxDdR: number; maxLossStreak: number; worstMonthR: number; bestMonthR: number; negMonthsPct: number;
   worstYearR: number; worst12mR: number; maxOpen: number; medianSl: number; p25Sl: number; p75Sl: number;
 }
-export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3' | 'nas' | 'btc' | 'alt' | 'snr', RiskStats> = {
+export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3' | 'nas' | 'btc' | 'alt' | 'snr' | 'bz', RiskStats> = {
+  // BZ (Binance Futures, Bollinger squeeze SELL on EVERY liquid coin, bot part 'bz'): research portfolio max 2 open BZ positions, 1 per coin,
+  // ~440 coins with 30-day volume >= $20M, 1h Binance data Jul 2020 – Nov 2026, fee+slippage 0.12%. Simultaneous signals in RANDOM order
+  // (25 runs; this is the run with the median total). medianSl / p25Sl / p75Sl = SL in % of price. Generated 15 Nov 2026.
+  "bz": {"trades": 1255, "years": 6.3, "perMonth": 16.48, "winRate": 0.3928, "avgR": 0.1519, "perMonthR": 2.504, "maxDdR": 31.1, "maxLossStreak": 24, "worstMonthR": -14.2, "bestMonthR": 53.5, "negMonthsPct": 0.39, "worstYearR": 2.4, "worst12mR": -9.4, "maxOpen": 2, "medianSl": 5.42, "p25Sl": 3.98, "p75Sl": 7.52},
   // v1 SNR (Binance Futures altcoins, support break SELL, metode snr-sell-v1): research portfolio max 3 open positions, 1 per coin,
   // 440 liquid coins, 1h Binance data 2020 – 6 Nov 2026, fee+slippage 0.12%. medianSl / p25Sl / p75Sl = SL in % of price. 7 Nov 2026.
   // Simultaneous signals are taken in RANDOM order (25 runs; this is the run with the median total) — the result depends on which coin is taken.
@@ -158,7 +162,7 @@ export const RISK_STATS: Record<'v1' | 'v2' | 'v3' | 'v1v2' | 'v1v2v3' | 'nas' |
     "p75Sl": 11.73
   }
 };
-export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 Level', v2: 'v1 XAU', v3: 'v3 BOS', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT' };
+export const RISK_LABEL: Record<keyof typeof RISK_STATS, string> = { v1: 'v1 Level', v2: 'v1 XAU', v3: 'v3 BOS', v1v2: 'v1 + v2 bersamaan', v1v2v3: 'v1 + v2 + v3 bersamaan', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', bz: 'BZ' };
 /** Instrument facts per entry: USD per 1.00 price move per 1 lot, the broker's minimum lot (Exness) and the backtest period. */
 export const RISK_META: Record<keyof typeof RISK_STATS, { contract: number; minLot: number; period: string; unit: string; dp?: number; broker?: string; noLot?: boolean }> = {
   v1: { contract: 100, minLot: 0.01, period: '2004–2026', unit: '$' }, v2: { contract: 100, minLot: 0.01, period: '2004–2026', unit: '$' },
@@ -167,6 +171,7 @@ export const RISK_META: Record<keyof typeof RISK_STATS, { contract: number; minL
   btc: { contract: 1, minLot: 0.001, period: '2018–2026', unit: '$', dp: 3, broker: 'Binance' },
   alt: { contract: 1, minLot: 0, period: '2020–2026', unit: '%', broker: 'Binance', noLot: true },
   snr: { contract: 1, minLot: 0, period: '2020–2026', unit: '%', broker: 'Binance', noLot: true },   // many coins → no single lot; % risk only
+  bz: { contract: 1, minLot: 0, period: '2020–2026', unit: '%', broker: 'Binance', noLot: true },
 };
 /** Owner-facing rule: the historical max drawdown should stay at or below this share of the capital. */
 export const IDEAL_DD_SHARE = 0.4;

@@ -95,7 +95,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     await repo.setAppSetting(db, 'ea_last_report', { at: now, event: 'info', ticket: sym || 'bot' });
     const tg = await repo.getTelegramSettings(db);
     if (!tg.live_enabled) return { status: 200, body: { ok: true, telegram: 'disabled' } };
-    const head = b.strategy === 'snr' || b.strategy === 'btc' ? 'Bot Binance' : 'EA';
+    const head = b.strategy === 'snr' || b.strategy === 'btc' || b.strategy === 'bz' ? 'Bot Binance' : 'EA';
     const level = b.level === 'error' ? '⚠️' : 'ℹ️';
     const key = createHash('sha256').update(`${now}:${txt}`).digest('hex').slice(0, 16);
     const r = await sendTelegram(db, { deliveryKey: `ea:info:${key}`, mode: 'LIVE', text: `${level} <b>${escapeHtml(head)}</b>\n\n${escapeHtml(txt)}` }, { fetchImpl: opts.fetchImpl });
@@ -113,9 +113,10 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
 
   // which EA / bot: v1 XAU (journal key v2, default), v1 NAS ("strategy":"nas") or the Binance v1 SNR bot ("strategy":"snr", sends "symbol")
   // the Binance bot also sends "strategy":"btc" for its BUY part (v1 BTC rules on the largest coins)
-  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : 'v2';
-  const bot = strat === 'snr' || strat === 'btc';
-  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : 'v1 XAU';
+  // and "strategy":"bz" for BZ (Bollinger squeeze SELL on every liquid coin, 15 Nov 2026)
+  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : b.strategy === 'bz' ? 'bz' : 'v2';
+  const bot = strat === 'snr' || strat === 'btc' || strat === 'bz';
+  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : strat === 'bz' ? 'BZ' : 'v1 XAU';
   const symbol = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24).toUpperCase() : '';
   const src = bot ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
   const who = bot ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;

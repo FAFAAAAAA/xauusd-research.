@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
 import { call, fmt, peek, px } from '@/components/client';
 import { ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner, toast } from '@/components/Status';
 import Link from 'next/link';
@@ -10,6 +10,7 @@ import TradeDashboard, { type CashFlow } from '@/components/TradeDashboard';
 import LiveTradeChart from '@/components/LiveTradeChart';
 import BtcChart from '@/components/BtcChart';
 import { useBtcDay, pctText } from '@/components/btcDay';
+import StrategyInfo, { STRATEGY_INFO } from '@/components/StrategyInfo';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const money = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '—' : `${n < 0 ? '−' : n > 0 ? '+' : ''}$${Math.abs(n).toFixed(2)}`);
@@ -23,8 +24,9 @@ const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   btc: { win: 0.41, perMonth: 5.7, label: 'BIG' },  // bot BUY part: 6 largest coins, max 2 open (research 9 Nov 2026), Binance costs
   alt: { win: 0.386, perMonth: 15.2, label: 'v2 ALT (lama)' },  // research portfolio max 3, corrected slot bug 11 Nov 2026
   snr: { win: 0.41, perMonth: 27, label: 'ALT' },  // 26 bot coins, portfolio max 3, H4 close (corrected 11 Nov 2026)
+  bz: { win: 0.393, perMonth: 16.5, label: 'BZ' },  // Bollinger squeeze SELL, every liquid coin, max 2 open (research 15 Nov 2026)
 };
-const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
+const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', bz: 'BZ', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
 // coin of a bot trade: the note is "Bot Binance SANDUSDT …"
@@ -46,6 +48,7 @@ export default function TradePage() {
   const [detail, setDetail] = useState<JournalTrade | null>(null);
   const btc = useBtcDay();                         // Bitcoin today (realtime, every 3 s)
   const [btcOpen, setBtcOpen] = useState(false);   // tap the Bitcoin row: chart only
+  const [info, setInfo] = useState<string | null>(null);   // tap a strategy card: rules + backtest
   const load = useCallback(() => {
     setErr(null);
     call<any>('/api/live').then(setD).catch((e) => setErr(e.message));
@@ -138,7 +141,7 @@ export default function TradePage() {
   const inMarket = (t: JournalTrade) => { const m = marketOfJournal(t.strategy); return m === 'both' || m === market; };
   const openT = j.trades.filter((t) => t.result === 'open' && inMarket(t));
   const closedT = j.trades.filter((t) => t.result !== 'open' && inMarket(t));
-  const stratOf = (label: string) => (/^v1 ?snr|snr-sell/i.test(label) ? 'snr' : /^v[12] ?alt|alt-breakdown/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
+  const stratOf = (label: string) => (/^v1 ?snr|snr-sell/i.test(label) ? 'snr' : /^bz\b|bollinger/i.test(label) ? 'bz' : /^v[12] ?alt|alt-breakdown/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
   // history card in the style of Binance "Riwayat Posisi", simplified: coin, side, result, P&L, entry → exit, opened / closed, duration
   const holdTxt = (ms: number) => { const m = Math.round(ms / 60_000); return m < 60 ? `${m} mnt` : m < 2880 ? `${Math.floor(m / 60)} jam ${m % 60} mnt` : `${(m / 1440).toFixed(1)} hari`; };
@@ -296,12 +299,12 @@ export default function TradePage() {
         <SecHead title="Performa per metode" />
         <div className="perf-cards">
           {JOURNAL_KEYS[market].map((k) => {
-            const s = j.stats[k];
-            if (!s) return null;
+            const s = j.stats[k] ?? { closed: 0, open: 0, wins: 0, losses: 0, winRate: null, pnl: 0, avgR: null };
             const win = s.winRate == null ? null : s.winRate * 100, bt = BT[k] ? BT[k].win * 100 : null;
+            const tap = STRATEGY_INFO[k] ? { role: 'button', tabIndex: 0, onClick: () => setInfo(k), onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter') setInfo(k); } } : {};
             return (
-              <div key={k} className="perf-card">
-                <div className="perf-head"><span className="perf-name">{NAME[k] ?? k}</span><span className={`perf-pnl ${tone(s.pnl)}`}>{money(s.pnl)}</span></div>
+              <div key={k} className={`perf-card${STRATEGY_INFO[k] ? ' tap' : ''}`} {...tap}>
+                <div className="perf-head"><span className="perf-name">{NAME[k] ?? k}{STRATEGY_INFO[k] ? <span className="perf-more" aria-hidden>Strategi ›</span> : null}</span><span className={`perf-pnl ${tone(s.pnl)}`}>{money(s.pnl)}</span></div>
                 <div className="perf-bar" aria-label={`Win ${win == null ? '—' : win.toFixed(0) + '%'}, backtest ${bt == null ? '—' : bt.toFixed(0) + '%'}`}>
                   <span className="fill" style={{ width: `${Math.min(100, win ?? 0)}%` }} />
                   {bt != null ? <span className="mark" style={{ left: `${bt}%` }} /> : null}
@@ -329,6 +332,7 @@ export default function TradePage() {
           </div> : null}
         </> : <p className="empty-inline">Belum ada trade.</p>}
         {btcOpen ? <Sheet title="Bitcoin" onClose={() => setBtcOpen(false)}><BtcChart tz={tz} /></Sheet> : null}
+        {info ? <Sheet title={`Strategi ${NAME[info] ?? info}`} onClose={() => setInfo(null)}><StrategyInfo k={info} live={j.stats[info] ? { win: j.stats[info].winRate, closed: j.stats[info].closed } : undefined} /></Sheet> : null}
         {detail ? (
           <Sheet title={coinOf(detail) || (NAME[detail.strategy] ?? detail.strategy)} onClose={() => setDetail(null)}>
             <div className="stack dt-sheet">
@@ -363,7 +367,7 @@ export default function TradePage() {
                 <span><span className="k">Dibuka</span><strong>{fmt(detail.openedAt, tz)}</strong></span>
                 <span><span className="k">Ditutup</span><strong>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</strong></span>
                 <span><span className="k">Durasi</span><strong>{detail.closedAt ? hm(detail.closedAt - detail.openedAt) : hm(Date.now() - detail.openedAt)}</strong></span>
-                <span><span className="k">{['btc', 'alt', 'snr'].includes(detail.strategy) ? 'Jumlah' : 'Lot'}</span><strong>{['btc', 'alt', 'snr'].includes(detail.strategy) ? detail.lot : detail.lot.toFixed(2)}</strong></span>
+                <span><span className="k">{['btc', 'alt', 'snr', 'bz'].includes(detail.strategy) ? 'Jumlah' : 'Lot'}</span><strong>{['btc', 'alt', 'snr', 'bz'].includes(detail.strategy) ? detail.lot : detail.lot.toFixed(2)}</strong></span>
               </div>
               <div className="dt-actions">
                 <button className="btn" onClick={async () => { const t = detail; setDetail(null); await fix(t); }}>Koreksi</button>

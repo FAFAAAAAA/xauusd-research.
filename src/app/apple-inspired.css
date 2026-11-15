@@ -1684,3 +1684,29 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .office-menu button { gap: 10px; padding: 5px 11px 5px 5px; border-radius: 16px; font-size: 15px; }
 .office-menu span { width: 34px; height: 34px; border-radius: 11px; font-size: 18px; }
 .office-menu em { font-size: 12px; padding: 1px 8px; }
+
+/* Trade · strategy cards open the strategy sheet (rules + backtest) */
+.perf-card.tap { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; -webkit-tap-highlight-color: transparent; }
+.perf-card.tap:active { transform: scale(.985); }
+.perf-name { display: inline-flex; align-items: baseline; gap: 8px; }
+.perf-more { font-size: 11.5px; font-weight: 600; color: var(--mute); }
+.si { gap: 12px !important; }
+.si-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.si-tags > span { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 99px; background: var(--fill, rgba(120,120,128,.12)); }
+.si-side.s { background: var(--down-tint) !important; color: var(--down); }
+.si-side.b { background: var(--up-tint) !important; color: var(--up); }
+.si-card { border: 1px solid var(--line); background: var(--surface); border-radius: 18px; padding: 14px 16px; }
+.si-h { font-size: 13px; font-weight: 800; margin: 0 0 10px; display: flex; justify-content: space-between; gap: 8px; }
+.si-h span { font-weight: 500; color: var(--mute); font-size: 12px; }
+.si-rules { margin: 0; padding-left: 20px; display: grid; gap: 7px; font-size: 14px; line-height: 1.35; }
+.si-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+.si-facts > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.si-facts .k { font-size: 11px; color: var(--mute); }
+.si-facts strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.si-years { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 14px; align-items: end; }
+.si-yr { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+.si-bar { height: 64px; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.si-bar i { display: block; width: 70%; max-width: 26px; border-radius: 6px 6px 3px 3px; background: var(--up); }
+.si-bar i.neg { background: var(--down); }
+.si-yr strong { font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.si-yr small { font-size: 10.5px; color: var(--mute); }

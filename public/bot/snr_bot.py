@@ -14,6 +14,12 @@ BUY part (v1 BTC rules, 9 Nov 2026, on the largest coins: BTC ETH SOL BNB XRP DO
   BUY      = an H4 candle CLOSES above the highest high of the 50 H4 candles before it (first close beyond) and that H4 close
              is above EMA200 (H4) (was EMA200 D1 until 2026.11.15.3).   SL = H4 close - 1.0 x ATR14(D1);  TP = entry + 2 x (entry - SL).   Max 2 BUY positions.
 
+BZ part (Bollinger squeeze SELL, 15 Nov 2026, on EVERY liquid USDT coin; config bz_enabled / max_bz_positions):
+  BZ SELL  = the H4 Bollinger band width (4 x std20 / SMA20) of the candle BEFORE the last one is in the lowest 20% of the last 120 H4
+             candles (squeeze) and the last closed H4 candle closes below the lower band (SMA20 - 2 x std20). No trend filter.
+             Liquidity: 30-day average quote volume >= min_volume_usdt.  SL = close + 1.5 x ATR14(H4);  TP = 2 x risk.  Max 2 BZ positions.
+  Each part has its own position cap (SELL = SNR, BUY, BZ) and one position per coin across all parts.
+
 Remote settings (website Atur -> Kontrol bot, checked every ~60 s): risk %, max SELL / BUY positions and Pause (no new positions).
   The website never sends orders; the bot applies these values itself. Empty on the website = use snr_bot_config.json.
 
@@ -44,7 +50,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.15.3'
+BOT_VERSION = '2026.11.15.4'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -59,6 +65,8 @@ DEFAULT_CONFIG = {
     "buy_enabled": True,             # BUY v1 BTC di koin terbesar (buy_coins)
     "buy_coins": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"],
     "max_buy_positions": 2,          # maks posisi BUY terbuka (backtest: 2)
+    "bz_enabled": True,              # BZ = Bollinger squeeze SELL di semua koin likuid
+    "max_bz_positions": 2,           # maks posisi BZ terbuka (backtest: 2)
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
     "max_loss_streak": 7,            # rem kalah beruntun: setelah N kali SL berturut-turut tidak buka posisi baru (0 = mati); lanjut lagi: python snr_bot.py --reset
     "leverage": 5,                   # leverage tetap per koin (dipakai hanya bila leverage_auto = false)
@@ -77,6 +85,8 @@ DEFAULT_COINS = ['GMTUSDT', 'FILUSDT', '1000SHIBUSDT', 'SANDUSDT', 'DOTUSDT', 'G
                  '1000LUNCUSDT', '1INCHUSDT', 'ROSEUSDT', 'ARKMUSDT', 'ANKRUSDT', 'HOTUSDT']   # FTMUSDT is skipped automatically when delisted
 PV, KEEP, SLK, RR, H4_LIMIT, D1_LIMIT = 5, 10, 0.5, 2.0, 600, 400
 BUY_N, BUY_SLK, BUY_D1_LIMIT, BUY_H4_LIMIT = 50, 1.0, 400, 1000
+BZ_N, BZ_K, BZ_Q, BZ_W, BZ_SLK, BZ_H4_LIMIT = 20, 2.0, 0.2, 120, 1.5, 200
+NOT_COINS = ('USDCUSDT', 'BTCDOMUSDT', 'FDUSDUSDT', 'USDPUSDT', 'TUSDUSDT', 'DEFIUSDT')
 H4 = 4 * 3600
 
 log = logging.getLogger('snr')
@@ -197,6 +207,38 @@ def buy_signal(h4, d1):
     return (lvl, atr) if atr and atr > 0 else None
 
 
+def bz_signal(h4):
+    """BZ (identical to the research backtest): squeeze on the candle before the last one (band width in the lowest 20% of the last 120
+    H4 candles), and the LAST closed H4 candle closes below the lower Bollinger band. Returns (lower_band, atr14_h4) or None."""
+    n = len(h4)
+    if n < BZ_N + BZ_W + 1: return None
+    c = [r[4] for r in h4]
+    def band(j):                                                  # SMA20 and sample std (ddof 1) of the 20 closes ending at j
+        w = c[j - BZ_N + 1:j + 1]; m = sum(w) / BZ_N
+        return m, math.sqrt(sum((x - m) ** 2 for x in w) / (BZ_N - 1))
+    k = n - 1
+    mid, sd = band(k)
+    if not c[k] < mid - BZ_K * sd: return None
+    bw = []
+    for j in range(k - BZ_W, k):
+        m, d = band(j); bw.append(4 * d / m if m > 0 else float('inf'))
+    srt = sorted(bw); pos = BZ_Q * (len(srt) - 1); lo = int(math.floor(pos))   # linear quantile (as pandas)
+    q = srt[lo] + (srt[min(lo + 1, len(srt) - 1)] - srt[lo]) * (pos - lo)
+    if not bw[-1] <= q: return None
+    atr = -1.0
+    for i in range(1, n):
+        pc = h4[i - 1][4]; hi, lw = h4[i][2], h4[i][3]
+        tr = max(hi - lw, abs(hi - pc), abs(lw - pc)); atr = tr if atr < 0 else atr + (tr - atr) / 14
+    return (mid - BZ_K * sd, atr) if atr > 0 else None
+
+
+def strat_of(p):
+    return p.get('strat') or ('btc' if p.get('side') == 'BUY' else 'snr')
+
+
+STRAT_NAME = {'snr': 'ALT', 'btc': 'BIG', 'bz': 'BZ'}
+
+
 def closed_klines(api, sym, interval, limit, now_s):
     rows = api.get('/fapi/v1/klines', {'symbol': sym, 'interval': interval, 'limit': limit})
     return [[int(r[0]) // 1000, float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[7])] for r in rows if int(r[6]) // 1000 < now_s]
@@ -269,6 +311,11 @@ class Bot:
         bc = list(self.cfg.get('buy_coins') or []) if self.cfg.get('buy_enabled') else []
         self.buy_coins = [x for x in bc if x in self.filters and x not in set(self.cfg['exclude']) and x not in self.coins]
         if bc: log.info('BUY v1 BTC: %s', ', '.join(self.buy_coins) or 'tidak ada koin aktif')
+        ex = set(self.cfg['exclude'])
+        self.bz_all = [x for x in self.filters if x not in ex and x not in NOT_COINS] if self.cfg.get('bz_enabled') else []
+        old = getattr(self, 'bz_liq', None) or {'day': -1, 'syms': []}; keep = set(self.bz_all)
+        self.bz_liq = {'day': old['day'] if self.bz_all else -1, 'syms': [x for x in old['syms'] if x in keep]}
+        if self.bz_all and old['day'] == -1: log.info('BZ (Bollinger squeeze SELL): semua koin likuid (%d koin USDT di Binance)', len(self.bz_all))
         log.info('Memantau %d koin (%s)', len(self.coins), 'TESTNET' if self.cfg['testnet'] else 'AKUN ASLI')
 
     # ----- account -----
@@ -344,7 +391,7 @@ class Bot:
                 h4 = closed_klines(self.api, sym, '4h', H4_LIMIT + 1, now_s)[-H4_LIMIT:]
                 if not h4 or h4[-1][0] + H4 > now_s + 5 or now_s - (h4[-1][0] + H4) > 600: continue   # last closed H4 must be the one that just closed
                 s = snr_signal(h4)
-                if s: sigs.append((sym, 'SELL', s[0] + SLK * s[1], h4[-1][4], s[0]))
+                if s: sigs.append((sym, 'SELL', s[0] + SLK * s[1], h4[-1][4], s[0], 'snr'))
             except Exception as e:
                 log.warning('%s: %s', sym, e)
             time.sleep(0.15)
@@ -354,13 +401,42 @@ class Bot:
                 if not h4 or h4[-1][0] + H4 > now_s + 5 or now_s - (h4[-1][0] + H4) > 600: continue
                 d1 = closed_klines(self.api, sym, '1d', BUY_D1_LIMIT, now_s)
                 s = buy_signal(h4, d1)
-                if s: sigs.append((sym, 'BUY', h4[-1][4] - BUY_SLK * s[1], h4[-1][4], s[0]))
+                if s: sigs.append((sym, 'BUY', h4[-1][4] - BUY_SLK * s[1], h4[-1][4], s[0], 'btc'))
             except Exception as e:
                 log.warning('%s: %s', sym, e)
             time.sleep(0.15)
+        for sym in self.bz_coins(now_s):
+            try:
+                h4 = closed_klines(self.api, sym, '4h', BZ_H4_LIMIT, now_s)
+                if not h4 or h4[-1][0] + H4 > now_s + 5 or now_s - (h4[-1][0] + H4) > 900: continue
+                s = bz_signal(h4)
+                if s: sigs.append((sym, 'SELL', h4[-1][4] + BZ_SLK * s[1], h4[-1][4], s[0], 'bz'))
+            except Exception as e:
+                log.warning('BZ %s: %s', sym, e)
+            time.sleep(0.05)
         return sigs
 
-    def open_pos(self, sym, side, sl, close):
+    def bz_coins(self, now_s):
+        """liquid coins for BZ, refreshed once per UTC day: 30-day average quote volume (completed days) >= min_volume_usdt"""
+        if not self.cfg.get('bz_enabled') or not getattr(self, 'bz_all', None): return []
+        day = now_s // 86400
+        if getattr(self, 'bz_liq', {}).get('day') == day: return self.bz_liq['syms']
+        try: tick = {t['symbol']: float(t['quoteVolume']) for t in self.api.get('/fapi/v1/ticker/24hr')}
+        except RuntimeError as e:
+            log.warning('BZ: daftar volume tidak terbaca (%s)', e); return getattr(self, 'bz_liq', {}).get('syms', [])
+        mn = float(self.cfg['min_volume_usdt']); out = []
+        for sym in [x for x in self.bz_all if tick.get(x, 0) >= 0.25 * mn]:
+            try:
+                d1 = closed_klines(self.api, sym, '1d', 32, now_s)
+                if len(d1) >= 20 and sum(r[5] for r in d1[-30:]) / min(30, len(d1)) >= mn: out.append(sym)
+            except Exception as e:
+                log.warning('BZ %s: %s', sym, e)
+            time.sleep(0.05)
+        self.bz_liq = {'day': day, 'syms': out}
+        log.info('BZ: %d koin likuid hari ini', len(out))
+        return out
+
+    def open_pos(self, sym, side, sl, close, strat=None):
         """market order on `side` (SELL = v1 SNR, BUY = v1 BTC), then SL and TP (RR 1:2) as Binance algo orders (closePosition)"""
         f = self.filters[sym]
         s = 1 if side == 'BUY' else -1; ex = 'SELL' if side == 'BUY' else 'BUY'
@@ -420,10 +496,11 @@ class Bot:
             self.close_now(sym, filled, side); return
         t = int(time.time())
         ticket = f"{sym}-{o['orderId']}"
-        self.st['positions'][sym] = {'ticket': ticket, 'side': side, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'trim_id': trim_id, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
+        strat = strat or ('btc' if side == 'BUY' else 'snr')
+        self.st['positions'][sym] = {'ticket': ticket, 'side': side, 'strat': strat, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'trim_id': trim_id, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
         save_state(self.st)
-        log.info('%s %s qty %s @ %s | SL %s | TP %s', side, sym, filled, entry, fmt(sl_r, f['tick']), fmt(tp_r, f['tick']))
-        report(self.cfg, {'event': 'open', 'strategy': 'btc' if side == 'BUY' else 'snr', 'ticket': ticket, 'symbol': sym, 'side': side, 'price': entry, 'sl': sl_r, 'tp': tp_r, 'lot': filled, 'time': t})
+        log.info('%s %s %s qty %s @ %s | SL %s | TP %s', STRAT_NAME.get(strat, strat), side, sym, filled, entry, fmt(sl_r, f['tick']), fmt(tp_r, f['tick']))
+        report(self.cfg, {'event': 'open', 'strategy': strat, 'ticket': ticket, 'symbol': sym, 'side': side, 'price': entry, 'sl': sl_r, 'tp': tp_r, 'lot': filled, 'time': t})
 
     def close_now(self, sym, qty, side='SELL'):
         try: self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'SELL' if side == 'BUY' else 'BUY', 'type': 'MARKET', 'quantity': fmt(qty, self.filters[sym]['step']), 'reduceOnly': 'true'})
@@ -472,7 +549,7 @@ class Bot:
                 reason = 'tp' if abs(exit_px - p['tp']) <= 0.25 * r1 else 'sl' if abs(exit_px - p['sl']) <= 0.25 * r1 else 'manual'
             log.info('Posisi %s ditutup (%s) | hasil %.2f USDT', sym, reason.upper(), pnl)
             self.bal_pushed = 0                                   # send the new balance on the next loop
-            report(self.cfg, {'event': 'close', 'strategy': 'btc' if side == 'BUY' else 'snr', 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
+            report(self.cfg, {'event': 'close', 'strategy': strat_of(p), 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
                               'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'],
                               'time': int(max(float(x['time']) for x in buys) / 1000) if buys else int(time.time())})
             cl = self.st.setdefault('closed', []); cl.append([int(time.time()), round(pnl, 4), reason]); del cl[:-300]
@@ -497,18 +574,18 @@ class Bot:
         except RuntimeError: bal = float('nan')
         done = [c for c in self.st.get('closed', []) if c[0] > since]
         res = sum(c[1] for c in done); tp = sum(1 for c in done if c[2] == 'tp'); sl = sum(1 for c in done if c[2] == 'sl')
-        pos = ', '.join(f"{k.replace('USDT', '')} ({v.get('side', 'SELL')})" for k, v in self.st['positions'].items()) or 'tidak ada'
+        pos = ', '.join(f"{k.replace('USDT', '')} ({STRAT_NAME.get(strat_of(v), '')} {v.get('side', 'SELL')})" for k, v in self.st['positions'].items()) or 'tidak ada'
         mx = int(self.cfg.get('max_loss_streak') or 0); ls = self.st.get('loss_streak', 0)
         pos += f"\nKalah beruntun: {ls}" + (f" dari {mx}" + (' — REM AKTIF (--reset untuk lanjut)' if ls >= mx else '') if mx > 0 else '')
         notify(self.cfg, f"Ringkasan {kst.strftime('%H:%M')} (waktu Korea) — bot aktif.\nSaldo Futures: {bal:.2f} USDT\n"
                          f"Sejak ringkasan terakhir: {len(done)} trade selesai (TP {tp}, SL {sl}), hasil {res:+.2f} USDT\nPosisi terbuka: {pos}")
 
     REMOTE = {'risk_mode': ('mode',), 'risk_percent': ('num', 0.1, 5, 1), 'risk_usdt': ('num', 0.5, 500, 2), 'max_positions': ('num', 1, 6, 0),
-              'max_buy_positions': ('num', 0, 4, 0), 'buy_enabled': ('bool',), 'stop_balance_usdt': ('num', 0, 100000, 0), 'max_loss_streak': ('num', 0, 30, 0),
+              'max_buy_positions': ('num', 0, 4, 0), 'buy_enabled': ('bool',), 'bz_enabled': ('bool',), 'max_bz_positions': ('num', 0, 4, 0), 'stop_balance_usdt': ('num', 0, 100000, 0), 'max_loss_streak': ('num', 0, 30, 0),
               'leverage_auto': ('bool',), 'leverage': ('num', 1, 20, 0), 'margin_isolated': ('bool',), 'daily_summary': ('bool',),
               'summary_hours_kst': ('hours',), 'exclude': ('syms',)}
     LABEL = {'risk_mode': 'mode risiko', 'risk_percent': 'risiko %', 'risk_usdt': 'risiko USDT', 'max_positions': 'maks SELL', 'max_buy_positions': 'maks BUY',
-             'buy_enabled': 'BUY aktif', 'stop_balance_usdt': 'rem saldo', 'max_loss_streak': 'rem kalah beruntun', 'leverage_auto': 'leverage otomatis',
+             'buy_enabled': 'BUY aktif', 'bz_enabled': 'BZ aktif', 'max_bz_positions': 'maks BZ', 'stop_balance_usdt': 'rem saldo', 'max_loss_streak': 'rem kalah beruntun', 'leverage_auto': 'leverage otomatis',
              'leverage': 'leverage', 'margin_isolated': 'margin isolated', 'daily_summary': 'ringkasan', 'summary_hours_kst': 'jam ringkasan', 'exclude': 'koin dikecualikan'}
 
     @staticmethod
@@ -553,7 +630,7 @@ class Bot:
             if want != self.cfg.get(k):
                 self.cfg[k] = want
                 changes.append(f"{self.LABEL[k]} {(', '.join(map(str, want)) or '-') if isinstance(want, list) else ('ya' if want is True else 'tidak' if want is False else want)}")
-                if k in ('exclude', 'buy_enabled'): reload = True
+                if k in ('exclude', 'buy_enabled', 'bz_enabled'): reload = True
         paused = c.get('paused') is True
         if paused != self.paused:
             self.paused = paused
@@ -614,11 +691,12 @@ class Bot:
         mx = int(self.cfg.get('max_loss_streak') or 0)
         if mx > 0: log.info('Rem kalah beruntun: berhenti buka posisi baru setelah %d SL berturut-turut (sekarang %d)', mx, self.st['loss_streak'])
         if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
-        log.info('Mode: %s · risiko %s · maks %d posisi SELL + %d BUY · leverage %s', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
+        nbz = int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0
+        log.info('Mode: %s · risiko %s · maks %d posisi SELL + %d BUY + %d BZ · leverage %s', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'],
-                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
+                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, nbz, 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
         last_sync = time.time()
-        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY{' · JEDA dari website' if self.paused else ''}.")
+        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin SELL + {len(self.buy_coins)} koin BUY, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} SELL + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BUY + {nbz} BZ (semua koin likuid){' · JEDA dari website' if self.paused else ''}.")
         self.push_balance()
         while True:
             if time.time() - self.ctl_at > 60: self.control()
@@ -639,9 +717,11 @@ class Bot:
                 random.shuffle(sigs)                                   # several signals at once: random order (as in the backtest)
                 live = self.positions()
                 busy = set(self.st['positions']) | {s for s, a in live.items() if a != 0}
-                n_side = {'SELL': {k for k, v in self.st['positions'].items() if v.get('side', 'SELL') == 'SELL'} | {k for k, a in live.items() if a < 0},
-                          'BUY': {k for k, v in self.st['positions'].items() if v.get('side') == 'BUY'} | {k for k, a in live.items() if a > 0}}
-                cap = {'SELL': int(self.cfg['max_positions']), 'BUY': int(self.cfg.get('max_buy_positions') or 0)}
+                own = self.st['positions']                              # positions per part; unknown live positions: short = SNR, long = BUY
+                n_side = {g: {k for k, v in own.items() if strat_of(v) == g} for g in ('snr', 'btc', 'bz')}
+                n_side['snr'] |= {k for k, a in live.items() if a < 0 and k not in own}; n_side['btc'] |= {k for k, a in live.items() if a > 0 and k not in own}
+                cap = {'snr': int(self.cfg['max_positions']), 'btc': int(self.cfg.get('max_buy_positions') or 0),
+                       'bz': int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0}
                 stop = float(self.cfg.get('stop_balance_usdt') or 0)
                 if sigs and stop > 0 and not self.cfg['dry_run']:
                     bal = self.balance()
@@ -656,14 +736,15 @@ class Bot:
                 if sigs and mx > 0 and self.st.get('loss_streak', 0) >= mx:
                     log.error('REM KALAH BERUNTUN aktif (%d SL berturut-turut) — %d sinyal dilewati. Lanjut lagi: python snr_bot.py --reset', self.st['loss_streak'], len(sigs))
                     sigs = []
-                for sym, side, sl, close, level in sigs:
+                for sym, side, sl, close, level, strat in sigs:
                     if sym in busy: continue
-                    if not self.cfg['dry_run'] and len(n_side[side]) >= cap[side]:
-                        log.info('Sinyal %s %s dilewati: sudah %d posisi %s', side, sym, len(n_side[side]), side); continue
-                    log.info('Sinyal %s %s: close %s menembus %s %s', side, sym, close, 'high 50 H4' if side == 'BUY' else 'support', level)
-                    try: self.open_pos(sym, side, sl, close)
+                    nm = STRAT_NAME[strat]
+                    if not self.cfg['dry_run'] and len(n_side[strat]) >= cap[strat]:
+                        log.info('Sinyal %s %s %s dilewati: sudah %d posisi %s', nm, side, sym, len(n_side[strat]), nm); continue
+                    log.info('Sinyal %s %s %s: close %s menembus %s %s', nm, side, sym, close, {'btc': 'high 50 H4', 'snr': 'support', 'bz': 'band bawah Bollinger (squeeze)'}[strat], level)
+                    try: self.open_pos(sym, side, sl, close, strat)
                     except RuntimeError as e: log.error('%s: order gagal: %s', sym, e)
-                    busy.add(sym); n_side[side].add(sym)
+                    busy.add(sym); n_side[strat].add(sym)
                 if not sigs: log.info('Tidak ada sinyal.')
             try: self.manage()
             except RuntimeError as e: log.warning('Cek posisi gagal: %s', e)
