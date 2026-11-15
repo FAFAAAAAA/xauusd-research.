@@ -3109,7 +3109,13 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         const glow = (x: number, y: number, z: number, r: number, col: string) => { const [gx, gy] = iso(x, y, z); const g = c.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(gx - r, gy - r, 2 * r, 2 * r); };
         for (let r = 0; r < ROOMS; r++) {
           c.setTransform(k * V.z, 0, 0, k * V.z, k * (V.tx + roomX(r) * V.z), k * (V.ty + roomY(r) * V.z));
-          glow(6, 5, 70, 130, 'rgba(255,214,120,.14)');   // warm yellow room light
+          {   // warm yellow light, even over the floor and the back wall (fading out softly towards the ceiling, no hard edges)
+            const WA = 0.075;
+            c.fillStyle = `rgba(255,212,120,${WA})`; c.beginPath(); for (const [x, y] of [[0, 0], [NX, 0], [NX, NY], [0, NY]] as const) { const [px, py] = iso(x, y, 0); c.lineTo(px, py); } c.closePath(); c.fill();
+            const [wx, wy] = iso(0, 0, 0); c.save(); c.translate(wx, wy); c.transform(1, 0.5, 0, 1, 0, 0);
+            const wg = c.createLinearGradient(0, 0, 0, -175); wg.addColorStop(0, `rgba(255,212,120,${WA})`); wg.addColorStop(0.62, `rgba(255,212,120,${WA})`); wg.addColorStop(1, 'rgba(255,212,120,0)');
+            c.fillStyle = wg; c.fillRect(0, -175, NX * TW, 175); c.restore();
+          }
           if (r === 1) { for (const y0 of [1.0, 3.4, 6.0, 8.4]) { glow(0.9, y0 + 0.1, 22, 26, 'rgba(255,200,90,.26)'); glow(0.8, y0 + 0.9, 26, 16, 'rgba(90,170,255,.15)'); } glow(5.25, 0.4, 22, 24, 'rgba(255,200,90,.24)'); glow(8.9, 0, 56, 40, 'rgba(80,160,255,.16)'); }
           if (r === 0) { glow(7.1, 4.0, 22, 26, 'rgba(255,200,90,.26)'); glow(2.2, 0, 50, 30, 'rgba(242,194,48,.14)'); }
           if (r === 2) { glow(8.0, 0.4, 30, 30, 'rgba(255,200,90,.18)'); glow(4.8, 8.8, 20, 34, 'rgba(255,200,90,.12)'); }
