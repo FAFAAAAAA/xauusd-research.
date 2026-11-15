@@ -96,8 +96,8 @@ const LIFTCTL: { busyUntil: number; ride: Ride | null; who: string } = { busyUnt
 
 const S0: Array<Omit<Spot, 'room'>> = [
   { id: 'safe', x: 8.37, y: 1.45, face: 'ny', pose: 'stand', label: 'BUKA BRANKAS', zone: 'boss' },
-  { id: 'trophy', x: 9.7, y: 1.2, face: 'ny', pose: 'stand', label: 'LIHAT PIALA', zone: 'boss' },
-  { id: 'golf', x: 8.7, y: 5.3, face: 'px', pose: 'stand', label: 'MAIN GOLF', prop: 'club', zone: 'boss' },
+  { id: 'trophy', x: 9.7, y: 1.2, face: 'ny', pose: 'stand', label: 'LIHAT PIALA', zone: 'boss', alt: [{ label: 'FOTO SAMA PIALA', prop: 'hp' }, { label: 'LAP PIALA' }] },
+  { id: 'golf', x: 8.7, y: 5.3, face: 'px', pose: 'stand', label: 'MAIN GOLF', prop: 'club', zone: 'boss', alt: [{ label: 'LATIHAN PUTT' }] },
   { id: 'meet1', x: 2.0, y: 7.6, face: 'px', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'BIKIN LAPORAN', prop: 'laptop' }] },
   { id: 'meet2', x: 4.0, y: 7.6, face: 'nx', pose: 'sit', label: 'RAPAT', zone: 'meet' },
   { id: 'meet3', x: 2.0, y: 8.5, face: 'px', pose: 'sit', label: 'RAPAT', zone: 'meet', alt: [{ label: 'PRESENTASI', prop: 'laptop' }] },
@@ -105,26 +105,26 @@ const S0: Array<Omit<Spot, 'room'>> = [
   { id: 'bsofa1', x: 9.75, y: 9.55, face: 'ny', pose: 'sit', label: 'NUNGGU BOS', zone: 'lounge' },
   { id: 'bsofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'NUNGGU BOS', zone: 'lounge' },
   { id: 'bwin', x: 0.95, y: 4.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
-  { id: 'fish', x: 13.6, y: 1.25, face: 'ny', pose: 'stand', label: 'LIHAT IKAN', zone: 'boss', alt: [{ label: 'KASIH MAKAN IKAN' }] },
-  { id: 'bsofa3', x: 13.6, y: 6.2, face: 'nx', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'BACA KORAN', prop: 'paper' }] },
+  { id: 'fish', x: 13.6, y: 1.25, face: 'ny', pose: 'stand', label: 'LIHAT IKAN', zone: 'boss', alt: [{ label: 'KASIH MAKAN IKAN' }, { label: 'FOTO IKAN', prop: 'hp' }] },
+  { id: 'bsofa3', x: 13.6, y: 6.2, face: 'nx', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'BACA KORAN', prop: 'paper' }, { label: 'NGOPI SORE', prop: 'cup' }] },
 ];
 const S1: Array<Omit<Spot, 'room'>> = [
-  { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
+  { id: 'water', x: 7.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break', alt: [{ label: 'ISI TUMBLER' }, { label: 'NGOBROL DI DISPENSER' }] },
   { id: 'trash', x: 3.3, y: 1.35, face: 'ny', pose: 'stand', label: 'BUANG SAMPAH', prop: 'trash' },
   { id: 'printer', x: 10.35, y: 1.35, face: 'ny', pose: 'stand', label: 'AMBIL PRINT', prop: 'paper', alt: [{ label: 'FOTOKOPI' }, { label: 'ISI KERTAS' }, { label: 'SCAN DOKUMEN' }] },
-  { id: 'tv', x: 9.0, y: 2.6, face: 'ny', pose: 'stand', label: 'LIHAT CHART', zone: 'meet' },
-  { id: 'win1', x: 0.75, y: 3.2, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'tv', x: 9.0, y: 2.6, face: 'ny', pose: 'stand', label: 'LIHAT CHART', zone: 'meet', alt: [{ label: 'NONTON BERITA' }, { label: 'DISKUSI CHART' }] },
+  { id: 'win1', x: 0.75, y: 3.2, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }, { label: 'FOTO PEMANDANGAN', prop: 'hp' }, { label: 'MELAMUN' }] },
   { id: 'win2', x: 0.75, y: 5.45, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'TELEPON', prop: 'phone' }] },
-  { id: 'win3', x: 0.75, y: 7.7, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'win3', x: 0.75, y: 7.7, face: 'nx', pose: 'stand', label: 'LIHAT LUAR', alt: [{ label: 'MAIN HP', prop: 'hp' }, { label: 'CEK CUACA', prop: 'hp' }] },
   // (the two front chairs of this table are Sari's and Rina's desks: finance & risk)
   { id: 'hot3', x: 6.95, y: 6.0, face: 'ny', pose: 'sit', label: 'KERJA BARENG', zone: 'meet' },
-  { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }] },
-  { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN' },
+  { id: 'phone', x: 8.6, y: 8.5, face: 'py', pose: 'stand', label: 'TELEPON', prop: 'phone', alt: [{ label: 'TELEPON KLIEN' }, { label: 'TELEPON MAMA' }, { label: 'VIDEO CALL', prop: 'hp' }, { label: 'PESAN OJOL', prop: 'hp' }] },
+  { id: 'stretch', x: 6.2, y: 8.2, face: 'py', pose: 'stretch', label: 'PEREGANGAN', alt: [{ label: 'YOGA SEBENTAR' }, { label: 'SENAM LEHER' }] },
   { id: 'rest1', x: 13.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
-  { id: 'rest2', x: 14.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'BACA BUKU', prop: 'book' }] },
+  { id: 'rest2', x: 14.05, y: 10.15, face: 'ny', pose: 'sit', label: 'ISTIRAHAT', zone: 'lounge', alt: [{ label: 'BACA BUKU', prop: 'book' }, { label: 'BELAJAR TRADING', prop: 'book' }, { label: 'NGEMIL', prop: 'food' }] },
 ];
 const S2: Array<Omit<Spot, 'room'>> = [
-  { id: 'coffee', x: 7.55, y: 1.3, face: 'ny', pose: 'stand', label: 'BIKIN KOPI', prop: 'cup', zone: 'break', alt: [{ label: 'BIKIN TEH' }, { label: 'SEDUH MIE' }] },
+  { id: 'coffee', x: 7.55, y: 1.3, face: 'ny', pose: 'stand', label: 'BIKIN KOPI', prop: 'cup', zone: 'break', alt: [{ label: 'BIKIN TEH' }, { label: 'SEDUH MIE' }, { label: 'BIKIN JUS' }, { label: 'MASAK TELUR' }] },
   { id: 'sink', x: 8.5, y: 1.3, face: 'ny', pose: 'stand', label: 'CUCI GELAS', zone: 'break', alt: [{ label: 'CUCI TANGAN' }, { label: 'ISI BOTOL' }] },
   { id: 'fridge', x: 12.62, y: 1.45, face: 'ny', pose: 'stand', label: 'AMBIL SNACK', prop: 'food', zone: 'break', alt: [{ label: 'AMBIL MINUMAN', prop: 'can' }] },
   { id: 'water2', x: 2.6, y: 1.25, face: 'ny', pose: 'stand', label: 'MINUM', prop: 'cup', zone: 'break' },
@@ -134,18 +134,18 @@ const S2: Array<Omit<Spot, 'room'>> = [
   { id: 'barbel', x: 1.55, y: 5.9, face: 'nx', pose: 'stand', label: 'ANGKAT BARBEL', prop: 'dumbbell', zone: 'gym' },
   { id: 'eat1', x: 6.7, y: 5.4, face: 'px', pose: 'sit', label: 'NGEMIL', prop: 'food', zone: 'eat' },
   { id: 'eat2', x: 8.5, y: 5.4, face: 'nx', pose: 'sit', label: 'NGEMIL', prop: 'food', zone: 'eat' },
-  { id: 'eat3', x: 7.6, y: 6.3, face: 'ny', pose: 'sit', label: 'NGOPI', zone: 'eat' },
-  { id: 'eat4', x: 7.6, y: 4.5, face: 'py', pose: 'sit', label: 'NGOPI', zone: 'eat' },
-  { id: 'bean1', x: 3.75, y: 8.15, face: 'px', pose: 'bean', label: 'SANTAI', prop: 'laptop', zone: 'lounge', alt: [{ label: 'MAIN GAME', prop: 'hp' }] },
+  { id: 'eat3', x: 7.6, y: 6.3, face: 'ny', pose: 'sit', label: 'NGOPI', zone: 'eat', alt: [{ label: 'MAKAN SIANG', prop: 'food' }, { label: 'NGOBROL' }] },
+  { id: 'eat4', x: 7.6, y: 4.5, face: 'py', pose: 'sit', label: 'NGOPI', zone: 'eat', alt: [{ label: 'MAKAN BAKSO', prop: 'food' }, { label: 'GOSIP' }] },
+  { id: 'bean1', x: 3.75, y: 8.15, face: 'px', pose: 'bean', label: 'SANTAI', prop: 'laptop', zone: 'lounge', alt: [{ label: 'MAIN GAME', prop: 'hp' }, { label: 'NONTON YOUTUBE', prop: 'hp' }] },
   { id: 'bean2', x: 5.75, y: 9.65, face: 'ny', pose: 'bean', label: 'SANTAI', prop: 'laptop', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa1', x: 9.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }, { label: 'MAIN HP', prop: 'hp' }] },
   { id: 'sofa2', x: 10.75, y: 9.55, face: 'ny', pose: 'sit', label: 'SANTAI', zone: 'lounge', alt: [{ label: 'TIDUR SIANG', pose: 'nap' }] },
-  { id: 'hp', x: 6.9, y: 9.4, face: 'py', pose: 'stand', label: 'MAIN HP', prop: 'hp' },
+  { id: 'hp', x: 6.9, y: 9.4, face: 'py', pose: 'stand', label: 'MAIN HP', prop: 'hp', alt: [{ label: 'SELFIE' }, { label: 'CEK HARGA BTC' }, { label: 'BALAS CHAT' }] },
   { id: 'win4', x: 0.95, y: 7.6, face: 'nx', pose: 'stand', label: 'LIHAT LUAR' },
   { id: 'vend', x: 3.45, y: 1.3, face: 'ny', pose: 'stand', label: 'BELI MINUM', prop: 'can', zone: 'break', alt: [{ label: 'BELI SNACK', prop: 'food' }] },
-  { id: 'arcade', x: 11.65, y: 1.35, face: 'ny', pose: 'stand', label: 'MAIN ARCADE', zone: 'lounge' },
+  { id: 'arcade', x: 11.65, y: 1.35, face: 'ny', pose: 'stand', label: 'MAIN ARCADE', zone: 'lounge', alt: [{ label: 'MAIN TETRIS' }, { label: 'CETAK SKOR TINGGI' }] },
   { id: 'pijat', x: 13.9, y: 5.2, face: 'nx', pose: 'sit', label: 'KURSI PIJAT', zone: 'lounge', alt: [{ label: 'PIJAT SANTAI', pose: 'nap' }] },
-  { id: 'bench', x: 11.0, y: 11.0, face: 'ny', pose: 'sit', label: 'NUNGGU TAMU', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }] },
+  { id: 'bench', x: 11.0, y: 11.0, face: 'ny', pose: 'sit', label: 'NUNGGU TAMU', zone: 'lounge', alt: [{ label: 'MAIN HP', prop: 'hp' }, { label: 'BACA MAJALAH', prop: 'paper' }, { label: 'CARI ANGIN' }] },
 ];
 const SPOTS: Spot[] = [...S0.map((q) => ({ ...q, room: 0 })), ...S1.map((q) => ({ ...q, room: 1 })), ...S2.map((q) => ({ ...q, room: 2 }))];
 const PATROL: Spot[] = ([
@@ -2856,6 +2856,19 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         let a = agents[p.id];
         const fresh = !a;
         if (!a) a = agents[p.id] = { room: p.seat.room, pending: null, hiddenUntil: 0, x: p.seat.x, y: p.seat.y, vx: 0, vy: 0, face: p.seat.face, path: [], act: p.id === 'vet' ? { ...p.seat, prop: 'tablet' } : p.seat, until: wall + 2000 + Math.random() * 9000, dist: 0, speed: 1.45, carry: null, carryUntil: 0, patrol: 0, last: s.label, run: false, scoldUntil: 0, scoldBy: '', bubble: null, chase: 0, celebrated: s.tp ? s.tag?.text ?? '' : '', angryAt: wall - 6000 };
+        // every app open looks different: about half of the staff start somewhere else in the office doing something, and nobody gets up at the same moment
+        if (fresh && !s.sleep && !['vet', 'bos', 'jaga', 'tamu', 'kurir', 'ob', 'tg'].includes(p.id)) {
+          a.until = wall + 4000 + Math.random() * 40_000;
+          if (Math.random() < 0.5) {
+            const free = SPOTS.filter((q) => q.zone !== 'boss' && q.id !== 'toilet' && q.pose !== 'run' && !taken.has(q.id));
+            const q = free[Math.floor(Math.random() * free.length)];
+            if (q) {
+              const alt = q.alt && Math.random() < 0.5 ? q.alt[Math.floor(Math.random() * q.alt.length)] : null;
+              a.act = alt ? { ...q, ...alt, alt: undefined } : q; a.room = q.room; a.x = q.x; a.y = q.y; a.face = q.face;
+              a.until = wall + 6000 + Math.random() * 25_000; taken.add(q.id);
+            }
+          }
+        }
         if (fresh && p.id === 'tamu') { a.hiddenUntil = wall + 1200; a.until = 0; a.face = 'py'; }
         if (fresh && p.id === 'kurir') { a.hiddenUntil = wall + 1200; a.carry = 'box'; a.carryUntil = wall + 14_000; a.until = 0; a.face = 'py'; }
         if (wall < a.hiddenUntil) continue;                                          // riding the lift
