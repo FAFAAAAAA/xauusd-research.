@@ -34,7 +34,7 @@
 //| bukan jaminan hasil nyata.                                         |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.00"
+#property version   "1.01"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -157,15 +157,38 @@ double AtrLast(const Bar &a[], int n, int len, int win)
    }
    return e;
 }
-//--- lot for a money risk and an SL distance (price) on `sym`, rounded DOWN to the volume step; 0 if below the broker minimum
-double LotFor(string sym, double riskMoney, double dist)
+//--- money lost per 1.00 lot when price moves `dist` against the position. v1.01/v1.15 (15 Nov 2026): the LARGEST of three
+//    independent estimates (broker profit calculator, tick value, contract size). A FundingPips demo reported a far too small tick
+//    value for XAUUSD: the EA computed 5.00 lots instead of 0.06 for a 2% risk (12 Nov 2026, -4.2% before the daily guard closed it).
+double LossPerLot(string sym, double dist)
 {
+   if(dist <= 0) return 0;
+   double worst = 0, p = 0, px = SymbolInfoDouble(sym, SYMBOL_BID);
+   if(px > dist && OrderCalcProfit(ORDER_TYPE_BUY, sym, 1.0, px, px - dist, p) && p < 0) worst = -p;
    double tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE_LOSS);
    if(tv <= 0) tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE);
    double ts = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_SIZE);
+   if(tv > 0 && ts > 0) worst = MathMax(worst, dist / ts * tv);
+   double cs = SymbolInfoDouble(sym, SYMBOL_TRADE_CONTRACT_SIZE);
+   if(cs > 0 && SymbolInfoString(sym, SYMBOL_CURRENCY_PROFIT) == AccountInfoString(ACCOUNT_CURRENCY)) worst = MathMax(worst, dist * cs);
+   return worst;
+}
+//--- one line at start: what 1.00 lot loses on a move of `dist` by each method (check that the three agree)
+void LotCheck(string sym, double dist)
+{
+   double p = 0, px = SymbolInfoDouble(sym, SYMBOL_BID), a = 0;
+   if(px > dist && OrderCalcProfit(ORDER_TYPE_BUY, sym, 1.0, px, px - dist, p)) a = -p;
+   double tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE_LOSS); if(tv <= 0) tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE);
+   double ts = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_SIZE), cs = SymbolInfoDouble(sym, SYMBOL_TRADE_CONTRACT_SIZE);
+   PrintFormat("Cek lot %s: 1.00 lot, harga bergerak %.2f = rugi %.2f (kalkulator broker) / %.2f (tick value %.5f, tick %.5f) / %.2f (kontrak %.2f). Dipakai: %.2f",
+               sym, dist, a, ts > 0 ? dist / ts * tv : 0, tv, ts, dist * cs, cs, LossPerLot(sym, dist));
+}
+//--- lot for a money risk and an SL distance (price) on `sym`, rounded DOWN to the volume step; 0 if below the broker minimum
+double LotFor(string sym, double riskMoney, double dist)
+{
    double step = SymbolInfoDouble(sym, SYMBOL_VOLUME_STEP), mn = SymbolInfoDouble(sym, SYMBOL_VOLUME_MIN), mx = SymbolInfoDouble(sym, SYMBOL_VOLUME_MAX);
-   if(tv <= 0 || ts <= 0 || dist <= 0 || step <= 0 || riskMoney <= 0) return 0;
-   double perLot = dist / ts * tv;
+   double perLot = LossPerLot(sym, dist);
+   if(perLot <= 0 || step <= 0 || riskMoney <= 0) return 0;
    double lot = MathFloor(riskMoney / perLot / step + 1e-9) * step;
    if(lot < mn) return 0;
    return MathMin(lot, mx);
@@ -617,7 +640,7 @@ void Status()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
-   string s = StringFormat("PROP EA v1.00 | risiko %.2f%% | v1 XAU %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
+   string s = StringFormat("PROP EA v1.01 | risiko %.2f%% | v1 XAU %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
                            InpUseXau ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS);
    if(PropOn())
    {
@@ -697,6 +720,8 @@ int OnInit()
    XS = InpXauSymbol; NS = InpNasSymbol;
    if(InpUseXau && !CheckSymbol(XS)) return INIT_PARAMETERS_INCORRECT;
    if(InpUseNas && !CheckSymbol(NS)) return INIT_PARAMETERS_INCORRECT;
+   if(InpUseXau) LotCheck(XS, 10.0);
+   if(InpUseNas) LotCheck(NS, 100.0);
    tradeX.SetExpertMagicNumber(InpXauMagic); tradeX.SetDeviationInPoints(InpXauSlippagePts);
    tradeN.SetExpertMagicNumber(InpNasMagic); tradeN.SetDeviationInPoints(InpNasSlippagePts);
    if(InpUseXau) tradeX.SetTypeFillingBySymbol(XS);

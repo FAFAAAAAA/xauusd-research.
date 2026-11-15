@@ -32,7 +32,7 @@
 //| jaminan hasil nyata.                                               |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.00"
+#property version   "1.01"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -186,6 +186,7 @@ int AlignedBreakout(const MqlRates &h1[], int nh, int i, int off, double &atr)
 
 int OnInit()
 {
+   LotCheck(_Symbol, 100.0);
    trade.SetExpertMagicNumber(InpMagic);
    trade.SetDeviationInPoints(InpSlippagePts);
    trade.SetTypeFillingBySymbol(_Symbol);
@@ -196,15 +197,39 @@ int OnInit()
 
 string GvName(int side, long barTime) { return StringFormat("NASv1_%I64d_%d_%I64d", InpMagic, side, barTime); }
 
+//--- money lost per 1.00 lot when price moves `dist` against the position. v1.01/v1.15 (15 Nov 2026): the LARGEST of three
+//    independent estimates (broker profit calculator, tick value, contract size). A FundingPips demo reported a far too small tick
+//    value for XAUUSD: the EA computed 5.00 lots instead of 0.06 for a 2% risk (12 Nov 2026, -4.2% before the daily guard closed it).
+double LossPerLot(string sym, double dist)
+{
+   if(dist <= 0) return 0;
+   double worst = 0, p = 0, px = SymbolInfoDouble(sym, SYMBOL_BID);
+   if(px > dist && OrderCalcProfit(ORDER_TYPE_BUY, sym, 1.0, px, px - dist, p) && p < 0) worst = -p;
+   double tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE_LOSS);
+   if(tv <= 0) tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE);
+   double ts = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_SIZE);
+   if(tv > 0 && ts > 0) worst = MathMax(worst, dist / ts * tv);
+   double cs = SymbolInfoDouble(sym, SYMBOL_TRADE_CONTRACT_SIZE);
+   if(cs > 0 && SymbolInfoString(sym, SYMBOL_CURRENCY_PROFIT) == AccountInfoString(ACCOUNT_CURRENCY)) worst = MathMax(worst, dist * cs);
+   return worst;
+}
+//--- one line at start: what 1.00 lot loses on a move of `dist` by each method (check that the three agree)
+void LotCheck(string sym, double dist)
+{
+   double p = 0, px = SymbolInfoDouble(sym, SYMBOL_BID), a = 0;
+   if(px > dist && OrderCalcProfit(ORDER_TYPE_BUY, sym, 1.0, px, px - dist, p)) a = -p;
+   double tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE_LOSS); if(tv <= 0) tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE);
+   double ts = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_SIZE), cs = SymbolInfoDouble(sym, SYMBOL_TRADE_CONTRACT_SIZE);
+   PrintFormat("Cek lot %s: 1.00 lot, harga bergerak %.2f = rugi %.2f (kalkulator broker) / %.2f (tick value %.5f, tick %.5f) / %.2f (kontrak %.2f). Dipakai: %.2f",
+               sym, dist, a, ts > 0 ? dist / ts * tv : 0, tv, ts, dist * cs, cs, LossPerLot(sym, dist));
+}
 //--- lot for a $ risk and an SL distance (price), rounded DOWN to the volume step; 0 if below the broker minimum
 double LotFor(double riskMoney, double dist)
 {
-   double tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
-   if(tv <= 0) tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
-   double ts = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
    double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP), mn = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN), mx = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
-   if(tv <= 0 || ts <= 0 || dist <= 0 || step <= 0) return 0;
-   double perLot = dist / ts * tv;
+   double perLotX = LossPerLot(_Symbol, dist);
+   if(perLotX <= 0 || step <= 0) return 0;
+   double perLot = perLotX;                           // money lost per 1.00 lot if SL is hit
    double lot = MathFloor(riskMoney / perLot / step + 1e-9) * step;
    if(lot < mn) return 0;
    return MathMin(lot, mx);
