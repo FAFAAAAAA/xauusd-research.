@@ -8,9 +8,9 @@ export type Market = 'forex' | 'crypto';
 export const MARKETS: ReadonlyArray<readonly [Market, string]> = [['crypto', 'Crypto'], ['forex', 'Forex']];
 
 /** adapter key → market */
-const ADAPTER: Record<string, Market> = { metode_crypto_donchian: 'crypto', metode_alt_volbreak: 'crypto', metode_alt_breakdown: 'crypto', metode_snr_sell: 'crypto' };
+const ADAPTER: Record<string, Market> = { metode_crypto_donchian: 'crypto', metode_alt_volbreak: 'crypto', metode_alt_breakdown: 'crypto', metode_snr_sell: 'crypto', metode_bz: 'crypto' };
 /** strategy label of a backtest session ("metode <version>") → market */
-const VERSION: Record<string, Market> = { 'metode crypto-donchian-v1': 'crypto', 'metode alt-volbreak-v1': 'crypto', 'metode alt-breakdown-v1': 'crypto', 'metode snr-sell-v1': 'crypto' };
+const VERSION: Record<string, Market> = { 'metode crypto-donchian-v1': 'crypto', 'metode alt-volbreak-v1': 'crypto', 'metode alt-breakdown-v1': 'crypto', 'metode snr-sell-v1': 'crypto', 'metode bz-v1': 'crypto' };
 /** journal / risk-calculator keys per market (in display order) */
 export const JOURNAL_KEYS: Record<Market, string[]> = { forex: ['v2', 'nas'], crypto: ['snr', 'btc', 'bz'] };
 export const RISK_KEYS: Record<Market, Array<'v2' | 'nas' | 'btc' | 'alt' | 'snr' | 'bz'>> = { forex: ['v2', 'nas'], crypto: ['snr', 'bz'] };
