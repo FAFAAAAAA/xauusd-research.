@@ -304,7 +304,7 @@ export default function TradePage() {
             const tap = STRATEGY_INFO[k] ? { role: 'button', tabIndex: 0, onClick: () => setInfo(k), onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter') setInfo(k); } } : {};
             return (
               <div key={k} className={`perf-card${STRATEGY_INFO[k] ? ' tap' : ''}`} {...tap}>
-                <div className="perf-head"><span className="perf-name">{NAME[k] ?? k}{STRATEGY_INFO[k] ? <span className="perf-more" aria-hidden>Strategi ›</span> : null}</span><span className={`perf-pnl ${tone(s.pnl)}`}>{money(s.pnl)}</span></div>
+                <div className="perf-head"><span className="perf-name">{NAME[k] ?? k}{STRATEGY_INFO[k] ? <span className="perf-more" aria-label="Info strategi"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9.5" /><path d="M12 11v6" /><circle cx="12" cy="7.6" r=".6" fill="currentColor" /></svg></span> : null}</span><span className={`perf-pnl ${tone(s.pnl)}`}>{money(s.pnl)}</span></div>
                 <div className="perf-bar" aria-label={`Win ${win == null ? '—' : win.toFixed(0) + '%'}, backtest ${bt == null ? '—' : bt.toFixed(0) + '%'}`}>
                   <span className="fill" style={{ width: `${Math.min(100, win ?? 0)}%` }} />
                   {bt != null ? <span className="mark" style={{ left: `${bt}%` }} /> : null}
