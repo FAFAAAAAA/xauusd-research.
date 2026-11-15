@@ -448,7 +448,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const b = biz(ctx.data, wall), tp = b.todayAll.filter((t) => t.result === 'tp').length, sl = b.todayAll.filter((t) => t.result === 'sl').length;
     const pnl = b.todayAll.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
     const line1: [string, string] = b.todayAll.length ? [`Hari ini ${tp} TP, ${sl} SL, total ${usd2(pnl)}`, pnl >= 0 ? '#2e9e5b' : '#e5242b'] : ['Hari ini belum ada trade selesai, pak', '#1e1f23'];
-    const bal = [ctx.data.binance ? `Binance $${ctx.data.binance.wallet.toFixed(2)}` : '', ctx.data.mt5 ? `MT5 $${ctx.data.mt5.wallet.toFixed(2)}` : ''].filter(Boolean).join(', ');
+    const bal = ctx.data.binance ? `Binance $${ctx.data.binance.wallet.toFixed(2)}` : '';   // office money only (MT5 prop account stays out)
     const at = (label: string, more: Partial<Spot> = {}) => ({ ...X.ttd, id: 'ev-laporan-akun', label, prop: 'paper' as Prop, ...more });
     const plans: Record<string, Step[]> = {
       akun: [
@@ -833,7 +833,7 @@ export function biz(data: OfficeData, now: number) {
   const last = cr.filter((t) => (t.closedAt ?? 0) >= pm0.getTime() && (t.closedAt ?? 0) < m0.getTime());
   const todayB = sum(today), wallet = data.binance?.wallet ?? 0;
   const todayPct = wallet - todayB > 0 ? (todayB / (wallet - todayB)) * 100 : 0;          // today's result vs the balance at the start of the day
-  const openN = data.trades.filter((t) => t.result === 'open').length;
+  const openN = data.trades.filter((t) => t.result === 'open' && !isMt5Trade(t)).length;
   const level: 'RISIKO AMAN' | 'WASPADA' | 'BAHAYA' = streak >= 5 || todayPct <= -10 ? 'BAHAYA' : streak >= 3 || todayPct <= -5 ? 'WASPADA' : 'RISIKO AMAN';
   const why = streak >= 3 ? `SL ${streak}× beruntun` : todayPct <= -5 ? `Hari ini ${todayPct.toFixed(1)}%` : '';
   return { streak, todayB, todayPct, todayAll, openN, level, why, wallet, month, monthPnl: sum(month), last, lastPnl: sum(last), pmName: pm0.toLocaleString('id-ID', { month: 'long' }), mName: m0.toLocaleString('id-ID', { month: 'long' }) };
@@ -3194,7 +3194,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
                   <div><small>Hari ini</small><b className={b.todayAll.length ? (b.todayAll.reduce((a, t) => a + Number(t.pnl ?? 0), 0) >= 0 ? 'up' : 'dn') : ''}>{money(b.todayAll.reduce((a, t) => a + Number(t.pnl ?? 0), 0))}</b></div>
                   <div><small>Bulan ini</small><b className={b.monthPnl > 0 ? 'up' : b.monthPnl < 0 ? 'dn' : ''}>{money(b.monthPnl)}</b></div>
                   <div><small>Binance</small><b>{data.binance ? `$${data.binance.wallet.toFixed(2)}` : '—'}</b></div>
-                  <div><small>MT5</small><b>{data.mt5 ? `$${data.mt5.wallet.toFixed(2)}` : '—'}</b></div>
                 </div>;
               })() : null}
               {strat ? <div className="oc-stats">

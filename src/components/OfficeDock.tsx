@@ -109,7 +109,6 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   }
   for (const v of Object.values(posB)) floatB += v;
   if (!liveB && j.binance) floatB = j.binance.upnl ?? floatB;
-  const floatM = j.mt5?.upnl ?? 0;
   const data: OfficeData = { ...j, market, cal, btc, binance: j.binance ? { ...j.binance, pos: posB } : j.binance };
   const today = new Date(now); today.setHours(0, 0, 0, 0);
   const closedToday = j.trades.filter((t) => t.result !== 'open' && t.closedAt && t.closedAt >= today.getTime());
@@ -120,7 +119,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   const tone = (n: number) => (n > 0 ? '#2ee59d' : n < 0 ? '#ff6b6b' : undefined);
   const screen: ScreenLine[] = [
     { k: 'BINANCE', v: j.binance ? usd(j.binance.wallet + floatB) : '—' },
-    { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet + floatM) : '—' },
+    { k: 'MT5', v: j.mt5 ? usd(j.mt5.wallet) : '—' },   // MT5 = balance only on the LIVE screen (prop account, not office money)
     { k: 'PNL HARI INI', v: usd(todayB, true), color: tone(todayB) },
     { k: 'FLOATING', v: openB ? `${openB}× ${usd(fl, true)}` : 'tidak ada', color: openB ? tone(fl) : undefined },
   ];
