@@ -1050,8 +1050,7 @@ function drawRoofDeck(c: C, night: boolean) {
 }
 
 /* ---------- the static room ---------- */
-const SKY_FAR = Array.from({ length: 24 }, (_, i) => ({ y: 0.3 + i * 0.5 + hash(`sf${i}`) * 0.2, w: 0.38 + hash(`sfw${i}`) * 0.3, h: 120 + hash(`sfh${i}`) * 220, ant: hash(`sfa${i}`) > 0.7 }));
-const SKY_NEAR = Array.from({ length: 18 }, (_, i) => ({ y: 0.5 + i * 0.66 + hash(`sn${i}`) * 0.25, w: 0.45 + hash(`snw${i}`) * 0.35, h: 70 + hash(`snh${i}`) * 190, ant: hash(`sna${i}`) > 0.85 }));
+const CITY = Array.from({ length: 26 }, (_, i) => ({ y: 0.5 + i * 0.4 + hash(`b${i}`) * 0.15, w: 0.25 + hash(`w${i}`) * 0.3, h: 22 + hash(`h${i}`) * 42 }));
 // the colour at the very top of the sky: also used above the drawing and behind the phone's clock, so there is no visible edge
 const skyTop = (night: boolean) => (night ? '#03060f' : PHASE === 'pagi' ? DAWN[0] : PHASE === 'sore' ? DUSK[0] : THEME.sky?.[0] ?? '#5aa8e0');
 /* ---- time of day (Seoul sunrise / sunset by month, roughly) and the season ---- */
@@ -1221,22 +1220,14 @@ function drawStatic(c: C, night: boolean, room: number) {
     if (night) { sky.addColorStop(0, '#0b1430'); sky.addColorStop(1, '#1a2550'); } else if (THEME.paint) { sky.addColorStop(0, '#9ccbe9'); sky.addColorStop(0.6, '#e1f0ee'); sky.addColorStop(1, '#f3e6c8'); } else { sky.addColorStop(0, '#8cc6ec'); sky.addColorStop(1, '#e7f4fb'); }
     c.save(); c.beginPath(); const p = wallL(y0, y1, 13, wh - 7); c.moveTo(p[0][0], p[0][1]); for (const q of p.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
     c.fillStyle = sky; c.fill();
-    // city skyline behind the glass (owner, 15 Nov 2026): two layers of tall towers, lit windows at night, every floor sees a different slice
-    const base = 13 - (2 - room) * 90, day = !night;
-    for (const [layer, L] of [[0, SKY_FAR], [1, SKY_NEAR]] as const) {
-      const front = day ? (layer ? '#93abc4' : '#b9cde0') : (layer ? '#1a2442' : '#111a33'), side = day ? (layer ? '#7f98b2' : '#a6bcd2') : (layer ? '#141d36' : '#0c1328');
-      for (const b of L) {
-        if (b.y + b.w < y0 || b.y > y1) continue;
-        const top = base + b.h; if (top < 14) continue;
-        poly(c, wallL(b.y, b.y + b.w, 13, top), front); poly(c, wallL(b.y, b.y + b.w * 0.3, 13, top), side);
-        if (b.ant) { poly(c, wallL(b.y + b.w * 0.48, b.y + b.w * 0.52, top, top + 10), side); poly(c, wallL(b.y + b.w * 0.45, b.y + b.w * 0.55, top + 9, top + 11), night ? '#ff4d4f' : '#c2cfdc'); }
-        const cols = b.w > 0.45 ? 3 : 2, cw = (b.w * 0.6) / cols;
-        for (let z = Math.max(16, base + 6); z < top - 6; z += 7) for (let k = 0; k < cols; k++) {
-          const v = hash(`${layer}:${b.y.toFixed(2)}:${z}:${k}`);
-          if (night ? v > 0.38 : v > 0.55) continue;
-          const yy = b.y + b.w * 0.35 + k * (b.w * 0.62 / cols);
-          poly(c, wallL(yy, yy + cw * 0.7, z, z + 3), night ? (v < 0.06 ? '#9fd3ff' : '#ffd27a') : 'rgba(235,243,250,.75)');
-        }
+    if (THEME.paint) { /* plain glass: only the sky behind it */ }
+    else for (const b of CITY) {
+      if (b.y + b.w < y0 || b.y > y1) continue;
+      poly(c, wallL(b.y, b.y + b.w, 13, 13 + b.h * 0.8), night ? '#1b2440' : '#c3ccd6');
+      poly(c, wallL(b.y, b.y + b.w * 0.35, 13, 13 + b.h * 0.8), night ? '#151c34' : '#b0bac6');
+      for (let k = 0; k < 8; k++) {
+        const lit = hash(`${b.y}:${k}`);
+        if (night ? lit > 0.45 : lit > 0.7) poly(c, wallL(b.y + 0.06 + (k % 2) * b.w * 0.45, b.y + 0.1 + (k % 2) * b.w * 0.45, 17 + Math.floor(k / 2) * 9, 20 + Math.floor(k / 2) * 9), night ? '#ffd27a' : '#e9eef3');
       }
     }
     c.restore();
@@ -3066,7 +3057,6 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
         if (r === 2) { drawParking(c, wall, nightNow); drawCars(c, t, nightNow); }
         if (r <= 1) drawWallText(c, scrRef.current, r, t);
         if (r === 1) drawPositions(c, posRef.current, t);
-        drawWindowFx(c, r, wall, nightNow);
         drawBoards(c, r, wall, t);
         drawWeather(c, r, t);
         if (SEASON) drawSeason(c, r, t);
@@ -3729,27 +3719,6 @@ function drawSeason(c: C, room: number, t: number) {
   }
 }
 /** New Year's Eve: fireworks over the roof */
-/** night: now and then fireworks over the city, seen through the glass of every floor (about half of the 2-minute slots, 12 s each) */
-function drawWindowFx(c: C, room: number, wall: number, night: boolean) {
-  if (!night || FLAT || SHAPE !== 'tower') return;
-  const slot = Math.floor(wall / 120_000), s0 = (wall % 120_000) / 1000;
-  if (hash(`fw${slot}`) > 0.5 || s0 > 12) return;
-  const wh = room === 0 ? WALL + 26 : RH - 8, y0 = 0.55, y1 = NY - 0.3, zTop = Math.min(wh - 9, 200);
-  c.save(); c.beginPath(); const p = wallL(y0, y1, 13, wh - 7); c.moveTo(p[0][0], p[0][1]); for (const q of p.slice(1)) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
-  c.globalCompositeOperation = 'lighter';
-  const cols = ['#ffd84a', '#ff5a7a', '#5ad1ff', '#9dff7a', '#ffffff', '#c792ea'];
-  for (let i = 0; i < 3; i++) {
-    const st = i * 3.2 + hash(`fs${slot}:${room}:${i}`) * 1.5, f = (s0 - st) / 3.2; if (f < 0 || f > 1) continue;
-    const by = y0 + 1 + hash(`fy${slot}:${room}:${i}`) * (y1 - y0 - 2), bz = 45 + hash(`fz${slot}:${room}:${i}`) * Math.max(10, zTop - 60), col = cols[Math.floor(hash(`fc${slot}:${room}:${i}`) * cols.length)];
-    const [cx, cy] = iso(0, by, bz);
-    if (f < 0.25) { const k = f / 0.25; c.fillStyle = 'rgba(255,230,180,.9)'; c.fillRect(cx - 0.4, cy + 40 * (1 - k), 0.8, 2.6); continue; }
-    const k = (f - 0.25) / 0.75, rad = 5 + Math.sqrt(k) * 20, fade = Math.max(0, 1 - k);
-    c.globalAlpha = fade * 0.3; const gl = c.createRadialGradient(cx, cy, 0, cx, cy, rad * 1.3); gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gl; c.fillRect(cx - rad * 1.3, cy - rad * 1.3, rad * 2.6, rad * 2.6);
-    c.globalAlpha = fade; c.strokeStyle = col; c.lineWidth = 0.7;
-    for (let j = 0; j < 22; j++) { const an = (j / 22) * Math.PI * 2, r2 = rad * 0.72; c.beginPath(); c.moveTo(cx + Math.cos(an) * r2, cy + Math.sin(an) * r2 + k * k * 8); c.lineTo(cx + Math.cos(an) * rad, cy + Math.sin(an) * rad + k * k * 9); c.stroke(); }
-  }
-  c.restore();
-}
 function drawFireworks(c: C, t: number) {
   c.save();
   if (!FLAT) {       // only in the sky: cut the building (with its roof units) out
