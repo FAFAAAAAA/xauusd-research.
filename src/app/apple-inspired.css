@@ -1680,3 +1680,7 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .office-menu span { width: 30px; height: 30px; border-radius: 10px; font-size: 16px; }
 .office-menu em { font-size: 11px; padding: 1px 7px; }
 .office-menu-bg { position: absolute; inset: 0; z-index: 24; background: rgba(20,14,8,.12); }
+.office-menu { min-width: 214px; border-radius: 24px; padding: 7px; }
+.office-menu button { gap: 10px; padding: 5px 11px 5px 5px; border-radius: 16px; font-size: 15px; }
+.office-menu span { width: 34px; height: 34px; border-radius: 11px; font-size: 18px; }
+.office-menu em { font-size: 12px; padding: 1px 8px; }
