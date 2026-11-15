@@ -99,7 +99,7 @@ export interface CompanyInput {
   binance?: { wallet: number } | null; mt5?: { wallet: number } | null;
   settings: CompanySettings; fx: Fx | null; books?: Record<string, MonthBook>; now: number; tz: string;
 }
-const isMt5 = (t: JournalTrade) => t.strategy === 'v2' || t.strategy === 'nas';
+const isMt5 = (t: JournalTrade) => t.strategy === 'v2' || t.strategy === 'v1' || t.strategy === 'nas';
 export const wdFeeOf = (s: CompanySettings, w: number) => (w > 0 ? s.wdFee.fixed + (s.wdFee.pct / 100) * w : 0);
 
 /** the raw numbers of one month (also what gets stored when the month's books are closed) */

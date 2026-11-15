@@ -333,7 +333,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     if (!freeFor(ctx, 'bos')) return null;
     const who = [...workers(true), ...['akun', 'risk'].filter((id) => freeFor(ctx, id, true))]; if (!who.length) return null;
     const wk = wall - 7 * 86_400_000;
-    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= wk && t.strategy !== 'v2' && t.strategy !== 'nas');
+    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= wk && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');
     const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
     const seats = [2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' })));
     const plans: Record<string, Step[]> = {};
@@ -360,7 +360,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const who = [...W5.filter((id) => freeFor(ctx, id, true)), ...['akun', 'risk', 'ob', 'jaga', 'vet'].filter((id) => id !== lead && freeFor(ctx, id, true))];
     if (!who.length) return null;
     const day0 = new Date(wall); day0.setHours(0, 0, 0, 0);
-    const fin = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'nas');
+    const fin = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');
     const pnl = fin.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
     const openN = ctx.data.trades.filter((t) => t.result === 'open').length;
     const seats: Spot[] = [...[2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' }))), sp('', 0, 3.0, 10.4, 'ny', ''), sp('', 0, 2.2, 10.5, 'ny', '')];
@@ -404,7 +404,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     // 23:00: Marcel announces today's result (the same number as "PNL HARI INI" on the TV) before he goes home
     const who = ctx.agents.bos && ctx.S.bos && !ctx.S.bos.sleep ? 'bos' : null; if (!who) return null;
     const day0 = new Date(wall); day0.setHours(0, 0, 0, 0);
-    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'nas');
+    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');
     const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
     const amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
     const said: Array<[string, string]> = !done.length ? [['Rekap hari ini: belum ada trade selesai.', '#1e1f23'], ['Sabar, tunggu setup yang bagus!', '#1e1f23']]
@@ -474,7 +474,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const tp = done.filter((t) => t.result === 'tp').length, sl = done.filter((t) => t.result === 'sl').length;
     const wr = tp + sl ? Math.round((tp / (tp + sl)) * 100) : 0;
     const byCoin: Record<string, number> = {};
-    for (const t of done) { const k = (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '') || (t.strategy === 'nas' ? 'NAS' : t.strategy === 'v2' ? 'XAU' : t.strategy.toUpperCase()); byCoin[k] = (byCoin[k] ?? 0) + Number(t.pnl ?? 0); }
+    for (const t of done) { const k = (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '') || (t.strategy === 'nas' ? 'NAS' : t.strategy === 'v2' || t.strategy === 'v1' ? 'XAU' : t.strategy.toUpperCase()); byCoin[k] = (byCoin[k] ?? 0) + Number(t.pnl ?? 0); }
     const best = Object.entries(byCoin).sort((x, y) => y[1] - x[1])[0];
     const who = [...workers(), ...['risk', 'vet'].filter((id) => freeFor(ctx, id))];        // not everybody: one lift for all
     const seats = [2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' })));
@@ -816,7 +816,7 @@ export type Status = { label: string; color: string; sleep: boolean; tag?: { tex
 const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
 const weekendMt5 = (t: number) => { const d = new Date(t), wd = d.getUTCDay(), h = d.getUTCHours(); return wd === 6 || (wd === 0 && h < 22) || (wd === 5 && h >= 21); };
 /* ---------- the business side: numbers Sari (accountant) and Rina (risk manager) work with, all from the journal ---------- */
-const isMt5Trade = (t: JournalTrade) => t.strategy === 'v2' || t.strategy === 'nas';
+const isMt5Trade = (t: JournalTrade) => t.strategy === 'v2' || t.strategy === 'v1' || t.strategy === 'nas';
 const usd2 = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
 export function biz(data: OfficeData, now: number) {
   const day0 = new Date(now); day0.setHours(0, 0, 0, 0);
@@ -847,9 +847,9 @@ export function statuses(data: OfficeData, now: number): Record<string, Status> 
   const open = data.trades.filter((t) => t.result === 'open');
   const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
   const bOn = !!data.binance && now - data.binance.at < SILENT, mOn = !!data.mt5 && now - data.mt5.at < SILENT;
-  const recent = (key: string) => data.trades.filter((t) => t.strategy === key && t.result !== 'open' && t.closedAt && now - t.closedAt < 15 * 60_000).sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))[0];
+  const recent = (key: string) => data.trades.filter((t) => key.split('|').includes(t.strategy) && t.result !== 'open' && t.closedAt && now - t.closedAt < 15 * 60_000).sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))[0];
   const one = (key: string, online: boolean, live: Live, closed: boolean, posKey: (t: JournalTrade) => string): Status => {
-    const mine = open.filter((t) => t.strategy === key);
+    const mine = open.filter((t) => key.split('|').includes(t.strategy));
     const r = recent(key);
     const flash = r ? { text: `${r.result === 'tp' ? '🎉 TP' : r.result === 'sl' ? 'SL' : 'TUTUP'} ${coin(r)} ${money(Number(r.pnl ?? 0))}`, color: Number(r.pnl) >= 0 ? '#2ee59d' : '#ff6b6b' } : null;
     const extra = { tp: r?.result === 'tp', sl: r?.result === 'sl' };
@@ -869,7 +869,7 @@ export function statuses(data: OfficeData, now: number): Record<string, Status> 
     alt: one('snr', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
     big: one('btc', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
     bz: one('bz', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
-    xau: one('v2', mOn, data.mt5, wk, () => 'xau'),
+    xau: one('v2|v1', mOn, data.mt5, wk, () => 'xau'),
     nas: one('nas', mOn, data.mt5, wk, () => 'nas'),
     tg: !data.binance && !data.mt5 ? { label: 'BELUM AKTIF', color: '#8a8f98', sleep: false, tag: null }
       : lastMsg ? { label: 'KIRIM PESAN', color: '#229ed9', sleep: false, tag: { text: `📨 ${coin(lastMsg.t) || (lastMsg.t.strategy === 'nas' ? 'NAS' : 'XAU')} ${lastMsg.t.result === 'open' ? 'BUKA' : (lastMsg.t.result ?? '').toUpperCase()}`, color: '#7cc8f0' } }
@@ -2644,8 +2644,8 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
   const moments = useMemo(() => {
     const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
     return data.trades.filter((t) => t.result === 'tp' && t.closedAt).map((t) => {
-      const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
-      const pid = ({ snr: 'alt', btc: 'big', bz: 'bz', v2: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
+      const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' || t.strategy === 'v1' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
+      const pid = ({ snr: 'alt', btc: 'big', bz: 'bz', v2: 'xau', v1: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
       const who = PEOPLE.find((q) => q.id === pid)?.name ?? '';
       return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, who, side: String(t.side ?? ''), pid };
     }).sort((a, b) => b.at - a.at);
@@ -3307,7 +3307,7 @@ export function openPositions(data: OfficeData): Pos[] {
   const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
   const who: Record<string, string> = { snr: 'Na', btc: 'Ni', v2: 'Nu', nas: 'Ne' };
   return data.trades.filter((t) => t.result === 'open').map((t) => {
-    const mt5 = t.strategy === 'v2' || t.strategy === 'nas', name = mt5 ? (t.strategy === 'nas' ? 'NAS' : 'XAU') : coin(t) || '—';
+    const mt5 = t.strategy === 'v2' || t.strategy === 'v1' || t.strategy === 'nas', name = mt5 ? (t.strategy === 'nas' ? 'NAS' : 'XAU') : coin(t) || '—';
     const live = mt5 ? data.mt5 : data.binance, key = mt5 ? (t.strategy === 'nas' ? 'nas' : 'xau') : `${coin(t)}USDT`;
     const v = live?.pos?.[key];
     return { name, side: t.side === 'BUY' ? 'BUY' : 'SELL', who: who[t.strategy] ?? '', pnl: Number.isFinite(v) ? Number(v) : null };

@@ -51,7 +51,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
     return () => window.clearInterval(id);
   }, []);
   const open = useMemo(() => (j?.trades ?? []).filter((t) => t.result === 'open'), [j]);
-  const syms = open.filter((t) => t.strategy !== 'v2' && t.strategy !== 'nas' && coinOf(t)).map((t) => `${coinOf(t)}USDT`).filter((x, i, a) => a.indexOf(x) === i).sort().join(',');
+  const syms = open.filter((t) => t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas' && coinOf(t)).map((t) => `${coinOf(t)}USDT`).filter((x, i, a) => a.indexOf(x) === i).sort().join(',');
   useEffect(() => {
     if (!syms) return;
     let off = false;
@@ -101,7 +101,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   let floatB = 0, liveB = false;
   const seen = new Set<string>();
   for (const t of open) {
-    if (t.strategy === 'v2' || t.strategy === 'nas') continue;
+    if (t.strategy === 'v2' || t.strategy === 'v1' || t.strategy === 'nas') continue;
     const sym = `${coinOf(t)}USDT`, mp = mark[sym], lot = Number(t.lot), entry = Number(t.entry);
     if (!mp || !(lot > 0) || !(entry > 0)) continue;
     if (!seen.has(sym)) { seen.add(sym); posB[sym] = 0; }
@@ -113,7 +113,7 @@ export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; 
   const data: OfficeData = { ...j, market, cal, btc, binance: j.binance ? { ...j.binance, pos: posB } : j.binance };
   const today = new Date(now); today.setHours(0, 0, 0, 0);
   const closedToday = j.trades.filter((t) => t.result !== 'open' && t.closedAt && t.closedAt >= today.getTime());
-  const isMt5 = (t: { strategy: string }) => t.strategy === 'v2' || t.strategy === 'nas';
+  const isMt5 = (t: { strategy: string }) => t.strategy === 'v2' || t.strategy === 'v1' || t.strategy === 'nas';
   const todayB = closedToday.filter((t) => !isMt5(t)).reduce((a, t) => a + Number(t.pnl ?? 0), 0);
   const fl = floatB + floatM;
   const tone = (n: number) => (n > 0 ? '#2ee59d' : n < 0 ? '#ff6b6b' : undefined);

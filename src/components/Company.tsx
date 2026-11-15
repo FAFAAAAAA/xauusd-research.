@@ -61,7 +61,7 @@ export function CompanyReport({ data, now }: { data: CompanyData; now: number })
       </div>
       {r.noRate ? <p className="co-warn">Kurs Rupiah belum tersedia, operasional belum dihitung.</p> : null}
       {tab === 'w' ? (() => {
-        const W = data.trades.filter((t) => t.result !== 'open' && t.pnl != null && t.closedAt != null && t.closedAt >= r.week.from && t.closedAt <= now && (S.mt5 !== 'off' || (t.strategy !== 'v2' && t.strategy !== 'nas')));
+        const W = data.trades.filter((t) => t.result !== 'open' && t.pnl != null && t.closedAt != null && t.closedAt >= r.week.from && t.closedAt <= now && (S.mt5 !== 'off' || (t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas')));
         const days = Array.from({ length: 7 }, (_, d) => W.filter((t) => Math.floor((t.closedAt! - r.week.from) / 86_400_000) === d).reduce((a, t) => a + Number(t.pnl), 0));
         const today = Math.min(6, Math.floor((now - r.week.from) / 86_400_000));
         const top = Math.max(1, ...days.map(Math.abs));

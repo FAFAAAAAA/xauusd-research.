@@ -114,9 +114,9 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   // which EA / bot: v1 XAU (journal key v2, default), v1 NAS ("strategy":"nas") or the Binance v1 SNR bot ("strategy":"snr", sends "symbol")
   // the Binance bot also sends "strategy":"btc" for its BUY part (v1 BTC rules on the largest coins)
   // and "strategy":"bz" for BZ (Bollinger squeeze SELL on every liquid coin, 15 Nov 2026)
-  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : b.strategy === 'bz' ? 'bz' : 'v2';
+  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'lvl' ? 'v1' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : b.strategy === 'bz' ? 'bz' : 'v2';
   const bot = strat === 'snr' || strat === 'btc' || strat === 'bz';
-  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : strat === 'bz' ? 'BZ' : 'v1 XAU';
+  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'v1' ? 'v1 Level' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : strat === 'bz' ? 'BZ' : 'v1 XAU';
   const symbol = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24).toUpperCase() : '';
   const src = bot ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
   const who = bot ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;

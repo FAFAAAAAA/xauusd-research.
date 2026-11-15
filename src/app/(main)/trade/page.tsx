@@ -20,13 +20,14 @@ const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')))
 // Internal journal key 'v2' = "v1 XAU" (volbreak-v5); 'v1' / 'v3' are older strategies, kept only for old journal rows.
 const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v2: { win: 0.342, perMonth: 5.0, label: 'v1 XAU' },   // + ±15% impas (BE)
-  nas: { win: 0.431, perMonth: 5.6, label: 'v1 NAS' },  // website engine M30 2013–2026
+  nas: { win: 0.431, perMonth: 5.6, label: 'v1 NAS' },
+  v1: { win: 0.416, perMonth: 3.1, label: 'v1 Level' },  // level-v3, Exness costs 2004–2026 (research 15 Nov 2026), prop EA v1.02  // website engine M30 2013–2026
   btc: { win: 0.41, perMonth: 5.7, label: 'BIG' },  // bot BUY part: 6 largest coins, max 2 open (research 9 Nov 2026), Binance costs
   alt: { win: 0.386, perMonth: 15.2, label: 'v2 ALT (lama)' },  // research portfolio max 3, corrected slot bug 11 Nov 2026
   snr: { win: 0.41, perMonth: 27, label: 'ALT' },  // 26 bot coins, portfolio max 3, H4 close (corrected 11 Nov 2026)
   bz: { win: 0.393, perMonth: 16.5, label: 'BZ' },  // Bollinger squeeze SELL, every liquid coin, max 2 open (research 15 Nov 2026)
 };
-const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', bz: 'BZ', v1: 'v1 Level (lama)', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
+const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', bz: 'BZ', v1: 'v1 Level', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
 // coin of a bot trade: the note is "Bot Binance SANDUSDT …"
@@ -356,7 +357,7 @@ export default function TradePage() {
                 <span><span className="k">Take profit</span><strong className="pos">{px(detail.tp)}</strong></span>
                 {detail.result === 'open' ? (() => {
                   // what this position makes or loses when it hits its stop or its target (fees not included)
-                  const cs = detail.strategy === 'v2' ? 100 : 1, dir = detail.side === 'BUY' ? 1 : -1;
+                  const cs = detail.strategy === 'v2' || detail.strategy === 'v1' ? 100 : 1, dir = detail.side === 'BUY' ? 1 : -1;
                   const at = (p: number) => (p - detail.entry) * dir * detail.lot * cs;
                   const ok = Number.isFinite(detail.sl) && Number.isFinite(detail.tp) && detail.lot > 0;
                   return <>

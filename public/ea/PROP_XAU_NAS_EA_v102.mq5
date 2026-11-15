@@ -2,9 +2,10 @@
 //| PROP_XAU_NAS_EA.mq5 — v1 XAU + v1 NAS dalam SATU EA, dengan       |
 //| penjaga aturan prop firm (FundingPips 2 Step Standard dsb.).       |
 //|                                                                    |
-//| Dua metode tetap TERPISAH (tidak digabung):                        |
-//|  v1 XAU (emas)   = sama persis dengan XAU_v2_EA v1.14 (volbreak-v5)|
-//|  v1 NAS (Nasdaq) = sama persis dengan NAS_v1_EA v1.00              |
+//| Tiga metode tetap TERPISAH (tidak digabung):                       |
+//|  v1 XAU (emas)   = sama persis dengan XAU_v2_EA v1.15 (volbreak-v5)|
+//|  v1 Level (emas) = website metode level-v3 (v1.02, 15 Nov 2026)    |
+//|  v1 NAS (Nasdaq) = sama persis dengan NAS_v1_EA v1.01              |
 //|  Masing-masing punya magic number sendiri (jurnal website terpisah)|
 //|                                                                    |
 //| Pasang di SATU chart saja (simbol apa pun, timeframe apa pun).     |
@@ -34,7 +35,7 @@
 //| bukan jaminan hasil nyata.                                         |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.01"
+#property version   "1.02"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -42,8 +43,9 @@
 input group "Strategi"
 input bool   InpUseXau       = true;       // Jalankan v1 XAU (emas)
 input string InpXauSymbol    = "XAUUSD";   // Nama simbol emas di broker ini
+input bool   InpUseLvl       = true;       // Jalankan v1 Level (emas, simbol sama dengan v1 XAU)
 input bool   InpUseNas       = true;       // Jalankan v1 NAS (Nasdaq)
-input string InpNasSymbol    = "NAS100";   // Nama simbol Nasdaq di broker ini (FundingPips: NAS100, Exness: USTEC)
+input string InpNasSymbol    = "NDX100";   // Nama simbol Nasdaq di broker ini (FundingPips: NDX100, Exness: USTEC)
 input double InpRiskPercent  = 2.0;        // Risiko per trade (% dari ukuran akun)
 input bool   InpTrade        = true;       // true = pasang order; false = hanya tulis sinyal ke log
 
@@ -61,6 +63,7 @@ input double InpXauMaxSpread = 0.60;       // Emas: lewati entry jika spread (ha
 input double InpNasMaxSpread = 4.0;        // Nasdaq: lewati entry jika spread (poin) di atas ini
 input long   InpXauMagic     = 20261102;   // Magic v1 XAU (sama dengan EA lama → jurnal v1 XAU)
 input long   InpNasMagic     = 20261107;   // Magic v1 NAS (sama dengan EA lama → jurnal v1 NAS)
+input long   InpLvlMagic     = 20261115;   // Magic v1 Level (jurnal v1 Level)
 input int    InpXauSlippagePts = 30;       // Slippage maksimum emas (points)
 input int    InpNasSlippagePts = 300;      // Slippage maksimum Nasdaq (points)
 input string InpReportUrl    = "https://xauusd-research.vercel.app/api/ea/report"; // Alamat laporan website
@@ -76,13 +79,19 @@ const int    N_DON_N   = 20;
 const int    N_GAP     = 2;
 const double N_SL_ATR  = 0.2;
 const int    N_NY_FROM = 10, N_NY_TO = 16;
+//--- v1 Level constants (level-v3)
+const int    L_PIV     = 3;        // swing pivot: 3 H1 candles left & right
+const int    L_BACK    = 119;      // a level may be at most 119 H1 candles old
+const int    L_WIN     = 200;      // H1 candles the level search looks at (same window as the website)
+const double L_NEAR    = 0.25;     // a touch = within 0.25 x ATR14 H1 of the level
+const double L_SL_ATR  = 1.5;      // SL = level -/+ 1.5 x ATR14 H1
 //--- shared
 const double RR      = 2.0;
 const int    H4_WIN  = 1000;
 const int    D1_WIN  = 1000;
 const int    ATR_WIN = 400;
 
-CTrade tradeX, tradeN;
+CTrade tradeX, tradeN, tradeL;
 string XS, NS;
 
 struct Bar { datetime t; double o, h, l, c; };
@@ -244,7 +253,7 @@ bool   PropOn() { return InpAccountSize > 0; }
 string PGv(string name) { return StringFormat("PROP_%I64d_%s", AccountInfoInteger(ACCOUNT_LOGIN), name); }
 int    ServerDay() { return (int)((long)TimeTradeServer() / 86400); }
 
-bool IsOurs(long magic) { return magic == InpXauMagic || magic == InpNasMagic; }
+bool IsOurs(long magic) { return magic == InpXauMagic || magic == InpNasMagic || magic == InpLvlMagic; }
 
 void CloseOurs(string why)
 {
@@ -528,6 +537,106 @@ void XauCheck()
    }
 }
 
+
+//====================================================================
+// v1 Level (website metode level-v3, symbol = XS). Closed H1 candles, UTC.
+//  Level  = swing high (BUY) / swing low (SELL) of the H1 candles: highest/lowest of the 3 candles on each side (ties count),
+//           at most 119 H1 candles old, confirmed (3 candles to its right closed).
+//  Signal = the LAST closed H1 candle closes beyond the OLDEST such level that no earlier close crossed; the level must have been
+//           touched 2-3 times (price within 0.25 x ATR14 H1, touches at least 3 candles apart, the pivot itself counts as one).
+//  Momentum: the signal candle body (in trade direction) >= ATR14 H1. Trend = aturan 1 (as v1 XAU; SELL also EMA50 D1 < EMA200 D1).
+//  2nd signal of the same direction on the same UTC day is skipped (3rd+ allowed). SL = level -/+ 1.5 x ATR14 H1, TP 2R, no BE.
+//====================================================================
+datetime gl_lastH1 = 0;
+long   gl_day = -1;
+bool   gl_dayOk = false;
+double gl_d50 = 0, gl_d200 = 0, gl_lcd = 0;
+
+string LGv(string kind, int side, long key) { return StringFormat("LVLv1_%I64d_%s_%d_%I64d", InpLvlMagic, kind, side, key); }
+
+void LvlCheck()
+{
+   datetime bar = iTime(XS, PERIOD_H1, 0);
+   if(bar == 0 || bar == gl_lastH1) return;
+   int off = UtcOffset();
+   MqlRates c[];
+   ArraySetAsSeries(c, false);
+   if(CopyRates(XS, PERIOD_H1, 1, L_WIN, c) < L_WIN) return;          // data not ready yet: try again on the next timer
+   gl_lastH1 = bar;
+   int n = L_WIN, i = n - 1;
+   long openUtc = (long)c[i].time - off, closeUtc = openUtc + 3600;
+   // ATR14 (Wilder EWM) series over this window, starting at the 2nd candle (same as the website)
+   double at[]; ArrayResize(at, n); at[0] = -1;
+   double e = -1;
+   for(int k = 1; k < n; k++)
+   {
+      double pc = c[k - 1].close, tr = MathMax(c[k].high - c[k].low, MathMax(MathAbs(c[k].high - pc), MathAbs(c[k].low - pc)));
+      e = e < 0 ? tr : e + (tr - e) / 14.0; at[k] = e;
+   }
+   // levels first (cheap); trend only when a candidate exists
+   int cand[2] = {0, 0}; double candLv[2] = {0, 0};
+   for(int si = 0; si < 2; si++)
+   {
+      int side = si == 0 ? 1 : -1;
+      for(int k = MathMax(L_PIV, i - L_BACK); k + L_PIV < i; k++)
+      {
+         double ek = side > 0 ? c[k].high : c[k].low;
+         bool piv = true;
+         for(int q = k - L_PIV; q <= k + L_PIV && piv; q++) { double eq = side > 0 ? c[q].high : c[q].low; if(side * (eq - ek) > 0) piv = false; }
+         if(!piv) continue;
+         if(!(side * (c[i].close - ek) > 0)) continue;
+         bool early = false; int touches = 1, last = k;
+         for(int j = k + L_PIV + 1; j < i; j++)
+         {
+            if(side * (c[j].close - ek) > 0) { early = true; break; }
+            bool nr = at[j] > 0 && (side > 0 ? c[j].high >= ek - L_NEAR * at[j] : c[j].low <= ek + L_NEAR * at[j]);
+            if(nr) { if(j - last >= 3) touches++; last = j; }
+         }
+         if(early) continue;
+         if(touches >= 2 && touches <= 3 && side * (c[i].close - c[i].open) >= at[i]) { cand[si] = touches; candLv[si] = ek; }
+         break;                                                          // only the oldest level broken on this candle
+      }
+   }
+   if(cand[0] == 0 && cand[1] == 0) return;
+   // trend (aturan 1) from H4 / D1 built in UTC from H1, closed by the H1 close
+   long dayStart = (openUtc / 86400) * 86400;
+   if(dayStart != gl_day)
+   {
+      gl_dayOk = false;
+      MqlRates h1d[]; ArraySetAsSeries(h1d, false);
+      int nhd = CopyRates(XS, PERIOD_H1, 0, 26000, h1d);
+      if(nhd < 5000) { Print("v1 Level: riwayat H1 ", XS, " kurang (", nhd, ")."); return; }
+      Bar d1[]; int nd = BuildUtc(h1d, nhd, off, 86400, (datetime)dayStart, d1);
+      if(nd < 210) return;
+      gl_d50 = EmaLast(d1, nd, 50, D1_WIN); gl_d200 = EmaLast(d1, nd, 200, D1_WIN); gl_lcd = d1[nd - 1].c;
+      gl_day = dayStart; gl_dayOk = true;
+   }
+   if(!gl_dayOk) return;
+   MqlRates h1[]; ArraySetAsSeries(h1, false);
+   int nh = CopyRates(XS, PERIOD_H1, 0, 6000, h1);
+   if(nh < 4100) { Print("v1 Level: riwayat H1 ", XS, " kurang (", nh, ")."); return; }
+   Bar h4[]; int n4 = BuildUtc(h1, nh, off, 14400, (datetime)closeUtc, h4);
+   if(n4 < 210) return;
+   double e50 = EmaLast(h4, n4, 50, H4_WIN), e200 = EmaLast(h4, n4, 200, H4_WIN), lc4 = h4[n4 - 1].c;
+   bool up = lc4 > e50 && e50 > e200 && gl_lcd > gl_d50;
+   bool dn = lc4 < e50 && e50 < e200 && gl_lcd < gl_d50 && gl_d50 < gl_d200;
+   for(int si = 0; si < 2; si++)
+   {
+      int s = si == 0 ? 1 : -1;
+      if(cand[si] == 0 || !(s > 0 ? up : dn)) continue;
+      string side = s > 0 ? "BUY" : "SELL";
+      if(GlobalVariableCheck(LGv("bar", s, (long)c[i].time))) continue;
+      GlobalVariableSet(LGv("bar", s, (long)c[i].time), 1);
+      string gc = LGv("day", s, dayStart);
+      double nth = (GlobalVariableCheck(gc) ? GlobalVariableGet(gc) : 0) + 1;
+      GlobalVariableSet(gc, nth);
+      if(nth == 2) { PrintFormat("v1 Level: lewati sinyal %s (sinyal ke-2 searah hari ini).", side); continue; }
+      double sl = candLv[si] - s * L_SL_ATR * at[i];
+      PrintFormat("Sinyal v1 Level %s: close H1 %.2f menembus level %.2f (disentuh %dx), SL %.2f (ATR H1 %.2f)", side, c[i].close, candLv[si], cand[si], sl, at[i]);
+      if(!InpTrade) continue;
+      OpenTrade(tradeL, XS, s, sl, InpXauMaxSpread, "v1 Level");
+   }
+}
 //====================================================================
 // v1 NAS (copy of NAS_v1_EA v1.00, symbol = NS)
 //====================================================================
@@ -640,8 +749,8 @@ void Status()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
-   string s = StringFormat("PROP EA v1.01 | risiko %.2f%% | v1 XAU %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
-                           InpUseXau ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS);
+   string s = StringFormat("PROP EA v1.02 | risiko %.2f%% | v1 XAU %s · v1 Level %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
+                           InpUseXau ? "ON" : "off", InpUseLvl ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS);
    if(PropOn())
    {
       double tot = (eq - InpAccountSize) / InpAccountSize * 100.0, day = (eq - gDayRef) / InpAccountSize * 100.0;
@@ -659,7 +768,7 @@ void HistCheck()
 {
    if(TimeLocal() - gHistAt < 60) return;
    gHistAt = TimeLocal(); gHistWarn = "";
-   int bx = InpUseXau ? Bars(XS, PERIOD_H1) : 99999, bn = InpUseNas ? Bars(NS, PERIOD_H1) : 99999;
+   int bx = (InpUseXau || InpUseLvl) ? Bars(XS, PERIOD_H1) : 99999, bn = InpUseNas ? Bars(NS, PERIOD_H1) : 99999;
    if(bx < 5000) gHistWarn = StringFormat("riwayat H1 %s baru %d candle (butuh 5000): v1 XAU belum bisa trading. Tools > Options > Charts > Max bars in chart = Unlimited, buka chart %s H1 dan scroll ke kiri", XS, bx, XS);
    if(bn < 5000) gHistWarn += (gHistWarn != "" ? "\n⚠ " : "") + StringFormat("riwayat H1 %s baru %d candle (butuh 5000): v1 NAS belum bisa trading. Buka chart %s H1 dan scroll ke kiri", NS, bn, NS);
 }
@@ -678,7 +787,7 @@ void PushBalance()
       if(tk == 0) continue;
       long mg = PositionGetInteger(POSITION_MAGIC);
       double v = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
-      if(mg == InpXauMagic) px += v; else if(mg == InpNasMagic) pn += v;
+      if(mg == InpXauMagic || mg == InpLvlMagic) px += v; else if(mg == InpNasMagic) pn += v;
    }
    Report(StringFormat("{\"key\":\"%s\",\"event\":\"balance\",\"source\":\"mt5\",\"wallet\":%.2f,\"upnl\":%.2f,\"pos\":{\"xau\":%.2f,\"nas\":%.2f}}", InpEaKey, bal, eq - bal, px, pn));
    PushCashflow();
@@ -711,6 +820,7 @@ void Run()
    HistCheck();
    if(InpUseXau && InpTrade) XauBreakeven();
    if(InpUseXau) XauCheck();
+   if(InpUseLvl) LvlCheck();
    if(InpUseNas) NasCheck();
    Status();
 }
@@ -718,18 +828,20 @@ void Run()
 int OnInit()
 {
    XS = InpXauSymbol; NS = InpNasSymbol;
-   if(InpUseXau && !CheckSymbol(XS)) return INIT_PARAMETERS_INCORRECT;
+   if((InpUseXau || InpUseLvl) && !CheckSymbol(XS)) return INIT_PARAMETERS_INCORRECT;
    if(InpUseNas && !CheckSymbol(NS)) return INIT_PARAMETERS_INCORRECT;
-   if(InpUseXau) LotCheck(XS, 10.0);
+   if(InpUseXau || InpUseLvl) LotCheck(XS, 10.0);
    if(InpUseNas) LotCheck(NS, 100.0);
    tradeX.SetExpertMagicNumber(InpXauMagic); tradeX.SetDeviationInPoints(InpXauSlippagePts);
    tradeN.SetExpertMagicNumber(InpNasMagic); tradeN.SetDeviationInPoints(InpNasSlippagePts);
+   tradeL.SetExpertMagicNumber(InpLvlMagic); tradeL.SetDeviationInPoints(InpXauSlippagePts);
    if(InpUseXau) tradeX.SetTypeFillingBySymbol(XS);
+   if(InpUseLvl) tradeL.SetTypeFillingBySymbol(XS);
    if(InpUseNas) tradeN.SetTypeFillingBySymbol(NS);
    if(PropOn()) gTargetHit = InpTargetPct > 0 && GlobalVariableCheck(PGv(StringFormat("target_%.0f", InpTargetPct)));
    if(StringLen(InpEaKey) < 10) Print("Info: Kunci EA kosong — tidak ada laporan ke website/Telegram.");
-   PrintFormat("PROP EA aktif: v1 XAU %s (%s), v1 NAS %s (%s), risiko %.2f%%, akun %.0f, target %.1f%%, batas harian %.1f%%, total %.1f%%, buffer %.1f%%. Offset server-UTC %.1f jam.",
-               InpUseXau ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS, InpRiskPercent, InpAccountSize, InpTargetPct, InpDailyLimitPct, InpMaxLossPct, InpBufferPct, UtcOffset() / 3600.0);
+   PrintFormat("PROP EA aktif: v1 XAU %s, v1 Level %s (%s), v1 NAS %s (%s), risiko %.2f%%, akun %.0f, target %.1f%%, batas harian %.1f%%, total %.1f%%, buffer %.1f%%. Offset server-UTC %.1f jam.",
+               InpUseXau ? "ON" : "off", InpUseLvl ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS, InpRiskPercent, InpAccountSize, InpTargetPct, InpDailyLimitPct, InpMaxLossPct, InpBufferPct, UtcOffset() / 3600.0);
    if(gTargetHit) Print("Target fase ini sudah pernah tercapai di akun ini — EA tidak membuka posisi baru. (Fase berikutnya: ganti InpTargetPct.)");
    EventSetTimer(5);
    return INIT_SUCCEEDED;
@@ -744,7 +856,7 @@ void OnTradeTransaction(const MqlTradeTransaction &tx, const MqlTradeRequest &rq
    if(!HistoryDealSelect(tx.deal)) return;
    long magic = HistoryDealGetInteger(tx.deal, DEAL_MAGIC);
    if(!IsOurs(magic)) return;
-   string strat = magic == InpNasMagic ? ",\"strategy\":\"nas\"" : "";
+   string strat = magic == InpNasMagic ? ",\"strategy\":\"nas\"" : magic == InpLvlMagic ? ",\"strategy\":\"lvl\"" : "";
    long entry = HistoryDealGetInteger(tx.deal, DEAL_ENTRY);
    long pos = HistoryDealGetInteger(tx.deal, DEAL_POSITION_ID);
    long t = (long)HistoryDealGetInteger(tx.deal, DEAL_TIME) - UtcOffset();
