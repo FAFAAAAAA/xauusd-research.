@@ -35,7 +35,7 @@
 //| bukan jaminan hasil nyata.                                         |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.03"
+#property version   "1.04"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -504,6 +504,7 @@ void XauCheck()
    ArraySetAsSeries(m, true);
    if(CopyRates(XS, PERIOD_M15, 0, 200, m) < 100) return;          // data not ready yet: try again on the next timer
    gx_lastBar = bar;
+   if((long)m[0].time - (long)m[1].time > 900 + 3600) return;          // v1.04: first bar after a weekend / market break: stale setup (the backtest skips it)
    long sigUtc = (long)m[1].time - off;
    long dayStart = (sigUtc / 86400) * 86400;
 
@@ -601,6 +602,7 @@ void LvlCheck()
    ArraySetAsSeries(c, false);
    if(CopyRates(XS, PERIOD_H1, 1, L_WIN, c) < L_WIN) return;          // data not ready yet: try again on the next timer
    gl_lastH1 = bar;
+   if((long)bar - ((long)c[L_WIN - 1].time + 3600) > 3600) return;     // v1.04: stale after a weekend / market break (as the backtest)
    int n = L_WIN, i = n - 1;
    long openUtc = (long)c[i].time - off, closeUtc = openUtc + 3600;
    // ATR14 (Wilder EWM) series over this window, starting at the 2nd candle (same as the website)
@@ -739,6 +741,7 @@ void NasCheck()
    ArraySetAsSeries(q, false);
    if(CopyRates(NS, PERIOD_H1, 1, N_DON_N + 1, q) < N_DON_N + 1) return;   // data not ready yet: try again on the next timer
    gn_lastH1 = bar;
+   if((long)bar - ((long)q[N_DON_N].time + 3600) > 3600) return;       // v1.04: stale after a weekend / market break (as the backtest)
    double qh = -DBL_MAX, ql = DBL_MAX;
    for(int x = 0; x < N_DON_N; x++) { qh = MathMax(qh, q[x].high); ql = MathMin(ql, q[x].low); }
    if(!(q[N_DON_N].close > qh) && !(q[N_DON_N].close < ql)) return;
@@ -788,7 +791,7 @@ void Status()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
-   string s = StringFormat("PROP EA v1.03 | risiko %.2f%% | v1 XAU %s · v1 Level %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
+   string s = StringFormat("PROP EA v1.04 | risiko %.2f%% | v1 XAU %s · v1 Level %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
                            InpUseXau ? "ON" : "off", InpUseLvl ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS);
    if(PropOn())
    {
