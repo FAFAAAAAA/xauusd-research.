@@ -35,7 +35,8 @@ export function BotControlCard() {
   const [open, setOpen] = useState<string | null>(null);
   const [sym, setSym] = useState('');
   const [sos, setSos] = useState(0);
-  const [sheet, setSheet] = useState(false);   // emergency close: 0 = closed, 1 = first confirmation, 2 = second
+  const [sheet, setSheet] = useState(false);
+  const [revert, setRevert] = useState(false);   // emergency close: 0 = closed, 1 = first confirmation, 2 = second
   const load = useCallback(() => call<any>('/api/bot-control').then((x) => { setD(x); setNow(Date.now()); }).catch((e) => setErr(e.message)), []);
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
   const c = d?.control, seen = d?.seen, ap = seen?.applied;
@@ -224,7 +225,15 @@ export function BotControlCard() {
           <button type="button" disabled={busy} onClick={save}>{busy ? <Spinner /> : 'Kirim ke bot'}</button>
         </div>
       ) : null}
-      {!dirty && Object.keys(c.set).length ? <button type="button" className="bc-reset" disabled={busy} onClick={async () => { const r = await send({ ...c, set: {} }, 'Semua setelan kembali ke config VPS'); if (r) setSet({}); }}>Kembalikan semua ke config VPS</button> : null}
+      {!dirty && Object.keys(c.set).length ? (revert ? (
+        <div className="bx-rv">
+          <b>Kembalikan semua setelan ke config VPS?</b>
+          <div className="bx-sos-row">
+            <button type="button" className="ghost" onClick={() => setRevert(false)}>Batal</button>
+            <button type="button" className="dark" disabled={busy} onClick={async () => { const r = await send({ ...c, set: {} }, 'Semua setelan kembali ke config VPS'); if (r) setSet({}); setRevert(false); }}>Ya, kembalikan</button>
+          </div>
+        </div>
+      ) : <button type="button" className="bx-rv-btn" onClick={() => setRevert(true)}>↺ Kembalikan ke config VPS</button>) : null}
       {sos ? (
         <div className="bx-sos open">
           <b>Tutup semua posisi bot?</b>
