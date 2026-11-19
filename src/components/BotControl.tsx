@@ -94,9 +94,10 @@ export function BotControlCard() {
   const riskPct = mode === 'usdt' ? (bal ? (v<number>('risk_usdt', 5) / bal) * 100 : 0) : v<number>('risk_percent', 1);
   const riskUsd = mode === 'usdt' ? v<number>('risk_usdt', 5) : bal ? (bal * riskPct) / 100 : 0;
   const ex = expect(riskPct);
-  const tier = bal == null ? null : bal < 200 ? { risk: 2, sell: 3, buy: 1, bz: 1, keep: 0.5 } : bal < 1000 ? { risk: 2, sell: 4, buy: 2, bz: 2, keep: 0.5 }
-    : bal < 5000 ? { risk: 1.5, sell: 4, buy: 2, bz: 2, keep: 0.6 } : { risk: 1, sell: 4, buy: 2, bz: 2, keep: 0.7 };
-  const safe: Partial<Record<BotKey, BotVal>> | null = tier && bal ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy, bz_enabled: true, max_bz_positions: tier.bz,
+  // BZ (Bollinger squeeze SELL) retired 19 Nov 2026: long floating, win 39%. The safe preset keeps it off.
+  const tier = bal == null ? null : bal < 200 ? { risk: 1, sell: 3, buy: 1, keep: 0.5 } : bal < 1000 ? { risk: 1, sell: 4, buy: 2, keep: 0.5 }
+    : bal < 5000 ? { risk: 1, sell: 4, buy: 2, keep: 0.6 } : { risk: 0.75, sell: 4, buy: 2, keep: 0.7 };
+  const safe: Partial<Record<BotKey, BotVal>> | null = tier && bal ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy, bz_enabled: false, max_bz_positions: 0,
     stop_balance_usdt: Math.max(10, Math.floor((bal * tier.keep) / 10) * 10), max_loss_streak: 7, leverage_auto: true, margin_isolated: true } : null;
   const isSafe = !!safe && Object.entries(safe).every(([k, x]) => same(v(k as BotKey, null as unknown as BotVal), x));
   const zone = riskPct <= 1.5 ? 'Aman' : riskPct <= 3 ? 'Seimbang' : 'Agresif';
@@ -105,10 +106,10 @@ export function BotControlCard() {
     stop_balance_usdt: 'Rem saldo', max_loss_streak: 'Rem beruntun', leverage_auto: 'Leverage', leverage: 'Leverage', margin_isolated: 'Margin', daily_summary: 'Ringkasan', summary_hours_kst: 'Jam ringkasan', exclude: 'Koin' };
   const show = (k: BotKey, x: unknown) => (x == null ? '—' : typeof x === 'boolean' ? (x ? 'nyala' : 'mati') : Array.isArray(x) ? (x.length ? x.join(', ').replace(/USDT/g, '') : '—')
     : k === 'risk_percent' ? `${nf(x as number)}%` : k === 'risk_usdt' || k === 'stop_balance_usdt' ? `$${nf(x as number)}` : k === 'risk_mode' ? (x === 'usdt' ? 'USD' : '%') : String(x));
-  const posTxt = `${v<number>('max_positions', 3)} + ${v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 2) : 0} + ${v<boolean>('bz_enabled', true) ? v<number>('max_bz_positions', 2) : 0}`;
+  const posTxt = `${v<number>('max_positions', 3)} + ${v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 2) : 0}`;
   const changed = BOT_KEYS.filter((k) => !same(set[k], c.set[k]) && !same(v(k, null as unknown as BotVal), ap?.cfg?.[k]));
   const tiles: Array<[string, string, string, string, string]> = [
-    ['pos', '⇅', 'Posisi', posTxt, 'SELL · BUY · BZ'],
+    ['pos', '⇅', 'Posisi', posTxt, 'SELL · BUY'],
     ['brake', '⛨', 'Rem', stopBal > 0 ? fmtUsd(stopBal) : 'Mati', streak > 0 ? `${streak} SL beruntun` : 'beruntun mati'],
     ['lev', '⚡', 'Leverage', lev ? 'Otomatis' : `${v<number>('leverage', 5)}x`, v<boolean>('margin_isolated', true) ? 'Isolated' : 'Cross'],
     ['sum', '✈', 'Ringkasan', v<boolean>('daily_summary', true) ? hours.map((h) => String(h).padStart(2, '0')).join(' & ') : 'Mati', 'Telegram'],
@@ -176,8 +177,6 @@ export function BotControlCard() {
             <Step k="max_positions" label="Maks posisi SELL" by={1} lo={1} hi={6} dflt={3} />
             <Toggle k="buy_enabled" label="BUY (BTC, ETH, SOL, …)" dflt />
             {v<boolean>('buy_enabled', true) ? <Step k="max_buy_positions" label="Maks posisi BUY" by={1} lo={0} hi={4} dflt={2} /> : null}
-            <Toggle k="bz_enabled" label="BZ (Bollinger SELL, semua koin)" dflt />
-            {v<boolean>('bz_enabled', true) ? <Step k="max_bz_positions" label="Maks posisi BZ" by={1} lo={0} hi={4} dflt={2} /> : null}
           </> : null}
           {open === 'brake' ? <>
             <Step k="stop_balance_usdt" label="Rem saldo" unit="$" by={10} lo={0} hi={100000} dflt={0} />

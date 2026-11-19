@@ -86,7 +86,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (b.event === 'control') {
     await repo.setAppSetting(db, 'bot_control_seen', { at: now, applied: cleanApplied(b.applied) });
     const c = await repo.getAppSetting<BotControl | null>(db, 'bot_control', null);
-    return { status: 200, body: { ok: true, control: c ? cleanBotControl(c) : DEFAULT_BOT_CONTROL } };
+    return { status: 200, body: { ok: true, control: cleanBotControl(c ?? DEFAULT_BOT_CONTROL) } };
   }
   if (b.event === 'info') {
     const txt = String(b.text ?? '').slice(0, 800);

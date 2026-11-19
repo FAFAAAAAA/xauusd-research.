@@ -66,6 +66,9 @@ export function cleanBotControl(x: unknown, now = Date.now()): BotControl {
     const v = cleanBotVal(k, k in raw ? raw[k] : legacy[k]);
     if (v !== undefined) set[k] = v;
   }
+  // BZ (Bollinger squeeze SELL) retired 19 Nov 2026: always sent OFF so the bot never opens BZ again,
+  // even when the VPS config file still says bz_enabled = true. Open BZ positions finish on their own SL/TP.
+  set.bz_enabled = false; set.max_bz_positions = 0;
   if (o.riskPercent != null && !('risk_mode' in raw) && set.risk_percent != null) set.risk_mode = 'percent';
   const t = (v: unknown) => (Number.isFinite(num(v)) && num(v) > 0 ? num(v) : 0);
   return { set, paused: o.paused === true, resetAt: t(o.resetAt), closeAllAt: t(o.closeAllAt), updatedAt: t(o.updatedAt) || now };
