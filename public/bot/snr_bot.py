@@ -33,6 +33,9 @@ Background + autostart (Windows):   python snr_bot.py --install    start now and
                                     python snr_bot.py --reset      resume after the loss-streak brake (max_loss_streak)
                                     python snr_bot.py --uninstall  stop and remove the autostart
                                     python snr_bot.py --test       send a test trade + message to the website journal / Telegram
+                                    python snr_bot.py --sync [CAPUSDT PONSUSDT ...] [strat=bz]
+                                        (bot stopped first) adopt open Binance positions the bot does not know (SL/TP from Binance) so their
+                                        close is reported, and send the missed close reports of the listed coins (last 14 days) to the website
 """
 import hashlib, hmac, json, logging, math, os, random, socket, subprocess, sys, time, urllib.parse
 from datetime import datetime, timezone
@@ -50,7 +53,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.15.4'
+BOT_VERSION = '2026.11.19.1'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -762,6 +765,78 @@ def schtasks(*args):
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
+def sync_command(args):
+    """--sync: repair after another bot (or a crash) left positions the bot does not know about.
+    1) every open Binance position missing from snr_bot_state.json is adopted (side, size, entry, SL/TP read from Binance; ticket = symbol-entry order id,
+       the same id the bot uses, so the website matches it) -> its TP / SL is reported later like any other position;
+    2) for each coin given (e.g. CAPUSDT PONSUSDT) the last closed position of the past 14 days is read from the trade history and its close is
+       reported to the website journal / Telegram. Never sends orders. Run it only while the bot is stopped."""
+    try:
+        lk = socket.socket(); lk.bind(('127.0.0.1', LOCK_PORT))
+    except OSError:
+        sys.exit('Bot masih berjalan. Hentikan dulu: python snr_bot.py --stop  (tunggu ±40 detik), lalu jalankan --sync lagi.')
+    setup_log(); cfg = load_config()
+    strat = next((a.split('=', 1)[1] for a in args if a.startswith('strat=')), 'bz')
+    if strat not in STRAT_NAME: sys.exit('strat harus snr, btc atau bz')
+    syms = [a.upper() for a in args if not a.startswith('strat=')]
+    api = Binance(cfg); api.sync_time()
+    st = load_state(); st.setdefault('positions', {})
+    since = int(time.time() * 1000) - 14 * 86_400_000
+    vw = lambda xs: sum(float(x['price']) * float(x['qty']) for x in xs) / max(1e-12, sum(float(x['qty']) for x in xs))
+    # 1) adopt unknown open positions
+    try: rows = api.get('/fapi/v3/positionRisk', signed=True)
+    except RuntimeError: rows = api.get('/fapi/v2/positionRisk', signed=True)
+    live = {r['symbol']: r for r in rows if float(r.get('positionAmt') or 0) != 0}
+    try: algos = api.get('/fapi/v1/openAlgoOrders', {}, signed=True)
+    except RuntimeError as e: algos = []; print(f'Order SL/TP tidak terbaca: {e}')
+    if isinstance(algos, dict): algos = algos.get('orders') or algos.get('rows') or []
+    for sym, r in live.items():
+        if sym in st['positions']: print(f'{sym}: sudah dikenal bot'); continue
+        amt = float(r['positionAmt']); side = 'BUY' if amt > 0 else 'SELL'
+        mine = [a for a in algos if a.get('symbol') == sym]
+        typ = lambda a: str(a.get('orderType') or a.get('type') or '')
+        sl = next((float(a['triggerPrice']) for a in mine if 'STOP' in typ(a) and 'PROFIT' not in typ(a)), 0.0)
+        tp = next((float(a['triggerPrice']) for a in mine if 'TAKE_PROFIT' in typ(a)), 0.0)
+        if not (sl > 0 and tp > 0):
+            print(f'{sym}: SL/TP tidak ditemukan di Binance — dilewati, cek manual di app Binance.'); continue
+        tr = api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': since}, signed=True)
+        ent = [x for x in tr if x['side'] == side]
+        if not ent: print(f'{sym}: transaksi entry tidak ditemukan (lebih dari 14 hari?) — dilewati.'); continue
+        oid = ent[-1]['orderId']; fills = [x for x in ent if x['orderId'] == oid]
+        p = {'ticket': f'{sym}-{oid}', 'side': side, 'strat': strat, 'entry': float(r.get('entryPrice') or vw(fills)), 'sl': sl, 'tp': tp,
+             'qty': abs(amt), 'opened': int(fills[0]['time']) // 1000, 'trim_id': None,
+             'sl_id': next((a.get('algoId') for a in mine if 'STOP' in typ(a) and 'PROFIT' not in typ(a)), None),
+             'tp_id': next((a.get('algoId') for a in mine if 'TAKE_PROFIT' in typ(a)), None)}
+        st['positions'][sym] = p
+        report(cfg, {'event': 'open', 'strategy': strat, 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': p['entry'], 'sl': sl, 'tp': tp, 'lot': p['qty'], 'time': p['opened']})
+        print(f'{sym}: diambil alih ({STRAT_NAME[strat]} {side}, entry {p["entry"]}, SL {sl}, TP {tp}) — TP/SL-nya nanti dilaporkan.')
+    save_state(st)
+    # 2) missed close reports
+    for sym in syms:
+        if sym in live: print(f'{sym}: masih terbuka di Binance — tidak ada yang dilaporkan.'); continue
+        tr = api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': since}, signed=True)
+        if not tr: print(f'{sym}: tidak ada transaksi 14 hari terakhir.'); continue
+        last = tr[-1]['orderId']; cl = [x for x in tr if x['orderId'] == last]
+        ex = cl[0]['side']; side = 'BUY' if ex == 'SELL' else 'SELL'
+        ent = [x for x in tr if x['side'] == side and int(x['time']) < int(cl[0]['time'])]
+        if not ent: print(f'{sym}: transaksi entry tidak ditemukan — dilewati.'); continue
+        oid = ent[-1]['orderId']; fills = [x for x in ent if x['orderId'] == oid]
+        t0 = int(fills[0]['time']); t1 = int(cl[-1]['time'])
+        pnl = sum(float(x['realizedPnl']) - float(x['commission']) for x in tr if t0 <= int(x['time']) <= t1 and x.get('commissionAsset') == 'USDT')
+        try:
+            inc = api.get('/fapi/v1/income', {'symbol': sym, 'incomeType': 'FUNDING_FEE', 'startTime': t0, 'endTime': t1}, signed=True)
+            pnl += sum(float(x['income']) for x in inc)
+        except RuntimeError: pass
+        entry, exit_px = vw(fills), vw(cl); reason = 'tp' if pnl > 0 else 'sl'
+        d = abs(exit_px - entry); sgn = 1 if side == 'BUY' else -1
+        sl_px, tp_px = (entry - sgn * d / 2, exit_px) if reason == 'tp' else (exit_px, entry + sgn * 2 * d)
+        ok = report(cfg, {'event': 'close', 'strategy': strat, 'ticket': f'{sym}-{oid}', 'symbol': sym, 'side': side, 'price': exit_px, 'profit': round(pnl, 2), 'reason': reason,
+                          'lot': sum(float(x['qty']) for x in fills), 'entry': entry, 'sl': sl_px, 'tp': tp_px, 'time': t1 // 1000})
+        print(f'{sym}: penutupan dilaporkan ({reason.upper()}, {pnl:+.2f} USDT)' if ok else f'{sym}: laporan ditolak website — cek log.')
+    lk.close()
+    print('Selesai. Jalankan bot lagi: python snr_bot.py --install')
+
+
 def command(cmd):
     if cmd == '--install':
         if os.name != 'nt': sys.exit('--install hanya untuk Windows.')
@@ -792,6 +867,8 @@ def command(cmd):
         report(cfg, {'event': 'close', 'ticket': tk, 'symbol': 'TESTUSDT', 'side': 'SELL', 'price': 1.1603, 'profit': 7.86, 'reason': 'tp', 'lot': 107.8, 'time': t})
         notify(cfg, 'Pesan tes — kalau ini sampai, laporan bot ke Telegram berfungsi.')
         print('3 pesan tes dikirim (posisi TEST dibuka, ditutup TP, dan info). Hapus trade TEST di jurnal website (Trade -> Crypto) bila sudah dilihat.')
+    elif cmd == '--sync':
+        sync_command(sys.argv[2:])
     elif cmd == '--status':
         try:
             with open(LOG_FILE, encoding='utf-8') as f: lines = f.readlines()[-15:]
@@ -799,7 +876,7 @@ def command(cmd):
         except FileNotFoundError: print('Belum ada log.')
         print('stop.flag ada -> bot dihentikan' if os.path.exists(STOP_FILE) else '')
     else:
-        sys.exit('Perintah: --install, --status, --stop, --reset, --uninstall, --test')
+        sys.exit('Perintah: --install, --status, --stop, --reset, --uninstall, --test, --sync')
 
 
 if __name__ == '__main__':
