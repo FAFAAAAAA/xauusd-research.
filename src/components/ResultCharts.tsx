@@ -262,14 +262,14 @@ const compact = (n: number, dollar = true) => {
   return `${Math.round(a) === 0 ? '' : n > 0 ? '+' : '−'}${dollar ? '$' : ''}${v}`;
 };
 
-/** simple: compact header (Trade page). renderSelection: what to show for a tapped day/week/month (gets a matcher for entry times). */
+/** simple: compact header (Trade page). renderSelection: what to show for a tapped day/week/month (gets a matcher for close times). */
 export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { trades: ClosedTrade[]; tz: string; simple?: boolean;
-  renderSelection?: (match: (entryMs: number) => boolean, label: string) => React.ReactNode }) {
+  renderSelection?: (match: (closeMs: number) => boolean, label: string) => React.ReactNode }) {
   const [tab, setTab] = useState<CalTab>('day');
   const [metric, setMetric] = useState<Metric>('pnl');
   const [sel, setSel] = useState<string | null>(null);
 
-  // aggregate by local day / Monday-week / month (entry time, display timezone)
+  // aggregate by local day / Monday-week / month of the CLOSE (realized PnL day, like the exchange), display timezone
   const agg = useMemo(() => {
     const day = new Map<string, Cell>(), week = new Map<string, Cell>(), month = new Map<string, Cell>();
     const add = (m: Map<string, Cell>, k: string, t: ClosedTrade) => {
@@ -278,7 +278,7 @@ export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { t
       m.set(k, c);
     };
     for (const t of trades) {
-      const d = wall(t.entry, tz);
+      const d = wall(t.exit, tz);
       const Y = d.getUTCFullYear(), M = d.getUTCMonth(), D = d.getUTCDate();
       add(day, `${Y}-${M}-${D}`, t);
       add(week, String(Date.UTC(Y, M, D - ((d.getUTCDay() + 6) % 7))), t);

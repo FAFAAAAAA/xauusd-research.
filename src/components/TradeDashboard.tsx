@@ -126,7 +126,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
 
         <section className="group">
           <PnlCalendar trades={s.closed} tz={tz} simple
-            renderSelection={(match) => renderTrades(trades.filter((t) => t.result !== 'open' && t.pnl != null && match(t.openedAt)).sort((a, b) => b.openedAt - a.openedAt))} />
+            renderSelection={(match) => renderTrades(trades.filter((t) => t.result !== 'open' && t.pnl != null && match(t.closedAt ?? t.openedAt)).sort((a, b) => (b.closedAt ?? b.openedAt) - (a.closedAt ?? a.openedAt)))} />
         </section>
       </> : <p className="empty-inline">Belum ada trade selesai di pasar ini.</p>}
 
