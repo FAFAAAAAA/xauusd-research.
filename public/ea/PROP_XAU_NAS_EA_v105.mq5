@@ -2,6 +2,7 @@
 //| PROP_XAU_NAS_EA.mq5 — v1 XAU + v1 NAS dalam SATU EA, dengan       |
 //| penjaga aturan prop firm (FundingPips 2 Step Standard dsb.).       |
 //|                                                                    |
+//| v1.05 (20 Nov 2026): v1 XAU MATI bawaan (plan FX2 = Level + NAS). |
 //| Tiga metode tetap TERPISAH (tidak digabung):                       |
 //|  v1 XAU (emas)   = sama persis dengan XAU_v2_EA v1.15 (volbreak-v5)|
 //|  v1 Level (emas) = website metode level-v3 (v1.02, 15 Nov 2026)    |
@@ -35,13 +36,13 @@
 //| bukan jaminan hasil nyata.                                         |
 //+------------------------------------------------------------------+
 #property copyright "XAUUSD Research"
-#property version   "1.04"
+#property version   "1.05"
 #property strict
 
 #include <Trade/Trade.mqh>
 
 input group "Strategi"
-input bool   InpUseXau       = true;       // Jalankan v1 XAU (emas)
+input bool   InpUseXau       = false;      // Jalankan v1 XAU (emas) — MATI sejak v1.05 (plan FX2 = Level + NAS)
 input string InpXauSymbol    = "XAUUSD";   // Nama simbol emas di broker ini
 input bool   InpUseLvl       = true;       // Jalankan v1 Level (emas, simbol sama dengan v1 XAU)
 input bool   InpUseNas       = true;       // Jalankan v1 NAS (Nasdaq)
@@ -791,7 +792,7 @@ void Status()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
-   string s = StringFormat("PROP EA v1.04 | risiko %.2f%% | v1 XAU %s · v1 Level %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
+   string s = StringFormat("PROP EA v1.05 | risiko %.2f%% | v1 XAU %s · v1 Level %s (%s) | v1 NAS %s (%s)\n", InpRiskPercent,
                            InpUseXau ? "ON" : "off", InpUseLvl ? "ON" : "off", XS, InpUseNas ? "ON" : "off", NS);
    if(PropOn())
    {

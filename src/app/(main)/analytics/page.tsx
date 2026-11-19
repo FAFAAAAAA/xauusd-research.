@@ -123,7 +123,7 @@ export default function Analytics() {
     setPair(sym); setYear(pairs.length > 1 ? 'ALL' : null); setDetail(null); setTradeLimit(10);
     setTimeout(() => document.getElementById('pair-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   };
-  const pairLabel = isPlan ? 'FX3' : instrumentLabel(pairSel);
+  const pairLabel = isPlan ? 'FX2' : instrumentLabel(pairSel);
 
   const m = d?.overall;
   const trades = useMemo(() => closedTrades(d?.trades ?? []), [d?.trades]);
@@ -139,7 +139,7 @@ export default function Analytics() {
       {hasRuns ? <div className="backtest-controls">
         <button className="research-filter" onClick={() => { setTab('hasil'); setFilterOpen(true); }} aria-haspopup="dialog" aria-label="Pilih strategi, tahun dan risk reward">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg>
-          <span>{isPlan ? 'FX3' : pairSel ?? 'XAUUSD'} <i>·</i> {curYear} <i>·</i> 1:{curRr}</span>
+          <span>{isPlan ? 'FX2' : pairSel ?? 'XAUUSD'} <i>·</i> {curYear} <i>·</i> 1:{curRr}</span>
         </button>
         <button className="research-view icon-only" onClick={() => setActionsOpen(true)} aria-haspopup="dialog" aria-label="Opsi backtest" title="Hasil, jalankan, dan kelola"><ResearchIcon name="options" /></button>
       </div> : null}
@@ -295,7 +295,7 @@ export default function Analytics() {
                   <a className="btn block" href={`/api/analytics/export?kind=trades${key ? `&session=${key}` : ''}`}>Unduh trade (CSV)</a>
                 <ReportButton filename={`backtest-${String(pairSel ?? 'xauusd').toLowerCase()}-${yearSel === 'ALL' ? 'semua-tahun' : yearSel}-rr1-${curRr}.png`} make={() => (m ? {
                   title: `${curYear} · RR 1:${curRr}`, symbol: pairLabel, strategyLabel: configs.find((c) => c.key === cfgSel)?.label ?? 'Strategi',
-                  rules: isPlan ? 'FX3 = v1 XAU (SL ke entry di +1R) + v1 Level + v1 NAS, digabung dalam satu hasil · RR sama untuk ketiganya' : methodByStrategy(String(cfgSel ?? '').split('|')[0])?.rules ?? (String(cfgSel ?? '').startsWith('breakout v0.8')
+                  rules: isPlan ? 'FX2 = v1 Level + v1 NAS, digabung dalam satu hasil · RR sama untuk keduanya' : methodByStrategy(String(cfgSel ?? '').split('|')[0])?.rules ?? (String(cfgSel ?? '').startsWith('breakout v0.8')
                     ? 'v0.7 (v0.6 + Pola N H1/H4) + Breakout Base: base ≥ 3 candle (overlap ≥ 50%, tinggi ≤ 1,5×ATR) di H4 (breakout jam 07–17 UTC) dan H1 (harga sudah bergerak ≥ 1×ATR searah sebelum base) · entry setelah close M15 keluar base · SL batas base ∓ 0,3×ATR · BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1 · tiap bagian slot sendiri'
                     : String(cfgSel ?? '').startsWith('breakout v0.7')
                     ? 'v0.6 (breakout H1 40 candle, range New York, level H1 2–3×, candle momentum, searah tren H4 & D1) + Pola N: A-B-C di H1/H4 (swing = pantulan 3×ATR, C di atas A untuk BUY), entry setelah close M15 menembus B · BUY: EMA50 H4 > EMA200 · SELL: EMA50 < EMA200 di H4 & D1 · SL di C · v0.6 dan Pola N punya slot sendiri'
@@ -455,15 +455,15 @@ type PairStatus = { id: string; symbol: string; label: string; years: number[]; 
 const STRAT_ORDER = ['metode_volbreak', 'metode_level', 'metode_nas_donchian', 'metode_snr_sell', 'metode_crypto_donchian', 'metode_bz'];
 // crypto: only v1 SNR for now (owner, 7 Nov 2026); v1 BTC / v2 ALT stay in the code
 const VISIBLE_STRATEGIES = new Set(['metode volbreak-v5', 'metode level-v3', 'metode nas-donchian-v1', 'metode snr-sell-v1', 'metode crypto-donchian-v1', 'metode bz-v1']);
-// FX3 = the combined forex plan (owner, 15 Nov 2026): v1 XAU (SL → entry at +1R) + v1 Level + v1 NAS (no SL → entry), one result per year.
-const PLAN_KEY = 'FX3';
-const PLAN_LABEL = 'FX3 · v1 XAU + v1 Level + v1 NAS';
+// FX2 = the combined forex plan: v1 Level + v1 NAS, one result per year. v1 XAU removed by the owner (20 Nov 2026):
+// it often entered together with v1 Level; FX2 2018-26: +23.6R/yr, DD 16.8R, no losing year.
+const PLAN_KEY = 'FX2';
+const PLAN_LABEL = 'FX2 · v1 Level + v1 NAS';
 const PLAN_PARTS = [
-  { strategy: 'metode volbreak-v5', adapter: 'metode_volbreak', sym: 'XAUUSD', be: 'on', label: 'v1 XAU' },
   { strategy: 'metode level-v3', adapter: 'metode_level', sym: 'XAUUSD', be: 'off', label: 'v1 Level' },
   { strategy: 'metode nas-donchian-v1', adapter: 'metode_nas_donchian', sym: 'USATECHIDXUSD', be: 'off', label: 'v1 NAS' },
 ] as const;
-/** Year rows of FX3: years where all three parts have a result (newest config of each part); cells = the parts' sessions (RR 1:1/1:2/1:3). */
+/** Year rows of FX2: years where all parts have a result (newest config of each part); cells = the parts' sessions (RR 1:1/1:2/1:3). */
 function planRows(sessions: any[]) {
   const parts = PLAN_PARTS.map((p) => {
     const ps = sessions.filter((s: any) => String(s.strategy ?? '') === p.strategy && symOf(s) === p.sym);
@@ -474,7 +474,7 @@ function planRows(sessions: any[]) {
   const labels = parts[0]!.map((r) => r.label).filter((l) => /^\d{4}$/.test(l) && parts.every((r) => r!.some((x) => x.label === l)));
   return labels.map((l) => ({ label: l, sort: Number(l), cells: parts.flatMap((r) => r!.find((x) => x.label === l)!.cells) })).sort((a, b) => b.sort - a.sort);
 }
-/** Days covered by the chosen results, each period counted once (FX3 has three results per period). */
+/** Days covered by the chosen results, each period counted once (FX2 has two results per period). */
 function periodDays(cells: any[]) {
   const seen = new Set<string>(); let days = 0;
   for (const c of cells) { const k = `${c.period_start}|${c.period_end}`; if (seen.has(k)) continue; seen.add(k); days += Math.max(0, (tsMs(c.period_end) - tsMs(c.period_start)) / 86_400_000 || 0); }
@@ -572,7 +572,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
     costs: { spread: Number(f.spread), slippage: Number(f.slippage), commissionPerUnit: Number(f.commission), swapLong: Number(f.swapLong) || 0, swapShort: Number(f.swapShort) || 0, ambiguityPolicy: f.ambiguity },
     breakeven: be, no_costs: noCost,
   });
-  // one job = one strategy on one pair (FX3: v1 XAU, v1 Level, v1 NAS, each with its own SL → entry rule)
+  // one job = one strategy on one pair (FX2: v1 Level, v1 NAS)
   type Job = { m: any; sid: string; be: string; label: string; cfg: string };
   const jobs: Job[] = isPlanRun
     ? planJobs.filter(Boolean).map((j) => ({ m: j!.m, sid: j!.sv.id, be: j!.p.be, label: `${j!.p.label} · ${j!.m.label.replace(/ \(.*\)$/, '')}`,
@@ -630,7 +630,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
         </select></label>
       ) : <Loading what="strategi" variant="list" />}
       </div>
-      {isPlanRun ? <div className="form-sec"><h3><span className="n">2</span>Pair</h3><p className="mute small">FX3 otomatis: v1 XAU + v1 Level di XAUUSD, v1 NAS di US100. SL ke entry di +1R hanya untuk v1 XAU. Hasil gabungan hanya untuk tahun yang ketiganya ada (US100 mulai 2017).</p></div> : <div className="form-sec">
+      {isPlanRun ? <div className="form-sec"><h3><span className="n">2</span>Pair</h3><p className="mute small">FX2 otomatis: v1 Level di XAUUSD, v1 NAS di US100. Hasil gabungan hanya untuk tahun yang keduanya ada (US100 mulai 2017).</p></div> : <div className="form-sec">
         <div className="row between"><h3><span className="n">2</span>Pair <span className="mute" style={{ fontWeight: 400 }}>{chosen.length}/{sets.length}</span></h3>
           <button className="btn sm ghost" onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>
         <div className="chips wide">
@@ -689,7 +689,7 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       {busy
         ? <button className="btn block" onClick={() => { stop.current = true; }}><Spinner />Berhenti setelah tahun ini</button>
         : <button className="btn primary block" onClick={run} disabled={!f.strategy || !chosen.length || (!custom && !list.length)}>
-            {isPlanRun ? `Jalankan FX3 · ${y1 === y2 ? y1 : `${y1}–${y2}`}` : custom ? `Jalankan ${chosen.length} pair` : `Jalankan ${chosen.length} pair · ${y1 === y2 ? y1 : `${y1}–${y2}`}`}
+            {isPlanRun ? `Jalankan FX2 · ${y1 === y2 ? y1 : `${y1}–${y2}`}` : custom ? `Jalankan ${chosen.length} pair` : `Jalankan ${chosen.length} pair · ${y1 === y2 ? y1 : `${y1}–${y2}`}`}
           </button>}
       {err ? <div className="error">{err}</div> : null}
       {prog ? (
