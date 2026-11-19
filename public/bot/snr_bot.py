@@ -53,7 +53,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.19.1'
+BOT_VERSION = '2026.11.19.2'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -523,7 +523,9 @@ class Bot:
             # The position is not in the list. Do NOT touch anything until the close is CONFIRMED by closing BUY trades
             # (8 Nov 2026: an empty/partial positionRisk answer made the bot cancel the SL/TP of a position that was still open).
             p['miss'] = p.get('miss', 0) + 1
-            try: trades = self.api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': p['opened'] * 1000 - 60000}, signed=True)
+            # Binance returns at most 7 days from startTime: for a position older than ~7 days read the last 7 days (the closing fills are there)
+            t_from = max(p['opened'] * 1000 - 60000, int(time.time() * 1000) - 7 * 86_400_000 + 60000)
+            try: trades = self.api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': t_from}, signed=True)
             except RuntimeError as e:
                 log.warning('%s: riwayat trade tidak terbaca (%s) — cek ulang nanti.', sym, e); save_state(self.st); continue
             buys = [x for x in trades if x['side'] == ex and x.get('orderId') != p.get('trim_id')]   # closing fills (not the size trim right after entry)
@@ -781,7 +783,14 @@ def sync_command(args):
     syms = [a.upper() for a in args if not a.startswith('strat=')]
     api = Binance(cfg); api.sync_time()
     st = load_state(); st.setdefault('positions', {})
-    since = int(time.time() * 1000) - 14 * 86_400_000
+    nowms = int(time.time() * 1000)
+    def history(sym):    # Binance gives at most 7 days per call: read the last 14 days in two windows, oldest first
+        out = []
+        for k in (2, 1):
+            try: out += api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': nowms - k * 7 * 86_400_000 + 1, 'endTime': nowms - (k - 1) * 7 * 86_400_000, 'limit': 1000}, signed=True)
+            except RuntimeError as e: print(f'{sym}: riwayat tidak terbaca ({e})')
+        uniq = {(x.get('id'), x['orderId'], x['time'], x['qty']): x for x in out}          # no double count where the windows touch
+        return sorted(uniq.values(), key=lambda x: (int(x['time']), int(x.get('id', 0))))
     vw = lambda xs: sum(float(x['price']) * float(x['qty']) for x in xs) / max(1e-12, sum(float(x['qty']) for x in xs))
     # 1) adopt unknown open positions
     try: rows = api.get('/fapi/v3/positionRisk', signed=True)
@@ -799,7 +808,7 @@ def sync_command(args):
         tp = next((float(a['triggerPrice']) for a in mine if 'TAKE_PROFIT' in typ(a)), 0.0)
         if not (sl > 0 and tp > 0):
             print(f'{sym}: SL/TP tidak ditemukan di Binance — dilewati, cek manual di app Binance.'); continue
-        tr = api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': since}, signed=True)
+        tr = history(sym)
         ent = [x for x in tr if x['side'] == side]
         if not ent: print(f'{sym}: transaksi entry tidak ditemukan (lebih dari 14 hari?) — dilewati.'); continue
         oid = ent[-1]['orderId']; fills = [x for x in ent if x['orderId'] == oid]
@@ -814,7 +823,7 @@ def sync_command(args):
     # 2) missed close reports
     for sym in syms:
         if sym in live: print(f'{sym}: masih terbuka di Binance — tidak ada yang dilaporkan.'); continue
-        tr = api.get('/fapi/v1/userTrades', {'symbol': sym, 'startTime': since}, signed=True)
+        tr = history(sym)
         if not tr: print(f'{sym}: tidak ada transaksi 14 hari terakhir.'); continue
         last = tr[-1]['orderId']; cl = [x for x in tr if x['orderId'] == last]
         ex = cl[0]['side']; side = 'BUY' if ex == 'SELL' else 'SELL'
