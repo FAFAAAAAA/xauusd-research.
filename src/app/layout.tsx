@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import '@fontsource-variable/inter';
 import './globals.css';
 import './apple-inspired.css';
 import './tokens.css';
