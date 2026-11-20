@@ -1,5 +1,5 @@
 /* =========================================================================
-   "Gold Terminal" component layer (20 Nov 2026). Loaded after tokens.css and
+   Component layer (monochrome) (20 Nov 2026). Loaded after tokens.css and
    polish.css. Uses tokens only; the few local overrides below re-point tokens
    inside one component (the dark balance panel) so its children follow along.
    ========================================================================= */
@@ -33,23 +33,23 @@
 .b-v { font-size: 22px; font-weight: 600; }
 
 /* ---------------------------------------------------------- the balance panel
-   Always a dark "terminal" panel with a faint gold glow, in both themes. Its own token
+   Always a dark "terminal" panel with a faint light sheen, in both themes. Its own token
    values make every child (labels, chips, green/red) switch to the dark palette. */
 .td-hero {
-  --ink: #f4f1ea; --ink-2: #cfcabf; --mute: #a39e92; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
+  --ink: #f4f4f5; --ink-2: #d4d4d8; --mute: #a1a1aa; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
   --up: #3ddc97; --down: #ff7b7b; --up-tint: rgba(61, 220, 151, .12); --down-tint: rgba(255, 123, 123, .12);
   position: relative; overflow: hidden; color: var(--ink);
   background:
-    radial-gradient(120% 90% at 100% 0%, rgba(230, 182, 69, .20), transparent 55%),
-    radial-gradient(80% 60% at 0% 100%, rgba(230, 182, 69, .06), transparent 60%),
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
     #121214;
-  border: 1px solid rgba(230, 182, 69, .28);
+  border: 1px solid rgba(255, 255, 255, .08);
   box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 18px 40px -24px rgba(0, 0, 0, .55);
   padding: 24px 22px 20px;
 }
-.td-hero::before { /* fine gold rule along the top edge */
+.td-hero::before { /* fine light rule along the top edge */
   content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(230, 182, 69, .75), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22), transparent);
 }
 .td-bal { font-family: var(--font); font-feature-settings: var(--num-features); font-weight: 650; letter-spacing: -.05em; font-size: clamp(42px, 11.5vw, 62px); }
 .td-chip { font-weight: 600; }
@@ -67,7 +67,7 @@
 .wlbar { height: 6px; gap: 3px; }
 .st-pill.w, .td-chip.pos { background: var(--up-tint); }
 .hc-side, .op-badge { border-radius: 9px; }
-.opencard .btc-badge { background: var(--gold-bright); color: #17120a; }
+.opencard .btc-badge { background: #d17c16; color: #fff; }   /* Bitcoin's own orange (a coin logo, not the site accent) */
 .btn.primary { letter-spacing: -.01em; }
 
 /* in dark mode cards are flat panels; a light lift reads as glare */
@@ -90,14 +90,14 @@
 .eq-tip .mute { color: inherit; opacity: .7; }
 
 /* ---------------------------------------------------------- Backtest results */
-/* the result summary is the same dark gold panel as the Trade balance */
+/* the result summary is the same dark panel as the Trade balance */
 .apple-shell .research-flow .hero.flagship-verdict {
-  --ink: #f4f1ea; --ink-2: #cfcabf; --mute: #a39e92; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
+  --ink: #f4f4f5; --ink-2: #d4d4d8; --mute: #a1a1aa; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
   --up: #3ddc97; --down: #ff7b7b;
-  color: var(--ink); border: 1px solid rgba(230, 182, 69, .28); border-radius: var(--r); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .55);
+  color: var(--ink); border: 1px solid rgba(255, 255, 255, .08); border-radius: var(--r); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .55);
   background:
-    radial-gradient(120% 90% at 100% 0%, rgba(230, 182, 69, .20), transparent 55%),
-    radial-gradient(80% 60% at 0% 100%, rgba(230, 182, 69, .06), transparent 60%),
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
     #121214;
 }
 .apple-shell .research-flow .hero.flagship-verdict .profit-caption,
@@ -137,5 +137,5 @@
 .flagship-verdict .verdict-context, .flagship-verdict .summary-risk, .flagship-verdict .summary-meta, .summary-trades { font-size: 12px; }
 .research-filter > span:first-of-type { font-size: 12px; }
 
-/* Atur: the bot card's main button follows the gold accent (was mint green) */
-.bxs-btn .go { background: var(--gold-bright, #e6b645); color: #17120a; }
+/* Atur: the bot card's main button is light on the dark card (monochrome accent; was mint green) */
+.bxs-btn .go { background: #f4f4f5; color: #18181b; }

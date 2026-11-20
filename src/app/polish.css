@@ -59,7 +59,7 @@
 .cal-simple .cal .cell.up .n, .cal-simple .cal .cell.up .v,
 .cal-simple .cal .cell.down .n, .cal-simple .cal .cell.down .v,
 .b-three .b-stat .hc-res.tp, .b-three .b-stat .hc-res.sl { color: var(--on-solid); }
-/* (dark-mode blue button override removed: the accent is gold now, see tokens.css) */
+/* (dark-mode blue button override removed: the accent comes from tokens.css) */
 
 
 /* entrance animations of [data-anim] blocks wait (hidden at their first frame) until the block scrolls into view */
@@ -83,7 +83,7 @@
 .pair-more { margin-top: 8px; min-height: 44px; }
 .run-bar { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 4; }
 .run-bar > .btn { box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--ink) 45%, transparent); }
-/* selected pair chips: gold label (>= 4.5:1 on the gold tint) */
+/* selected pair chips: accent label (>= 4.5:1 on the accent tint) */
 .chip[aria-pressed='true'] .k { color: var(--gold); }
 
 /* ---------------------------------------------------------- 8. Trade page on wide screens
