@@ -67,7 +67,7 @@
 .wlbar { height: 6px; gap: 3px; }
 .st-pill.w, .td-chip.pos { background: var(--up-tint); }
 .hc-side, .op-badge { border-radius: 9px; }
-.opencard .btc-badge { background: #d17c16; color: #fff; }   /* Bitcoin's own orange (a coin logo, not the site accent) */
+
 .btn.primary { letter-spacing: -.01em; }
 
 /* in dark mode cards are flat panels; a light lift reads as glare */
@@ -139,3 +139,17 @@
 
 /* Atur: the bot card's main button is light on the dark card (monochrome accent; was mint green) */
 .bxs-btn .go { background: #f4f4f5; color: #18181b; }
+
+/* ---------------------------------------------------------- icons (monochrome)
+   Atur's app icons and the Bitcoin badge follow the monochrome accent (they were one
+   colour gradient each). Status dots on the icons (green ok / amber warning) keep their meaning. */
+.ap-ic { background: linear-gradient(160deg, #3a3a40, #18181b); color: #fff; box-shadow: 0 6px 14px -6px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .14); }
+:root[data-theme='dark'] .ap-ic { background: linear-gradient(160deg, #3f3f46, #27272a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10); }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] .ap-ic { background: linear-gradient(160deg, #3f3f46, #27272a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10); }
+}
+.opencard .btc-badge { background: #18181b; color: #fff; }
+:root[data-theme='dark'] .opencard .btc-badge { background: #3f3f46; }
+@media (prefers-color-scheme: dark) { :root[data-theme='auto'] .opencard .btc-badge { background: #3f3f46; } }
+/* Atur: the bot card is the same neutral dark panel as Saldo (it had a green glow) */
+.bxs { background: radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%), #121214; border: 1px solid rgba(255, 255, 255, .08); }
