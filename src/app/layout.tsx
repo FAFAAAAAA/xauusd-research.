@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+import '@fontsource-variable/inter';
 import './globals.css';
 import './apple-inspired.css';
 import './tokens.css';
@@ -27,7 +26,7 @@ const THEME_SCRIPT = `try{var t=localStorage.getItem('xau.theme');if(t==='dark'|
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" data-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+    <html lang="id" data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

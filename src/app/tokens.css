@@ -51,9 +51,11 @@
 
 /* type, shape and motion are the same in both themes */
 :root, :root[data-theme] {
-  /* Geist (bundled with the site, no Google request); the iPhone's own font if it fails to load */
-  --font: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: var(--font-geist-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Inter (bundled with the site via @fontsource, no Google request); the iPhone's own font if it fails to load.
+     Figures use the same font with tabular digits (--num-features), so columns of numbers line up. */
+  --font: 'Inter Variable', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --num-features: 'tnum' 1, 'cv11' 1;
   --fs-xs: 12.5px; --fs-sm: 13.5px; --fs-md: 16px; --fs-lg: 17px; --fs-xl: 22px; --fs-2xl: 28px; --fs-num: 36px;
 
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px;

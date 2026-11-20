@@ -5,12 +5,12 @@
    ========================================================================= */
 
 /* ---------------------------------------------------------- numbers
-   Every figure that matters is set in Geist Mono: digits line up and read like a terminal. */
+   Every figure uses tabular digits, so amounts line up in columns. */
 .td-row, .td-period strong, .td-startbtn, .td-sub .flash,
 .b-v, .b-stat .b-v, .op-pnl, .perf-pnl, .perf-facts strong, .si-facts strong,
 .cal .cell .v, .cal-top strong, .cal-pick-head span, .metric .v, .num, .wl-legend, .st-recs strong,
 .bxs-sum b, .cf-amt, .hc-pnl, .dt-pnl strong, .eq-fig text {
-  font-family: var(--mono); font-feature-settings: 'tnum' 1, 'zero' 0; letter-spacing: -.02em;
+  font-family: var(--font); font-feature-settings: var(--num-features); font-variant-numeric: tabular-nums; letter-spacing: -.015em;
 }
 
 /* ---------------------------------------------------------- labels
@@ -51,7 +51,7 @@
   content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(230, 182, 69, .75), transparent);
 }
-.td-bal { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -.05em; font-size: clamp(42px, 11.5vw, 62px); }
+.td-bal { font-family: var(--font); font-feature-settings: var(--num-features); font-weight: 650; letter-spacing: -.05em; font-size: clamp(42px, 11.5vw, 62px); }
 .td-chip { font-weight: 600; }
 .td-period { border-top-color: var(--line); }
 .td-period strong { font-size: 16px; font-weight: 500; }
@@ -81,9 +81,9 @@
 .eq-svg:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
 .eq-tip { position: absolute; top: -6px; z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
   padding: 8px 10px; border-radius: var(--r-s); background: var(--ink); color: var(--bg); box-shadow: 0 10px 24px -12px var(--shadow);
-  font-family: var(--mono); font-size: 13px; line-height: 1.25; white-space: nowrap; animation: unfold var(--d-1) var(--ease) both; }
+  font-size: 13px; font-feature-settings: var(--num-features); line-height: 1.25; white-space: nowrap; animation: unfold var(--d-1) var(--ease) both; }
 .eq-tip strong { font-size: 15px; font-weight: 600; }
-.eq-tip small { font-family: var(--font); font-size: 12px; opacity: .75; }
+.eq-tip small { font-size: 12px; opacity: .75; }
 /* on the inverted chip, profit/loss use the opposite theme's green/red so they stay readable */
 .eq-tip .pos { color: color-mix(in srgb, var(--up) 55%, var(--bg)); }
 .eq-tip .neg { color: color-mix(in srgb, var(--down) 55%, var(--bg)); }
@@ -109,7 +109,7 @@
 .apple-shell .research-flow .hero.flagship-verdict .pos { color: var(--up); }
 .apple-shell .research-flow .hero.flagship-verdict .neg { color: var(--down); }
 .flagship-verdict .price { font-variant-numeric: tabular-nums; }
-.flagship-verdict .hero-winrate strong, .facts strong, .hold3 strong, .tbl td, table.num-r td { font-family: var(--mono); font-feature-settings: 'tnum' 1; letter-spacing: -.02em; }
+.flagship-verdict .hero-winrate strong, .facts strong, .hold3 strong, .tbl td, table.num-r td { font-feature-settings: var(--num-features); font-variant-numeric: tabular-nums; }
 
 /* a card inside a card loses its own frame (e.g. the trade list under "Riwayat") */
 .research-flow .group .group { border: 0; box-shadow: none; background: transparent; padding-inline: 0; }
@@ -132,7 +132,6 @@
 .office-tag .ot-card strong { font-size: 10px; }
 .office-tag .ot-st, .office-tag .ot-role { font-size: 8.5px; }
 .ot-bubble { font-size: 10px; padding: 2px 7px; }
-.ot-card, .ot-bubble { font-family: var(--mono); }
 .office-cat { width: 44px; height: 44px; }
 
 /* Backtest filter bar and the summary's context line were 11px on phones */
