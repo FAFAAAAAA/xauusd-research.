@@ -139,3 +139,6 @@
 .research-filter, .research-view { font-size: 12px; min-height: 44px; }
 .flagship-verdict .verdict-context, .flagship-verdict .summary-risk, .flagship-verdict .summary-meta, .summary-trades { font-size: 12px; }
 .research-filter > span:first-of-type { font-size: 12px; }
+
+/* Atur: the bot card's main button follows the gold accent (was mint green) */
+.bxs-btn .go { background: var(--gold-bright, #e6b645); color: #17120a; }
