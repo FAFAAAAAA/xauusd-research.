@@ -88,8 +88,6 @@
 .eq-tip .pos { color: color-mix(in srgb, var(--up) 55%, var(--bg)); }
 .eq-tip .neg { color: color-mix(in srgb, var(--down) 55%, var(--bg)); }
 .eq-tip .mute { color: inherit; opacity: .7; }
-/* balance trend inside the balance panel */
-.td-spark { display: block; width: 100%; height: 44px; margin: 2px 0 -2px; }
 
 /* ---------------------------------------------------------- Backtest results */
 /* the result summary is the same dark gold panel as the Trade balance */
