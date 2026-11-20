@@ -9,9 +9,10 @@ import { datasets, fileProvider, parseFileSource, type BaseTf } from '@/lib/serv
 export const dynamic = 'force-dynamic';
 
 /** Trade review: chart around entry, setup reason, news known AT ENTRY, outcome. */
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: rawId } = await params;   // Next.js 15: route params are a Promise
   return api(async (db) => {
-    const id = reqUuid(params.id, 'id');
+    const id = reqUuid(rawId, 'id');
     const r = await db.query<Record<string, unknown>>(
       `select t.*, extract(epoch from t.entry_time)*1000 as entry_ms, extract(epoch from t.exit_time)*1000 as exit_ms,
               t.entry_price::float8 as entry_px, t.exit_price::float8 as exit_px, t.stop_loss::float8 as sl, t.take_profit::float8 as tp,

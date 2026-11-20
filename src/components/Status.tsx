@@ -185,7 +185,7 @@ export function CopyButton({ text, label = 'Salin', done }: { text: string; labe
 /** Headline number that counts smoothly to its value (from 0 on first show, then from the previous value). */
 /** Marks an element once it scrolls into view: its entrance animations (polish.css, [data-anim]) wait until then,
  *  so charts further down the page draw in front of the user instead of while off screen. */
-export function useSeen<T extends Element>(existing?: React.RefObject<T>, ready = true) {
+export function useSeen<T extends Element>(existing?: React.RefObject<T | null>, ready = true) {
   const own = useRef<T>(null);
   const ref = existing ?? own;
   useEffect(() => {
