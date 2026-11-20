@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/core.test.ts tests/snr.test.ts tests/client-cache.test.ts tests/trade-chart.test.ts",
     "test:e2e": "tsx --test tests/e2e.test.ts",
+    "test:ui": "tsx --test tests/ui.test.ts",
     "db:migrate": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f supabase/migrations/20261031000000_init.sql"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "@types/pg": "^8.11.10",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
+    "playwright": "1.63.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2"
   }
