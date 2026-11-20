@@ -51,11 +51,6 @@ const ICON: Record<string, string> = {
   'impor-tv': 'M12 3v12M7 10l5 5 5-5M4 21h16',
   error: 'M12 3 2 21h20L12 3zM12 10v5M12 18h.01',
 };
-const GRAD: Record<string, string> = {
-  telegram: 'linear-gradient(160deg,#5ac8fa,#1e90d6)', ea: 'linear-gradient(160deg,#3a3a40,#141416)', sinyal: 'linear-gradient(160deg,#ffcc4d,#f2930d)',
-  tradingview: 'linear-gradient(160deg,#7d93ff,#4058e6)', tampilan: 'linear-gradient(160deg,#c7c7cc,#8e8e93)', data: 'linear-gradient(160deg,#5fd3c3,#22a091)',
-  zona: 'linear-gradient(160deg,#d17bf0,#9b3fd1)', 'impor-tv': 'linear-gradient(160deg,#8fdcff,#3aa9e6)', error: 'linear-gradient(160deg,#ff7b72,#e5322b)',
-};
 const SHORT: Record<string, string> = { telegram: 'Telegram', ea: 'EA & bot', sinyal: 'Sinyal XAU', tradingview: 'TradingView', tampilan: 'Tampilan', data: 'Data harga', zona: 'Zona', 'impor-tv': 'Impor TV', error: 'Error' };
 
 /** Settings tile: a square with an icon, a name and its status; tap opens the full section in a bottom sheet.
@@ -67,7 +62,7 @@ function Group({ id, title, sub, children }: { id: string; title: string; sub?: 
   return (
     <>
       <button type="button" className="ap-btn" id={id} onClick={() => setOpen(true)} aria-label={`${title}${sub ? ` — ${sub}` : ''}`}>
-        <span className="ap-ic" style={{ background: GRAD[id] ?? 'linear-gradient(160deg,#3a3a40,#141416)' }}>
+        <span className="ap-ic">
           <svg viewBox="0 0 24 24"><path d={ICON[id] ?? 'M12 12h.01'} /></svg>
           {dot === 'warn' ? <em className={dot} /> : null}
         </span>

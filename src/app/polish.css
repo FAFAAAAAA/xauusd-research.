@@ -3,13 +3,7 @@
    earlier theme layers. Everything here is visual only.
    ========================================================================= */
 
-/* ---------------------------------------------------------- 1. contrast
-   Grey labels and green/red figures reach 4.5:1 (WCAG AA) on white and on the
-   tinted chips. Same hues as before, just a little deeper. */
-:root[data-theme='light'] { --mute: #686e78; --up: #2b7a5c; --down: #af4c57; }
-@media (prefers-color-scheme: light) { :root[data-theme='auto'] { --mute: #686e78; --up: #2b7a5c; --down: #af4c57; } }
-:root[data-theme='dark'] { --mute: #8b8b95; }
-@media (prefers-color-scheme: dark) { :root[data-theme='auto'] { --mute: #8b8b95; } }
+/* (1. contrast tokens moved to tokens.css) */
 
 /* ---------------------------------------------------------- 2. tap targets
    44px minimum for anything a finger presses. */
@@ -65,14 +59,8 @@
 .cal-simple .cal .cell.up .n, .cal-simple .cal .cell.up .v,
 .cal-simple .cal .cell.down .n, .cal-simple .cal .cell.down .v,
 .b-three .b-stat .hc-res.tp, .b-three .b-stat .hc-res.sl { color: var(--on-solid); }
-/* primary (blue) buttons in dark mode: a slightly deeper blue fill so the white label reads
-   (links and the active tab keep the brighter blue, which reads better as text on dark) */
-:root[data-theme='dark'] .btn.primary:not(:disabled) { background: #3373d9; border-color: #3373d9; }
-:root[data-theme='dark'] .btn.primary:active:not(:disabled) { background: #2a63bf; }
-@media (prefers-color-scheme: dark) {
-  :root[data-theme='auto'] .btn.primary:not(:disabled) { background: #3373d9; border-color: #3373d9; }
-  :root[data-theme='auto'] .btn.primary:active:not(:disabled) { background: #2a63bf; }
-}
+/* (dark-mode blue button override removed: the accent comes from tokens.css) */
+
 
 /* entrance animations of [data-anim] blocks wait (hidden at their first frame) until the block scrolls into view */
 [data-anim]:not([data-seen]) *, [data-anim]:not([data-seen]) { animation-play-state: paused !important; }
@@ -95,8 +83,8 @@
 .pair-more { margin-top: 8px; min-height: 44px; }
 .run-bar { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 4; }
 .run-bar > .btn { box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--ink) 45%, transparent); }
-/* selected pair chips: label colour reaches 4.5:1 on the light-blue chip */
-:root[data-theme='light'] .chip[aria-pressed='true'] .k { color: #0060c0; }
+/* selected pair chips: accent label (>= 4.5:1 on the accent tint) */
+.chip[aria-pressed='true'] .k { color: var(--gold); }
 
 /* ---------------------------------------------------------- 8. Trade page on wide screens
    Balance card on the left, Bitcoin + open positions on the right (one column on phones,

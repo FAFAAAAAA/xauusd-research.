@@ -1,0 +1,72 @@
+/* =========================================================================
+   XAUUSD Research — design tokens (monochrome, 20 Nov 2026)
+   The ONE place colours, type, radius and motion are defined. Loaded after
+   globals.css / apple-inspired.css, so these values win over the older layers.
+
+   Light  = :root (no attribute), [data-theme='light'], and 'auto' on a light phone
+   Dark   = [data-theme='dark'], and 'auto' on a dark phone
+   Every text colour below is checked at >= 4.5:1 on bg, surface and sunk.
+   ========================================================================= */
+
+:root, :root[data-theme='light'] {
+  --bg: #f4f4f5; --surface: #ffffff; --card: #ffffff; --sunk: #ececee; --hover: #e7e7ea;
+  --line: #e4e4e7; --line-2: #d4d4d8;
+  --card-edge: 0 1px 2px rgba(24, 24, 27, .04), 0 8px 24px -16px rgba(24, 24, 27, .10); --card-line: transparent;
+  --glow-1: transparent; --glow-2: transparent;
+  --ink: #18181b; --ink-2: #3f3f46; --mute: #62626b; --faint: #c4c4cc;
+  /* accent: monochrome (owner's choice). The token keeps its old name "gold" so no component changes;
+     in light mode it is near-black with white text, in dark mode near-white with black text. */
+  --gold: #18181b; --gold-ink: #ffffff; --gold-tint: #e7e7ea; --gold-press: #000000; --gold-bright: #18181b;
+  --up: #136f38; --up-tint: #e5f4ea; --down: #b42318; --down-tint: #fcebe9; --warn: #925409; --warn-tint: #fbf0dc;
+  --err-ink: #9b1c13; --ok-ink: #0f5c2e; --on-solid: #ffffff; --bar: #ffffff; --track: #d4d4d8;
+  --sk-a: #e9e9ec; --sk-b: #f4f4f5; --shadow: rgba(24, 24, 27, .10); --scrim: rgba(24, 24, 27, .45);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0c0c0e; --surface: #151518; --card: #151518; --sunk: #1c1c20; --hover: #222227;
+  --line: #26262b; --line-2: #34343a;
+  --card-edge: none; --card-line: transparent;
+  --glow-1: transparent; --glow-2: transparent;
+  --ink: #f2f2f4; --ink-2: #b8b8c0; --mute: #8e8e98; --faint: #4a4a52;
+  --gold: #f2f2f4; --gold-ink: #0c0c0e; --gold-tint: #26262b; --gold-press: #d4d4d8; --gold-bright: #f2f2f4;
+  --up: #3ddc97; --up-tint: #0f2a1f; --down: #ff6b6b; --down-tint: #2e1517; --warn: #f5a524; --warn-tint: #2a2112;
+  --err-ink: #ffadb5; --ok-ink: #9fe3c4; --on-solid: #0c0c0e; --bar: #16161a; --track: #34343a;
+  --sk-a: #1a1a1e; --sk-b: #232328; --shadow: rgba(0, 0, 0, .5); --scrim: rgba(0, 0, 0, .65);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] {
+    --bg: #0c0c0e; --surface: #151518; --card: #151518; --sunk: #1c1c20; --hover: #222227;
+    --line: #26262b; --line-2: #34343a;
+    --card-edge: none; --card-line: transparent;
+    --glow-1: transparent; --glow-2: transparent;
+    --ink: #f2f2f4; --ink-2: #b8b8c0; --mute: #8e8e98; --faint: #4a4a52;
+    --gold: #f2f2f4; --gold-ink: #0c0c0e; --gold-tint: #26262b; --gold-press: #d4d4d8; --gold-bright: #f2f2f4;
+    --up: #3ddc97; --up-tint: #0f2a1f; --down: #ff6b6b; --down-tint: #2e1517; --warn: #f5a524; --warn-tint: #2a2112;
+    --err-ink: #ffadb5; --ok-ink: #9fe3c4; --on-solid: #0c0c0e; --bar: #16161a; --track: #34343a;
+    --sk-a: #1a1a1e; --sk-b: #232328; --shadow: rgba(0, 0, 0, .5); --scrim: rgba(0, 0, 0, .65);
+    color-scheme: dark;
+  }
+}
+
+/* type, shape and motion are the same in both themes */
+:root, :root[data-theme] {
+  /* the iPhone's own font (SF Pro); system fonts elsewhere (owner's choice, as before the redesign).
+     Figures use the same font with tabular digits (--num-features), so columns of numbers line up. */
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --num-features: 'tnum' 1;
+  --fs-xs: 12.5px; --fs-sm: 13.5px; --fs-md: 16px; --fs-lg: 17px; --fs-xl: 22px; --fs-2xl: 28px; --fs-num: 36px;
+
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px;
+  /* tighter than before (22–26px): reads as a precise tool rather than a toy */
+  --r: 16px; --r-m: 12px; --r-s: 10px; --r-xs: 8px; --r-pill: 999px;
+
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --spring: cubic-bezier(.34, 1.36, .64, 1);
+  --d-1: 120ms; --d-2: 200ms; --d-3: 260ms;
+
+  --side-w: 232px;
+}

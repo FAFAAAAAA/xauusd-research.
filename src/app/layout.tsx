@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './apple-inspired.css';
+import './tokens.css';
 import './polish.css';
+import './theme.css';
 
 export const metadata: Metadata = {
   title: 'q',
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = {
   width: 'device-width', initialScale: 1, viewportFit: 'cover',
-  themeColor: '#f2f4f6',
+  themeColor: '#f5f4f0',
 };
 // Applies the saved theme (Atur → Tampilan) before the first paint, so there is no flash. Light ("Terang Bersih") is the default.
 // 'auto' follows the phone's light/dark setting. Storage may be blocked: then light.

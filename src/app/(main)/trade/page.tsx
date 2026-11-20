@@ -233,7 +233,7 @@ export default function TradePage() {
             <div className="hcards">
               <button className="hcard opencard btcday" aria-label="Bitcoin" onClick={() => setBtcOpen(true)}>
                 <span className="hc-side op-badge btc-badge" aria-hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M8 5h5.5a3.5 3.5 0 0 1 0 7H8zM8 12h6.5a3.5 3.5 0 0 1 0 7H8zM8 5v14M10.5 3v2M14 3v2M10.5 19v2M14 19v2" /></svg></span>
-                <span className="op-left" />
+                <span className="op-left"><strong className="hc-name">Bitcoin</strong><span className="op-strat">hari ini</span></span>
                 <span className={`op-pnl ${!btc ? 'mute' : btc.pct > 0 ? 'pos' : btc.pct < 0 ? 'neg' : ''}`}>{btc ? pctText(btc.pct) : '—'}</span>
               </button>
             </div>

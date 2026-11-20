@@ -1,0 +1,131 @@
+/* =========================================================================
+   Component layer (monochrome) (20 Nov 2026). Loaded after tokens.css and
+   polish.css. Uses tokens only; the few local overrides below re-point tokens
+   inside one component (the dark balance panel) so its children follow along.
+   ========================================================================= */
+
+/* (typography is exactly as before the redesign: no font, weight, size or letter-spacing overrides here) */
+
+/* ---------------------------------------------------------- cards
+   Hairline outline + a very soft lift in light mode; outline only in dark mode. */
+.research-flow .group:not(:has(.chart,.chartbox,.cal,canvas)),
+.research-flow .panel:not(:has(.chart,.chartbox,.cal,canvas)),
+.research-flow .group, .b-tile, .td-hero {
+  border: 1px solid var(--line); box-shadow: var(--card-edge); border-radius: var(--r);
+}
+.b-tile { padding: 16px; gap: 8px; }
+
+/* ---------------------------------------------------------- the balance panel
+   Always a dark "terminal" panel with a faint light sheen, in both themes. Its own token
+   values make every child (labels, chips, green/red) switch to the dark palette. */
+.td-hero {
+  --ink: #f4f4f5; --ink-2: #d4d4d8; --mute: #a1a1aa; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
+  --up: #3ddc97; --down: #ff7b7b; --up-tint: rgba(61, 220, 151, .12); --down-tint: rgba(255, 123, 123, .12);
+  position: relative; overflow: hidden; color: var(--ink);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
+    #121214;
+  border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 18px 40px -24px rgba(0, 0, 0, .55);
+  padding: 24px 22px 20px;
+}
+.td-hero::before { /* fine light rule along the top edge */
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22), transparent);
+}
+.td-period { border-top-color: var(--line); }
+.td-startbtn { color: var(--mute); }
+
+/* ---------------------------------------------------------- segmented controls
+   Active option is inverted (ink pill, page-coloured text): unmistakable at a glance. */
+.seg .seg-ind { background: var(--ink); box-shadow: 0 6px 16px -10px var(--shadow); }
+.seg button[aria-pressed='true'], .seg.has-ind button[aria-pressed='true'] { color: var(--bg); }
+
+/* ---------------------------------------------------------- accents */
+.wlbar { height: 6px; gap: 3px; }
+.st-pill.w, .td-chip.pos { background: var(--up-tint); }
+.hc-side, .op-badge { border-radius: 9px; }
+
+
+/* in dark mode cards are flat panels; a light lift reads as glare */
+:root[data-theme='dark'] .b-tile, :root[data-theme='dark'] .research-flow .group { box-shadow: none; }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] .b-tile, :root[data-theme='auto'] .research-flow .group { box-shadow: none; }
+}
+
+/* ---------------------------------------------------------- interactive equity chart */
+.eq-svg { touch-action: pan-y; cursor: crosshair; outline: none; border-radius: var(--r-s); }
+.eq-svg:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
+.eq-tip { position: absolute; top: -6px; z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 8px 10px; border-radius: var(--r-s); background: var(--ink); color: var(--bg); box-shadow: 0 10px 24px -12px var(--shadow);
+  font-size: 13px; font-feature-settings: var(--num-features); line-height: 1.25; white-space: nowrap; animation: unfold var(--d-1) var(--ease) both; }
+.eq-tip strong { font-size: 15px; font-weight: 600; }
+.eq-tip small { font-size: 12px; opacity: .75; }
+/* on the inverted chip, profit/loss use the opposite theme's green/red so they stay readable */
+.eq-tip .pos { color: color-mix(in srgb, var(--up) 55%, var(--bg)); }
+.eq-tip .neg { color: color-mix(in srgb, var(--down) 55%, var(--bg)); }
+.eq-tip .mute { color: inherit; opacity: .7; }
+
+/* ---------------------------------------------------------- Backtest results */
+/* the result summary is the same dark panel as the Trade balance */
+.apple-shell .research-flow .hero.flagship-verdict {
+  --ink: #f4f4f5; --ink-2: #d4d4d8; --mute: #a1a1aa; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
+  --up: #3ddc97; --down: #ff7b7b;
+  color: var(--ink); border: 1px solid rgba(255, 255, 255, .08); border-radius: var(--r); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .55);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
+    #121214;
+}
+.apple-shell .research-flow .hero.flagship-verdict .profit-caption,
+.apple-shell .research-flow .hero.flagship-verdict .hero-winrate span,
+.apple-shell .research-flow .hero.flagship-verdict .summary-meta { color: var(--mute); }
+.apple-shell .research-flow .hero.flagship-verdict .hero-winrate { border-top-color: var(--line); }
+.apple-shell .research-flow .hero.flagship-verdict .pos { color: var(--up); }
+.apple-shell .research-flow .hero.flagship-verdict .neg { color: var(--down); }
+
+/* a card inside a card loses its own frame (e.g. the trade list under "Riwayat") */
+.research-flow .group .group { border: 0; box-shadow: none; background: transparent; padding-inline: 0; }
+
+/* wide tables that scroll sideways show a soft shadow on the side that has more content
+   (pure CSS scroll shadows: the 'local' covers hide each shadow once you reach that end;
+   a table that fits shows nothing) */
+.tablewrap {
+  background:
+    linear-gradient(90deg, var(--card) 40%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(270deg, var(--card) 40%, transparent) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--shadow), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--shadow), transparent) right center / 12px 100% no-repeat scroll;
+}
+
+/* ---------------------------------------------------------- Kantor (office scene)
+   The scene itself is art and stays as drawn. Only the readable bits change:
+   name / status tags above the characters were 6.5–8.5px, the menu cat was 40px. */
+.office-tag .ot-card { padding: 1px 5px 2px; }
+.office-tag .ot-card strong { font-size: 10px; }
+.office-tag .ot-st, .office-tag .ot-role { font-size: 8.5px; }
+.ot-bubble { font-size: 10px; padding: 2px 7px; }
+.office-cat { width: 44px; height: 44px; }
+
+/* Backtest filter bar and the summary's context line were 11px on phones */
+.research-filter, .research-view { font-size: 12px; min-height: 44px; }
+.flagship-verdict .verdict-context, .flagship-verdict .summary-risk, .flagship-verdict .summary-meta, .summary-trades { font-size: 12px; }
+.research-filter > span:first-of-type { font-size: 12px; }
+
+/* Atur: the bot card's main button is light on the dark card (monochrome accent; was mint green) */
+.bxs-btn .go { background: #f4f4f5; color: #18181b; }
+
+/* ---------------------------------------------------------- icons (monochrome)
+   Atur's app icons and the Bitcoin badge follow the monochrome accent (they were one
+   colour gradient each). Status dots on the icons (green ok / amber warning) keep their meaning. */
+.ap-ic { background: linear-gradient(160deg, #3a3a40, #18181b); color: #fff; box-shadow: 0 6px 14px -6px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .14); }
+:root[data-theme='dark'] .ap-ic { background: linear-gradient(160deg, #3f3f46, #27272a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10); }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] .ap-ic { background: linear-gradient(160deg, #3f3f46, #27272a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10); }
+}
+.opencard .btc-badge { background: #18181b; color: #fff; }
+:root[data-theme='dark'] .opencard .btc-badge { background: #3f3f46; }
+@media (prefers-color-scheme: dark) { :root[data-theme='auto'] .opencard .btc-badge { background: #3f3f46; } }
+/* Atur: the bot card is the same neutral dark panel as Saldo (it had a green glow) */
+.bxs { background: radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%), #121214; border: 1px solid rgba(255, 255, 255, .08); }
