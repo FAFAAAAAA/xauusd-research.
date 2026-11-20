@@ -4,23 +4,7 @@
    inside one component (the dark balance panel) so its children follow along.
    ========================================================================= */
 
-/* ---------------------------------------------------------- numbers
-   Every figure uses tabular digits, so amounts line up in columns. */
-.td-row, .td-period strong, .td-startbtn, .td-sub .flash,
-.b-v, .b-stat .b-v, .op-pnl, .perf-pnl, .perf-facts strong, .si-facts strong,
-.cal .cell .v, .cal-top strong, .cal-pick-head span, .metric .v, .num, .wl-legend, .st-recs strong,
-.bxs-sum b, .cf-amt, .hc-pnl, .dt-pnl strong, .eq-fig text {
-  font-family: var(--font); font-feature-settings: var(--num-features); font-variant-numeric: tabular-nums; letter-spacing: -.015em;
-}
-
-/* ---------------------------------------------------------- labels
-   Small caps-style labels above values: quiet, precise, consistent across tiles. */
-.td-k, .b-k, .perf-facts .k, .si-facts .k, .metric .k, .bxs-sum small {
-  text-transform: uppercase; letter-spacing: .07em; font-size: 12px; font-weight: 600; color: var(--mute);
-}
-
-/* ---------------------------------------------------------- page title */
-.research-flow .page-head h1 { font-weight: 650; letter-spacing: -.045em; }
+/* (typography is exactly as before the redesign: no font, weight, size or letter-spacing overrides here) */
 
 /* ---------------------------------------------------------- cards
    Hairline outline + a very soft lift in light mode; outline only in dark mode. */
@@ -30,7 +14,6 @@
   border: 1px solid var(--line); box-shadow: var(--card-edge); border-radius: var(--r);
 }
 .b-tile { padding: 16px; gap: 8px; }
-.b-v { font-size: 22px; font-weight: 600; }
 
 /* ---------------------------------------------------------- the balance panel
    Always a dark "terminal" panel with a faint light sheen, in both themes. Its own token
@@ -51,24 +34,19 @@
   content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22), transparent);
 }
-.td-bal { font-family: var(--font); font-feature-settings: var(--num-features); font-weight: 650; letter-spacing: -.05em; font-size: clamp(42px, 11.5vw, 62px); }
-.td-chip { font-weight: 600; }
 .td-period { border-top-color: var(--line); }
-.td-period strong { font-size: 16px; font-weight: 500; }
 .td-startbtn { color: var(--mute); }
 
 /* ---------------------------------------------------------- segmented controls
    Active option is inverted (ink pill, page-coloured text): unmistakable at a glance. */
 .seg .seg-ind { background: var(--ink); box-shadow: 0 6px 16px -10px var(--shadow); }
 .seg button[aria-pressed='true'], .seg.has-ind button[aria-pressed='true'] { color: var(--bg); }
-.seg button { font-weight: 600; }
 
 /* ---------------------------------------------------------- accents */
 .wlbar { height: 6px; gap: 3px; }
 .st-pill.w, .td-chip.pos { background: var(--up-tint); }
 .hc-side, .op-badge { border-radius: 9px; }
 
-.btn.primary { letter-spacing: -.01em; }
 
 /* in dark mode cards are flat panels; a light lift reads as glare */
 :root[data-theme='dark'] .b-tile, :root[data-theme='dark'] .research-flow .group { box-shadow: none; }
@@ -106,8 +84,6 @@
 .apple-shell .research-flow .hero.flagship-verdict .hero-winrate { border-top-color: var(--line); }
 .apple-shell .research-flow .hero.flagship-verdict .pos { color: var(--up); }
 .apple-shell .research-flow .hero.flagship-verdict .neg { color: var(--down); }
-.flagship-verdict .price { font-variant-numeric: tabular-nums; }
-.flagship-verdict .hero-winrate strong, .facts strong, .hold3 strong, .tbl td, table.num-r td { font-feature-settings: var(--num-features); font-variant-numeric: tabular-nums; }
 
 /* a card inside a card loses its own frame (e.g. the trade list under "Riwayat") */
 .research-flow .group .group { border: 0; box-shadow: none; background: transparent; padding-inline: 0; }
