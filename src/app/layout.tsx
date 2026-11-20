@@ -4,7 +4,6 @@ import './apple-inspired.css';
 import './tokens.css';
 import './polish.css';
 import './theme.css';
-import './motion.css';
 
 export const metadata: Metadata = {
   title: 'q',
