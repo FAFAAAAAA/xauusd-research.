@@ -15,25 +15,7 @@
 }
 .b-tile { padding: 16px; gap: 8px; }
 
-/* ---------------------------------------------------------- the balance panel
-   Always a dark "terminal" panel with a faint light sheen, in both themes. Its own token
-   values make every child (labels, chips, green/red) switch to the dark palette. */
-.td-hero {
-  --ink: #f4f4f5; --ink-2: #d4d4d8; --mute: #a1a1aa; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
-  --up: #3ddc97; --down: #ff7b7b; --up-tint: rgba(61, 220, 151, .12); --down-tint: rgba(255, 123, 123, .12);
-  position: relative; overflow: hidden; color: var(--ink);
-  background:
-    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%),
-    radial-gradient(80% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
-    #121214;
-  border: 1px solid rgba(255, 255, 255, .08);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 18px 40px -24px rgba(0, 0, 0, .55);
-  padding: 24px 22px 20px;
-}
-.td-hero::before { /* fine light rule along the top edge */
-  content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22), transparent);
-}
+/* the balance card stays a normal (white) card, as before (owner's choice) */
 .td-period { border-top-color: var(--line); }
 .td-startbtn { color: var(--mute); }
 
@@ -68,22 +50,7 @@
 .eq-tip .mute { color: inherit; opacity: .7; }
 
 /* ---------------------------------------------------------- Backtest results */
-/* the result summary is the same dark panel as the Trade balance */
-.apple-shell .research-flow .hero.flagship-verdict {
-  --ink: #f4f4f5; --ink-2: #d4d4d8; --mute: #a1a1aa; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
-  --up: #3ddc97; --down: #ff7b7b;
-  color: var(--ink); border: 1px solid rgba(255, 255, 255, .08); border-radius: var(--r); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .55);
-  background:
-    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, .07), transparent 55%),
-    radial-gradient(80% 60% at 0% 100%, rgba(255, 255, 255, .025), transparent 60%),
-    #121214;
-}
-.apple-shell .research-flow .hero.flagship-verdict .profit-caption,
-.apple-shell .research-flow .hero.flagship-verdict .hero-winrate span,
-.apple-shell .research-flow .hero.flagship-verdict .summary-meta { color: var(--mute); }
-.apple-shell .research-flow .hero.flagship-verdict .hero-winrate { border-top-color: var(--line); }
-.apple-shell .research-flow .hero.flagship-verdict .pos { color: var(--up); }
-.apple-shell .research-flow .hero.flagship-verdict .neg { color: var(--down); }
+/* the result summary stays a normal (white) card, as before (owner's choice) */
 
 /* a card inside a card loses its own frame (e.g. the trade list under "Riwayat") */
 .research-flow .group .group { border: 0; box-shadow: none; background: transparent; padding-inline: 0; }
