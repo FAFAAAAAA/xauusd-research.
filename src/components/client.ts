@@ -1,5 +1,6 @@
 'use client';
 // Browser-side helpers. Never import server modules here.
+import { useEffect, useLayoutEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { formatInTz } from '@/lib/core/time';
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
@@ -29,6 +30,23 @@ export function peek<T>(url: string): T | null {
   if (!cache.has(url) && typeof window !== 'undefined') { const v = lsGet(url); if (v !== undefined) cache.set(url, v); }
   return (cache.get(url) as T) ?? null;
 }
+
+// The server never sees this browser's cache, so the very first (hydrating) render must start empty like the server HTML did.
+// The cached answer is then put in by a layout effect, which runs before the browser paints: still no loading flash.
+// After that first page, client-side navigations read the cache directly in the initializer.
+let hydrated = false;
+const useBeforePaint = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+/** useState seeded with the last cached GET answer for `url`, without a server/browser mismatch on the first page load. */
+export function usePeek<T>(url: string): [T | null, Dispatch<SetStateAction<T | null>>] {
+  const [v, setV] = useState<T | null>(() => (hydrated ? peek<T>(url) : null));
+  useBeforePaint(() => {
+    hydrated = true;
+    const c = peek<T>(url);   // when the initializer already had it, cur is kept
+    if (c != null) setV((cur) => cur ?? c);
+  }, []);
+  return [v, setV];
+}
+
 /** Warm the cache in the background (used after the first page shows). */
 export function warm(urls: string[]) { for (const u of urls) call(u).catch(() => {}); }
 

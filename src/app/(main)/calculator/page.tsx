@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { call, peek, px } from '@/components/client';
+import { call, px, usePeek } from '@/components/client';
 import { ErrorBox, Loading, PageHead, SecHead, Seg, toast } from '@/components/Status';
 import { RiskCalculator } from '@/components/RiskCalculator';
 import { lotFor } from '@/lib/core/journal';
@@ -11,7 +11,7 @@ const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')))
 
 /** Calculators: risk plan (saved; used for the lot in signals), lot per trade, and the capital & lot risk calculator. */
 export default function CalculatorPage() {
-  const [d, setD] = useState<any>(() => peek('/api/live'));
+  const [d, setD] = usePeek<any>('/api/live');
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => { setErr(null); call<any>('/api/live').then(setD).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { load(); }, [load]);

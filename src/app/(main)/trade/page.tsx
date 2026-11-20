@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
-import { call, fmt, peek, px } from '@/components/client';
-import { ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner, toast } from '@/components/Status';
+import { call, fmt, px, usePeek } from '@/components/client';
+import { ErrorBox, Flash, Loading, PageHead, SecHead, Seg, Sheet, Spinner, toast } from '@/components/Status';
 import Link from 'next/link';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
 import { JOURNAL_KEYS, marketOfJournal } from '@/lib/core/markets';
@@ -37,8 +37,8 @@ const coinOf = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? ''
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
 
 export default function TradePage() {
-  const [d, setD] = useState<any>(() => peek('/api/live'));
-  const [j, setJRaw] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats>; binance?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; mt5?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; cashflow?: { crypto: CashFlow[]; forex: CashFlow[] } } | null>(() => peek('/api/journal'));
+  const [d, setD] = usePeek<any>('/api/live');
+  const [j, setJRaw] = usePeek<{ trades: JournalTrade[]; stats: Record<string, JournalStats>; binance?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; mt5?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; cashflow?: { crypto: CashFlow[]; forex: CashFlow[] } }>('/api/journal');
   // edits return the journal without the Binance balance: keep the last one
   const setJ = (v: any) => setJRaw((old) => (v && v.binance === undefined && old ? { ...v, binance: old.binance, mt5: old.mt5, cashflow: old.cashflow } : v));
   const [err, setErr] = useState<string | null>(null);
@@ -212,7 +212,7 @@ export default function TradePage() {
                     <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
                     <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
                   </span>
-                  <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
+                  <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}><Flash value={fl}>{fl == null ? '—' : money(fl)}</Flash></span>
                 </button>
               );
             })}

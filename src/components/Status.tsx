@@ -183,6 +183,37 @@ export function CopyButton({ text, label = 'Salin', done }: { text: string; labe
 }
 
 /** Headline number that counts smoothly to its value (from 0 on first show, then from the previous value). */
+/** Marks an element once it scrolls into view: its entrance animations (polish.css, [data-anim]) wait until then,
+ *  so charts further down the page draw in front of the user instead of while off screen. */
+export function useSeen<T extends Element>(existing?: React.RefObject<T>, ready = true) {
+  const own = useRef<T>(null);
+  const ref = existing ?? own;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const show = () => el.setAttribute('data-seen', '');
+    if (typeof IntersectionObserver === 'undefined') { show(); return; }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { show(); io.disconnect(); } }, { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, ready]);
+  return ref;
+}
+
+/** Live number that briefly glows green / red when it ticks up / down (the text itself does not move). */
+export function Flash({ value, children }: { value: number | null | undefined; children: React.ReactNode }) {
+  const prev = useRef(value);
+  const [tick, setTick] = useState<{ n: number; dir: 'up' | 'down' | null }>({ n: 0, dir: null });
+  useEffect(() => {
+    const a = prev.current, b = value;
+    prev.current = value;
+    if (a == null || b == null || !Number.isFinite(a) || !Number.isFinite(b) || Math.abs(b - a) < 0.005) return;
+    setTick((t) => ({ n: t.n + 1, dir: b > a ? 'up' : 'down' }));
+  }, [value]);
+  // a new key restarts the CSS animation on every tick
+  return <span key={tick.n} className={tick.dir ? `flash flash-${tick.dir}` : 'flash'}>{children}</span>;
+}
+
 export function CountUp({ value, format, ms = 700 }: { value: number; format: (n: number) => string; ms?: number }) {
   const [shown, setShown] = useState(value);
   const from = useRef(0);

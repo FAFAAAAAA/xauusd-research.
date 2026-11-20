@@ -2,7 +2,7 @@
 import { BROKER } from '@/lib/core/broker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { call, fmt, peek, pct, px } from '@/components/client';
+import { call, fmt, peek, pct, px, usePeek } from '@/components/client';
 import { CountUp, EmptyState, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner } from '@/components/Status';
 import { DrawdownBreakdown, EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
 import { StatsBento, useResultStats } from '@/components/StatsBento';
@@ -56,7 +56,7 @@ function ResearchIcon({ name }: { name: keyof typeof UI_ICON_PATH }) {
 }
 
 export default function Analytics() {
-  const [dRaw, setD] = useState<any>(() => peek('/api/analytics'));
+  const [dRaw, setD] = usePeek<any>('/api/analytics');
   const [market, setMarket] = useMarket();
   // only the chosen market's results (Forex = MT5 strategies, Crypto = Binance strategies)
   const d = useMemo(() => (dRaw?.sessions ? { ...dRaw, sessions: dRaw.sessions.filter((s: any) => marketOfStrategy(String(s.strategy ?? '')) === market) } : dRaw), [dRaw, market]);

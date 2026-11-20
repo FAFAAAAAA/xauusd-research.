@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { call, peek } from '@/components/client';
+import { call, usePeek } from '@/components/client';
 import Office, { type OfficeData, type ScreenLine } from '@/components/Office';
 import { useBtcDay } from '@/components/btcDay';
 
@@ -11,7 +11,7 @@ const coinOf = (t: { note?: string | null }) => (/Bot Binance ([0-9A-Z]+)/.exec(
 /** The virtual office on top of every page (stays mounted while switching pages).
  *  Journal every 30 s + Binance mark price every 3 s, so the wall TV and the floating P&L are realtime. */
 export default function OfficeDock({ full = false, onSwipe }: { full?: boolean; onSwipe?: () => void } = {}) {
-  const [j, setJ] = useState<OfficeData | null>(() => peek<OfficeData>('/api/journal'));
+  const [j, setJ] = usePeek<OfficeData>('/api/journal');
   const [now, setNow] = useState(() => Date.now());
   const [mark, setMark] = useState<Record<string, number>>({});
   const btc = useBtcDay()?.pct ?? null;      // Bitcoin % today, for the board next to the H4 countdown

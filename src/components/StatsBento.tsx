@@ -1,5 +1,6 @@
 'use client';
 import { useMemo } from 'react';
+import { useSeen } from './Status';
 import type { ClosedTrade } from './ResultCharts';
 
 /* Shared result tiles (Trade page and Backtest, 9 Nov 2026): bento tiles of different sizes + the streak run chart.
@@ -49,15 +50,16 @@ export type ResultStats = ReturnType<typeof useResultStats>;
 /** Streak tile: header with the current streak, a run chart (green bars up = win runs, red bars down = loss runs) and the two records. */
 export function StreakTile({ s }: { s: ResultStats }) {
   const runs = s.runs.slice(-48), mx = Math.max(1, s.maxW, s.maxL);
+  const seen = useSeen<HTMLDivElement>();
   return (
     <div className="b-tile b-wide streak2">
       <div className="b-top">
         <span className="b-k">Beruntun</span>
         {s.cur ? <span className={`st-pill ${s.cur > 0 ? 'w' : 'l'}`}>{Math.abs(s.cur)}× {s.cur > 0 ? 'menang' : 'kalah'} sekarang</span> : null}
       </div>
-      <div className="st-chart" role="img" aria-label={`Rangkaian menang dan kalah, terpanjang ${s.maxW} menang dan ${s.maxL} kalah`}>
+      <div ref={seen} data-anim className="st-chart" role="img" aria-label={`Rangkaian menang dan kalah, terpanjang ${s.maxW} menang dan ${s.maxL} kalah`}>
         {runs.map((r, i) => (
-          <span key={i} className="st-col" title={`${Math.abs(r)}× ${r > 0 ? 'menang' : 'kalah'}`}>
+          <span key={i} className="st-col" style={{ '--i': i } as React.CSSProperties} title={`${Math.abs(r)}× ${r > 0 ? 'menang' : 'kalah'}`}>
             <span className="st-up">{r > 0 ? <span className="st-bar w" style={{ height: `${(r / mx) * 100}%` }} /> : null}</span>
             <span className="st-dn">{r < 0 ? <span className="st-bar l" style={{ height: `${(-r / mx) * 100}%` }} /> : null}</span>
           </span>
