@@ -10,20 +10,22 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/core.test.ts tests/snr.test.ts tests/client-cache.test.ts tests/trade-chart.test.ts",
     "test:e2e": "tsx --test tests/e2e.test.ts",
+    "test:ui": "tsx --test tests/ui.test.ts",
     "db:migrate": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f supabase/migrations/20261031000000_init.sql"
   },
   "dependencies": {
     "lightweight-charts": "^4.2.0",
-    "next": "^14.2.15",
+    "next": "^15.5.29",
     "pg": "^8.13.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.2.9",
+    "react-dom": "^19.2.9"
   },
   "devDependencies": {
     "@types/node": "^20.16.0",
     "@types/pg": "^8.11.10",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "playwright": "1.63.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2"
   }

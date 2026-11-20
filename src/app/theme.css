@@ -29,7 +29,6 @@
 .st-pill.w, .td-chip.pos { background: var(--up-tint); }
 .hc-side, .op-badge { border-radius: 9px; }
 
-
 /* in dark mode cards are flat panels; a light lift reads as glare */
 :root[data-theme='dark'] .b-tile, :root[data-theme='dark'] .research-flow .group { box-shadow: none; }
 @media (prefers-color-scheme: dark) {
@@ -69,10 +68,7 @@
 /* ---------------------------------------------------------- Kantor (office scene)
    The scene itself is art and stays as drawn. Only the readable bits change:
    name / status tags above the characters were 6.5–8.5px, the menu cat was 40px. */
-.office-tag .ot-card { padding: 1px 5px 2px; }
-.office-tag .ot-card strong { font-size: 10px; }
-.office-tag .ot-st, .office-tag .ot-role { font-size: 8.5px; }
-.ot-bubble { font-size: 10px; padding: 2px 7px; }
+
 .office-cat { width: 44px; height: 44px; }
 
 /* Backtest filter bar and the summary's context line were 11px on phones */

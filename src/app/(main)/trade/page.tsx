@@ -200,7 +200,7 @@ export default function TradePage() {
   const openTotal = openT.length && openVals.every((v) => v != null) ? openVals.reduce((a: number, v) => a + (v as number), 0) : null;
   const openSection = openT.length ? (
         <section className="group">
-          <SecHead title="Posisi terbuka" />
+          <SecHead title={<><span className="live-ring" aria-hidden />Posisi terbuka</>} />
           <div className="hcards">
             {openT.map((t) => {
               // floating P&L sent by the bot (per coin) / EA (per method); null until the new bot / EA reports it
@@ -225,7 +225,7 @@ export default function TradePage() {
  />
       <MarketSwitch value={market} onChange={(m) => { setMarket(m); setDraft(null); }} />
 
-      <TradeDashboard trades={j.trades.filter(inMarket)} market={market} tz={tz} live={market === 'crypto' ? j.binance ?? null : j.mt5 ?? null}
+      <TradeDashboard key={market /* switching Crypto/Forex plays the entrance again */} trades={j.trades.filter(inMarket)} market={market} tz={tz} live={market === 'crypto' ? j.binance ?? null : j.mt5 ?? null}
         cashflow={(market === 'crypto' ? j.cashflow?.crypto : j.cashflow?.forex) ?? []}
         openSlot={<>
           {/* Bitcoin today, above the open positions: % from today's daily open (00:00 UTC), tap for the chart */}

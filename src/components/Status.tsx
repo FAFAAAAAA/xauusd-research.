@@ -185,7 +185,7 @@ export function CopyButton({ text, label = 'Salin', done }: { text: string; labe
 /** Headline number that counts smoothly to its value (from 0 on first show, then from the previous value). */
 /** Marks an element once it scrolls into view: its entrance animations (polish.css, [data-anim]) wait until then,
  *  so charts further down the page draw in front of the user instead of while off screen. */
-export function useSeen<T extends Element>(existing?: React.RefObject<T>, ready = true) {
+export function useSeen<T extends Element>(existing?: React.RefObject<T | null>, ready = true) {
   const own = useRef<T>(null);
   const ref = existing ?? own;
   useEffect(() => {
@@ -214,22 +214,25 @@ export function Flash({ value, children }: { value: number | null | undefined; c
   return <span key={tick.n} className={tick.dir ? `flash flash-${tick.dir}` : 'flash'}>{children}</span>;
 }
 
-export function CountUp({ value, format, ms = 700 }: { value: number; format: (n: number) => string; ms?: number }) {
-  const [shown, setShown] = useState(value);
-  const from = useRef(0);
-  useEffect(() => {
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const a = from.current, b = value;
-    from.current = value;
-    if (reduce || !Number.isFinite(a) || !Number.isFinite(b) || a === b) { setShown(b); return; }
-    let raf = 0; const t0 = performance.now();
-    const tick = (t: number) => {
-      const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
-      setShown(k >= 1 ? b : a + (b - a) * e);
-      if (k < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [value, ms]);
-  return <span aria-label={format(value)}><span aria-hidden>{format(shown)}</span></span>;
+/** A figure whose digits roll into place like an odometer (on first show, and digit by digit when it changes).
+ *  Screen readers get the plain text. Under reduced motion the digits just appear (globals.css shortens transitions). */
+export function RollNumber({ value, format }: { value: number; format: (n: number) => string }) {
+  const text = format(value);
+  const [ready, setReady] = useState(false);
+  useEffect(() => { const r = requestAnimationFrame(() => setReady(true)); return () => cancelAnimationFrame(r); }, []);
+  const chars = [...text];
+  return (
+    <span className="roll" aria-label={text} role="text">
+      {chars.map((ch, i) => /\d/.test(ch) ? (
+        <span key={i} className="roll-d" aria-hidden>
+          {/* the digits run in from the right: the last digit settles first */}
+          <span className="roll-col" style={{ transform: `translateY(${ready ? -Number(ch) * 10 : 0}%)`, transitionDelay: `${(chars.length - i) * 28}ms` }}>
+            {DIGITS.map((d) => <span key={d}>{d}</span>)}
+          </span>
+        </span>
+      ) : <span key={i} className="roll-c" aria-hidden>{ch}</span>)}
+    </span>
+  );
 }
+const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+

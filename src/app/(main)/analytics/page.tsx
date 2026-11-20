@@ -3,7 +3,7 @@ import { BROKER } from '@/lib/core/broker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { call, fmt, peek, pct, px, usePeek } from '@/components/client';
-import { CountUp, EmptyState, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner } from '@/components/Status';
+import { EmptyState, RollNumber, ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner } from '@/components/Status';
 import { DrawdownBreakdown, EquityChart, PnlCalendar, closedTrades, type ClosedTrade } from '@/components/ResultCharts';
 import { StatsBento, useResultStats } from '@/components/StatsBento';
 import { ReportButton } from '@/components/ReportImage';
@@ -207,7 +207,7 @@ export default function Analytics() {
                 <section className="hero verdict flagship-verdict">
                   <div className="summary-meta"><span className="label verdict-context summary-risk" aria-label="Risiko per trade"><ResearchIcon name="risk" />{picked[0]?.cost_config?.risk_usd ? `$${Math.round(Number(picked[0].cost_config.risk_usd))}` : 'Lot tetap'}</span><span className="summary-trades">{sum.trades} trade</span></div>
                   <span className="profit-caption">Hasil bersih</span>
-                  <span className={`price ${tone(sum.pnl)}`}><CountUp value={sum.pnl} format={money} /></span>
+                  <span className={`price ${tone(sum.pnl)}`}><RollNumber value={sum.pnl} format={money} /></span>
                   <div className="hero-winrate"><span>Win rate</span><strong className={winRateTone}>{winRate == null ? '—' : `${(winRate * 100).toFixed(1)}%`}</strong></div>
                 </section>
                 {m && fresh ? (() => {
