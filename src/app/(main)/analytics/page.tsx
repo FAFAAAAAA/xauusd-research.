@@ -235,8 +235,8 @@ export default function Analytics() {
                 })() : <section className="group"><span className="label row" style={{ gap: 8 }}><Spinner />Memuat detail…</span></section>}
 
                 {fresh ? <>
-                {m ? <DrawdownBreakdown key={key} trades={trades} tz={tz} /> : null}
-                <CapitalGrowth key={key} months={monthsTested} trades={trades} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
+                {m ? <DrawdownBreakdown key={`dd:${key}`} trades={trades} tz={tz} /> : null}
+                <CapitalGrowth key={`cg:${key}`} months={monthsTested} trades={trades} tz={tz} baseRisk={Number(picked[0]?.cost_config?.risk_usd) || null} startCapital={Number(picked[0]?.cost_config?.capital) || null} />
 
                 <section className="group calcard">
                   <PnlCalendar key={key} trades={trades} tz={tz} simple />

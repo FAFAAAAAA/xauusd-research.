@@ -19,6 +19,23 @@ const readStart = (m: string, fallback: number) => { try { const v = Number(loca
 
 export interface CashFlow { id: string; at: number; amount: number; asset: string; type: string }
 
+/** Small balance trend inside the balance panel (no axes; the full chart is further down). */
+function Spark({ trades, start }: { trades: ClosedTrade[]; start: number }) {
+  if (trades.length < 2) return null;
+  let eq = start;
+  const v = [start, ...trades.map((t) => (eq += t.pnl))];
+  const W = 300, H = 44, lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
+  const pts = v.map((y, i) => `${((i / (v.length - 1)) * W).toFixed(1)},${(3 + (1 - (y - lo) / span) * (H - 6)).toFixed(1)}`);
+  const up = v[v.length - 1] >= start;
+  return (
+    <svg className="td-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
+      <defs><linearGradient id="td-spark-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={up ? 'var(--up)' : 'var(--down)'} stopOpacity=".28" /><stop offset="1" stopColor={up ? 'var(--up)' : 'var(--down)'} stopOpacity="0" /></linearGradient></defs>
+      <polygon points={`0,${H} ${pts.join(' ')} ${W},${H}`} fill="url(#td-spark-fill)" />
+      <polyline points={pts.join(' ')} fill="none" stroke={up ? 'var(--up)' : 'var(--down)'} strokeWidth="1.6" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function TradeDashboard({ trades, market, tz, fallbackStart, groupOf, renderTrades, live = null, cashflow = [], openSlot = null, openPnl = null }: {
   trades: JournalTrade[]; cashflow?: CashFlow[]; openSlot?: React.ReactNode; openPnl?: number | null; market: string; tz: string; fallbackStart: number; live?: { wallet: number; upnl: number; at: number } | null;
   groupOf: (t: JournalTrade) => string; groupLabel?: string; renderTrades: (list: JournalTrade[]) => React.ReactNode;
@@ -107,6 +124,7 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
           <span className={tone(profit)}>{usd(profit)}</span>
         </span>
+        <Spark trades={s.closed} start={start} />
         {(() => { const u = openPnl ?? live?.upnl ?? 0; return live && Math.abs(u) >= 0.01 ? <span className="td-sub">Posisi terbuka <span className={tone(u)}><Flash value={u}>{usd(u)}</Flash></span></span> : null; })()}
         <div className="td-period">
           <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}><CountUp value={s.today} format={(n) => usd(n)} /></strong></span>

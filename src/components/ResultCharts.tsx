@@ -45,6 +45,8 @@ export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: Clos
   }, [trades, start, scale]);
   const [box, measured] = useWidth<HTMLElement>(360, trades.length >= 2);
   useSeen(box, trades.length >= 2);
+  // scrub: the point under the finger / pointer (or picked with the arrow keys); null = nothing picked
+  const [pick, setPick] = useState<number | null>(null);
   if (trades.length < 2) return <p className="mute small">Butuh minimal 2 trade untuk menggambar grafik.</p>;
   // drawn at the real width: text stays 12px; height grows a little on wide screens but never balloons
   const W = Math.max(260, measured), H = Math.round(Math.min(280, Math.max(190, W * 0.32))), P = { l: start ? 60 : 48, r: 10, t: 12, b: 26 };
@@ -63,9 +65,37 @@ export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: Clos
   // deepest drawdown segment (peak → trough)
   let peakI = 0, best = { from: 0, to: 0, dd: 0 }, curPeak = 0;
   pts.forEach((p, i) => { if (p.v > pts[curPeak].v) curPeak = i; const dd = pts[curPeak].v - p.v; if (dd > best.dd) { best = { from: curPeak, to: i, dd }; peakI = curPeak; } });
+  const n = pts.length;
+  const at = (e: React.PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = ((e.clientX - r.left) / r.width) * W;
+    setPick(Math.max(0, Math.min(n - 1, Math.round(((px - P.l) / (W - P.l - P.r)) * (n - 1)))));
+  };
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      setPick((c) => Math.max(0, Math.min(n - 1, (c ?? n - 1) + (e.key === 'ArrowLeft' ? -1 : 1))));
+    } else if (e.key === 'Escape') setPick(null);
+  };
+  const sel = pick != null ? pts[pick] : null;
+  const delta = pick ? pts[pick].v - pts[pick - 1].v : null;
+  const tipLeft = pick != null ? (x(pick) / W) * 100 : 0;
   return (
-    <figure ref={box} data-anim className="eq-fig" style={{ margin: 0 }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Grafik saldo: akhir ${start ? bal(end) : money(end)}`} style={{ display: 'block' }}>
+    <figure ref={box} data-anim className="eq-fig" style={{ margin: 0, position: 'relative' }}>
+      {sel ? (
+        // the readout follows the finger, pinned inside the card near the edges
+        <div className="eq-tip" style={{ left: `${tipLeft}%`, transform: `translateX(${tipLeft < 18 ? '0' : tipLeft > 82 ? '-100%' : '-50%'})` }} aria-live="polite">
+          <strong>{start ? bal(sel.v) : money(sel.v)}</strong>
+          {delta != null ? <span className={delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'mute'}>{money(delta) || '$0'}</span> : <span className="mute">awal</span>}
+          <small>{dmy(wall(sel.t, tz))}</small>
+        </div>
+      ) : null}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" tabIndex={0} className="eq-svg"
+        aria-label={`Grafik saldo: akhir ${start ? bal(end) : money(end)}. Geser atau tekan panah kiri/kanan untuk melihat saldo per trade.`}
+        style={{ display: 'block' }}
+        onPointerDown={at} onPointerMove={(e) => { if (e.pointerType === 'mouse' || e.buttons || pick != null) at(e); }}
+        onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPick(null); }}
+        onKeyDown={onKey} onBlur={() => setPick(null)}>
         {ticks.map((v, i) => (
           <g key={i}>
             <line x1={P.l} x2={W - P.r} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeWidth="1" />
@@ -78,11 +108,15 @@ export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: Clos
         {/* key on the path: the line draws itself again whenever the data changes */}
         <path key={`${pts.length}:${end}`} d={line} pathLength={1} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" className="eq-line" />
         <circle cx={x(pts.length - 1)} cy={y(end)} r="4" fill={color} className="eq-end" style={{ transformOrigin: `${x(pts.length - 1)}px ${y(end)}px` }} />
+        {sel && pick != null ? <g className="eq-scrub" pointerEvents="none">
+          <line x1={x(pick)} x2={x(pick)} y1={P.t} y2={H - P.b} stroke="var(--ink)" strokeOpacity=".35" strokeWidth="1" />
+          <circle cx={x(pick)} cy={y(sel.v)} r="5.5" fill="var(--surface)" stroke={color} strokeWidth="2.5" />
+        </g> : null}
         <text x={P.l} y={H - 6} fontSize="12" fill="var(--mute)">{dmy(wall(pts[0].t, tz))}</text>
         <text x={W - P.r} y={H - 6} fontSize="12" fill="var(--mute)" textAnchor="end">{dmy(wall(pts[pts.length - 1].t, tz))}</text>
       </svg>
       <figcaption className="mute small" style={{ marginTop: 6 }}>
-        Merah tipis = penurunan terdalam ({money(-best.dd)})
+        Merah tipis = penurunan terdalam ({money(-best.dd)}) · geser grafik untuk melihat saldo per trade
       </figcaption>
     </figure>
   );

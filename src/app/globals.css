@@ -2,59 +2,8 @@
    Dark-first, calm and precise. One typeface (Inter, tabular numbers), one accent (muted gold),
    green/red only for buy/sell & profit/loss, amber only for warnings. Motion: opacity/transform only. */
 
-/* ======================================================================= tokens */
-:root {
-  /* colour — "Terang Bersih" (default): grey-white page, white cards, blue accent */
-  --bg: #f2f4f6; --surface: #ffffff; --card: #ffffff; --card-edge: 0 1px 3px rgba(25, 31, 40, .04); --card-line: transparent;
-  --glow-1: transparent; --glow-2: transparent;
-  --sunk: #f5f6f8; --hover: #eef0f3; --line: #e5e8eb; --line-2: #d1d6db;
-  --ink: #191f28; --ink-2: #4e5968; --mute: #8b95a1; --faint: #c9cfd6;
-  --gold: #3182f6; --gold-ink: #ffffff; --gold-tint: #e8f3ff; --gold-press: #1b64da;   /* accent (blue) — token name kept */
-  --up: #0fa36b; --up-tint: #e6f7ef; --down: #f04452; --down-tint: #ffeef0; --warn: #d9820b; --warn-tint: #fff4e0;
-  --err-ink: #b4222e; --ok-ink: #0a6e48; --on-solid: #ffffff; --bar: #ffffff; --track: #d1d6db;
-  --sk-a: #eceff2; --sk-b: #f6f7f9; --shadow: rgba(25, 31, 40, .08); --scrim: rgba(25, 31, 40, .4); color-scheme: light;
-
-  /* type */
-  /* the iPhone's own font (SF Pro); system fonts elsewhere */
-  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
-  --fs-xs: 12.5px; --fs-sm: 13.5px; --fs-md: 16px; --fs-lg: 17px; --fs-xl: 22px; --fs-2xl: 28px; --fs-num: 36px;
-
-  /* space · radius */
-  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px;
-  --r: 18px; --r-m: 14px; --r-s: 10px; --r-xs: 8px; --r-pill: 999px;
-
-  /* motion */
-  --ease: cubic-bezier(.2, .8, .2, 1);
-  --ease-in: cubic-bezier(.4, 0, 1, 1);
-  --spring: cubic-bezier(.34, 1.36, .64, 1);
-  --d-1: 120ms; --d-2: 200ms; --d-3: 260ms;
-
-  --side-w: 232px;
-}
-/* dark — chosen in Atur → Tampilan, or "Otomatis" on a dark iPhone */
-:root[data-theme='dark'] {
-    --bg: #101013; --surface: #1b1b1f; --card: #1b1b1f; --card-edge: none; --card-line: transparent;
-    --glow-1: transparent; --glow-2: transparent;
-    --sunk: #232328; --hover: #2a2a30; --line: #2c2c33; --line-2: #3a3a42;
-    --ink: #ececf0; --ink-2: #b0b0ba; --mute: #84848f; --faint: #45454d;
-    --gold: #4c94f8; --gold-ink: #ffffff; --gold-tint: #16243a; --gold-press: #3b82f0;
-    --up: #2fc184; --up-tint: #10261d; --down: #f2596a; --down-tint: #2c1519; --warn: #f0a43a; --warn-tint: #2a2112;
-    --err-ink: #ffadb5; --ok-ink: #9fe3c4; --on-solid: #101013; --bar: #16161a; --track: #3a3a42;
-    --sk-a: #1f1f24; --sk-b: #28282e; --shadow: rgba(0, 0, 0, .45); --scrim: rgba(0, 0, 0, .6); color-scheme: dark;
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-theme='auto'] {
-    --bg: #101013; --surface: #1b1b1f; --card: #1b1b1f; --card-edge: none; --card-line: transparent;
-    --glow-1: transparent; --glow-2: transparent;
-    --sunk: #232328; --hover: #2a2a30; --line: #2c2c33; --line-2: #3a3a42;
-    --ink: #ececf0; --ink-2: #b0b0ba; --mute: #84848f; --faint: #45454d;
-    --gold: #4c94f8; --gold-ink: #ffffff; --gold-tint: #16243a; --gold-press: #3b82f0;
-    --up: #2fc184; --up-tint: #10261d; --down: #f2596a; --down-tint: #2c1519; --warn: #f0a43a; --warn-tint: #2a2112;
-    --err-ink: #ffadb5; --ok-ink: #9fe3c4; --on-solid: #101013; --bar: #16161a; --track: #3a3a42;
-    --sk-a: #1f1f24; --sk-b: #28282e; --shadow: rgba(0, 0, 0, .45); --scrim: rgba(0, 0, 0, .6); color-scheme: dark;
-  }
-}
+/* ======================================================================= tokens
+   All colours, type, spacing, radius and motion live in tokens.css (one definition each). */
 
 /* ======================================================================= base */
 * { box-sizing: border-box; }

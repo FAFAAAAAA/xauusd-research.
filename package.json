@@ -2,7 +2,9 @@
   "name": "xauusd-research",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=18.18" },
+  "engines": {
+    "node": ">=18.18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,6 +15,7 @@
     "db:migrate": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f supabase/migrations/20261031000000_init.sql"
   },
   "dependencies": {
+    "geist": "1.7.2",
     "lightweight-charts": "^4.2.0",
     "next": "^14.2.15",
     "pg": "^8.13.0",

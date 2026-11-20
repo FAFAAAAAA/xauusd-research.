@@ -1,0 +1,141 @@
+/* =========================================================================
+   "Gold Terminal" component layer (20 Nov 2026). Loaded after tokens.css and
+   polish.css. Uses tokens only; the few local overrides below re-point tokens
+   inside one component (the dark balance panel) so its children follow along.
+   ========================================================================= */
+
+/* ---------------------------------------------------------- numbers
+   Every figure that matters is set in Geist Mono: digits line up and read like a terminal. */
+.td-row, .td-period strong, .td-startbtn, .td-sub .flash,
+.b-v, .b-stat .b-v, .op-pnl, .perf-pnl, .perf-facts strong, .si-facts strong,
+.cal .cell .v, .cal-top strong, .cal-pick-head span, .metric .v, .num, .wl-legend, .st-recs strong,
+.bxs-sum b, .cf-amt, .hc-pnl, .dt-pnl strong, .eq-fig text {
+  font-family: var(--mono); font-feature-settings: 'tnum' 1, 'zero' 0; letter-spacing: -.02em;
+}
+
+/* ---------------------------------------------------------- labels
+   Small caps-style labels above values: quiet, precise, consistent across tiles. */
+.td-k, .b-k, .perf-facts .k, .si-facts .k, .metric .k, .bxs-sum small {
+  text-transform: uppercase; letter-spacing: .07em; font-size: 12px; font-weight: 600; color: var(--mute);
+}
+
+/* ---------------------------------------------------------- page title */
+.research-flow .page-head h1 { font-weight: 650; letter-spacing: -.045em; }
+
+/* ---------------------------------------------------------- cards
+   Hairline outline + a very soft lift in light mode; outline only in dark mode. */
+.research-flow .group:not(:has(.chart,.chartbox,.cal,canvas)),
+.research-flow .panel:not(:has(.chart,.chartbox,.cal,canvas)),
+.research-flow .group, .b-tile, .td-hero {
+  border: 1px solid var(--line); box-shadow: var(--card-edge); border-radius: var(--r);
+}
+.b-tile { padding: 16px; gap: 8px; }
+.b-v { font-size: 22px; font-weight: 600; }
+
+/* ---------------------------------------------------------- the balance panel
+   Always a dark "terminal" panel with a faint gold glow, in both themes. Its own token
+   values make every child (labels, chips, green/red) switch to the dark palette. */
+.td-hero {
+  --ink: #f4f1ea; --ink-2: #cfcabf; --mute: #a39e92; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
+  --up: #3ddc97; --down: #ff7b7b; --up-tint: rgba(61, 220, 151, .12); --down-tint: rgba(255, 123, 123, .12);
+  position: relative; overflow: hidden; color: var(--ink);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(230, 182, 69, .20), transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(230, 182, 69, .06), transparent 60%),
+    #121214;
+  border: 1px solid rgba(230, 182, 69, .28);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 18px 40px -24px rgba(0, 0, 0, .55);
+  padding: 24px 22px 20px;
+}
+.td-hero::before { /* fine gold rule along the top edge */
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(230, 182, 69, .75), transparent);
+}
+.td-bal { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -.05em; font-size: clamp(42px, 11.5vw, 62px); }
+.td-chip { font-weight: 600; }
+.td-period { border-top-color: var(--line); }
+.td-period strong { font-size: 16px; font-weight: 500; }
+.td-startbtn { color: var(--mute); }
+
+/* ---------------------------------------------------------- segmented controls
+   Active option is inverted (ink pill, page-coloured text): unmistakable at a glance. */
+.seg .seg-ind { background: var(--ink); box-shadow: 0 6px 16px -10px var(--shadow); }
+.seg button[aria-pressed='true'], .seg.has-ind button[aria-pressed='true'] { color: var(--bg); }
+.seg button { font-weight: 600; }
+
+/* ---------------------------------------------------------- accents */
+.wlbar { height: 6px; gap: 3px; }
+.st-pill.w, .td-chip.pos { background: var(--up-tint); }
+.hc-side, .op-badge { border-radius: 9px; }
+.opencard .btc-badge { background: var(--gold-bright); color: #17120a; }
+.btn.primary { letter-spacing: -.01em; }
+
+/* in dark mode cards are flat panels; a light lift reads as glare */
+:root[data-theme='dark'] .b-tile, :root[data-theme='dark'] .research-flow .group { box-shadow: none; }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='auto'] .b-tile, :root[data-theme='auto'] .research-flow .group { box-shadow: none; }
+}
+
+/* ---------------------------------------------------------- interactive equity chart */
+.eq-svg { touch-action: pan-y; cursor: crosshair; outline: none; border-radius: var(--r-s); }
+.eq-svg:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
+.eq-tip { position: absolute; top: -6px; z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 8px 10px; border-radius: var(--r-s); background: var(--ink); color: var(--bg); box-shadow: 0 10px 24px -12px var(--shadow);
+  font-family: var(--mono); font-size: 13px; line-height: 1.25; white-space: nowrap; animation: unfold var(--d-1) var(--ease) both; }
+.eq-tip strong { font-size: 15px; font-weight: 600; }
+.eq-tip small { font-family: var(--font); font-size: 12px; opacity: .75; }
+/* on the inverted chip, profit/loss use the opposite theme's green/red so they stay readable */
+.eq-tip .pos { color: color-mix(in srgb, var(--up) 55%, var(--bg)); }
+.eq-tip .neg { color: color-mix(in srgb, var(--down) 55%, var(--bg)); }
+.eq-tip .mute { color: inherit; opacity: .7; }
+/* balance trend inside the balance panel */
+.td-spark { display: block; width: 100%; height: 44px; margin: 2px 0 -2px; }
+
+/* ---------------------------------------------------------- Backtest results */
+/* the result summary is the same dark gold panel as the Trade balance */
+.apple-shell .research-flow .hero.flagship-verdict {
+  --ink: #f4f1ea; --ink-2: #cfcabf; --mute: #a39e92; --line: rgba(255, 255, 255, .09); --sunk: rgba(255, 255, 255, .07);
+  --up: #3ddc97; --down: #ff7b7b;
+  color: var(--ink); border: 1px solid rgba(230, 182, 69, .28); border-radius: var(--r); box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .55);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(230, 182, 69, .20), transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(230, 182, 69, .06), transparent 60%),
+    #121214;
+}
+.apple-shell .research-flow .hero.flagship-verdict .profit-caption,
+.apple-shell .research-flow .hero.flagship-verdict .hero-winrate span,
+.apple-shell .research-flow .hero.flagship-verdict .summary-meta { color: var(--mute); }
+.apple-shell .research-flow .hero.flagship-verdict .hero-winrate { border-top-color: var(--line); }
+.apple-shell .research-flow .hero.flagship-verdict .pos { color: var(--up); }
+.apple-shell .research-flow .hero.flagship-verdict .neg { color: var(--down); }
+.flagship-verdict .price { font-variant-numeric: tabular-nums; }
+.flagship-verdict .hero-winrate strong, .facts strong, .hold3 strong, .tbl td, table.num-r td { font-family: var(--mono); font-feature-settings: 'tnum' 1; letter-spacing: -.02em; }
+
+/* a card inside a card loses its own frame (e.g. the trade list under "Riwayat") */
+.research-flow .group .group { border: 0; box-shadow: none; background: transparent; padding-inline: 0; }
+
+/* wide tables that scroll sideways show a soft shadow on the side that has more content
+   (pure CSS scroll shadows: the 'local' covers hide each shadow once you reach that end;
+   a table that fits shows nothing) */
+.tablewrap {
+  background:
+    linear-gradient(90deg, var(--card) 40%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(270deg, var(--card) 40%, transparent) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--shadow), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--shadow), transparent) right center / 12px 100% no-repeat scroll;
+}
+
+/* ---------------------------------------------------------- Kantor (office scene)
+   The scene itself is art and stays as drawn. Only the readable bits change:
+   name / status tags above the characters were 6.5–8.5px, the menu cat was 40px. */
+.office-tag .ot-card { padding: 1px 5px 2px; }
+.office-tag .ot-card strong { font-size: 10px; }
+.office-tag .ot-st, .office-tag .ot-role { font-size: 8.5px; }
+.ot-bubble { font-size: 10px; padding: 2px 7px; }
+.ot-card, .ot-bubble { font-family: var(--mono); }
+.office-cat { width: 44px; height: 44px; }
+
+/* Backtest filter bar and the summary's context line were 11px on phones */
+.research-filter, .research-view { font-size: 12px; min-height: 44px; }
+.flagship-verdict .verdict-context, .flagship-verdict .summary-risk, .flagship-verdict .summary-meta, .summary-trades { font-size: 12px; }
+.research-filter > span:first-of-type { font-size: 12px; }
