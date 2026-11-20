@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Flash, RollNumber, SecHead, Sheet } from './Status';
+import { CountUp, Flash, SecHead, Sheet } from './Status';
 import { StatsBento, useResultStats } from './StatsBento';
 import { EquityChart, PnlCalendar, type ClosedTrade } from './ResultCharts';
 import { tzOffsetMinutes } from '@/lib/core/time';
@@ -102,16 +102,16 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
             <button className="td-startbtn" onClick={() => setEdit(String(start))} aria-label="Ubah saldo awal">{usd(start, false)}</button>
           </span>
         </div>
-        <span className="td-bal"><RollNumber value={bal} format={(n) => usd(n, false)} /></span>
+        <span className="td-bal"><CountUp value={bal} format={(n) => usd(n, false)} /></span>
         <span className="td-row">
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
           <span className={tone(profit)}>{usd(profit)}</span>
         </span>
         {(() => { const u = openPnl ?? live?.upnl ?? 0; return live && Math.abs(u) >= 0.01 ? <span className="td-sub">Posisi terbuka <span className={tone(u)}><Flash value={u}>{usd(u)}</Flash></span></span> : null; })()}
         <div className="td-period">
-          <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}><RollNumber value={s.today} format={(n) => usd(n)} /></strong></span>
-          <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}><RollNumber value={s.week} format={(n) => usd(n)} /></strong></span>
-          <span><span className="td-k">Bulan ini</span><strong className={tone(s.month)}><RollNumber value={s.month} format={(n) => usd(n)} /></strong></span>
+          <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}><CountUp value={s.today} format={(n) => usd(n)} /></strong></span>
+          <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}><CountUp value={s.week} format={(n) => usd(n)} /></strong></span>
+          <span><span className="td-k">Bulan ini</span><strong className={tone(s.month)}><CountUp value={s.month} format={(n) => usd(n)} /></strong></span>
         </div>
       </section>
 
