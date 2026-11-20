@@ -93,6 +93,8 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   const growth = start + added > 0 ? profit / (start + added) * 100 : 0;
   return (
     <div className="stack td">
+      {/* wide screens: balance on the left, Bitcoin + open positions beside it (polish.css .td-top) */}
+      <div className="td-top">
       <section className="td-hero">
         <div className="td-head">
           <span className="td-k">Saldo</span>
@@ -113,7 +115,8 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
         </div>
       </section>
 
-      {openSlot /* open positions: between the balance and the win rate, only when there are any */}
+      <div className="td-side stack">{openSlot /* open positions: between the balance and the win rate, only when there are any */}</div>
+      </div>
 
       {s.n ? <>
         <StatsBento s={rs} />

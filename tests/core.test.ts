@@ -294,6 +294,7 @@ test('swap triple day is configurable (index CFDs charge Friday 3×) and v1 NAS 
 test('bot control: values are clamped, missing means "use the VPS config"', async () => {
   const { cleanBotControl } = await import('../src/lib/core/bot-control');
   const c = cleanBotControl({ set: { risk_percent: 9, max_positions: 0, max_buy_positions: 7, risk_mode: 'x', buy_enabled: 'yes', exclude: ['arbusdt', 'bad', 'ARBUSDT'], summary_hours_kst: [23, 8, 30] }, paused: 'yes' }, 5);
-  assert.deepEqual(c, { set: { risk_percent: 5, max_positions: 1, max_buy_positions: 4, summary_hours_kst: [8, 23], exclude: ["ARBUSDT"] }, paused: false, resetAt: 0, closeAllAt: 0, updatedAt: 5 });
-  assert.deepEqual(cleanBotControl({ riskPercent: '2.04', maxSell: null, paused: true }, 7), { set: { risk_mode: "percent", risk_percent: 2 }, paused: true, resetAt: 0, closeAllAt: 0, updatedAt: 7 });
+  // BZ is retired (19 Nov 2026): every control always tells the bot BZ is off
+  assert.deepEqual(c, { set: { risk_percent: 5, max_positions: 1, max_buy_positions: 4, summary_hours_kst: [8, 23], exclude: ["ARBUSDT"], bz_enabled: false, max_bz_positions: 0 }, paused: false, resetAt: 0, closeAllAt: 0, updatedAt: 5 });
+  assert.deepEqual(cleanBotControl({ riskPercent: '2.04', maxSell: null, paused: true }, 7), { set: { risk_mode: "percent", risk_percent: 2, bz_enabled: false, max_bz_positions: 0 }, paused: true, resetAt: 0, closeAllAt: 0, updatedAt: 7 });
 });

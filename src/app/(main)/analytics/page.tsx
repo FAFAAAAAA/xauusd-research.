@@ -515,6 +515,9 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
     try { localStorage.setItem(FORM_KEY, JSON.stringify(Object.fromEntries(FORM_SAVED.map((k) => [k, (f as any)[k]])))); } catch { /* ignore */ }
   }, [f]);
   const [sel, setSel] = useState<string[] | null>(null); // null = all pairs
+  // long pair lists (crypto: 150+ coins): search box, and only the first few + the selected ones until "show all"
+  const [pairQ, setPairQ] = useState('');
+  const [pairsOpen, setPairsOpen] = useState(false);
   const [custom, setCustom] = useState(false);
   const [skipDone, setSkipDone] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -617,6 +620,19 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
   const total = prog?.reduce((a, p) => a + p.years.length, 0) ?? 0;
   const finished = prog?.reduce((a, p) => a + (p.proc ?? 0), 0) ?? 0;
   const allSel = sel == null;
+  const PAIR_PREVIEW = 12;
+  const pairQn = pairQ.trim().toUpperCase();
+  // collapsed list = the first few + every selected pair; a chip that was shown stays shown (until search / expand / strategy
+  // changes), so un-ticking a pair never makes it vanish under the finger
+  const keepRef = useRef<Set<string>>(new Set());
+  const keepKey = `${pairsOpen}|${pairQn}|${f.strategy}|${market}`;
+  const keepKeyRef = useRef(keepKey);
+  if (keepKeyRef.current !== keepKey) { keepKeyRef.current = keepKey; keepRef.current = new Set(); }
+  const shownPairs = pairQn
+    ? sets.filter((m) => m.symbol.toUpperCase().includes(pairQn) || String(m.label).toUpperCase().includes(pairQn))
+    : pairsOpen || sets.length <= PAIR_PREVIEW + 4 ? sets
+    : sets.filter((m, i) => i < PAIR_PREVIEW || (sel != null && sel.includes(m.symbol)) || keepRef.current.has(m.symbol));
+  for (const m of shownPairs) keepRef.current.add(m.symbol);
 
   return (
     <section className={bare ? 'stack' : 'group stack'}>
@@ -633,13 +649,24 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       {isPlanRun ? <div className="form-sec"><h3><span className="n">2</span>Pair</h3><p className="mute small">FX2 otomatis: v1 Level di XAUUSD, v1 NAS di US100. Hasil gabungan hanya untuk tahun yang keduanya ada (US100 mulai 2017).</p></div> : <div className="form-sec">
         <div className="row between"><h3><span className="n">2</span>Pair <span className="mute" style={{ fontWeight: 400 }}>{chosen.length}/{sets.length}</span></h3>
           <button className="btn sm ghost" onClick={() => setSel(allSel ? [] : null)}>{allSel ? 'Kosongkan' : 'Pilih semua'}</button></div>
+        {sets.length > PAIR_PREVIEW + 4 ? (
+          <label className="field pair-search"><span className="sr-only">Cari pair</span>
+            <input type="search" inputMode="search" autoCapitalize="characters" placeholder={`Cari di ${sets.length} pair (mis. SOL)`} value={pairQ} onChange={(e) => setPairQ(e.target.value)} />
+          </label>
+        ) : null}
         <div className="chips wide">
-          {sets.map((m) => (
+          {shownPairs.map((m) => (
             <button key={m.symbol} className="chip" aria-pressed={allSel || (sel ?? []).includes(m.symbol)} onClick={() => togglePair(m.symbol)}>
               <span className="k">{m.label.replace(/ \(.*\)$/, '')}</span><span className="v">{yearOf(m.first)}–{yearOf(m.last)}</span>
             </button>
           ))}
         </div>
+        {pairQn && !shownPairs.length ? <p className="mute small">Tidak ada pair yang cocok dengan “{pairQ.trim()}”.</p> : null}
+        {!pairQn && sets.length > PAIR_PREVIEW + 4 ? (
+          <button className="btn sm ghost pair-more" onClick={() => setPairsOpen((v) => !v)} aria-expanded={pairsOpen}>
+            {pairsOpen ? 'Tampilkan lebih sedikit' : `Tampilkan semua ${sets.length} pair`}
+          </button>
+        ) : null}
       </div>}
       <div className="form-sec">
       <h3><span className="n">3</span>Periode</h3>
@@ -686,11 +713,11 @@ function RunBacktest({ onDone, bare = false, existingFor, market }: { onDone: (c
       </details>
       </div>
       {!sets.length ? (markets.length ? <div className="notice">Data belum siap.</div> : <Loading what="daftar pair" variant="list" />) : null}
-      {busy
+      <div className="run-bar">{busy
         ? <button className="btn block" onClick={() => { stop.current = true; }}><Spinner />Berhenti setelah tahun ini</button>
         : <button className="btn primary block" onClick={run} disabled={!f.strategy || !chosen.length || (!custom && !list.length)}>
             {isPlanRun ? `Jalankan FX2 · ${y1 === y2 ? y1 : `${y1}–${y2}`}` : custom ? `Jalankan ${chosen.length} pair` : `Jalankan ${chosen.length} pair · ${y1 === y2 ? y1 : `${y1}–${y2}`}`}
-          </button>}
+          </button>}</div>
       {err ? <div className="error">{err}</div> : null}
       {prog ? (
         <div className="stack tight appear" role="status" aria-live="polite">

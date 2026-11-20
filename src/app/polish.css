@@ -76,3 +76,49 @@
 
 /* entrance animations of [data-anim] blocks wait (hidden at their first frame) until the block scrolls into view */
 [data-anim]:not([data-seen]) *, [data-anim]:not([data-seen]) { animation-play-state: paused !important; }
+
+/* ---------------------------------------------------------- 6. minimum text size
+   Labels people actually read were 11px; 12px is the floor. */
+.b-three .b-stat .hc-res, .histrow .hc-res, .dt-pnl .hc-res { font-size: 12px; }
+.cal-simple .cal.dow span { font-size: 12px; }
+.perf-facts .k, .si-facts .k, .levels .k { font-size: 12px; }
+.form-sec h3 .n { font-size: 12px; }
+.chip .v { font-size: 12px; }
+.bxs-sum small { font-size: 12px; }
+.ap-btn small { font-size: 12px; }
+
+/* ---------------------------------------------------------- 7. Backtest: long pair list
+   Search box above the chips, a "show all" toggle under them, and the run button
+   stays reachable at the bottom of the screen while the form scrolls. */
+.pair-search { margin: 10px 0 4px; }
+.pair-search input { min-height: 44px; }
+.pair-more { margin-top: 8px; min-height: 44px; }
+.run-bar { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 4; }
+.run-bar > .btn { box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--ink) 45%, transparent); }
+/* selected pair chips: label colour reaches 4.5:1 on the light-blue chip */
+:root[data-theme='light'] .chip[aria-pressed='true'] .k { color: #0060c0; }
+
+/* ---------------------------------------------------------- 8. Trade page on wide screens
+   Balance card on the left, Bitcoin + open positions on the right (one column on phones,
+   and when there is nothing to show beside the balance). */
+.td-top { display: flex; flex-direction: column; gap: var(--s-4); }
+.td-side:empty { display: none; }
+@media (min-width: 1000px) {
+  .td-top:has(.td-side:not(:empty)) { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+  .td-top .td-hero { height: 100%; }
+}
+
+/* ---------------------------------------------------------- 9. small fixes
+   Phone page titles: the header kept 54px on the right for the menu button only, so
+   every centred title sat 27px left of the screen centre. Same space on both sides. */
+@media (max-width: 899px) { .research-flow .page-head { padding-left: 54px; justify-content: center; } }
+/* Bitcoin badge: drawn as an icon (the ₿ glyph fell back to a font where it read as "8"); orange deep enough for 3:1 */
+.opencard .btc-badge { background: #d17c16; display: grid; place-items: center; }
+.opencard .btc-badge svg { display: block; }
+/* card headings: when title + note do not fit on one line the note moves under the title,
+   instead of squeezing the title onto two lines ("Risiko modal & / lot") */
+.sec-head { flex-wrap: wrap; row-gap: 2px; }
+.sec-head .meta { white-space: nowrap; }
+/* BUY / SELL side badges: same on-solid ink as the calendar (bright fills in dark mode take dark text) */
+.hc-side.b, .hc-side.s { color: var(--on-solid); }
+.apple-site-footer { font-size: 12px; }
