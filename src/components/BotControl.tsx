@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { call, peek } from './client';
+import { call, usePeek } from './client';
 import { Loading, Sheet, Spinner, toast } from './Status';
 import { BOT_KEYS, SYM_RE, type BotKey, type BotVal } from '@/lib/core/bot-control';
 
@@ -27,7 +27,7 @@ function expect(r: number) {
  * A setting that was never changed here keeps the value from snr_bot_config.json on the VPS ("config VPS").
  */
 export function BotControlCard() {
-  const [d, setD] = useState<any>(() => peek('/api/bot-control'));
+  const [d, setD] = usePeek<any>('/api/bot-control');
   const [set, setSet] = useState<Partial<Record<BotKey, BotVal>> | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

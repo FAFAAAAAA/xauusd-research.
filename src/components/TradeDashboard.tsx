@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { CountUp, SecHead, Sheet } from './Status';
+import { CountUp, Flash, SecHead, Sheet } from './Status';
 import { StatsBento, useResultStats } from './StatsBento';
 import { EquityChart, PnlCalendar, type ClosedTrade } from './ResultCharts';
 import { tzOffsetMinutes } from '@/lib/core/time';
@@ -93,6 +93,8 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
   const growth = start + added > 0 ? profit / (start + added) * 100 : 0;
   return (
     <div className="stack td">
+      {/* wide screens: balance on the left, Bitcoin + open positions beside it (polish.css .td-top) */}
+      <div className="td-top">
       <section className="td-hero">
         <div className="td-head">
           <span className="td-k">Saldo</span>
@@ -105,15 +107,16 @@ export default function TradeDashboard({ trades, market, tz, fallbackStart, grou
           <span className={`td-chip ${tone(growth)}`}>{pct(growth)}</span>
           <span className={tone(profit)}>{usd(profit)}</span>
         </span>
-        {(() => { const u = openPnl ?? live?.upnl ?? 0; return live && Math.abs(u) >= 0.01 ? <span className="td-sub">Posisi terbuka <span className={tone(u)}>{usd(u)}</span></span> : null; })()}
+        {(() => { const u = openPnl ?? live?.upnl ?? 0; return live && Math.abs(u) >= 0.01 ? <span className="td-sub">Posisi terbuka <span className={tone(u)}><Flash value={u}>{usd(u)}</Flash></span></span> : null; })()}
         <div className="td-period">
-          <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}>{usd(s.today)}</strong></span>
-          <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}>{usd(s.week)}</strong></span>
-          <span><span className="td-k">Bulan ini</span><strong className={tone(s.month)}>{usd(s.month)}</strong></span>
+          <span><span className="td-k">Hari ini</span><strong className={tone(s.today)}><CountUp value={s.today} format={(n) => usd(n)} /></strong></span>
+          <span><span className="td-k">Minggu ini</span><strong className={tone(s.week)}><CountUp value={s.week} format={(n) => usd(n)} /></strong></span>
+          <span><span className="td-k">Bulan ini</span><strong className={tone(s.month)}><CountUp value={s.month} format={(n) => usd(n)} /></strong></span>
         </div>
       </section>
 
-      {openSlot /* open positions: between the balance and the win rate, only when there are any */}
+      <div className="td-side stack">{openSlot /* open positions: between the balance and the win rate, only when there are any */}</div>
+      </div>
 
       {s.n ? <>
         <StatsBento s={rs} />

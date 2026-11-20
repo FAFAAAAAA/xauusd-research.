@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
-import { call, fmt, peek, px } from '@/components/client';
-import { ErrorBox, Loading, PageHead, SecHead, Seg, Sheet, Spinner, toast } from '@/components/Status';
+import { call, fmt, px, usePeek } from '@/components/client';
+import { ErrorBox, Flash, Loading, PageHead, SecHead, Seg, Sheet, Spinner, toast } from '@/components/Status';
 import Link from 'next/link';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
 import { JOURNAL_KEYS, marketOfJournal } from '@/lib/core/markets';
@@ -37,8 +37,8 @@ const coinOf = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? ''
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
 
 export default function TradePage() {
-  const [d, setD] = useState<any>(() => peek('/api/live'));
-  const [j, setJRaw] = useState<{ trades: JournalTrade[]; stats: Record<string, JournalStats>; binance?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; mt5?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; cashflow?: { crypto: CashFlow[]; forex: CashFlow[] } } | null>(() => peek('/api/journal'));
+  const [d, setD] = usePeek<any>('/api/live');
+  const [j, setJRaw] = usePeek<{ trades: JournalTrade[]; stats: Record<string, JournalStats>; binance?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; mt5?: { wallet: number; upnl: number; at: number; pos?: Record<string, number> } | null; cashflow?: { crypto: CashFlow[]; forex: CashFlow[] } }>('/api/journal');
   // edits return the journal without the Binance balance: keep the last one
   const setJ = (v: any) => setJRaw((old) => (v && v.binance === undefined && old ? { ...v, binance: old.binance, mt5: old.mt5, cashflow: old.cashflow } : v));
   const [err, setErr] = useState<string | null>(null);
@@ -212,7 +212,7 @@ export default function TradePage() {
                     <strong className="hc-name">{coinOf(t) || (NAME[t.strategy] ?? t.strategy)}</strong>
                     <span className="op-strat">{NAME[t.strategy] ?? t.strategy}</span>
                   </span>
-                  <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}>{fl == null ? '—' : money(fl)}</span>
+                  <span className={`op-pnl ${fl == null ? 'mute' : tone(fl)}`}><Flash value={fl}>{fl == null ? '—' : money(fl)}</Flash></span>
                 </button>
               );
             })}
@@ -232,7 +232,7 @@ export default function TradePage() {
           {market === 'crypto' ? <section className="group">
             <div className="hcards">
               <button className="hcard opencard btcday" aria-label="Bitcoin" onClick={() => setBtcOpen(true)}>
-                <span className="hc-side op-badge btc-badge">₿</span>
+                <span className="hc-side op-badge btc-badge" aria-hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M8 5h5.5a3.5 3.5 0 0 1 0 7H8zM8 12h6.5a3.5 3.5 0 0 1 0 7H8zM8 5v14M10.5 3v2M14 3v2M10.5 19v2M14 19v2" /></svg></span>
                 <span className="op-left" />
                 <span className={`op-pnl ${!btc ? 'mute' : btc.pct > 0 ? 'pos' : btc.pct < 0 ? 'neg' : ''}`}>{btc ? pctText(btc.pct) : '—'}</span>
               </button>

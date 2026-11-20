@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { call, fmt, peek } from '@/components/client';
+import { call, fmt, usePeek } from '@/components/client';
 import { CopyButton, ErrorBox, Loading, PageHead, Seg, Sheet, Spinner, Status, copyText, toast } from '@/components/Status';
 import { FileText } from '@/components/FileText';
 import { BotControlCard } from '@/components/BotControl';
@@ -10,7 +10,7 @@ import { TIMEFRAMES } from '@/lib/core/types';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function Settings() {
-  const [s, setS] = useState<any>(() => peek('/api/settings'));
+  const [s, setS] = usePeek<any>('/api/settings');
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => { setErr(null); call<any>('/api/settings').then(setS).catch((e) => setErr(e.message)); }, []);
   useEffect(() => { load(); }, [load]);

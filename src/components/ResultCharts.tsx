@@ -1,7 +1,7 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { sessionOf, tzOffsetMinutes } from '@/lib/core/time';
-import { SecHead, Seg } from './Status';
+import { SecHead, Seg, useSeen } from './Status';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ClosedTrade { entry: number; exit: number; pnl: number; pnlR: number | null; side: string }
@@ -22,6 +22,20 @@ const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const wall = (ms: number, tz: string) => new Date(ms + tzOffsetMinutes(ms, tz) * 60_000);
 const dmy = (d: Date) => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 
+/** Rendered width of an element (px), so SVG charts draw 1:1 instead of stretching their text with the card. */
+function useWidth<T extends HTMLElement>(fallback: number, ready = true) {
+  const ref = useRef<T>(null);
+  const [w, setW] = useState(fallback);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => { const v = Math.round(e.contentRect.width); if (v > 0) setW(v); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ready]);
+  return [ref, w] as const;
+}
+
 /* ------------------------------------------------------------------ equity line */
 /** start: starting capital (the line then shows the account balance); scale: multiply each trade's P&L (risk typed by the owner ÷ backtest risk). */
 export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: ClosedTrade[]; tz: string; start?: number; scale?: number }) {
@@ -29,8 +43,11 @@ export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: Clos
     let eq = start;
     return [{ t: trades[0]?.entry ?? 0, v: start }, ...trades.map((x) => ({ t: x.exit, v: (eq += x.pnl * scale) }))];
   }, [trades, start, scale]);
+  const [box, measured] = useWidth<HTMLElement>(360, trades.length >= 2);
+  useSeen(box, trades.length >= 2);
   if (trades.length < 2) return <p className="mute small">Butuh minimal 2 trade untuk menggambar grafik.</p>;
-  const W = 360, H = 190, P = { l: start ? 56 : 44, r: 8, t: 10, b: 22 };
+  // drawn at the real width: text stays 12px; height grows a little on wide screens but never balloons
+  const W = Math.max(260, measured), H = Math.round(Math.min(280, Math.max(190, W * 0.32))), P = { l: start ? 60 : 48, r: 10, t: 12, b: 26 };
   const vs = pts.map((p) => p.v);
   let lo = Math.min(start, ...vs), hi = Math.max(start, ...vs);
   if (hi - lo < 1) { hi += 1; lo -= 1; }
@@ -47,21 +64,22 @@ export function EquityChart({ trades, tz, start = 0, scale = 1 }: { trades: Clos
   let peakI = 0, best = { from: 0, to: 0, dd: 0 }, curPeak = 0;
   pts.forEach((p, i) => { if (p.v > pts[curPeak].v) curPeak = i; const dd = pts[curPeak].v - p.v; if (dd > best.dd) { best = { from: curPeak, to: i, dd }; peakI = curPeak; } });
   return (
-    <figure style={{ margin: 0 }}>
+    <figure ref={box} data-anim className="eq-fig" style={{ margin: 0 }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Grafik saldo: akhir ${start ? bal(end) : money(end)}`} style={{ display: 'block' }}>
         {ticks.map((v, i) => (
           <g key={i}>
             <line x1={P.l} x2={W - P.r} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeWidth="1" />
-            <text x={P.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--mute)">{start ? bal(v) : short(v)}</text>
+            <text x={P.l - 8} y={y(v) + 4} textAnchor="end" fontSize="12" fill="var(--mute)">{start ? bal(v) : short(v)}</text>
           </g>
         ))}
         <line x1={P.l} x2={W - P.r} y1={y(start)} y2={y(start)} stroke="var(--mute)" strokeWidth="1" strokeDasharray="4 4" />
-        {best.dd > 0 ? <rect x={x(peakI)} y={P.t} width={Math.max(1, x(best.to) - x(peakI))} height={H - P.t - P.b} fill="var(--down)" opacity="0.06" /> : null}
-        <path d={area} fill={color} opacity="0.08" />
-        <path d={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
-        <circle cx={x(pts.length - 1)} cy={y(end)} r="3" fill={color} />
-        <text x={P.l} y={H - 6} fontSize="11" fill="var(--mute)">{dmy(wall(pts[0].t, tz))}</text>
-        <text x={W - P.r} y={H - 6} fontSize="11" fill="var(--mute)" textAnchor="end">{dmy(wall(pts[pts.length - 1].t, tz))}</text>
+        {best.dd > 0 ? <rect x={x(peakI)} y={P.t} width={Math.max(1, x(best.to) - x(peakI))} height={H - P.t - P.b} fill="var(--down)" opacity="0.06" className="eq-dd" /> : null}
+        <path d={area} fill={color} opacity="0.08" className="eq-area" />
+        {/* key on the path: the line draws itself again whenever the data changes */}
+        <path key={`${pts.length}:${end}`} d={line} pathLength={1} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" className="eq-line" />
+        <circle cx={x(pts.length - 1)} cy={y(end)} r="4" fill={color} className="eq-end" style={{ transformOrigin: `${x(pts.length - 1)}px ${y(end)}px` }} />
+        <text x={P.l} y={H - 6} fontSize="12" fill="var(--mute)">{dmy(wall(pts[0].t, tz))}</text>
+        <text x={W - P.r} y={H - 6} fontSize="12" fill="var(--mute)" textAnchor="end">{dmy(wall(pts[pts.length - 1].t, tz))}</text>
       </svg>
       <figcaption className="mute small" style={{ marginTop: 6 }}>
         Merah tipis = penurunan terdalam ({money(-best.dd)})
@@ -266,6 +284,7 @@ const compact = (n: number, dollar = true) => {
 export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { trades: ClosedTrade[]; tz: string; simple?: boolean;
   renderSelection?: (match: (closeMs: number) => boolean, label: string) => React.ReactNode }) {
   const [tab, setTab] = useState<CalTab>('day');
+  const seen = useSeen<HTMLDivElement>();
   const [metric, setMetric] = useState<Metric>('pnl');
   const [sel, setSel] = useState<string | null>(null);
 
@@ -355,7 +374,7 @@ export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { t
 
   if (!trades.length) return <p className="mute">Belum ada trade yang selesai.</p>;
   return (
-    <div className="stack">
+    <div ref={seen} data-anim className="stack">
       {simple ? <>
         <div className="cal-top"><h2>Kalender PnL</h2><strong className={tot.pnl > 0 ? 'pos' : tot.pnl < 0 ? 'neg' : 'mute'}>{`${tot.pnl < 0 ? '−' : tot.pnl > 0 ? '+' : ''}$${Math.abs(tot.pnl).toFixed(2)}`}</strong></div>
         <Seg full label="Periode" options={[['day', 'Harian'], ['week', 'Mingguan'], ['month', 'Bulanan']] as const} value={tab} onChange={(k) => { setTab(k as CalTab); setSel(null); }} />
@@ -400,9 +419,10 @@ export function PnlCalendar({ trades, tz, simple = false, renderSelection }: { t
 
       <div className={simple ? 'cal-simple' : undefined} style={{ display: 'contents' }}>
       {tab === 'day' ? <div className="cal dow">{DOW.map((d) => <span key={d}>{d}</span>)}</div> : null}
-      <div className={`cal ${tab}`}>
-        {view.map((v) => v.blank ? <span key={v.key} /> : (
-          <button key={v.key} className={`cell ${tone(v.cell)}`} aria-pressed={sel === v.key} onClick={() => setSel(sel === v.key ? null : v.key)} aria-label={v.label}>
+      {/* keyed on the period: the cells ripple in again when you step to another month / year */}
+      <div key={`${tab}:${heading}`} className={`cal ${tab}`}>
+        {view.map((v, i) => v.blank ? <span key={v.key} /> : (
+          <button key={v.key} style={{ '--i': i } as React.CSSProperties} className={`cell ${tone(v.cell)}`} aria-pressed={sel === v.key} onClick={() => setSel(sel === v.key ? null : v.key)} aria-label={v.label}>
             <span className="n">{v.title}</span>
             <span className="v">{value(v.cell) ?? ''}</span>
           </button>

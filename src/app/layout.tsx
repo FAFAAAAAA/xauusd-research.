@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './apple-inspired.css';
+import './polish.css';
 
 export const metadata: Metadata = {
   title: 'q',
