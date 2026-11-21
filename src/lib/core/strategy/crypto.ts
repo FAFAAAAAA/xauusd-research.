@@ -8,6 +8,8 @@ import { atrLastEwm, emaLast } from './breakout';
  *  BUY : an H4 candle CLOSES above the highest high of the 50 H4 candles before it, and the H4 candle before it did not
  *        (first close beyond), AND that H4 close is above EMA200 (H4). (Was EMA200 D1 until 15 Nov 2026: backtest 2020-26
  *        on 6 big coins BUY +14.5 vs +10.2 R/yr, portfolio DD 30.9 vs 32.9R.)
+ *  21 Nov 2026: only a strong break (close >= high + 0.5 x ATR14 H4). The bot also needs BTC above its EMA200 (H4); this adapter
+ *  sees one pair only, so that BTC filter is applied in the bot (snr_bot.py), not here.
  *  No SELL (shorts lost money on BTC and ETH in every variant tested).
  *  SL = H4 close − 1.0 × ATR14(D1); TP = RR × risk (engine, 1:2); exits only at TP or SL; no position cap.
  *  Website base timeframe M30 (BTC data from May 2017, ETH from 2018).
@@ -15,7 +17,7 @@ import { atrLastEwm, emaLast } from './breakout';
  *  ETH 2.7/month, win 45%, PF 1.56, DD 17.5R. Median holding ±2.5 days.
  */
 const H4 = 4 * 3_600_000;
-const N = 50, SLK = 1.0;
+const N = 50, SLK = 1.0, BRK = 0.5;
 interface St { lastH4?: number; tk?: number; atrD?: number }
 
 export const CRYPTO_DONCHIAN_KEY = 'metode_crypto_donchian';
@@ -49,6 +51,8 @@ export const cryptoDonchianAdapter: StrategyAdapter = {
     if (!(last.close > lvl)) return [];
     if (h4[k - 1].close > hh(k - 1)) return [];          // not the first close beyond the channel
     if (!(last.close > emaLast(h4.map((x: Candle) => x.close), 200))) return [];   // trend: H4 close above EMA200 (H4)
+    // strong break only (21 Nov 2026): close at least 0.5 x ATR14(H4) above the 50-candle high (backtest per trade +0.19R -> +0.36R)
+    if (!(last.close - lvl >= BRK * atrLastEwm(h4.slice(-1000), 14))) return [];
     if (!Number.isFinite(st.atrD) || !(st.atrD! > 0)) return [];
     const sl = last.close - SLK * st.atrD!;
     const out: StrategyEventDraft[] = [{

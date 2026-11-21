@@ -236,7 +236,7 @@ function EaSetup({ tz }: { tz: string }) {
   const last = info?.lastReport as { at: number; event: string } | null;
   const [botV, setBotV] = useState<string | null>(null);
   useEffect(() => { call<any>('/api/bot-control').then((x) => setBotV(x?.seen?.applied?.version || null)).catch(() => {}); }, []);
-  const newest = '2026.11.19.2';
+  const newest = '2026.11.21.1';
   return (
     <Group id="ea" title="EA MT5 & bot Binance (otomatis)" sub={botV ? `Bot v${botV}${botV >= newest ? ' · terbaru' : ' · ada update'}` : info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
       <div className={`at-ver ${botV && botV >= newest ? 'ok' : 'old'}`}>
@@ -247,7 +247,7 @@ function EaSetup({ tz }: { tz: string }) {
         <a className="btn sm primary" href="/ea/XAU_v2_EA_v115.mq5" download>Unduh EA v1 XAU (XAU_v2_EA_v115.mq5)</a>
         <a className="btn sm primary" href="/ea/NAS_v1_EA_v101.mq5" download>Unduh EA v1 NAS (NAS_v1_EA_v101.mq5)</a>
         <a className="btn sm primary" href="/ea/PROP_XAU_NAS_EA_v105.mq5" download>Unduh EA prop firm FX2: v1 Level + v1 NAS (PROP_XAU_NAS_EA_v105.mq5)</a>
-        <a className="btn sm primary" href="/bot/snr_bot.py" download>Unduh bot Binance — ALT + BIG (snr_bot.py)</a>
+        <a className="btn sm primary" href="/bot/snr_bot.py" download>Unduh bot Binance — ALT + BIG + MACD (snr_bot.py)</a>
         <a className="btn sm" href="/ea/XAU_v2_EA_DIAGNOSTIK.mq5" download>Unduh EA Diagnostik (MT5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
         <button className="btn sm" onClick={async () => { try { const r = await call<any>('/api/ea/test', { method: 'POST' }); toast(r.sent?.every((x: string) => x === 'sent') ? 'Contoh pesan bot terkirim ke Telegram + 1 trade TES di jurnal (Trade → Crypto)' : `Telegram: ${(r.sent ?? []).join(', ')}`); } catch (e) { setErr((e as Error).message); } }}>Tes pesan bot di Telegram</button>

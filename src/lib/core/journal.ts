@@ -26,7 +26,7 @@ export interface JournalTrade {
   closedAt: number | null; exit: number | null; result: JournalResult; pnl: number | null; note: string;
 }
 
-const STRATS = ['v1', 'v2', 'v3', 'nas', 'btc', 'alt', 'snr', 'bz', 'lain'];
+const STRATS = ['v1', 'v2', 'v3', 'nas', 'btc', 'alt', 'snr', 'mb', 'bz', 'lain'];
 /** Validates one journal entry from the browser. Returns an error message or the clean trade. */
 export function cleanTrade(b: Record<string, unknown>, id: string): JournalTrade | string {
   const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : typeof x === 'string' && x.trim() !== '' && Number.isFinite(Number(x)) ? Number(x) : NaN);
@@ -35,7 +35,7 @@ export function cleanTrade(b: Record<string, unknown>, id: string): JournalTrade
   const entry = num(b.entry), sl = num(b.sl), tp = num(b.tp), lot = num(b.lot);
   if (!(entry > 0) || !(sl > 0) || !(tp > 0)) return 'Entry, SL dan TP wajib diisi';
   if (side === 'BUY' ? !(sl < entry && tp > entry) : !(sl > entry && tp < entry)) return 'SL/TP tidak cocok dengan arah';
-  const crypto = ['btc', 'alt', 'snr', 'bz'].includes(String(b.strategy));   // crypto: quantity in coins (can be large)
+  const crypto = ['btc', 'alt', 'snr', 'mb', 'bz'].includes(String(b.strategy));   // crypto: quantity in coins (can be large)
   if (!(lot > 0 && lot <= (crypto ? 1e12 : 100))) return crypto ? 'Jumlah koin tidak valid' : 'Lot harus 0,01–100';
   const openedAt = num(b.openedAt);
   if (!(openedAt > 0)) return 'Waktu buka tidak valid';

@@ -20,9 +20,20 @@ export const STRATEGY_INFO: Record<string, Info> = {
   },
   btc: {
     name: 'BIG', side: 'BUY', coins: 'BTC ETH SOL BNB XRP DOGE',
-    rules: ['Tren naik: close H4 di atas EMA200 H4', 'Close H4 pertama di atas high 50 candle H4 sebelumnya', 'SL close − 1 × ATR14 D1 · TP 2 × risiko', 'Maks 2 posisi BUY'],
-    facts: [['Win', '41%'], ['Trade/bulan', '±5,7'], ['Rata-rata', '+0,17R'], ['Per tahun', '±+14,5R'], ['Data lama', '+0,19R'], ['Data uji', '+0,21R']],
-    note: 'Pengimbang saat pasar naik. Jarang ada sinyal saat BTC di bawah EMA200 H4.',
+    rules: ['Tren naik: close H4 di atas EMA200 H4, dan BTC juga di atas EMA200 H4', 'Close H4 pertama di atas high 50 candle H4 sebelumnya',
+      'Tembus kuat: close minimal 0,5 × ATR14 H4 di atas high itu', 'SL close − 1 × ATR14 D1 · TP 2 × risiko', 'Maks 3 posisi BIG'],
+    facts: [['Win', '46%'], ['Trade/bulan', '±4,3'], ['Rata-rata', '+0,34R'], ['Per tahun', '±+17,5R'], ['2021–23', '+0,46R'], ['2024–26', '+0,24R']],
+    years: [['2021', 36.8], ['2022', 2.4], ['2023', 32.0], ['2024', 4.4], ['2025', 16.6], ['2026', 10.0]],
+    note: 'Pengimbang saat pasar naik: untung justru saat ALT SELL rugi. Aturan 21 Nov 2026 (tembus kuat + filter BTC) menaikkan rata-rata dari +0,19R ke +0,34R per trade.',
+  },
+  mb: {
+    name: 'MACD', side: 'BUY', coins: 'Semua altcoin likuid',
+    rules: ['Volume 30 hari rata-rata ≥ $20 jt (altcoin USDT, bukan koin BIG)', 'MACD H4 (12, 26, signal SMA 9) di bawah 0',
+      'Dua lembah MACD (MACD memotong signal ke atas) dengan kedalaman beda maks 8%, lembah terdalam salah satunya · sekali per zona',
+      'Close H4 di atas EMA200 H4, maks 2 × ATR14 H4 di atasnya', 'SL low terendah zona − 0,1 × ATR14 H4 · TP 2 × risiko', 'Maks 3 posisi MACD'],
+    facts: [['Win', '43%'], ['Trade/bulan', '±3,1'], ['Rata-rata', '+0,26R'], ['Per tahun', '±+9,7R'], ['Beli acak', '−0,06R'], ['Biaya ×2', '+0,22R']],
+    years: [['2021', 12.6], ['2022', 4.7], ['2023', 13.3], ['2024', 8.0], ['2025', 10.1], ['2026', 8.0]],
+    note: 'Baru 21 Nov 2026. Diuji di semua altcoin (tanpa memilih koin). Bersama ALT + BIG: +102R/tahun, turun terdalam 30R.',
   },
   v2: {
     name: 'v1 XAU', side: 'BUY', coins: 'Emas (XAUUSD) · BUY & SELL',

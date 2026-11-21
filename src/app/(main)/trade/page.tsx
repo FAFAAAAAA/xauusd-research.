@@ -22,12 +22,13 @@ const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v2: { win: 0.342, perMonth: 5.0, label: 'v1 XAU' },   // + ±15% impas (BE)
   nas: { win: 0.431, perMonth: 5.6, label: 'v1 NAS' },
   v1: { win: 0.416, perMonth: 3.1, label: 'v1 Level' },  // level-v3, Exness costs 2004–2026 (research 15 Nov 2026), prop EA v1.02  // website engine M30 2013–2026
-  btc: { win: 0.41, perMonth: 5.7, label: 'BIG' },  // bot BUY part: 6 largest coins, max 2 open (research 9 Nov 2026), Binance costs
+  btc: { win: 0.456, perMonth: 4.3, label: 'BIG' },  // bot BIG part: 6 largest coins, strong break + BTC > EMA200 H4, max 3 open (research 21 Nov 2026), Binance costs
+  mb: { win: 0.431, perMonth: 3.1, label: 'MACD' },  // MACD double bottom BUY, liquid altcoins, near EMA200 H4, max 3 open (research 21 Nov 2026)
   alt: { win: 0.386, perMonth: 15.2, label: 'v2 ALT (lama)' },  // research portfolio max 3, corrected slot bug 11 Nov 2026
   snr: { win: 0.41, perMonth: 27, label: 'ALT' },  // 26 bot coins, portfolio max 3, H4 close (corrected 11 Nov 2026)
   bz: { win: 0.393, perMonth: 16.5, label: 'BZ' },  // Bollinger squeeze SELL, every liquid coin, max 2 open (research 15 Nov 2026)
 };
-const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', bz: 'BZ', v1: 'v1 Level', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
+const NAME: Record<string, string> = { v2: 'v1 XAU', nas: 'v1 NAS', btc: 'BIG', alt: 'v2 ALT (lama)', snr: 'ALT', mb: 'MACD', bz: 'BZ', v1: 'v1 Level', v3: 'v3 BOS (lama)', lain: 'lain', all: 'Semua' };
 interface Draft { strategy: string; side: 'BUY' | 'SELL'; entry: string; sl: string; tp: string; lot: string; note: string }
 const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', lot: '', note: '' };
 // coin of a bot trade: the note is "Bot Binance SANDUSDT …"
@@ -142,7 +143,7 @@ export default function TradePage() {
   const inMarket = (t: JournalTrade) => { const m = marketOfJournal(t.strategy); return m === 'both' || m === market; };
   const openT = j.trades.filter((t) => t.result === 'open' && inMarket(t));
   const closedT = j.trades.filter((t) => t.result !== 'open' && inMarket(t));
-  const stratOf = (label: string) => (/^v1 ?snr|snr-sell/i.test(label) ? 'snr' : /^bz\b|bollinger/i.test(label) ? 'bz' : /^v[12] ?alt|alt-breakdown/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
+  const stratOf = (label: string) => (/^v1 ?snr|snr-sell/i.test(label) ? 'snr' : /^macd\b|macd-db/i.test(label) ? 'mb' : /^bz\b|bollinger/i.test(label) ? 'bz' : /^v[12] ?alt|alt-breakdown/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
   // history card in the style of Binance "Riwayat Posisi", simplified: coin, side, result, P&L, entry → exit, opened / closed, duration
   const holdTxt = (ms: number) => { const m = Math.round(ms / 60_000); return m < 60 ? `${m} mnt` : m < 2880 ? `${Math.floor(m / 60)} jam ${m % 60} mnt` : `${(m / 1440).toFixed(1)} hari`; };
@@ -368,7 +369,7 @@ export default function TradePage() {
                 <span><span className="k">Dibuka</span><strong>{fmt(detail.openedAt, tz)}</strong></span>
                 <span><span className="k">Ditutup</span><strong>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</strong></span>
                 <span><span className="k">Durasi</span><strong>{detail.closedAt ? hm(detail.closedAt - detail.openedAt) : hm(Date.now() - detail.openedAt)}</strong></span>
-                <span><span className="k">{['btc', 'alt', 'snr', 'bz'].includes(detail.strategy) ? 'Jumlah' : 'Lot'}</span><strong>{['btc', 'alt', 'snr', 'bz'].includes(detail.strategy) ? detail.lot : detail.lot.toFixed(2)}</strong></span>
+                <span><span className="k">{['btc', 'alt', 'snr', 'mb', 'bz'].includes(detail.strategy) ? 'Jumlah' : 'Lot'}</span><strong>{['btc', 'alt', 'snr', 'mb', 'bz'].includes(detail.strategy) ? detail.lot : detail.lot.toFixed(2)}</strong></span>
               </div>
               <div className="dt-actions">
                 <button className="btn" onClick={async () => { const t = detail; setDetail(null); await fix(t); }}>Koreksi</button>

@@ -867,7 +867,7 @@ export function statuses(data: OfficeData, now: number): Record<string, Status> 
   const lastMsg = data.trades.map((t) => ({ t, at: Math.max(t.openedAt ?? 0, t.closedAt ?? 0) })).filter((x) => now - x.at < 3 * 60_000).sort((a, b) => b.at - a.at)[0];
   return {
     alt: one('snr|bz', bOn, data.binance, false, (t) => `${coin(t)}USDT`),   // leftover BZ positions (BZ retired) show under ALT
-    big: one('btc', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
+    big: one('btc|mb', bOn, data.binance, false, (t) => `${coin(t)}USDT`),
     xau: one('v2|v1', mOn, data.mt5, wk, () => 'xau'),
     nas: one('nas', mOn, data.mt5, wk, () => 'nas'),
     tg: !data.binance && !data.mt5 ? { label: 'BELUM AKTIF', color: '#8a8f98', sleep: false, tag: null }
@@ -2643,7 +2643,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
     return data.trades.filter((t) => t.result === 'tp' && t.closedAt).map((t) => {
       const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' || t.strategy === 'v1' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
-      const pid = ({ snr: 'alt', btc: 'big', bz: 'alt', v2: 'xau', v1: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
+      const pid = ({ snr: 'alt', btc: 'big', mb: 'big', bz: 'alt', v2: 'xau', v1: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
       const who = PEOPLE.find((q) => q.id === pid)?.name ?? '';
       return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, who, side: String(t.side ?? ''), pid };
     }).sort((a, b) => b.at - a.at);
