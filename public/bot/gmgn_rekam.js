@@ -21,7 +21,7 @@
  */
 'use strict';
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
-const VERSION = '2026.11.21.1';
+const VERSION = '2026.11.22.1';
 const HERE = __dirname, DATA = path.join(HERE, 'data'), STATE = path.join(HERE, 'rekam_state.json'), LOG = path.join(HERE, 'gmgn_rekam.log');
 const CHAIN = 'sol';
 const TRACK_H = 48;                 // follow each token for 48 hours
@@ -165,28 +165,45 @@ function track(S) {                     // append new 1m candles to each open re
 }
 
 // ---------- report ----------
-function outcome(rec, sl, tp) {         // first touch of SL / TP after entry; both in one candle = SL (conservative)
+const RUG = 0.8;                        // price 80% or more below entry = rug
+const COST_HARD = 0.05;                 // cost used by the strict check
+const MIN_N = 100;
+function outcome(rec, sl, tp, strict) { // first touch of SL / TP after entry; both in one candle = SL (conservative)
+  // normal: SL fills at the SL price. strict: SL fills at that candle's low, and a drop of 80%+ counts as -100% (rug).
   const e = rec.entry, lo = e * (1 - sl), hi = e * (1 + tp);
-  for (const [, h, l] of rec.k) { if (l <= lo) return { x: -1, end: true }; if (h >= hi) return { x: tp / sl, end: true }; }
+  for (const [, h, l] of rec.k) {
+    if (l <= lo) {
+      if (!strict) return { x: -1, end: true };
+      const loss = 1 - l / e; return { x: -(loss >= RUG ? 1 : loss) / sl, end: true, rug: loss >= RUG };
+    }
+    if (h >= hi) return { x: tp / sl, end: true };
+  }
   if (!rec.k.length) return null;
-  return { x: (rec.k[rec.k.length - 1][3] / e - 1) / sl, end: rec.done };   // not hit yet: value at the last price
+  const last = rec.k[rec.k.length - 1][3] / e - 1;
+  return { x: (strict && last <= -RUG ? -1 : last) / sl, end: rec.done };   // not hit yet: value at the last price
 }
+const isRug = (rec) => rec.k.some((k) => k[2] <= rec.entry * (1 - RUG));
 function report() {
   const recs = fs.existsSync(DATA) ? fs.readdirSync(DATA).filter((f) => f.endsWith('.json')).map((f) => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch (e) { return null; } }).filter(Boolean) : [];
   if (!recs.length) { console.log('Belum ada catatan.'); return; }
   const t0 = Math.min(...recs.map((r) => r.t)), t1 = Math.max(...recs.map((r) => r.t)), mid = (t0 + t1) / 2;
-  console.log(`GMGN rekam ${VERSION} · ${recs.length} catatan · ${new Date(t0 * 1000).toISOString().slice(0, 16)} s/d ${new Date(t1 * 1000).toISOString().slice(0, 16)} UTC · biaya ${COST * 100}% per trade`);
-  console.log('x = kelipatan risiko (SL). "terbuka" = belum kena TP/SL, dinilai di harga terakhir.');
+  const m = (a) => a.length ? (a.reduce((s, v) => s + v, 0) / a.length) : NaN, f = (v, d = 2, w = 7) => (Number.isFinite(v) ? v.toFixed(d) : '-').padStart(w);
+  console.log(`GMGN rekam ${VERSION} · ${recs.length} catatan · ${new Date(t0 * 1000).toISOString().slice(0, 16)} s/d ${new Date(t1 * 1000).toISOString().slice(0, 16)} UTC`);
+  console.log(`x = kelipatan risiko (SL). BIASA: SL terisi di harga SL, biaya ${COST * 100}%. KETAT: SL terisi di low candle, turun ${RUG * 100}%+ = rug = -100%, biaya ${COST_HARD * 100}%.`);
+  console.log(`LOLOS = n >= ${MIN_N}, KETAT plus di paruh1 DAN paruh2, KETAT plus secara keseluruhan.`);
   const groups = {}; for (const r of recs) (groups[r.strat] = groups[r.strat] || []).push(r);
+  console.log('\nRug per strategi (pernah turun 80%+ dari harga beli dalam 48 jam):');
+  for (const [g, rs] of Object.entries(groups).sort()) { const done = rs.filter((r) => r.k.length); console.log(`  ${g.padEnd(13)} ${String(done.filter(isRug).length).padStart(4)} dari ${done.length}  (${f(100 * done.filter(isRug).length / Math.max(1, done.length), 0, 3)}%)`); }
   for (const [sl, tp] of GRID) {
     console.log(`\nSL -${sl * 100}% / TP +${tp * 100}%`);
-    console.log('strategi       n   menang  per trade  total x  paruh1   paruh2  terbuka');
+    console.log('strategi        n  menang  BIASA/trade  KETAT/trade  ketat paruh1  paruh2  terbuka  LOLOS');
     for (const [g, rs] of Object.entries(groups).sort()) {
-      const o = rs.map((r) => ({ r, q: outcome(r, sl, tp) })).filter((z) => z.q);
+      const o = rs.map((r) => ({ r, a: outcome(r, sl, tp, false), b: outcome(r, sl, tp, true) })).filter((z) => z.a && z.b);
       if (!o.length) continue;
-      const x = o.map((z) => z.q.x - COST / sl), m = (a) => a.length ? (a.reduce((s, v) => s + v, 0) / a.length) : NaN;
-      const h1 = o.filter((z) => z.r.t < mid).map((z) => z.q.x - COST / sl), h2 = o.filter((z) => z.r.t >= mid).map((z) => z.q.x - COST / sl);
-      console.log(`${g.padEnd(13)}${String(o.length).padStart(4)}  ${(100 * o.filter((z) => z.q.x > 0).length / o.length).toFixed(0).padStart(5)}%  ${m(x).toFixed(2).padStart(8)}  ${x.reduce((s, v) => s + v, 0).toFixed(1).padStart(7)}  ${m(h1).toFixed(2).padStart(6)}  ${m(h2).toFixed(2).padStart(7)}  ${String(o.filter((z) => !z.q.end).length).padStart(6)}`);
+      const xa = o.map((z) => z.a.x - COST / sl), xb = o.map((z) => z.b.x - COST_HARD / sl);
+      const h1 = o.filter((z) => z.r.t < mid).map((z) => z.b.x - COST_HARD / sl), h2 = o.filter((z) => z.r.t >= mid).map((z) => z.b.x - COST_HARD / sl);
+      const ok = o.length >= MIN_N && m(xb) > 0 && m(h1) > 0 && m(h2) > 0;
+      console.log(`${g.padEnd(13)}${String(o.length).padStart(4)}  ${f(100 * o.filter((z) => z.a.x > 0).length / o.length, 0, 5)}%  ${f(m(xa), 2, 11)}  ${f(m(xb), 2, 11)}  ${f(m(h1), 2, 12)}  ${f(m(h2), 2, 6)}  ${String(o.filter((z) => !z.a.end).length).padStart(7)}  ${ok ? '  YA' : (o.length < MIN_N ? '  kurang data' : '  tidak')}`);
     }
   }
 }
