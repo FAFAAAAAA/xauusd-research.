@@ -27,6 +27,10 @@ BZ part (Bollinger squeeze SELL, 15 Nov 2026, on EVERY liquid USDT coin; config 
   BZ SELL  = the H4 Bollinger band width (4 x std20 / SMA20) of the candle BEFORE the last one is in the lowest 20% of the last 120 H4
              candles (squeeze) and the last closed H4 candle closes below the lower band (SMA20 - 2 x std20). No trend filter.
              Liquidity: 30-day average quote volume >= min_volume_usdt.  SL = close + 1.5 x ATR14(H4);  TP = 2 x risk.  Max 2 BZ positions.
+LISTING part (SELL, 22 Nov 2026, every USDT perpetual newly listed on Binance Futures; config lst_enabled / max_lst_positions):
+  SELL at the close of the 25th 1-hour candle of a new coin (24 hours after its first candle closed).
+  SL = that close + 10%;  TP = that close - 20% (RR 1:2).  Max 3 LISTING positions.  Checked every hour.
+
   BZ is retired (19 Nov 2026): the website always sends it OFF.
   Each part has its own position cap (ALT, BIG, MACD, BZ) and one position per coin across all parts.
 
@@ -63,7 +67,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.21.1'
+BOT_VERSION = '2026.11.22.1'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -80,6 +84,8 @@ DEFAULT_CONFIG = {
     "max_buy_positions": 3,          # maks posisi BIG BUY terbuka (backtest: 3)
     "mb_enabled": True,              # MACD BUY (dua lembah MACD H4) di semua altcoin likuid
     "max_mb_positions": 3,           # maks posisi MACD terbuka (backtest: 3)
+    "lst_enabled": True,             # LISTING SELL: SELL koin baru 24 jam setelah listing di Binance Futures
+    "max_lst_positions": 3,          # maks posisi LISTING terbuka (backtest: 3)
     "bz_enabled": True,              # BZ = Bollinger squeeze SELL di semua koin likuid
     "max_bz_positions": 2,           # maks posisi BZ terbuka (backtest: 2)
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
@@ -101,6 +107,7 @@ DEFAULT_COINS = ['GMTUSDT', 'FILUSDT', '1000SHIBUSDT', 'SANDUSDT', 'DOTUSDT', 'G
 PV, KEEP, SLK, RR, H4_LIMIT, D1_LIMIT = 5, 10, 0.5, 2.0, 600, 400
 BUY_N, BUY_SLK, BUY_D1_LIMIT, BUY_H4_LIMIT, BUY_BRK = 50, 1.0, 400, 1000, 0.5
 MB_TOL, MB_EXT, MB_H4_LIMIT, MB_RISK_MIN, MB_RISK_MAX = 8.0, 2.0, 1000, 0.003, 0.25
+LST_BAR, LST_SL, LST_MAX_AGE = 24, 0.10, 4 * 86400        # LISTING: entry at the close of 1h candle index 24, SL 10%, look at coins listed in the last 4 days
 BIG_COINS = ('BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT')
 BZ_N, BZ_K, BZ_Q, BZ_W, BZ_SLK, BZ_H4_LIMIT = 20, 2.0, 0.2, 120, 1.5, 200
 NOT_COINS = ('USDCUSDT', 'BTCDOMUSDT', 'FDUSDUSDT', 'USDPUSDT', 'TUSDUSDT', 'DEFIUSDT')
@@ -309,7 +316,7 @@ def strat_of(p):
     return p.get('strat') or ('btc' if p.get('side') == 'BUY' else 'snr')
 
 
-STRAT_NAME = {'snr': 'ALT', 'btc': 'BIG', 'mb': 'MACD', 'bz': 'BZ'}
+STRAT_NAME = {'snr': 'ALT', 'btc': 'BIG', 'mb': 'MACD', 'lst': 'LISTING', 'bz': 'BZ'}
 
 
 def closed_klines(api, sym, interval, limit, now_s):
@@ -363,8 +370,10 @@ class Bot:
 
     def load_symbols(self):
         info = self.api.get('/fapi/v1/exchangeInfo')
+        self.onboard = {}
         for s in info['symbols']:
             if s.get('contractType') != 'PERPETUAL' or s.get('quoteAsset') != 'USDT' or s.get('status') != 'TRADING': continue
+            self.onboard[s['symbol']] = int(s.get('onboardDate') or 0) // 1000
             f = {x['filterType']: x for x in s['filters']}
             self.filters[s['symbol']] = {
                 'tick': float(f['PRICE_FILTER']['tickSize']), 'step': float(f['MARKET_LOT_SIZE']['stepSize'] if 'MARKET_LOT_SIZE' in f else f['LOT_SIZE']['stepSize']),
@@ -500,6 +509,64 @@ class Bot:
             except Exception as e:
                 log.warning('BZ %s: %s', sym, e)
             time.sleep(0.05)
+        return sigs
+
+    def open_signals(self, sigs, quiet=False):
+        """open the signals of one check (H4 scan or hourly LISTING check) within the per-part caps and the brakes"""
+        random.shuffle(sigs)                                   # several signals at once: random order (as in the backtest)
+        live = self.positions()
+        busy = set(self.st['positions']) | {s for s, a in live.items() if a != 0}
+        own = self.st['positions']                              # positions per part; unknown live positions: short = SNR, long = BUY
+        n_side = {g: {k for k, v in own.items() if strat_of(v) == g} for g in ('snr', 'btc', 'mb', 'lst', 'bz')}
+        n_side['snr'] |= {k for k, a in live.items() if a < 0 and k not in own}; n_side['btc'] |= {k for k, a in live.items() if a > 0 and k not in own}
+        cap = {'snr': int(self.cfg['max_positions']), 'btc': int(self.cfg.get('max_buy_positions') or 0),
+               'mb': int(self.cfg.get('max_mb_positions') or 0) if self.cfg.get('mb_enabled') else 0,
+               'lst': int(self.cfg.get('max_lst_positions') or 0) if self.cfg.get('lst_enabled') else 0,
+               'bz': int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0}
+        stop = float(self.cfg.get('stop_balance_usdt') or 0)
+        if sigs and stop > 0 and not self.cfg['dry_run']:
+            bal = self.balance()
+            if bal >= stop: self.st['brake_sent'] = 0
+            if bal < stop:
+                log.error('REM AKTIF: saldo %.2f USDT di bawah batas %.2f — tidak membuka posisi baru. Naikkan modal / ubah stop_balance_usdt bila ingin lanjut.', bal, stop)
+                if not self.st.get('brake_sent'): notify(self.cfg, f'REM AKTIF: saldo {bal:.2f} USDT di bawah batas {stop:.2f}. Bot tidak membuka posisi baru.', 'error'); self.st['brake_sent'] = 1
+                sigs = []
+        if sigs and self.paused:
+            log.info('JEDA dari website — %d sinyal dilewati.', len(sigs)); sigs = []
+        mx = int(self.cfg.get('max_loss_streak') or 0)
+        if sigs and mx > 0 and self.st.get('loss_streak', 0) >= mx:
+            log.error('REM KALAH BERUNTUN aktif (%d SL berturut-turut) — %d sinyal dilewati. Lanjut lagi: python snr_bot.py --reset', self.st['loss_streak'], len(sigs))
+            sigs = []
+        for sym, side, sl, close, level, strat in sigs:
+            if sym in busy: continue
+            nm = STRAT_NAME[strat]
+            if not self.cfg['dry_run'] and len(n_side[strat]) >= cap[strat]:
+                log.info('Sinyal %s %s %s dilewati: sudah %d posisi %s', nm, side, sym, len(n_side[strat]), nm); continue
+            log.info('Sinyal %s %s %s: close %s menembus %s %s', nm, side, sym, close, {'btc': 'high 50 H4', 'snr': 'support', 'mb': 'dua lembah MACD, low zona', 'lst': '24 jam setelah listing', 'bz': 'band bawah Bollinger (squeeze)'}[strat], level)
+            try: self.open_pos(sym, side, sl, close, strat)
+            except RuntimeError as e: log.error('%s: order gagal: %s', sym, e)
+            busy.add(sym); n_side[strat].add(sym)
+        if not sigs and not quiet: log.info('Tidak ada sinyal.')
+
+    def scan_listing(self, now_s):
+        """LISTING (identical to the research, 22 Nov 2026): a coin whose 1h candle index 24 (the 25th since its first candle) closed in the
+        last 30 minutes -> SELL at that close, SL +10%. Each coin once."""
+        if not self.cfg.get('lst_enabled'): return []
+        done = set(self.st.get('lst_done', [])); ex = set(self.cfg['exclude']); sigs = []
+        for sym, ob in getattr(self, 'onboard', {}).items():
+            if not ob or sym in done or sym in ex or sym in NOT_COINS or not (now_s - LST_MAX_AGE <= ob <= now_s - LST_BAR * 3600): continue
+            try:
+                rows = self.api.get('/fapi/v1/klines', {'symbol': sym, 'interval': '1h', 'startTime': ob * 1000, 'limit': LST_BAR + 5})
+                k = [[int(r[0]) // 1000, float(r[4])] for r in rows if int(r[6]) // 1000 < now_s]
+            except RuntimeError as e:
+                log.warning('LISTING %s: %s', sym, e); continue
+            time.sleep(0.1)
+            if len(k) <= LST_BAR: continue
+            end = k[LST_BAR][0] + 3600
+            self.st.setdefault('lst_done', []).append(sym); self.st['lst_done'] = self.st['lst_done'][-300:]
+            if now_s - end > 1800: continue                                          # missed (bot was off): never enter late
+            c = k[LST_BAR][1]
+            sigs.append((sym, 'SELL', c * (1 + LST_SL), c, datetime.fromtimestamp(k[0][0], timezone.utc).strftime('%d %b %H:%M UTC'), 'lst'))
         return sigs
 
     def btc_up(self, now_s):
@@ -683,11 +750,11 @@ class Bot:
                          f"Sejak ringkasan terakhir: {len(done)} trade selesai (TP {tp}, SL {sl}), hasil {res:+.2f} USDT\nPosisi terbuka: {pos}")
 
     REMOTE = {'risk_mode': ('mode',), 'risk_percent': ('num', 0.1, 5, 1), 'risk_usdt': ('num', 0.5, 500, 2), 'max_positions': ('num', 1, 6, 0),
-              'max_buy_positions': ('num', 0, 4, 0), 'buy_enabled': ('bool',), 'mb_enabled': ('bool',), 'max_mb_positions': ('num', 0, 4, 0), 'bz_enabled': ('bool',), 'max_bz_positions': ('num', 0, 4, 0), 'stop_balance_usdt': ('num', 0, 100000, 0), 'max_loss_streak': ('num', 0, 30, 0),
+              'max_buy_positions': ('num', 0, 4, 0), 'buy_enabled': ('bool',), 'mb_enabled': ('bool',), 'max_mb_positions': ('num', 0, 4, 0), 'lst_enabled': ('bool',), 'max_lst_positions': ('num', 0, 4, 0), 'bz_enabled': ('bool',), 'max_bz_positions': ('num', 0, 4, 0), 'stop_balance_usdt': ('num', 0, 100000, 0), 'max_loss_streak': ('num', 0, 30, 0),
               'leverage_auto': ('bool',), 'leverage': ('num', 1, 20, 0), 'margin_isolated': ('bool',), 'daily_summary': ('bool',),
               'summary_hours_kst': ('hours',), 'exclude': ('syms',)}
     LABEL = {'risk_mode': 'mode risiko', 'risk_percent': 'risiko %', 'risk_usdt': 'risiko USDT', 'max_positions': 'maks SELL', 'max_buy_positions': 'maks BIG',
-             'buy_enabled': 'BIG aktif', 'mb_enabled': 'MACD aktif', 'max_mb_positions': 'maks MACD', 'bz_enabled': 'BZ aktif', 'max_bz_positions': 'maks BZ', 'stop_balance_usdt': 'rem saldo', 'max_loss_streak': 'rem kalah beruntun', 'leverage_auto': 'leverage otomatis',
+             'buy_enabled': 'BIG aktif', 'mb_enabled': 'MACD aktif', 'max_mb_positions': 'maks MACD', 'lst_enabled': 'LISTING aktif', 'max_lst_positions': 'maks LISTING', 'bz_enabled': 'BZ aktif', 'max_bz_positions': 'maks BZ', 'stop_balance_usdt': 'rem saldo', 'max_loss_streak': 'rem kalah beruntun', 'leverage_auto': 'leverage otomatis',
              'leverage': 'leverage', 'margin_isolated': 'margin isolated', 'daily_summary': 'ringkasan', 'summary_hours_kst': 'jam ringkasan', 'exclude': 'koin dikecualikan'}
 
     @staticmethod
@@ -795,11 +862,12 @@ class Bot:
         if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
         nbz = int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0
         nmb = int(self.cfg.get('max_mb_positions') or 0) if self.cfg.get('mb_enabled') else 0
-        log.info('Mode: %s · risiko %s · maks %d ALT + %d BIG + %d MACD%s · leverage %s', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
+        nls = int(self.cfg.get('max_lst_positions') or 0) if self.cfg.get('lst_enabled') else 0
+        log.info('Mode: %s · risiko %s · maks %d ALT + %d BIG + %d MACD + %d LISTING%s · leverage %s', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'],
-                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, nmb, f' + {nbz} BZ' if nbz else '', 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
+                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, nmb, nls, f' + {nbz} BZ' if nbz else '', 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
         last_sync = time.time()
-        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin ALT + {len(self.buy_coins)} koin BIG{' + semua altcoin likuid (MACD)' if nmb else ''}, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} ALT + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BIG + {nmb} MACD{f' + {nbz} BZ' if nbz else ''}{' · JEDA dari website' if self.paused else ''}.")
+        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin ALT + {len(self.buy_coins)} koin BIG{' + semua altcoin likuid (MACD)' if nmb else ''}{' + koin baru listing' if nls else ''}, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} ALT + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BIG + {nmb} MACD + {nls} LISTING{f' + {nbz} BZ' if nbz else ''}{' · JEDA dari website' if self.paused else ''}.")
         self.push_balance()
         while True:
             if time.time() - self.ctl_at > 60: self.control()
@@ -817,39 +885,12 @@ class Bot:
                 self.st['last_scan'] = bucket; save_state(self.st)
                 log.info('H4 %s UTC tutup — memeriksa %d koin', datetime.fromtimestamp(bucket, timezone.utc).strftime('%Y-%m-%d %H:%M'), len(self.coins))
                 sigs = self.scan(now_s)
-                random.shuffle(sigs)                                   # several signals at once: random order (as in the backtest)
-                live = self.positions()
-                busy = set(self.st['positions']) | {s for s, a in live.items() if a != 0}
-                own = self.st['positions']                              # positions per part; unknown live positions: short = SNR, long = BUY
-                n_side = {g: {k for k, v in own.items() if strat_of(v) == g} for g in ('snr', 'btc', 'mb', 'bz')}
-                n_side['snr'] |= {k for k, a in live.items() if a < 0 and k not in own}; n_side['btc'] |= {k for k, a in live.items() if a > 0 and k not in own}
-                cap = {'snr': int(self.cfg['max_positions']), 'btc': int(self.cfg.get('max_buy_positions') or 0),
-                       'mb': int(self.cfg.get('max_mb_positions') or 0) if self.cfg.get('mb_enabled') else 0,
-                       'bz': int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0}
-                stop = float(self.cfg.get('stop_balance_usdt') or 0)
-                if sigs and stop > 0 and not self.cfg['dry_run']:
-                    bal = self.balance()
-                    if bal >= stop: self.st['brake_sent'] = 0
-                    if bal < stop:
-                        log.error('REM AKTIF: saldo %.2f USDT di bawah batas %.2f — tidak membuka posisi baru. Naikkan modal / ubah stop_balance_usdt bila ingin lanjut.', bal, stop)
-                        if not self.st.get('brake_sent'): notify(self.cfg, f'REM AKTIF: saldo {bal:.2f} USDT di bawah batas {stop:.2f}. Bot tidak membuka posisi baru.', 'error'); self.st['brake_sent'] = 1
-                        sigs = []
-                if sigs and self.paused:
-                    log.info('JEDA dari website — %d sinyal dilewati.', len(sigs)); sigs = []
-                mx = int(self.cfg.get('max_loss_streak') or 0)
-                if sigs and mx > 0 and self.st.get('loss_streak', 0) >= mx:
-                    log.error('REM KALAH BERUNTUN aktif (%d SL berturut-turut) — %d sinyal dilewati. Lanjut lagi: python snr_bot.py --reset', self.st['loss_streak'], len(sigs))
-                    sigs = []
-                for sym, side, sl, close, level, strat in sigs:
-                    if sym in busy: continue
-                    nm = STRAT_NAME[strat]
-                    if not self.cfg['dry_run'] and len(n_side[strat]) >= cap[strat]:
-                        log.info('Sinyal %s %s %s dilewati: sudah %d posisi %s', nm, side, sym, len(n_side[strat]), nm); continue
-                    log.info('Sinyal %s %s %s: close %s menembus %s %s', nm, side, sym, close, {'btc': 'high 50 H4', 'snr': 'support', 'mb': 'dua lembah MACD, low zona', 'bz': 'band bawah Bollinger (squeeze)'}[strat], level)
-                    try: self.open_pos(sym, side, sl, close, strat)
-                    except RuntimeError as e: log.error('%s: order gagal: %s', sym, e)
-                    busy.add(sym); n_side[strat].add(sym)
-                if not sigs: log.info('Tidak ada sinyal.')
+                self.open_signals(sigs)
+            hb = now_s // 3600 * 3600
+            if self.cfg.get('lst_enabled') and hb > self.st.get('last_lst', 0) and now_s - hb >= 20:   # every hour: coins listed 24 h ago
+                self.st['last_lst'] = hb
+                sigs = self.scan_listing(now_s); save_state(self.st)
+                if sigs: self.open_signals(sigs, quiet=True)
             try: self.manage()
             except RuntimeError as e: log.warning('Cek posisi gagal: %s', e)
             try: self.summary()
@@ -878,7 +919,7 @@ def sync_command(args):
         sys.exit('Bot masih berjalan. Hentikan dulu: python snr_bot.py --stop  (tunggu ±40 detik), lalu jalankan --sync lagi.')
     setup_log(); cfg = load_config()
     strat = next((a.split('=', 1)[1] for a in args if a.startswith('strat=')), 'bz')
-    if strat not in STRAT_NAME: sys.exit('strat harus snr, btc, mb atau bz')
+    if strat not in STRAT_NAME: sys.exit('strat harus snr, btc, mb, lst atau bz')
     syms = [a.upper() for a in args if not a.startswith('strat=')]
     api = Binance(cfg); api.sync_time()
     st = load_state(); st.setdefault('positions', {})

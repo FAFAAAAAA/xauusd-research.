@@ -26,6 +26,14 @@ export const STRATEGY_INFO: Record<string, Info> = {
     years: [['2021', 36.8], ['2022', 2.4], ['2023', 32.0], ['2024', 4.4], ['2025', 16.6], ['2026', 10.0]],
     note: 'Pengimbang saat pasar naik: untung justru saat ALT SELL rugi. Aturan 21 Nov 2026 (tembus kuat + filter BTC) menaikkan rata-rata dari +0,19R ke +0,34R per trade.',
   },
+  lst: {
+    name: 'LISTING', side: 'SELL', coins: 'Koin baru listing',
+    rules: ['Koin baru listing di Binance Futures (USDT perpetual)', 'SELL di close candle 1 jam ke-25 (24 jam setelah candle pertama)',
+      'SL +10% · TP −20% (RR 1:2)', 'Dicek tiap jam · tiap koin sekali · bot mati saat itu = tidak masuk telat', 'Maks 3 posisi LISTING'],
+    facts: [['Win', '48%'], ['Trade/bulan', '±5,4'], ['Rata-rata', '+0,41R'], ['Short acak', '+0,06R'], ['Biaya ×2', '+0,40R'], ['Tahun rugi', '0']],
+    years: [['2020', 46.2], ['2021', 13.3], ['2022', 16.6], ['2023', 24.1], ['2024', 48.3], ['2025', 29.5]],
+    note: 'Baru 22 Nov 2026. 437 listing 2020–Mar 2026, tiap tahun plus. Bersama ALT + BIG + MACD: +124R/tahun, turun terdalam 32R. Koin baru bisa melonjak tiba-tiba: SL bisa terisi lebih buruk.',
+  },
   mb: {
     name: 'MACD', side: 'BUY', coins: 'Semua altcoin likuid',
     rules: ['Volume 30 hari rata-rata ≥ $20 jt (altcoin USDT, bukan koin BIG)', 'MACD H4 (12, 26, signal SMA 9) di bawah 0',

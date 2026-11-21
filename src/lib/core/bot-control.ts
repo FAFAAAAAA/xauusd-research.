@@ -5,7 +5,7 @@
  * Secrets and account switches (API key, testnet, dry_run, report key) are NOT remote on purpose: they stay on the VPS.
  */
 export type BotKey =
-  | 'risk_mode' | 'risk_percent' | 'risk_usdt' | 'max_positions' | 'max_buy_positions' | 'buy_enabled' | 'mb_enabled' | 'max_mb_positions' | 'bz_enabled' | 'max_bz_positions'
+  | 'risk_mode' | 'risk_percent' | 'risk_usdt' | 'max_positions' | 'max_buy_positions' | 'buy_enabled' | 'mb_enabled' | 'max_mb_positions' | 'lst_enabled' | 'max_lst_positions' | 'bz_enabled' | 'max_bz_positions'
   | 'stop_balance_usdt' | 'max_loss_streak' | 'leverage_auto' | 'leverage' | 'margin_isolated'
   | 'daily_summary' | 'summary_hours_kst' | 'exclude';
 export type BotVal = number | boolean | string | number[] | string[];
@@ -23,6 +23,8 @@ export const BOT_SPEC: Record<BotKey, Spec> = {
   buy_enabled: { t: 'bool' },
   mb_enabled: { t: 'bool' },
   max_mb_positions: { t: 'num', lo: 0, hi: 4, dp: 0 },
+  lst_enabled: { t: 'bool' },
+  max_lst_positions: { t: 'num', lo: 0, hi: 4, dp: 0 },
   bz_enabled: { t: 'bool' },
   max_bz_positions: { t: 'num', lo: 0, hi: 4, dp: 0 },
   stop_balance_usdt: { t: 'num', lo: 0, hi: 100000, dp: 0 },
@@ -86,7 +88,7 @@ export function cleanApplied(x: unknown): BotApplied | null {
 
 export interface BotLogEntry { at: number; items: string[] }
 const LABELS: Record<BotKey, string> = {
-  risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko USD', max_positions: 'Maks ALT', max_buy_positions: 'Maks BIG', buy_enabled: 'BIG', mb_enabled: 'MACD', max_mb_positions: 'Maks MACD', bz_enabled: 'BZ', max_bz_positions: 'Maks BZ',
+  risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko USD', max_positions: 'Maks ALT', max_buy_positions: 'Maks BIG', buy_enabled: 'BIG', mb_enabled: 'MACD', max_mb_positions: 'Maks MACD', lst_enabled: 'LISTING', max_lst_positions: 'Maks LISTING', bz_enabled: 'BZ', max_bz_positions: 'Maks BZ',
   stop_balance_usdt: 'Rem saldo', max_loss_streak: 'Rem beruntun', leverage_auto: 'Leverage otomatis', leverage: 'Leverage', margin_isolated: 'Margin Isolated',
   daily_summary: 'Ringkasan', summary_hours_kst: 'Jam ringkasan', exclude: 'Koin dikecualikan',
 };

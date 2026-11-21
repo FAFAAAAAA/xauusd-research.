@@ -95,29 +95,29 @@ export function BotControlCard() {
   const riskUsd = mode === 'usdt' ? v<number>('risk_usdt', 5) : bal ? (bal * riskPct) / 100 : 0;
   const ex = expect(riskPct);
   // BZ (Bollinger squeeze SELL) retired 19 Nov 2026: long floating, win 39%. The safe preset keeps it off.
-  // 21 Nov 2026: backtest portfolio = 4 ALT + 3 BIG + 3 MACD (small balances keep fewer open positions for margin).
-  const tier = bal == null ? null : bal < 200 ? { risk: 1, sell: 3, buy: 1, mb: 1, keep: 0.5 } : bal < 1000 ? { risk: 1, sell: 4, buy: 3, mb: 3, keep: 0.5 }
-    : bal < 5000 ? { risk: 1, sell: 4, buy: 3, mb: 3, keep: 0.6 } : { risk: 0.75, sell: 4, buy: 3, mb: 3, keep: 0.7 };
-  const safe: Partial<Record<BotKey, BotVal>> | null = tier && bal ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy, mb_enabled: true, max_mb_positions: tier.mb, bz_enabled: false, max_bz_positions: 0,
+  // 21-22 Nov 2026: backtest portfolio = 4 ALT + 3 BIG + 3 MACD + 3 LISTING (small balances keep fewer open positions for margin).
+  const tier = bal == null ? null : bal < 200 ? { risk: 1, sell: 3, buy: 1, mb: 1, lst: 1, keep: 0.5 } : bal < 1000 ? { risk: 1, sell: 4, buy: 3, mb: 3, lst: 3, keep: 0.5 }
+    : bal < 5000 ? { risk: 1, sell: 4, buy: 3, mb: 3, lst: 3, keep: 0.6 } : { risk: 0.75, sell: 4, buy: 3, mb: 3, lst: 3, keep: 0.7 };
+  const safe: Partial<Record<BotKey, BotVal>> | null = tier && bal ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy, mb_enabled: true, max_mb_positions: tier.mb, lst_enabled: true, max_lst_positions: tier.lst, bz_enabled: false, max_bz_positions: 0,
     stop_balance_usdt: Math.max(10, Math.floor((bal * tier.keep) / 10) * 10), max_loss_streak: 7, leverage_auto: true, margin_isolated: true } : null;
   const isSafe = !!safe && Object.entries(safe).every(([k, x]) => same(v(k as BotKey, null as unknown as BotVal), x));
   const zone = riskPct <= 1.5 ? 'Aman' : riskPct <= 3 ? 'Seimbang' : 'Agresif';
   const fmtUsd = (x: number) => `$${Math.round(x).toLocaleString('id-ID')}`;
-  const LABEL: Partial<Record<BotKey, string>> = { risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko', max_positions: 'ALT', max_buy_positions: 'BIG', buy_enabled: 'BIG', mb_enabled: 'MACD', max_mb_positions: 'MACD', bz_enabled: 'BZ', max_bz_positions: 'BZ',
+  const LABEL: Partial<Record<BotKey, string>> = { risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko', max_positions: 'ALT', max_buy_positions: 'BIG', buy_enabled: 'BIG', mb_enabled: 'MACD', max_mb_positions: 'MACD', lst_enabled: 'LISTING', max_lst_positions: 'LISTING', bz_enabled: 'BZ', max_bz_positions: 'BZ',
     stop_balance_usdt: 'Rem saldo', max_loss_streak: 'Rem beruntun', leverage_auto: 'Leverage', leverage: 'Leverage', margin_isolated: 'Margin', daily_summary: 'Ringkasan', summary_hours_kst: 'Jam ringkasan', exclude: 'Koin' };
   const show = (k: BotKey, x: unknown) => (x == null ? '—' : typeof x === 'boolean' ? (x ? 'nyala' : 'mati') : Array.isArray(x) ? (x.length ? x.join(', ').replace(/USDT/g, '') : '—')
     : k === 'risk_percent' ? `${nf(x as number)}%` : k === 'risk_usdt' || k === 'stop_balance_usdt' ? `$${nf(x as number)}` : k === 'risk_mode' ? (x === 'usdt' ? 'USD' : '%') : String(x));
-  const posTxt = `${v<number>('max_positions', 3)} + ${v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 3) : 0} + ${v<boolean>('mb_enabled', true) ? v<number>('max_mb_positions', 3) : 0}`;
+  const posTxt = `${v<number>('max_positions', 3)} + ${v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 3) : 0} + ${v<boolean>('mb_enabled', true) ? v<number>('max_mb_positions', 3) : 0} + ${v<boolean>('lst_enabled', true) ? v<number>('max_lst_positions', 3) : 0}`;
   const changed = BOT_KEYS.filter((k) => !same(set[k], c.set[k]) && !same(v(k, null as unknown as BotVal), ap?.cfg?.[k]));
   const tiles: Array<[string, string, string, string, string]> = [
-    ['pos', '⇅', 'Posisi', posTxt, 'ALT · BIG · MACD'],
+    ['pos', '⇅', 'Posisi', posTxt, 'ALT · BIG · MACD · LISTING'],
     ['brake', '⛨', 'Rem', stopBal > 0 ? fmtUsd(stopBal) : 'Mati', streak > 0 ? `${streak} SL beruntun` : 'beruntun mati'],
     ['lev', '⚡', 'Leverage', lev ? 'Otomatis' : `${v<number>('leverage', 5)}x`, v<boolean>('margin_isolated', true) ? 'Isolated' : 'Cross'],
     ['sum', '✈', 'Ringkasan', v<boolean>('daily_summary', true) ? hours.map((h) => String(h).padStart(2, '0')).join(' & ') : 'Mati', 'Telegram'],
   ];
 
   const ver = ap?.version || '';
-  const latest = ver >= '2026.11.21.1';
+  const latest = ver >= '2026.11.22.1';
   const riskTxt = mode === 'usdt' ? `$${nf(v<number>('risk_usdt', 5))}` : `${nf(riskPct)}%`;
   return (
     <>
@@ -180,6 +180,8 @@ export function BotControlCard() {
             {v<boolean>('buy_enabled', true) ? <Step k="max_buy_positions" label="Maks posisi BIG" by={1} lo={0} hi={4} dflt={3} /> : null}
             <Toggle k="mb_enabled" label="MACD BUY (altcoin likuid)" sub="butuh bot versi 2026.11.21.1" dflt />
             {v<boolean>('mb_enabled', true) ? <Step k="max_mb_positions" label="Maks posisi MACD" by={1} lo={0} hi={4} dflt={3} /> : null}
+            <Toggle k="lst_enabled" label="LISTING SELL (koin baru, 24 jam)" sub="butuh bot versi 2026.11.22.1" dflt />
+            {v<boolean>('lst_enabled', true) ? <Step k="max_lst_positions" label="Maks posisi LISTING" by={1} lo={0} hi={4} dflt={3} /> : null}
           </> : null}
           {open === 'brake' ? <>
             <Step k="stop_balance_usdt" label="Rem saldo" unit="$" by={10} lo={0} hi={100000} dflt={0} />

@@ -95,7 +95,7 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
     await repo.setAppSetting(db, 'ea_last_report', { at: now, event: 'info', ticket: sym || 'bot' });
     const tg = await repo.getTelegramSettings(db);
     if (!tg.live_enabled) return { status: 200, body: { ok: true, telegram: 'disabled' } };
-    const head = b.strategy === 'snr' || b.strategy === 'btc' || b.strategy === 'mb' || b.strategy === 'bz' ? 'Bot Binance' : 'EA';
+    const head = b.strategy === 'snr' || b.strategy === 'btc' || b.strategy === 'mb' || b.strategy === 'lst' || b.strategy === 'bz' ? 'Bot Binance' : 'EA';
     const level = b.level === 'error' ? '⚠️' : 'ℹ️';
     const key = createHash('sha256').update(`${now}:${txt}`).digest('hex').slice(0, 16);
     const r = await sendTelegram(db, { deliveryKey: `ea:info:${key}`, mode: 'LIVE', text: `${level} <b>${escapeHtml(head)}</b>\n\n${escapeHtml(txt)}` }, { fetchImpl: opts.fetchImpl });
@@ -113,10 +113,10 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
 
   // which EA / bot: v1 XAU (journal key v2, default), v1 NAS ("strategy":"nas") or the Binance v1 SNR bot ("strategy":"snr", sends "symbol")
   // the Binance bot also sends "strategy":"btc" for its BUY part (v1 BTC rules on the largest coins)
-  // "strategy":"bz" for BZ (Bollinger squeeze SELL on every liquid coin, 15 Nov 2026, retired) and "strategy":"mb" for MACD BUY (21 Nov 2026)
-  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'lvl' ? 'v1' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : b.strategy === 'mb' ? 'mb' : b.strategy === 'bz' ? 'bz' : 'v2';
-  const bot = strat === 'snr' || strat === 'btc' || strat === 'mb' || strat === 'bz';
-  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'v1' ? 'v1 Level' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : strat === 'mb' ? 'MACD' : strat === 'bz' ? 'BZ' : 'v1 XAU';
+  // "strategy":"bz" for BZ (Bollinger squeeze SELL on every liquid coin, 15 Nov 2026, retired) "strategy":"mb" for MACD BUY (21 Nov 2026) and "strategy":"lst" for LISTING SELL (22 Nov 2026)
+  const strat = b.strategy === 'nas' ? 'nas' : b.strategy === 'lvl' ? 'v1' : b.strategy === 'snr' ? 'snr' : b.strategy === 'btc' ? 'btc' : b.strategy === 'mb' ? 'mb' : b.strategy === 'lst' ? 'lst' : b.strategy === 'bz' ? 'bz' : 'v2';
+  const bot = strat === 'snr' || strat === 'btc' || strat === 'mb' || strat === 'lst' || strat === 'bz';
+  const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'v1' ? 'v1 Level' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : strat === 'mb' ? 'MACD' : strat === 'lst' ? 'LISTING' : strat === 'bz' ? 'BZ' : 'v1 XAU';
   const symbol = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24).toUpperCase() : '';
   const src = bot ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
   const who = bot ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;
