@@ -6,6 +6,7 @@ v1 SNR bot — Binance USDⓈ-M Futures (support break SELL for altcoins). Same 
              the 10 most recent supports are watched, each is used once.
   SELL     = an H4 candle CLOSES below a watched support while the H4 candle before it closed at or above it,
              the coin's last completed D1 close is below EMA50 (D1) and its 30-day average quote volume is >= $20 jt.
+  Skip     = no ALT SELL when BTC already fell more than 4% in the 24 h before that H4 close (22 Nov 2026).
   SL       = support + 0.5 x ATR14(H4)  ->  STOP_MARKET (close position)
   TP       = entry - 2 x (SL - entry)   ->  TAKE_PROFIT_MARKET (close position)          RR 1:2, exits only at TP or SL
   Portfolio: at most MAX_POSITIONS open positions, 1 per coin; several signals at once -> random order (as in the backtest).
@@ -67,7 +68,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.22.1'
+BOT_VERSION = '2026.11.22.2'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -107,6 +108,7 @@ DEFAULT_COINS = ['GMTUSDT', 'FILUSDT', '1000SHIBUSDT', 'SANDUSDT', 'DOTUSDT', 'G
 PV, KEEP, SLK, RR, H4_LIMIT, D1_LIMIT = 5, 10, 0.5, 2.0, 600, 400
 BUY_N, BUY_SLK, BUY_D1_LIMIT, BUY_H4_LIMIT, BUY_BRK = 50, 1.0, 400, 1000, 0.5
 MB_TOL, MB_EXT, MB_H4_LIMIT, MB_RISK_MIN, MB_RISK_MAX = 8.0, 2.0, 1000, 0.003, 0.25
+ALT_BTC_DROP = 0.04                                         # ALT SELL is skipped when BTC fell more than 4% in the last 24 h (research 22 Nov 2026)
 LST_BAR, LST_SL, LST_MAX_AGE = 24, 0.10, 4 * 86400        # LISTING: entry at the close of 1h candle index 24, SL 10%, look at coins listed in the last 4 days
 BIG_COINS = ('BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT')
 BZ_N, BZ_K, BZ_Q, BZ_W, BZ_SLK, BZ_H4_LIMIT = 20, 2.0, 0.2, 120, 1.5, 200
@@ -463,7 +465,11 @@ class Bot:
     # ----- scan at every H4 close -----
     def scan(self, now_s):
         sigs = []
-        for sym in self.coins:
+        alt = self.coins
+        drop = self.btc_drop(now_s)
+        if drop is not None and drop < -ALT_BTC_DROP:
+            log.info('ALT: BTC sudah turun %.1f%% dalam 24 jam — ALT SELL tidak dicek', drop * 100); alt = []
+        for sym in alt:
             try:
                 d1 = closed_klines(self.api, sym, '1d', D1_LIMIT, now_s)
                 if len(d1) < 60: continue
@@ -568,6 +574,16 @@ class Bot:
             c = k[LST_BAR][1]
             sigs.append((sym, 'SELL', c * (1 + LST_SL), c, datetime.fromtimestamp(k[0][0], timezone.utc).strftime('%d %b %H:%M UTC'), 'lst'))
         return sigs
+
+    def btc_drop(self, now_s):
+        """BTC change over the last 24 h, at the H4 close that just happened (last closed H4 close vs the H4 close 24 h before).
+        None when BTC cannot be read (then the ALT filter is not applied)."""
+        try:
+            h4 = closed_klines(self.api, 'BTCUSDT', '4h', 10, now_s)
+            if len(h4) < 7 or now_s - (h4[-1][0] + H4) > 600: return None
+            return h4[-1][4] / h4[-7][4] - 1
+        except Exception as e:
+            log.warning('BTC H4 tidak terbaca (%s) — filter BTC ALT tidak dipakai', e); return None
 
     def btc_up(self, now_s):
         """BTC's last closed H4 close above its EMA200 (H4); False when BTC cannot be read (then no BIG BUY)"""

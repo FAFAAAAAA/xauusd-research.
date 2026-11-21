@@ -14,9 +14,9 @@ export const STRATEGY_INFO: Record<string, Info> = {
   snr: {
     name: 'ALT', side: 'SELL', coins: '26 alt pilihan',
     rules: ['Koin sedang turun: close D1 di bawah EMA50 D1', 'Volume 30 hari rata-rata ≥ $20 jt', 'Candle H4 tutup menembus support (low terendah 5 candle kiri-kanan)',
-      'SL di atas support + 0,5 × ATR H4 · TP 2 × risiko', 'Keluar hanya di TP atau SL'],
+      'Dilewati bila BTC sudah turun > 4% dalam 24 jam (sejak 22 Nov 2026)', 'SL di atas support + 0,5 × ATR H4 · TP 2 × risiko', 'Keluar hanya di TP atau SL'],
     facts: [['Win', '41%'], ['Trade/bulan', '±27'], ['Rata-rata', '+0,21R'], ['Per tahun', '±+77R'], ['Turun terdalam', '36R'], ['Tahun rugi', '0']],
-    note: 'Mesin utama. Koin dipilih dari backtest, jadi hasil nyata bisa sedikit lebih rendah.',
+    note: 'Mesin utama. Koin dipilih dari backtest, jadi hasil nyata bisa sedikit lebih rendah. Filter BTC −4%: SELL setelah BTC dump sering ikut tertarik saat BTC memantul (koin lain: −0,07R); turun terdalam bot 32R → 28R.',
   },
   btc: {
     name: 'BIG', side: 'BUY', coins: 'BTC ETH SOL BNB XRP DOGE',
