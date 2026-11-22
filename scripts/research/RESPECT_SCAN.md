@@ -52,3 +52,31 @@ Winrate RR 1:1 di mode `touch`, SL 1 ATR, tanpa filter, sudah termasuk biaya. An
 - **Daily Open** paling konsisten di atas acak untuk forex, NASDAQ, US30 dan XAU (+2 sampai +6 poin). **FVG M30** sedikit di atas acak di semua kelas. Tetapi winrate keduanya setelah biaya masih di bawah 50%.
 - **PDH/PDL, PWH/PWL dan Swing SNR lebih sering ditembus daripada level acak**, paling kuat di XAU. Namun mode breakout di level yang sama juga tidak cukup kuat setelah biaya.
 - **RR 1:2 dengan WR > 50% berarti PF > 2.** Tidak ada satu pun konfigurasi yang mendekati angka itu secara konsisten.
+
+## Tahap 2: kombinasi (`combo_scan.py`, `combo_portfolio.py`)
+Daily Open dan FVG M30 diuji ulang dengan tambahan berikut. Totalnya 58.000 kombinasi.
+- **Jendela sesi:** London 07-10, NY 13-16, London+NY, 07-20 UTC.
+- **Setup:** DO+FVG konfluensi (jarak ≤ 0,5 ATR), atau gabungan DO atau FVG.
+- **Filter tren:** EMA200 H1.
+- **SL:** 1, 1,5 atau 2 ATR.
+- **Exit:** RR 1:1, RR 1:2, atau parsial (50% di 1R, SL ke BE, sisa ke 2R).
+
+### Hasil
+- **PF ≥ 1,3 + WR > 50% + ≥ 8 trade/minggu: 0 kombinasi.**
+- **Versi longgar (PF ≥ 1,1): 62 kombinasi.** Semuanya koin yang listing setelah Juli 2024. Ini tidak terbukti sebagai pola: setup terbaiknya di 47 koin baru punya median PF 1,00.
+- **Kandidat terbaik di koin lama:** DO atau FVG, NY 13-16, searah tren, SL 2 ATR, RR 1:2. Di OOS, 87% dari 106 koin PF > 1 (median 1,09). Tapi uji portofolio per tahun menunjukkan edge-nya **bergantung rezim pasar**:
+
+| Tahun | Kripto lama: WR | Kripto lama: PF | Forex+XAU+indeks: PF |
+|---|---|---|---|
+| 2020 | 37% | 1,05 | 0,90 |
+| 2021 | 35% | 0,99 | 0,86 |
+| 2022 | 35% | 0,97 | 0,98 |
+| 2023 | 36% | 1,00 | 0,95 |
+| 2024 | 38% | 1,11 | 1,01 |
+| 2025 | 36% | 1,03 | 0,95 |
+| 2026 | 37% | 1,05 | 1,05 |
+
+- **Forex, XAU, NASDAQ, US30: PF 0,87-1,00 di semua simbol.** Tidak ada edge.
+
+### Kesimpulan tahap 2
+Konfirmasi sesi, konfluensi, tren dan TP parsial tidak mengubah hasil tahap 1. Level Daily Open dan FVG memang memantul sedikit lebih sering daripada level acak. Tapi bedanya terlalu kecil untuk menutup biaya secara konsisten, dan untung yang muncul di kripto hanya ada di periode 2024-2026.
