@@ -68,7 +68,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.22.2'
+BOT_VERSION = '2026.11.22.3'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -89,7 +89,7 @@ DEFAULT_CONFIG = {
     "max_lst_positions": 3,          # maks posisi LISTING terbuka (backtest: 3)
     "bz_enabled": True,              # BZ = Bollinger squeeze SELL di semua koin likuid
     "max_bz_positions": 2,           # maks posisi BZ terbuka (backtest: 2)
-    "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
+    "stop_balance_usdt": 0,          # rem saldo (0 = mati): tidak buka posisi bila rugi terburuk (semua posisi kena SL) bisa membuat saldo di bawah angka ini; equity menyentuh angka ini -> semua posisi bot ditutup
     "max_loss_streak": 7,            # rem kalah beruntun: setelah N kali SL berturut-turut tidak buka posisi baru (0 = mati); lanjut lagi: python snr_bot.py --reset
     "leverage": 5,                   # leverage tetap per koin (dipakai hanya bila leverage_auto = false)
     "leverage_auto": True,           # leverage per posisi = 0,5 / jarak SL (maks 20x): margin ≈ 2x risiko, likuidasi ±2x lebih jauh dari SL
@@ -427,6 +427,9 @@ class Bot:
             pos = {x['symbol']: round(float(x.get('unrealizedProfit') or 0), 4) for x in a.get('positions', []) if float(x.get('positionAmt') or 0) != 0}
             report(self.cfg, {'event': 'balance', 'wallet': round(float(a.get('totalWalletBalance') or 0), 4),
                               'upnl': round(float(a.get('totalUnrealizedProfit') or 0), 4), 'pos': pos, 'time': int(time.time())})
+            eq = float(a.get('totalWalletBalance') or 0) + float(a.get('totalUnrealizedProfit') or 0)
+            stop = float(self.cfg.get('stop_balance_usdt') or 0)
+            if stop > 0 and self.st.get('positions') and eq <= stop: self.stop_close(eq, stop)
         except Exception as e: log.warning('saldo tidak terkirim ke website: %s', e)
         self.bal_pushed = time.time()
         self.push_cashflow()
@@ -543,15 +546,21 @@ class Bot:
         if sigs and mx > 0 and self.st.get('loss_streak', 0) >= mx:
             log.error('REM KALAH BERUNTUN aktif (%d SL berturut-turut) — %d sinyal dilewati. Lanjut lagi: python snr_bot.py --reset', self.st['loss_streak'], len(sigs))
             sigs = []
+        room_bal = self.balance() if sigs and stop > 0 and not self.cfg['dry_run'] else 0
+        room_risk = self.risk_usdt() if room_bal else 0
         for sym, side, sl, close, level, strat in sigs:
             if sym in busy: continue
             nm = STRAT_NAME[strat]
             if not self.cfg['dry_run'] and len(n_side[strat]) >= cap[strat]:
                 log.info('Sinyal %s %s %s dilewati: sudah %d posisi %s', nm, side, sym, len(n_side[strat]), nm); continue
+            if room_bal:                                                # rem saldo: every open bot position + this one hitting SL must stay above the line
+                n_open = len([k for k in busy if k in own or k in live])
+                if room_bal - (n_open + 1) * room_risk < stop:
+                    log.info('Sinyal %s %s %s dilewati (rem saldo): %d posisi + 1 kena SL = saldo %.2f < batas %.2f', nm, side, sym, n_open, room_bal - (n_open + 1) * room_risk, stop); continue
             log.info('Sinyal %s %s %s: close %s menembus %s %s', nm, side, sym, close, {'btc': 'high 50 H4', 'snr': 'support', 'mb': 'dua lembah MACD, low zona', 'lst': '24 jam setelah listing', 'bz': 'band bawah Bollinger (squeeze)'}[strat], level)
             try: self.open_pos(sym, side, sl, close, strat)
             except RuntimeError as e: log.error('%s: order gagal: %s', sym, e)
-            busy.add(sym); n_side[strat].add(sym)
+            busy.add(sym); n_side[strat].add(sym); live.setdefault(sym, 1.0)
         if not sigs and not quiet: log.info('Tidak ada sinyal.')
 
     def scan_listing(self, now_s):
@@ -838,6 +847,23 @@ class Bot:
             if not quiet: notify(self.cfg, 'Setelan dari website dipakai: ' + '; '.join(changes) + '.')
             fetch_control(self.cfg, self.applied())   # tell the website what is used now
 
+    def stop_close(self, eq, stop):
+        """rem saldo: equity (wallet + open P&L) touched stop_balance_usdt -> close every position THIS bot opened, at market"""
+        own = dict(self.st.get('positions') or {})
+        if self.cfg['dry_run'] or not own: return
+        log.error('REM SALDO: equity %.2f USDT menyentuh batas %.2f — semua %d posisi bot ditutup.', eq, stop, len(own))
+        try: live = self.positions()
+        except RuntimeError as e:
+            notify(self.cfg, f'REM SALDO: daftar posisi tidak terbaca ({e}). TUTUP MANUAL di Binance!', 'error'); return
+        done = []
+        for sym, p in own.items():
+            side = p.get('side', 'SELL'); amt = live.get(sym, 0)
+            if (amt > 0) if side == 'BUY' else (amt < 0):
+                self.close_now(sym, abs(amt), side); done.append(sym.replace('USDT', ''))
+        time.sleep(3); self.manage()                                       # books the closes and cancels the leftover TP/SL
+        self.st['brake_sent'] = 1; save_state(self.st)
+        notify(self.cfg, f"REM SALDO: equity {eq:.2f} USDT menyentuh batas {stop:.2f}. {len(done)} posisi bot ditutup{' (' + ', '.join(done) + ')' if done else ''}. Bot tidak membuka posisi baru selama saldo di bawah batas.", 'error')
+
     def close_all(self):
         """close every position THIS bot opened, at market (reduce-only), then cancel their TP/SL; manual positions are not touched"""
         own = dict(self.st.get('positions') or {})
@@ -875,7 +901,7 @@ class Bot:
             self.st['loss_streak'] = n; save_state(self.st)
         mx = int(self.cfg.get('max_loss_streak') or 0)
         if mx > 0: log.info('Rem kalah beruntun: berhenti buka posisi baru setelah %d SL berturut-turut (sekarang %d)', mx, self.st['loss_streak'])
-        if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
+        if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo %.2f USDT: posisi baru hanya bila rugi terburuk tetap di atas batas; equity menyentuh batas -> semua posisi bot ditutup', float(self.cfg['stop_balance_usdt']))
         nbz = int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0
         nmb = int(self.cfg.get('max_mb_positions') or 0) if self.cfg.get('mb_enabled') else 0
         nls = int(self.cfg.get('max_lst_positions') or 0) if self.cfg.get('lst_enabled') else 0
