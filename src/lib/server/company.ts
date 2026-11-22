@@ -52,7 +52,7 @@ export async function companyData(db: Db, now = Date.now(), get: Get = fetch as 
 }
 
 export async function saveCompany(db: Db, raw: unknown) {
-  const s = cleanCompany(raw && typeof raw === 'object' ? { ...raw, mt5v: 2 } : raw);
+  const s = cleanCompany(raw && typeof raw === 'object' ? { ...raw, mt5v: 3 } : raw);
   await repo.setAppSetting(db, SET, s);
   return s;
 }

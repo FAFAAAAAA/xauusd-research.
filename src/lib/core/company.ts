@@ -23,11 +23,11 @@ export interface CompanySettings {
   mt5: 'off' | 'prop' | 'own';          // off: MT5 is still a trial, left out of the company; prop: only its profit / payouts count; own: its balance is the owner's money
   startBinance: number;                 // Binance balance before the first recorded trade (for the balance-sheet check)
   since: string;                        // the company starts this month (YYYY-MM): trades, money moves and costs before it are left out
-  mt5v?: 2;                             // set once the owner chose the MT5 mode himself (older saved settings → MT5 off)
+  mt5v?: 3;                             // set once the owner chose the MT5 mode himself after 22 Nov 2026 (older saved settings → MT5 own)
 }
 export const DEFAULT_COMPANY: CompanySettings = {
   target: 200, salaryPct: 30, budgetIdr: 0, wdFee: { fixed: 1, pct: 1 }, costs: [], paid: {},
-  tg: { monthly: true, weekly: true, bills: true }, officeBills: true, mt5: 'off', startBinance: 199.02, since: '2026-11',
+  tg: { monthly: true, weekly: true, bills: true }, officeBills: true, mt5: 'own', startBinance: 199.02, since: '2026-11',
 };
 export interface Fx { rate: number | null; at: number; byMonth: Record<string, number> }     // Rupiah per 1 USD
 export interface MonthBook { ym: string; revenue: number; costs: number; fees: number; costIdr: number; rate: number | null; trades: number; tp: number; sl: number }
@@ -59,7 +59,7 @@ export function cleanCompany(raw: unknown): CompanySettings {
     wdFee: { fixed: num(wd.fixed, 0, 1000, d.wdFee.fixed), pct: num(wd.pct, 0, 20, d.wdFee.pct) },
     costs, paid,
     tg: { monthly: tg.monthly !== false, weekly: tg.weekly !== false, bills: tg.bills !== false },
-    officeBills: b.officeBills !== false, mt5: b.mt5v === 2 && (b.mt5 === 'own' || b.mt5 === 'prop') ? b.mt5 : 'off', /* saved before 15 Nov (no mt5v) → off */ startBinance: num(b.startBinance, 0, 1e9, d.startBinance), mt5v: b.mt5v === 2 ? 2 : undefined, since: typeof b.since === 'string' && YM.test(b.since) ? b.since : '2026-11',
+    officeBills: b.officeBills !== false, mt5: b.mt5v === 3 && (b.mt5 === 'off' || b.mt5 === 'prop') ? b.mt5 : 'own', /* 22 Nov 2026: MT5 is a real-money own account → in the company unless chosen otherwise after that */ startBinance: num(b.startBinance, 0, 1e9, d.startBinance), mt5v: b.mt5v === 3 ? 3 : undefined, since: typeof b.since === 'string' && YM.test(b.since) ? b.since : '2026-11',
   };
 }
 
@@ -130,7 +130,19 @@ export function moneyMoves(inp: Pick<CompanyInput, 'cashflow' | 'settings' | 'no
   const out: Move[] = [];
   for (const c of inp.cashflow?.crypto ?? []) if (c && Number.isFinite(c.amount) && c.amount !== 0 && c.at <= inp.now) out.push({ id: c.id, at: c.at, amount: Math.abs(c.amount), kind: c.amount > 0 ? 'in' : 'out', market: 'crypto' });
   if (inp.settings.mt5 !== 'off') for (const c of inp.cashflow?.forex ?? []) if (c && Number.isFinite(c.amount) && c.amount !== 0 && c.at <= inp.now && (c.amount < 0 || inp.settings.mt5 === 'own')) out.push({ id: c.id, at: c.at, amount: Math.abs(c.amount), kind: c.amount > 0 ? 'in' : 'out', market: 'forex' });
-  return out.sort((a, b) => a.at - b.at);
+  out.sort((a, b) => a.at - b.at);
+  // own MT5 account: money moved between Binance and MT5 stays inside the company (not a payout, not new capital).
+  // A pair = one market out and the other market in, within 3 days and 3% of each other (transfer fees / rounding).
+  if (inp.settings.mt5 === 'own') {
+    const drop = new Set<string>();
+    for (const a of out) {
+      if (a.kind !== 'out' || drop.has(a.id)) continue;
+      const b = out.find((x) => x.kind === 'in' && x.market !== a.market && !drop.has(x.id) && Math.abs(x.at - a.at) <= 3 * 86_400_000 && Math.abs(x.amount - a.amount) <= 0.03 * a.amount);
+      if (b) { drop.add(a.id); drop.add(b.id); }
+    }
+    return out.filter((m) => !drop.has(m.id));
+  }
+  return out;
 }
 /** the input as the company sees it: MT5 trades left out while MT5 is a trial */
 export function companyInput<T extends CompanyInput>(inp: T): T {

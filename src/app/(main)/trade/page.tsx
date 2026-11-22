@@ -251,7 +251,7 @@ export default function TradePage() {
           {openSection}
         </>}
         openPnl={openTotal}
-        fallbackStart={market === 'crypto' ? 199.02 : 10000}
+        fallbackStart={market === 'crypto' ? 199.02 : 209.99}
         groupOf={market === 'crypto' ? (t) => coinOf(t) || NAME[t.strategy] || t.strategy : (t) => NAME[t.strategy] ?? t.strategy}
         renderTrades={(list) => <div className="hcards">{list.map(tradeRow)}</div>} />
 

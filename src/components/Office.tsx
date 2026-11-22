@@ -328,11 +328,11 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     return ev(plans, 52, { random: false });
   }
   if (kind === 'rapat') {
-    // Monday morning: weekly meeting in the boss office, Marcel reads last week's result (Binance, same as the TV)
+    // Monday morning: weekly meeting in the boss office, Marcel reads last week's result (Binance + MT5, same as the TV)
     if (!freeFor(ctx, 'bos')) return null;
     const who = [...workers(true), ...['akun', 'risk'].filter((id) => freeFor(ctx, id, true))]; if (!who.length) return null;
     const wk = wall - 7 * 86_400_000;
-    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= wk && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');
+    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= wk);
     const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
     const seats = [2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' })));
     const plans: Record<string, Step[]> = {};
@@ -359,7 +359,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     const who = [...W5.filter((id) => freeFor(ctx, id, true)), ...['akun', 'risk', 'ob', 'jaga', 'vet'].filter((id) => id !== lead && freeFor(ctx, id, true))];
     if (!who.length) return null;
     const day0 = new Date(wall); day0.setHours(0, 0, 0, 0);
-    const fin = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');
+    const fin = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime());
     const pnl = fin.reduce((a, t) => a + Number(t.pnl ?? 0), 0), amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
     const openN = ctx.data.trades.filter((t) => t.result === 'open').length;
     const seats: Spot[] = [...[2.0, 4.0].flatMap((x) => [6.7, 7.6, 8.5, 9.4].map((y) => sp('', 0, x, y, x < 3 ? 'px' : 'nx', '', { pose: 'sit' }))), sp('', 0, 3.0, 10.4, 'ny', ''), sp('', 0, 2.2, 10.5, 'ny', '')];
@@ -403,7 +403,7 @@ function makeEvent(kind: string, ctx: EvCtx): Ev | null {
     // 23:00: Marcel announces today's result (the same number as "PNL HARI INI" on the TV) before he goes home
     const who = ctx.agents.bos && ctx.S.bos && !ctx.S.bos.sleep ? 'bos' : null; if (!who) return null;
     const day0 = new Date(wall); day0.setHours(0, 0, 0, 0);
-    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime() && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');
+    const done = ctx.data.trades.filter((t) => t.result !== 'open' && (t.closedAt ?? 0) >= day0.getTime());
     const pnl = done.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
     const amt = `${pnl < 0 ? '−' : '+'}$${Math.abs(pnl).toFixed(2)}`;
     const said: Array<[string, string]> = !done.length ? [['Rekap hari ini: belum ada trade selesai.', '#1e1f23'], ['Sabar, tunggu setup yang bagus!', '#1e1f23']]
@@ -765,7 +765,7 @@ function scheduleEvents(ctx: EvCtx) {
   const closed = data.trades.filter((t) => t.result !== 'open' && t.closedAt).sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0));
   if (closed.length >= 3 && closed.slice(0, 3).every((t) => t.result === 'sl') && wall - (closed[0].closedAt ?? 0) < 30 * 60_000 && EV.done.darurat !== String(closed[0].id)) want.push('darurat');
   const today = new Date(wall); today.setHours(0, 0, 0, 0);
-  const tdy = closed.filter((t) => (t.closedAt ?? 0) >= today.getTime() && t.strategy !== 'v2' && t.strategy !== 'v1' && t.strategy !== 'nas');   // bonus = office money (Binance only)
+  const tdy = closed.filter((t) => (t.closedAt ?? 0) >= today.getTime());   // bonus = office money (Binance + MT5)
   if (tdy.filter((t) => t.result === 'tp').length >= 2 && tdy.reduce((s, t) => s + Number(t.pnl ?? 0), 0) > 0 && EV.done.bonus !== day && h >= 8 && h < 22) want.push('bonus');
   const lastDay = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getDate() === 1;
   if (lastDay && h === 22 && m >= 15 && m < 45 && EV.done.gajian !== day) want.push('gajian');            // payday: the last day, after the monthly meeting
@@ -815,24 +815,23 @@ export type Status = { label: string; color: string; sleep: boolean; tag?: { tex
 const money = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
 const weekendMt5 = (t: number) => { const d = new Date(t), wd = d.getUTCDay(), h = d.getUTCHours(); return wd === 6 || (wd === 0 && h < 22) || (wd === 5 && h >= 21); };
 /* ---------- the business side: numbers Sari (accountant) and Rina (risk manager) work with, all from the journal ---------- */
-const isMt5Trade = (t: JournalTrade) => t.strategy === 'v2' || t.strategy === 'v1' || t.strategy === 'nas';
 const usd2 = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
 export function biz(data: OfficeData, now: number) {
   const day0 = new Date(now); day0.setHours(0, 0, 0, 0);
   const m0 = new Date(now); m0.setHours(0, 0, 0, 0); m0.setDate(1);
   const pm0 = new Date(m0); pm0.setMonth(pm0.getMonth() - 1);
   const closed = data.trades.filter((t) => t.result !== 'open' && t.closedAt).sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0));
-  const cr = closed.filter((t) => !isMt5Trade(t));
-  let streak = 0; for (const t of cr) { if (t.result === 'sl') streak++; else break; }       // stop losses in a row (Binance bot)
+  // office money = Binance + MT5 (owner, 22 Nov 2026: MT5 is a real-money account now, no longer a prop / demo trial)
+  const cr = closed;
+  let streak = 0; for (const t of cr) { if (t.result === 'sl') streak++; else break; }       // stop losses in a row (bot + EA)
   const sum = (xs: JournalTrade[]) => xs.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
   const today = cr.filter((t) => (t.closedAt ?? 0) >= day0.getTime());
-  // office money = Binance only; MT5 (prop firm) trades keep their characters and the positions screen but not the P&L (owner, 15 Nov 2026)
   const todayAll = cr.filter((t) => (t.closedAt ?? 0) >= day0.getTime());
   const month = cr.filter((t) => (t.closedAt ?? 0) >= m0.getTime());
   const last = cr.filter((t) => (t.closedAt ?? 0) >= pm0.getTime() && (t.closedAt ?? 0) < m0.getTime());
-  const todayB = sum(today), wallet = data.binance?.wallet ?? 0;
+  const todayB = sum(today), wallet = (data.binance?.wallet ?? 0) + (data.mt5?.wallet ?? 0);
   const todayPct = wallet - todayB > 0 ? (todayB / (wallet - todayB)) * 100 : 0;          // today's result vs the balance at the start of the day
-  const openN = data.trades.filter((t) => t.result === 'open' && !isMt5Trade(t)).length;
+  const openN = data.trades.filter((t) => t.result === 'open').length;
   const level: 'RISIKO AMAN' | 'WASPADA' | 'BAHAYA' = streak >= 5 || todayPct <= -10 ? 'BAHAYA' : streak >= 3 || todayPct <= -5 ? 'WASPADA' : 'RISIKO AMAN';
   const why = streak >= 3 ? `SL ${streak}× beruntun` : todayPct <= -5 ? `Hari ini ${todayPct.toFixed(1)}%` : '';
   return { streak, todayB, todayPct, todayAll, openN, level, why, wallet, month, monthPnl: sum(month), last, lastPnl: sum(last), pmName: pm0.toLocaleString('id-ID', { month: 'long' }), mName: m0.toLocaleString('id-ID', { month: 'long' }) };
