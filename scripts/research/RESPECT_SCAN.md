@@ -225,3 +225,37 @@ Aturannya sama dengan bagian B. Instrumennya hanya yang PF-nya > 1 sebelum 2022,
 | **2022-2026** | **6,7** | **47,3%** | **1,16** | **26R** | 1,08 / 1,10 / 1,13 / 1,23 / 1,27 |
 
 Semua tahun 2022-2026 untung. Kekurangannya: frekuensi 6,7 trade/minggu, masih di bawah target 8.
+
+## Tahap 7: cari strategi RR 1:2 terbaik, target lain diabaikan (`strat_lab.py`, `lab_yearly.py`, `lab_cap.py`)
+- **Universe:** 46 instrumen dengan data sejak < 2021 (36 koin + BTC/ETH, XAU, NAS, US30, 5 forex).
+- **Uji:** RR 1:2 tanpa parsial, 10 keluarga sinyal × 4 filter tren × SL 2/3/5 ATR M30 × maks tahan 8 jam / 24 jam / 5 hari.
+- **Cara pilih:** satu aturan untuk satu kelompok aset, diperingkat dari data < 2022, diuji di ≥ 2022.
+
+### Keluarga sinyal (PF gabungan semua variasi, < 2022 → ≥ 2022)
+| Keluarga | Kripto | Non-kripto |
+|---|---|---|
+| swing D1 (breakout) | 1,18 → 1,07 | 1,04 → 1,02 |
+| retest D1 (flip) | 1,16 → 1,09 | 0,95 → 0,96 |
+| donchian D1 55 | 1,09 → 1,07 | 1,04 → 1,05 |
+| PWH/PWL, NR4, inside day | 1,11-1,15 → 0,95-0,98 | 0,89-0,99 → 0,92-0,96 |
+| RSI pullback, RSI2 reversion, big candle | 0,85-1,07 → 0,93-0,95 | 0,91-0,94 → 0,91-0,93 |
+
+### Terbaik: retest swing D1 di kripto
+**Aturan:**
+- Level adalah swing high/low D1 (fractal 2) yang **baru ditembus close M30**, maksimal 5 hari lalu.
+- Pasang **limit di level itu** saat harga kembali menyentuhnya dari sisi baru. Resistance yang ditembus jadi support untuk BUY, dan sebaliknya untuk SELL.
+- Hanya searah tren **EMA200 H1 dan EMA20 D1** sekaligus.
+- **SL 5 ATR(14) M30, TP 10 ATR (RR 1:2)**, tutup paksa setelah 5 hari.
+- **Maksimal 5 posisi terbuka bersamaan** di seluruh koin.
+
+| Periode | Trade/minggu | WR | PF | Max DD | PF per tahun |
+|---|---|---|---|---|---|
+| < 2022 | 5,1 | 43,9% | 1,35 | 30R | 2017-2021: 1,46 / 1,78 / 1,26 / 1,30 / 1,37 |
+| **2022-2026** | **11,2** | **42,4%** | **1,20** | **51R** | 1,21 / 1,16 / 1,43 / 1,10 / 1,09 |
+
+**Catatan:**
+- Tanpa batas posisi: PF ≥ 2022 = 1,13, tapi DD 153R karena koin bergerak bersamaan.
+- BUY dan SELL sama-sama untung di ≥ 2022: SELL PF 1,21, BUY PF 1,05.
+- Variasi breakout langsung (bukan retest): PF ≥ 2022 = 1,12 dengan maks 5 posisi, lebih cepat (median tahan 33 jam).
+- Median tahan ~48 jam. Funding rate Binance **belum** dihitung. Biaya 0,08% per trade sudah dihitung.
+- **Non-kripto:** tidak ada aturan dengan PF ≥ 2022 di atas 1,07 untuk semua instrumen. Dengan filter instrumen PF < 2022 > 1 (5 dari 8), swing D1 tanpa filter tren, SL 5 ATR, 24 jam: PF ≥ 2022 = 1,19 dengan 4,7 trade/minggu.
