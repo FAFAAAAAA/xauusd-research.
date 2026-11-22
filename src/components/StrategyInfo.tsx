@@ -52,12 +52,12 @@ export const STRATEGY_INFO: Record<string, Info> = {
     note: 'Biaya Exness Raw Spread + swap, 2004–2026. Paling stabil di semua periode dan saat emas turun.',
   },
   v1: {
-    name: 'v1 Level', side: 'BUY', coins: 'Emas (XAUUSD) · BUY & SELL',
+    name: 'v1 Level', side: 'BUY', coins: 'Emas (XAUUSD) · BUY saja',
     rules: ['Swing high/low H1 (3 candle kiri-kanan) maksimal 119 candle lalu', 'Level sudah disentuh 2–3× (dalam 0,25 × ATR H1) dan belum pernah ditembus close',
       'Close H1 pertama menembus level, badan candle ≥ 1 × ATR H1', 'Tren H4 & D1 searah (sama dengan v1 XAU)', 'Sinyal ke-2 searah di hari yang sama dilewati',
       'SL level ∓ 1,5 × ATR H1 · TP 2 × risiko · tanpa BEP'],
-    facts: [['Win', '42%'], ['Trade/bulan', '±3'], ['Rata-rata', '+0,16R'], ['2018–2026', '+0,27R'], ['Turun terdalam', '15R'], ['Tahun rugi', '7 dari 22']],
-    note: 'Biaya Exness Raw Spread + swap, 2004–2026. Kuat saat emas naik; bersama v1 XAU + v1 NAS turun terdalam gabungan malah lebih kecil.',
+    facts: [['Win', '47%'], ['Trade/bulan', '±2,5'], ['Rata-rata', '+0,33R'], ['Per tahun', '±+10R'], ['Turun terdalam', '10R'], ['Tahun rugi', '0 (2018–26)']],
+    note: 'BUY saja sejak EA v1.06 (SELL dimatikan: rugi). Biaya Exness + swap, 2018–Okt 2026. Bersama v1 XAU + v1 NAS turun terdalam gabungan lebih kecil.',
   },
   nas: {
     name: 'v1 NAS', side: 'BUY', coins: 'Nasdaq (US100) · BUY & SELL',
