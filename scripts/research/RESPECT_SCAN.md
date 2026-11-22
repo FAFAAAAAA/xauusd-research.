@@ -80,3 +80,40 @@ Daily Open dan FVG M30 diuji ulang dengan tambahan berikut. Totalnya 58.000 komb
 
 ### Kesimpulan tahap 2
 Konfirmasi sesi, konfluensi, tren dan TP parsial tidak mengubah hasil tahap 1. Level Daily Open dan FVG memang memantul sedikit lebih sering daripada level acak. Tapi bedanya terlalu kecil untuk menutup biaya secara konsisten, dan untung yang muncul di kripto hanya ada di periode 2024-2026.
+
+## Koreksi (berlaku untuk semua tahap)
+- **Biaya XAU, NASDAQ dan US30 sekarang proporsional harga:** XAU 1,5 bps, indeks 1 bps. Sebelumnya biaya tetap dalam poin, sehingga terlalu mahal di tahun harga rendah (XAU 2004 ≈ 0,6R per trade). Tahap 1-2 sudah diulang untuk ketiga instrumen ini dan **tetap 0 yang lolos**.
+- **BTCUSD dan ETHUSD sebelumnya terlewat** (tidak ada file BTCUSDT/ETHUSDT). Ketiga scan sudah dijalankan untuk keduanya: **0 lolos**, PF tertinggi 1,35.
+
+## Tahap 3: support/resistance + filter tren (`snr_trend_scan.py`, `snr_yearly.py`)
+- **S/R:** swing fractal H1, H4 dan D1, dalam tiga jenis:
+  - `plain`: swing terdekat yang belum ditembus.
+  - `strong`: zona dengan ≥ 2 swing.
+  - `flip`: resistance yang baru ditembus dan jadi support, atau sebaliknya.
+- **Filter tren:** EMA200 H1, EMA200 H1 + slope, EMA stack 20/50/200 H1, struktur H4 (HH+HL / LH+LL), EMA20 D1.
+- **Mode:** touch (SL 1 atau 2 ATR), confirm, break.
+- **Exit:** RR 1:1, RR 1:2, atau parsial.
+- **Total:** 90.000+ kombinasi.
+
+### Hasil
+- **Lolos semua aturan: 0.**
+- **Filter tren membantu, tapi sedikit.** Median PF naik ~0,02-0,06 dibanding tanpa filter, dan tidak ada filter yang mengubah hasil secara drastis.
+- **Pantulan (touch/confirm) di swing S/R rugi di semua kelas** (median PF 0,4-0,9), terutama di swing H4/D1 yang belum ditembus. Harga lebih sering **menembus** swing lama daripada memantul.
+- **Temuan terkuat: breakout swing D1 di XAU.** Setupnya close M30 menembus swing high/low D1 searah EMA200 H1, SL 2 ATR M30:
+
+| Exit | n | WR | PF | PF OOS | Tahun PF > 1 | Max DD |
+|---|---|---|---|---|---|---|
+| RR 1:1 | 1.223 | 58,8% | 1,31 | 1,57 | 19/23 | 16,6R |
+| Parsial (1R + BE + 2R) | 1.166 | 59,2% | 1,37 | 1,84 | 19/23 | 17,5R |
+| RR 1:2, filter struktur H4 | 461 | 45,6% | 1,55 | 1,49 | 17/23 | 10,2R |
+
+  Kekurangannya: hanya **~1 trade/minggu**.
+- **Setup yang sama di instrumen lain lebih lemah:**
+  - BTC: PF 1,16 (9/10 tahun untung).
+  - ETH: PF 1,09.
+  - NASDAQ: PF 1,10.
+  - US30: PF 1,00.
+  - Forex: PF 0,80-1,00.
+  - Median koin lama: PF 0,99.
+
+  Jadi edge ini paling jelas di XAU, bukan pola universal.

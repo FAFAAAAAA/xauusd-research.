@@ -3,12 +3,12 @@
 import sys, json, numpy as np, pandas as pd
 sys.path.insert(0, 'scripts/research')
 import combo_scan as cs
-from respect_scan import load, cls, ema, levels, FX_COST
+from respect_scan import load, cls, ema, cost_array, levels, FX_COST
 from multiprocessing import Pool
 SESSION = range(13, 16)
 def trades(sym, s=2.0, ex='rr2', sess=SESSION, trend=True):
     t, o, h, l, c = load(sym); crypto = cls(sym) == 'CRYPTO'
-    cost = 0.0008 * c if crypto else np.full(len(c), FX_COST[sym])
+    cost = cost_array(sym, c)
     tr = np.maximum(h - l, np.maximum(abs(h - np.r_[c[0], c[:-1]]), abs(l - np.r_[c[0], c[:-1]])))
     atr = np.r_[np.nan, pd.Series(tr).rolling(14).mean().values[:-1]]
     L = levels(t, o, h, l, c, crypto, atr); pc = np.r_[np.nan, c[:-1]]; e400 = np.r_[np.nan, ema(c, 400)[:-1]]
@@ -30,9 +30,9 @@ if __name__ == '__main__':
     first = {v['symbol']: v['first'] for v in m.values() if v['tf'] == 'M30'}
     grp = sys.argv[1]
     if grp == 'oldcrypto':
-        syms = [s for s in first if cls(s) == 'CRYPTO' and s not in ('BTCUSD', 'ETHUSD') and first[s] < pd.Timestamp('2024-07-01').value // 10**6]
+        syms = [s for s in first if cls(s) == 'CRYPTO' and first[s] < pd.Timestamp('2024-07-01').value // 10**6]
     elif grp == 'newcrypto':
-        syms = [s for s in first if cls(s) == 'CRYPTO' and s not in ('BTCUSD', 'ETHUSD') and first[s] >= pd.Timestamp('2024-07-01').value // 10**6]
+        syms = [s for s in first if cls(s) == 'CRYPTO' and first[s] >= pd.Timestamp('2024-07-01').value // 10**6]
     else:
         syms = [s for s in first if cls(s) != 'CRYPTO']
     with Pool(4) as p: T = pd.concat([x for x in p.map(trades, syms) if x is not None])

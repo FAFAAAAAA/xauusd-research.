@@ -5,7 +5,7 @@ import sys, json
 import numpy as np, pandas as pd
 from multiprocessing import Pool
 sys.path.insert(0, 'scripts/research')
-from respect_scan import load, cls, ema, levels, FX_COST, OOS_FROM, MAXHOLD, D
+from respect_scan import load, cls, ema, cost_array, levels, FX_COST, OOS_FROM, MAXHOLD, D
 
 SESS = {'all': range(0, 24), 'london 07-10': range(7, 10), 'ny 13-16': range(13, 16), 'lon+ny': list(range(7, 10)) + list(range(13, 16)),
         '07-20': range(7, 20)}
@@ -55,7 +55,7 @@ def sim(cand, h, l, c, atr, cost, s, ex, t):
 def run_symbol(sym):
     t, o, h, l, c = load(sym)
     crypto = cls(sym) == 'CRYPTO'
-    cost = 0.0008 * c if crypto else np.full(len(c), FX_COST[sym])
+    cost = cost_array(sym, c)
     tr = np.maximum(h - l, np.maximum(abs(h - np.r_[c[0], c[:-1]]), abs(l - np.r_[c[0], c[:-1]])))
     atr = np.r_[np.nan, pd.Series(tr).rolling(14).mean().values[:-1]]
     L = levels(t, o, h, l, c, crypto, atr)
@@ -111,7 +111,7 @@ def run_symbol(sym):
 if __name__ == '__main__':
     out = sys.argv[1]
     m = json.load(open(f'{D}/manifest.json'))
-    syms = sys.argv[2:] or sorted({v['symbol'] for v in m.values() if v['tf'] == 'M30' and v['symbol'] not in ('BTCUSD', 'ETHUSD')})
+    syms = sys.argv[2:] or sorted({v['symbol'] for v in m.values() if v['tf'] == 'M30'})
     with Pool(4) as p:
         allrows = []
         for k, rows in enumerate(p.imap_unordered(run_symbol, syms)):

@@ -11,6 +11,14 @@ OOS_FROM = int(pd.Timestamp('2024-07-01').value // 60_000_000_000)  # menit
 MAXHOLD = 96  # 2 hari (M30)
 FX_COST = {'EURUSD': 0.00010, 'GBPUSD': 0.00015, 'USDJPY': 0.012, 'USDCAD': 0.00018, 'USDCHF': 0.00015,
            'XAUUSD': 0.30, 'USATECHIDXUSD': 1.5, 'USA30IDXUSD': 3.0}
+# XAU dan indeks: biaya proporsional harga (0.30 di XAU 2000 = 1.5 bps), supaya tahun lama (harga rendah) tidak terlalu mahal
+REL_COST = {'XAUUSD': 1.5e-4, 'USATECHIDXUSD': 1.0e-4, 'USA30IDXUSD': 1.0e-4}
+
+
+def cost_array(sym, c):
+    if cls(sym) == 'CRYPTO': return 0.0008 * c
+    if sym in REL_COST: return REL_COST[sym] * c
+    return np.full(len(c), FX_COST[sym])
 
 
 def cls(sym):
@@ -115,7 +123,7 @@ DEDUPE = {'EMA50 H1': False, 'EMA200 H1': False, 'RANDOM (baseline)': False}
 def run_symbol(sym):
     t, o, h, l, c = load(sym)
     crypto = cls(sym) == 'CRYPTO'
-    cost_px = (0.0008 * c) if crypto else np.full(len(c), FX_COST[sym])
+    cost_px = cost_array(sym, c)
     tr = np.maximum(h - l, np.maximum(abs(h - np.r_[c[0], c[:-1]]), abs(l - np.r_[c[0], c[:-1]])))
     atr = np.r_[np.nan, pd.Series(tr).rolling(14).mean().values[:-1]]
     L = levels(t, o, h, l, c, crypto, atr)
@@ -212,7 +220,7 @@ def stats(sym, nm, mode, flt, s, rr, r, weeks, weeks_oos):
 if __name__ == '__main__':
     out = sys.argv[1]
     m = json.load(open(f'{D}/manifest.json'))
-    syms = sys.argv[2:] or sorted({v['symbol'] for k, v in m.items() if v['tf'] == 'M30' and v['symbol'] not in ('BTCUSD', 'ETHUSD')})
+    syms = sys.argv[2:] or sorted({v['symbol'] for k, v in m.items() if v['tf'] == 'M30'})
     with Pool(4) as p:
         allrows = []
         for k, rows in enumerate(p.imap_unordered(run_symbol, syms)):
