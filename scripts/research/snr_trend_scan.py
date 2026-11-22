@@ -119,7 +119,7 @@ def sim(cand, h, l, c, cost, ex, t):
         if risk <= 0: continue
         cr = cost[i] / risk
         if touch and ((side == 1 and l[i] <= sl) or (side == -1 and h[i] >= sl)):
-            out.append((t[i], -1 - cr)); busy = i; continue
+            out.append((t[i], -1 - cr, 0)); busy = i; continue
         j0, j1 = i + 1, min(i + 1 + MAXHOLD, n)
         if j0 >= n: break
         lo, hi = l[j0:j1], h[j0:j1]
@@ -142,8 +142,8 @@ def sim(cand, h, l, c, cost, ex, t):
                 k = kt + 1 + kb; R = 0.5
             else:
                 k = kt + 1 + k2; R = 1.5
-        out.append((t[i], R - cr)); busy = j0 + k
-    return np.array(out) if out else np.zeros((0, 2))
+        out.append((t[i], R - cr, k + 1)); busy = j0 + k  # kolom 3 = lama tahan (bar)
+    return np.array(out) if out else np.zeros((0, 3))
 
 
 def pf(x):

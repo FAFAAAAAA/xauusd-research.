@@ -22,7 +22,7 @@ def trades(sym, tf, trend, ex, s=2.0):
     cd['d'] = t[cd.i.values] // 1440; cd = cd.drop_duplicates(['side', 'lv', 'd']).sort_values('i')
     i_, sd = cd.i.values, cd.side.values; e = c[i_]; sl = e - sd * s * atr[i_]
     r = S.sim([(a, b, x, y, False) for a, b, x, y in zip(i_, sd, e, sl)], h, l, c, cost, ex, t)
-    return pd.DataFrame({'t': pd.to_datetime(r[:, 0], unit='m'), 'R': r[:, 1]})
+    return pd.DataFrame({'t': pd.to_datetime(r[:, 0], unit='m'), 'R': r[:, 1], 'hold_h': r[:, 2] * 0.5})
 
 if __name__ == '__main__':
     sym, tf, trend, ex = sys.argv[1:5]

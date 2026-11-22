@@ -157,3 +157,27 @@ Exit dihitung ulang di data M1 (2004 sampai Jan 2026), sehingga urutan SL/TP di 
 **Catatan:**
 - Leg dipilih dari hasil scan di seluruh data, jadi ada bias seleksi. Hanya leg XAU D1 yang sudah terbukti di OOS dan di M1.
 - Portofolio 6 leg memenuhi ≥ 8 trade/minggu dan WR > 50%. PF-nya 1,16, belum mencapai 1,3.
+
+## Tahap 5: breakout lebih cepat (`fast_breakout_scan.py`, `fast_portfolio.py`)
+- **Lama tahan versi lama (M30, SL 2 ATR, maks 48 jam):** median 3-5 jam. Tapi 25% trade ditahan lebih dari 7-13 jam, dan 10% lebih dari 13-20 jam.
+- **Versi cepat:** level tetap swing D1/H4, tapi entry dan ATR dari TF kecil (M5/M15/M30). Posisi ditutup paksa setelah 2, 4 atau 8 jam.
+- **Temuan:**
+  - SL 1 ATR TF kecil selalu rugi (PF 0,7-0,95) karena biaya dan noise. SL 2-3 ATR yang bekerja.
+  - **XAU M5, swing D1, EMA200 H1, SL 3 ATR M5, maks 4 jam, parsial:** WR 56%, PF 1,30, PF OOS 1,49, median tahan 1,5 jam.
+  - Level H4 memberi ~3 trade/minggu, tapi PF hanya 1,02-1,11.
+
+### Portofolio intraday (semua trade ≤ 8 jam), 2018-2025
+| Leg | /minggu | WR | PF | PF 18-21 | PF 22-26 | Tahan median |
+|---|---|---|---|---|---|---|
+| XAU M5, swing D1, EMA200 H1, SL3, 4 jam, parsial | 1,08 | 56% | 1,30 | 1,37 | 1,01 | 1,5 jam |
+| XAU M30, swing D1, struktur H4, SL2, 8 jam, parsial | 0,42 | 57% | 1,40 | 1,41 | 1,33 | 4 jam |
+| XAU M30, range Asia, EMA200 H1, SL range, 8 jam, RR2 | 2,17 | 48% | 1,19 | 0,97 | 1,12 | 8 jam |
+| NAS M15, ORB NY, EMA20 D1, SL range, 4 jam, parsial | 2,75 | 55% | 1,04 | 0,97 | 1,13 | 4 jam |
+| NAS M30, swing D1, EMA200 H1, SL3, 8 jam, RR2 | 0,84 | 51% | 1,25 | 1,53 | 1,05 | 8 jam |
+| BTC M30, swing D1, struktur H4, SL2, 8 jam, parsial | 0,50 | 57% | 1,31 | 1,66 | 1,08 | 3 jam |
+| USDJPY M15, swing D1, EMA20 D1, SL3, 8 jam, parsial | 0,87 | 59% | 1,26 | 1,51 | 1,14 | 3,8 jam |
+| **Total** | **8,6** | **52,7%** | **1,13** | | | **4 jam** |
+
+- **Portofolio:** 8/8 tahun untung, max DD 29,7R. Namun 41% minggu punya kurang dari 8 trade.
+- **Edge melemah di 2022-2026** untuk sebagian besar leg, misalnya XAU M5 turun dari PF 1,37 ke 1,01.
+- **Bias seleksi:** leg dipilih dari scan seluruh data, jadi angka portofolio kemungkinan optimis.

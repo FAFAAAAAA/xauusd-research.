@@ -20,7 +20,7 @@ import snr_trend_scan as S
 TFMIN = {'M5': 5, 'M15': 15, 'M30': 30}
 
 
-def run_symbol(args, want=None):
+def run_symbol(args, want=None, max_hold_h=None):
     """want=(signal, trend, sl, exit) -> kembalikan DataFrame trade (t, R) untuk satu konfigurasi."""
     sym, tf = args
     t, o, h, l, c = load(sym, tf); n = len(c); tfm = TFMIN[tf]
@@ -32,7 +32,7 @@ def run_symbol(args, want=None):
     pc = np.r_[np.nan, c[:-1]]
     base = np.isfinite(atr) & (atr > 0)
     bars_day = 1440 // tfm
-    S.MAXHOLD = bars_day
+    S.MAXHOLD = bars_day if max_hold_h is None else max_hold_h * 60 // tfm
     # tren
     e200h1 = np.r_[np.nan, ema(c, 200 * 60 // tfm)[:-1]]
     tr_h1 = np.sign(pc - e200h1)
@@ -104,7 +104,7 @@ def run_symbol(args, want=None):
                     if want is not None and want != (sn, tn, sln, ex): continue
                     r = S.sim(cand, h, l, c, cost, ex, t)
                     if want is not None:
-                        return pd.DataFrame({'t': pd.to_datetime(r[:, 0], unit='m'), 'R': r[:, 1]})
+                        return pd.DataFrame({'t': pd.to_datetime(r[:, 0], unit='m'), 'R': r[:, 1], 'hold_h': r[:, 2] * tfm / 60})
                     R = r[:, 1] if len(r) else np.zeros(0); oo = r[:, 0] >= OOS_FROM if len(r) else np.zeros(0, bool); Ro = R[oo]
                     yrs = pd.to_datetime(r[:, 0], unit='m').year if len(r) else np.zeros(0)
                     yp = pd.Series(R).groupby(yrs).sum() if len(r) else pd.Series(dtype=float)
