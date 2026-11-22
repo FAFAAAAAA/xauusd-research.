@@ -5,7 +5,9 @@
 //| v1.07 (22 Nov 2026): akun CENT (saldo USC) dilaporkan ke website dalam  |
 //|   dolar (dibagi 100); simbol Nasdaq yang tidak ada di akun tidak lagi   |
 //|   menghentikan EA (v1 NAS dimatikan otomatis); rem rugi total tersimpan |
-//|   (tetap berhenti setelah MT5/VPS restart).                             |
+//|   (tetap berhenti setelah MT5/VPS restart). Batas rugi harian / total   |
+//|   TIDAK menutup paksa posisi (InpCloseAtLimit = false): EA hanya        |
+//|   berhenti membuka posisi baru; posisi terbuka jalan sampai TP/SL.      |
 //| v1.06 (22 Nov 2026): v1 XAU NYALA lagi, v1 Level hanya BUY       |
 //|   (Level SELL emas rugi di riset 2005-26: -0,003x/trade). Rencana:  |
 //|   Level BUY + v1 XAU (dengan BEP) + v1 NAS.                         |
@@ -64,6 +66,7 @@ input double InpTargetPct    = 8.0;        // Target fase (%): Fase 1 = 8, Fase 
 input double InpDailyLimitPct = 5.0;       // Batas rugi harian prop firm (%)
 input double InpMaxLossPct   = 10.0;       // Batas rugi total prop firm (%)
 input double InpBufferPct    = 1.0;        // EA berhenti sekian % SEBELUM batas (jarak aman)
+input bool   InpCloseAtLimit = false;      // true = batas rugi harian/total MENUTUP semua posisi EA; false = hanya berhenti membuka posisi baru (posisi jalan sampai TP/SL)
 input int    InpMinTradingDays = 3;        // Minimal hari trading per fase (FundingPips 2 Step Standard = 3)
 input int    InpNewsMinutes  = 0;          // Tidak buka posisi X menit sebelum/sesudah berita USD berdampak tinggi (challenge 0, funded 5)
 input int    InpFridayCloseUtc = -1;       // Akun yang melarang posisi akhir pekan: jam UTC hari Jumat untuk menutup semua posisi EA (mis. 20). -1 = mati
@@ -354,16 +357,18 @@ void PropUpdate()
    if(!gMaxStop && eq <= maxLine)
    {
       gMaxStop = true; GlobalVariableSet(PGv("maxstop"), 1);          // v1.07: kept across MT5 / VPS restarts
-      CloseOurs("rugi total");
-      Info(StringFormat("PROP EA: equity %.2f menyentuh batas aman rugi total (%.2f = batas %.1f%% − buffer %.1f%%). Semua posisi EA ditutup, tidak ada entry baru.", eq, maxLine, InpMaxLossPct, InpBufferPct), true);
+      if(InpCloseAtLimit) CloseOurs("rugi total");
+      Info(StringFormat("PROP EA: equity %.2f menyentuh batas rugi total (%.2f = batas %.1f%% − buffer %.1f%%). %s, tidak ada entry baru.", eq, maxLine, InpMaxLossPct, InpBufferPct,
+                        InpCloseAtLimit ? "Semua posisi EA ditutup" : "Posisi terbuka dibiarkan sampai TP/SL"), true);
    }
    else if(gMaxStop && eq > maxLine + InpAccountSize * 0.05) { gMaxStop = false; GlobalVariableDel(PGv("maxstop")); }   // v1.07: only a deposit (> 5% above the line) re-opens trading
    double dayLine = gDayRef - InpAccountSize * (InpDailyLimitPct - InpBufferPct) / 100.0;
    if(!gDayStop && eq <= dayLine)
    {
       gDayStop = true; GlobalVariableSet(PGv(StringFormat("daystop_%d", d)), 1);
-      CloseOurs("rugi harian");
-      Info(StringFormat("PROP EA: rugi hari ini mencapai batas aman (equity %.2f, awal hari %.2f, batas %.1f%% − buffer %.1f%%). Semua posisi EA ditutup, entry baru mulai lagi besok (hari server).", eq, gDayRef, InpDailyLimitPct, InpBufferPct), true);
+      if(InpCloseAtLimit) CloseOurs("rugi harian");
+      Info(StringFormat("PROP EA: rugi hari ini mencapai batas (equity %.2f, awal hari %.2f, batas %.1f%% − buffer %.1f%%). %s, entry baru mulai lagi besok (hari server).", eq, gDayRef, InpDailyLimitPct, InpBufferPct,
+                        InpCloseAtLimit ? "Semua posisi EA ditutup" : "Posisi terbuka dibiarkan sampai TP/SL"), true);
    }
 }
 
