@@ -215,3 +215,13 @@ Exit dihitung ulang di data M1 (2004 sampai Jan 2026), sehingga urutan SL/TP di 
 - **Target lengkap (RR 1:2, WR > 50%, PF tinggi, ≥ 8 trade/minggu) tidak tercapai** di data mana pun.
 - Yang tersisa setelah uji jujur hanya edge tipis: PF ~1,05, ~11 trade/minggu, WR ~46%.
 - Setelah biaya, slippage live dan jeda eksekusi, edge setipis ini bisa habis. **Belum layak untuk uang sungguhan**, paling jauh untuk forward test di akun demo.
+
+### Rekomendasi: aturan tunggal di instrumen dengan PF < 2022 > 1
+Aturannya sama dengan bagian B. Instrumennya hanya yang PF-nya > 1 sebelum 2022, jadi dipilih tanpa melihat data 2022+: XAU, NASDAQ, EURUSD, USDJPY, BTC, ETH.
+
+| Periode | Trade/minggu | WR | PF | Max DD | PF per tahun |
+|---|---|---|---|---|---|
+| 2018-2021 | 6,1 | 48,7% | 1,20 | 17R | 1,18 / 1,31 / 1,24 / 1,10 |
+| **2022-2026** | **6,7** | **47,3%** | **1,16** | **26R** | 1,08 / 1,10 / 1,13 / 1,23 / 1,27 |
+
+Semua tahun 2022-2026 untung. Kekurangannya: frekuensi 6,7 trade/minggu, masih di bawah target 8.
