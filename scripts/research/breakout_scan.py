@@ -20,7 +20,8 @@ import snr_trend_scan as S
 TFMIN = {'M5': 5, 'M15': 15, 'M30': 30}
 
 
-def run_symbol(args):
+def run_symbol(args, want=None):
+    """want=(signal, trend, sl, exit) -> kembalikan DataFrame trade (t, R) untuk satu konfigurasi."""
     sym, tf = args
     t, o, h, l, c = load(sym, tf); n = len(c); tfm = TFMIN[tf]
     crypto = cls(sym) == 'CRYPTO'
@@ -100,7 +101,10 @@ def run_symbol(args):
                 ok = np.isfinite(sl) & (abs(e - sl) > 0)
                 cand = [(a, b, x, y, False) for a, b, x, y in zip(i_[ok], sd_[ok], e[ok], sl[ok])]
                 for ex in ('rr1', 'rr2', 'partial'):
+                    if want is not None and want != (sn, tn, sln, ex): continue
                     r = S.sim(cand, h, l, c, cost, ex, t)
+                    if want is not None:
+                        return pd.DataFrame({'t': pd.to_datetime(r[:, 0], unit='m'), 'R': r[:, 1]})
                     R = r[:, 1] if len(r) else np.zeros(0); oo = r[:, 0] >= OOS_FROM if len(r) else np.zeros(0, bool); Ro = R[oo]
                     yrs = pd.to_datetime(r[:, 0], unit='m').year if len(r) else np.zeros(0)
                     yp = pd.Series(R).groupby(yrs).sum() if len(r) else pd.Series(dtype=float)

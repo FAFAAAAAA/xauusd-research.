@@ -117,3 +117,43 @@ Konfirmasi sesi, konfluensi, tren dan TP parsial tidak mengubah hasil tahap 1. L
   - Median koin lama: PF 0,99.
 
   Jadi edge ini paling jelas di XAU, bukan pola universal.
+
+## Tahap 4: breakout TF kecil, validasi M1, portofolio (`breakout_scan.py`, `xau_m1_validate.py`, `breakout_portfolio.py`)
+
+### Validasi M1 breakout swing D1 XAU
+Exit dihitung ulang di data M1 (2004 sampai Jan 2026), sehingga urutan SL/TP di dalam candle M30 terlihat. Hasilnya sejalan dengan M30, malah sedikit lebih baik. Artinya edge ini bukan artefak dari cara simulasi.
+
+| Setup | Exit | n | WR | PF | Tahun untung |
+|---|---|---|---|---|---|
+| D1 + EMA200 H1 | RR 1:1 | 1.269 | 58,9% | 1,33 | 16/23 |
+| D1 + EMA200 H1 | Parsial | 1.179 | 58,9% | 1,39 | 17/23 |
+| D1 + struktur H4 | Parsial | 481 | 60,7% | 1,52 | 19/22 |
+| H4 + EMA stack H1 | Parsial | 2.264 | 55,6% | 1,18 | 19/23 |
+
+### Breakout di TF kecil
+- **Sinyal:** swing TF itu sendiri, swing H1, Donchian 20/55, ORB London (08:00 London) dan ORB NY (09:30 New York), keduanya ikut DST, range Asia, PDH/PDL, squeeze Bollinger.
+- **Filter tren:** EMA200 H1, EMA20 D1, keduanya.
+- **SL:** 1,5/2/3 ATR, atau sisi range seberang.
+- **TF dan instrumen:**
+  - M5: XAU.
+  - M15: forex, XAU, NASDAQ, US30, BTC, ETH.
+  - M30: semua.
+
+**Hasil: 0 lolos di M5, M15 dan M30.**
+- Hampir semua breakout TF kecil punya PF ≤ 1,05 setelah biaya. Forex paling buruk.
+- Versi longgar di M30 (29 kombinasi) semuanya koin yang listing 2024-2025.
+- Kandidat terbaik:
+  - **XAU, range Asia, M30:** searah EMA200 H1, SL di sisi range seberang, RR 1:2. PF 1,21, PF data baru 1,48, ~2 trade/minggu.
+  - **NASDAQ, ORB NY, M15:** searah EMA20 D1, SL di sisi range, parsial. PF 1,15, WR 55%, ~2,3 trade/minggu.
+
+### Portofolio breakout (2018+)
+| Portofolio | Trade/minggu | WR | PF | Tahun untung | Max DD |
+|---|---|---|---|---|---|
+| XAU D1 + H4 | 2,9 | 56,4% | 1,21 | 7/9 | 25,5R |
+| XAU D1 + H4 + Asia | 4,7 | 51,6% | 1,16 | 8/9 | 28,8R |
+| **6 leg terbaik** (XAU D1, XAU H4, XAU Asia, BTC D1, NAS D1, NAS ORB NY) | **9,1** | **53,4%** | **1,16** | **9/9** | 34,0R |
+| Semua 9 leg (+ETH D1, BTC H4, NAS H4) | 14,5 | 53,2% | 1,10 | 8/9 | 62,7R |
+
+**Catatan:**
+- Leg dipilih dari hasil scan di seluruh data, jadi ada bias seleksi. Hanya leg XAU D1 yang sudah terbukti di OOS dan di M1.
+- Portofolio 6 leg memenuhi ≥ 8 trade/minggu dan WR > 50%. PF-nya 1,16, belum mencapai 1,3.
