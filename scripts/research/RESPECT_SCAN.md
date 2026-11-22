@@ -181,3 +181,37 @@ Exit dihitung ulang di data M1 (2004 sampai Jan 2026), sehingga urutan SL/TP di 
 - **Portofolio:** 8/8 tahun untung, max DD 29,7R. Namun 41% minggu punya kurang dari 8 trade.
 - **Edge melemah di 2022-2026** untuk sebagian besar leg, misalnya XAU M5 turun dari PF 1,37 ke 1,01.
 - **Bias seleksi:** leg dipilih dari scan seluruh data, jadi angka portofolio kemungkinan optimis.
+
+## Tahap 6: uji jujur walk-forward, RR 1:2 saja, maks tahan 8 jam (`wf_select.py`, `wf_universal.py`)
+- **Scan ulang:** semua instrumen dan sinyal breakout, hanya RR 1:2 tanpa parsial, ditutup paksa setelah 2/4/8 jam. Total 30.276 kombinasi.
+- **Pilih hanya dari data < 2022, uji di 2022-2026.**
+- **Catatan:** RR 1:2 dengan WR > 50% berarti PF > 2. Tidak ada setup yang mendekati itu di tahap mana pun.
+
+### A. Pilih setup terbaik per instrumen (n ≥ 60, PF ≥ 1,2, ≥ 60% tahun untung, ≥ 0,25 trade/minggu)
+| | Leg | WR | PF |
+|---|---|---|---|
+| < 2022 (dipakai memilih) | 168 | 47,6% | 1,33 |
+| **≥ 2022 (uji)** | 168 | **41,9%** | **0,96** |
+
+- Non-kripto saja: PF 1,29 jadi 0,97. Koin USDT: PF 1,34 jadi 0,95.
+- Seleksi per instrumen **overfit**. Contoh: XAU M5 swing D1 PF 1,61 jadi 0,80.
+
+### B. Satu aturan sama untuk semua instrumen (diperingkat dari data < 2022)
+- Korelasi peringkat < 2022 vs ≥ 2022 cukup tinggi (0,65), tapi **tidak ada aturan dengan median PF ≥ 2022 di atas 1,1** (0 dari 348 aturan non-kripto, 0 dari 130 aturan kripto).
+- **Aturan terbaik:** M30, close tembus swing D1, searah EMA200 H1, SL 3 ATR M30, RR 1:2, maks 8 jam. Dijalankan di 10 instrumen non-kripto (XAU, NAS, US30, 5 forex, BTC, ETH):
+
+| Periode | Trade/minggu | Minggu ≥ 8 trade | WR | PF | Max DD |
+|---|---|---|---|---|---|
+| 2018-2021 | 10,5 | 76% | 46,9% | 1,10 | 36R |
+| 2022-2026 | 11,1 | 83% | 46,5% | 1,05 | 53R |
+
+- **Per instrumen ≥ 2022:**
+  - USDJPY 1,37, ETH 1,19, XAU 1,16, BTC 1,13.
+  - EURUSD dan NAS 1,05, US30 1,03.
+  - GBPUSD 0,97, USDCHF 0,90, USDCAD 0,73.
+- **Median tahan 8 jam.** Kebanyakan trade ditutup karena batas waktu sebelum mencapai 2R. WR 46% termasuk trade yang ditutup waktu dengan untung kecil.
+
+### Kesimpulan akhir
+- **Target lengkap (RR 1:2, WR > 50%, PF tinggi, ≥ 8 trade/minggu) tidak tercapai** di data mana pun.
+- Yang tersisa setelah uji jujur hanya edge tipis: PF ~1,05, ~11 trade/minggu, WR ~46%.
+- Setelah biaya, slippage live dan jeda eksekusi, edge setipis ini bisa habis. **Belum layak untuk uang sungguhan**, paling jauh untuk forward test di akun demo.
