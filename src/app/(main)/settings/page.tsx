@@ -236,7 +236,7 @@ function EaSetup({ tz }: { tz: string }) {
   const last = info?.lastReport as { at: number; event: string } | null;
   const [botV, setBotV] = useState<string | null>(null);
   useEffect(() => { call<any>('/api/bot-control').then((x) => setBotV(x?.seen?.applied?.version || null)).catch(() => {}); }, []);
-  const newest = '2026.11.22.3';
+  const newest = '2026.11.22.2';
   return (
     <Group id="ea" title="EA MT5 & bot Binance (otomatis)" sub={botV ? `Bot v${botV}${botV >= newest ? ' · terbaru' : ' · ada update'}` : info?.configured ? (last ? `Laporan terakhir ${fmt(last.at, tz)}` : 'Kunci siap, belum ada laporan') : 'Belum diatur'}>
       <div className={`at-ver ${botV && botV >= newest ? 'ok' : 'old'}`}>
