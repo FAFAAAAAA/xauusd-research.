@@ -84,7 +84,20 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   return api(async (db) => {
-    const id = new URL(req.url).searchParams.get('id');
+    const u = new URL(req.url), cf = u.searchParams.get('cf');
+    if (cf) {
+      // delete one deposit / withdraw; its id is remembered so the bot / EA report never adds it back
+      const k = u.searchParams.get('m') === 'forex' ? 'cashflow_mt5' : 'cashflow_binance';
+      const v = await repo.getAppSettings(db, [k, `${k}_deleted`]);
+      const have = Array.isArray(v[k]) ? (v[k] as Array<{ id: string }>) : [];
+      const next = have.filter((c) => c.id !== cf);
+      if (next.length === have.length) throw new HttpError(404, 'Catatan tidak ditemukan');
+      const gone = Array.isArray(v[`${k}_deleted`]) ? (v[`${k}_deleted`] as string[]) : [];
+      await repo.setAppSetting(db, k, next);
+      await repo.setAppSetting(db, `${k}_deleted`, [...gone, cf].slice(-1000));
+      return null;
+    }
+    const id = u.searchParams.get('id');
     const all = await load(db);
     const next = all.filter((x) => x.id !== id);
     if (next.length === all.length) throw new HttpError(404, 'Trade tidak ditemukan');

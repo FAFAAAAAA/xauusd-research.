@@ -58,7 +58,8 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   if (b.event === 'cashflow') {
     const mt5 = b.source === 'mt5', k = mt5 ? 'cashflow_mt5' : 'cashflow_binance';
     const items = Array.isArray(b.items) ? (b.items as Record<string, unknown>[]).slice(0, 60) : [];
-    const have = await repo.getAppSetting<CashFlow[]>(db, k, []), ids = new Set(have.map((c) => c.id));
+    const have = await repo.getAppSetting<CashFlow[]>(db, k, []), gone = await repo.getAppSetting<string[]>(db, `${k}_deleted`, []);
+    const ids = new Set([...have.map((c) => c.id), ...(Array.isArray(gone) ? gone : [])]);   // deleted on the website = never added again
     const fresh: CashFlow[] = [];
     for (const it of items) {
       const id = String(it.id ?? '').replace(/[^0-9A-Za-z:_-]/g, '').slice(0, 64), at = num(it.at), amount = num(it.amount);

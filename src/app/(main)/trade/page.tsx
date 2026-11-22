@@ -35,6 +35,7 @@ const EMPTY: Draft = { strategy: 'v2', side: 'BUY', entry: '', sl: '', tp: '', l
 // coin of a bot trade: the note is "Bot Binance SANDUSDT …"
 /** duration as plain numbers, hours.minutes (e.g. 5.12, 27.05) */
 const hm = (ms: number) => { const m = Math.max(0, Math.round(ms / 60_000)); return `${Math.floor(m / 60)}.${String(m % 60).padStart(2, '0')}`; };
+const dir_ = (t: JournalTrade) => (t.side === 'BUY' ? 1 : -1);
 const coinOf = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
 const RESULT: Record<string, string> = { tp: 'TP', sl: 'SL', be: 'Impas', manual: 'Manual' };
 
@@ -109,6 +110,13 @@ export default function TradePage() {
     try { setJ(await call<any>('/api/journal', { method: 'PUT', json: { id: t.id, result, entry: num(en), exit: num(ex), pnl: num(pl), closedAt: t.closedAt ?? Date.now() } })); toast('Trade dikoreksi'); }
     catch (e) { setJErr((e as Error).message); }
   };
+  const removeFlow = async (c: CashFlow) => {
+    if (!window.confirm(`Hapus catatan ${c.amount > 0 ? 'deposit' : 'withdraw'} $${Math.abs(c.amount).toFixed(2)}? Tidak akan muncul lagi.`)) return;
+    try {
+      await call<any>(`/api/journal?cf=${encodeURIComponent(c.id)}&m=${market}`, { method: 'DELETE' });
+      setJRaw(await call<any>('/api/journal')); toast('Catatan dihapus');
+    } catch (e) { setJErr((e as Error).message); }
+  };
   const remove = async (t: JournalTrade) => {
     if (!window.confirm('Hapus trade ini dari jurnal?')) return;
     try { setJ(await call<any>(`/api/journal?id=${t.id}`, { method: 'DELETE' })); toast('Trade dihapus'); } catch (e) { setJErr((e as Error).message); }
@@ -169,7 +177,7 @@ export default function TradePage() {
   const flowRow = (c: CashFlow) => {
     const inn = c.amount > 0, after = balAfter(c);
     return (
-      <div key={`cf-${c.id}`} className="hcard opencard histrow cfrow">
+      <button key={`cf-${c.id}`} className="hcard opencard histrow cfrow" aria-label={`${inn ? 'Deposit' : 'Withdraw'} ${Math.abs(c.amount).toFixed(2)} dolar, ketuk untuk hapus`} onClick={() => removeFlow(c)}>
         <span className={`hc-side op-badge ${inn ? 'b' : 's'}`} aria-hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">{inn ? <path d="M12 5v14M6 13l6 6 6-6" /> : <path d="M12 19V5M6 11l6-6 6 6" />}</svg></span>
         <span className="op-left">
           <strong className="hc-name">{inn ? 'Deposit' : 'Withdraw'}</strong>
@@ -179,7 +187,7 @@ export default function TradePage() {
           <span className={`op-pnl ${inn ? 'pos' : 'neg'}`}>{inn ? '+' : '−'}${Math.abs(c.amount).toFixed(2)}</span>
           {after == null ? null : <span className="op-strat">${usd2(after - c.amount)} → ${usd2(after)}</span>}
         </span>
-      </div>
+      </button>
     );
   };
   const histItems = [
@@ -357,16 +365,25 @@ export default function TradePage() {
                 <span><span className="k">Keluar</span><strong>{detail.exit != null ? px(detail.exit) : '—'}</strong></span>
                 <span><span className="k">Stop loss</span><strong className="neg">{px(detail.sl)}</strong></span>
                 <span><span className="k">Take profit</span><strong className="pos">{px(detail.tp)}</strong></span>
-                {detail.result === 'open' ? (() => {
-                  // what this position makes or loses when it hits its stop or its target (fees not included)
-                  const cs = detail.strategy === 'v2' || detail.strategy === 'v1' ? 100 : 1, dir = detail.side === 'BUY' ? 1 : -1;
-                  const at = (p: number) => (p - detail.entry) * dir * detail.lot * cs;
+                {(() => {
+                  // what this trade makes or loses at its stop and at its target (fees not included), for open AND closed trades.
+                  // $ per price unit: a closed trade's own result; otherwise the latest closed MT5 trade of the same market
+                  // (so cent accounts are right), else the contract size (gold 100 oz, Nasdaq 1, crypto = coins).
+                  const dir = detail.side === 'BUY' ? 1 : -1, mt5 = ['v1', 'v2', 'nas'].includes(detail.strategy);
+                  const perUnit = (t: JournalTrade) => { const m = (Number(t.exit) - t.entry) * dir_(t); return t.result !== 'open' && t.pnl != null && t.lot > 0 && Math.abs(m) > 1e-9 ? Number(t.pnl) / m / t.lot : null; };
+                  const own = perUnit(detail);
+                  const fam = (t: JournalTrade) => (t.strategy === 'nas' ? 'nas' : 'xau');
+                  const ref = !mt5 || own != null ? null : j.trades.filter((t: JournalTrade) => ['v1', 'v2', 'nas'].includes(t.strategy) && fam(t) === fam(detail) && perUnit(t) != null)
+                    .sort((a: JournalTrade, b: JournalTrade) => (b.closedAt ?? 0) - (a.closedAt ?? 0))[0];
+                  const k = own ?? (ref ? perUnit(ref) : null) ?? (detail.strategy === 'v2' || detail.strategy === 'v1' ? 100 : 1);
+                  const at = (p: number) => (p - detail.entry) * dir * detail.lot * k;
                   const ok = Number.isFinite(detail.sl) && Number.isFinite(detail.tp) && detail.lot > 0;
+                  const open = detail.result === 'open';
                   return <>
-                    <span><span className="k">Kalau kena SL</span><strong className="neg">{ok ? money(at(detail.sl)) : '—'}</strong></span>
-                    <span><span className="k">Kalau kena TP</span><strong className="pos">{ok ? money(at(detail.tp)) : '—'}</strong></span>
+                    <span><span className="k">{open ? 'Kalau kena SL' : 'Nilai SL'}</span><strong className="neg">{ok ? money(at(detail.sl)) : '—'}</strong></span>
+                    <span><span className="k">{open ? 'Kalau kena TP' : 'Nilai TP'}</span><strong className="pos">{ok ? money(at(detail.tp)) : '—'}</strong></span>
                   </>;
-                })() : null}
+                })()}
                 <span><span className="k">Dibuka</span><strong>{fmt(detail.openedAt, tz)}</strong></span>
                 <span><span className="k">Ditutup</span><strong>{detail.closedAt ? fmt(detail.closedAt, tz) : '—'}</strong></span>
                 <span><span className="k">Durasi</span><strong>{detail.closedAt ? hm(detail.closedAt - detail.openedAt) : hm(Date.now() - detail.openedAt)}</strong></span>
