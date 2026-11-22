@@ -246,7 +246,7 @@ function EaSetup({ tz }: { tz: string }) {
       <div className="row">
         <a className="btn sm primary" href="/ea/XAU_v2_EA_v115.mq5" download>Unduh EA v1 XAU (XAU_v2_EA_v115.mq5)</a>
         <a className="btn sm primary" href="/ea/NAS_v1_EA_v101.mq5" download>Unduh EA v1 NAS (NAS_v1_EA_v101.mq5)</a>
-        <a className="btn sm primary" href="/ea/PROP_XAU_NAS_EA_v105.mq5" download>Unduh EA prop firm FX2: v1 Level + v1 NAS (PROP_XAU_NAS_EA_v105.mq5)</a>
+        <a className="btn sm primary" href="/ea/PROP_XAU_NAS_EA_v106.mq5" download>Unduh EA forex v1.06: Level BUY + v1 XAU + v1 NAS (PROP_XAU_NAS_EA_v106.mq5)</a>
         <a className="btn sm primary" href="/bot/snr_bot.py" download>Unduh bot Binance — ALT + BIG + MACD + LISTING (snr_bot.py)</a>
         <a className="btn sm" href="/ea/XAU_v2_EA_DIAGNOSTIK.mq5" download>Unduh EA Diagnostik (MT5)</a>
         <button className="btn sm" onClick={make}>{info?.configured ? 'Buat kunci baru' : 'Buat kunci EA'}</button>
