@@ -8,6 +8,8 @@
 //|   (tetap berhenti setelah MT5/VPS restart). Batas rugi harian / total   |
 //|   TIDAK menutup paksa posisi (InpCloseAtLimit = false): EA hanya        |
 //|   berhenti membuka posisi baru; posisi terbuka jalan sampai TP/SL.      |
+//|   InpRiskFromBalance = true: risiko % dari saldo saat ini (bunga        |
+//|   berbunga) dengan batas rugi tetap dihitung dari InpAccountSize.       |
 //| v1.06 (22 Nov 2026): v1 XAU NYALA lagi, v1 Level hanya BUY       |
 //|   (Level SELL emas rugi di riset 2005-26: -0,003x/trade). Rencana:  |
 //|   Level BUY + v1 XAU (dengan BEP) + v1 NAS.                         |
@@ -58,6 +60,7 @@ input bool   InpLvlSell      = false;      // v1 Level: ikut SELL? (v1.06: MATI 
 input bool   InpUseNas       = true;       // Jalankan v1 NAS (Nasdaq)
 input string InpNasSymbol    = "NDX100";   // Nama simbol Nasdaq di broker ini (FundingPips: NDX100, Exness: USTEC)
 input double InpRiskPercent  = 0.75;       // Risiko per trade (% dari ukuran akun). Saran: challenge 0,5-0,75, funded 0,4
+input bool   InpRiskFromBalance = false;   // true = risiko % dari SALDO saat ini (bunga berbunga); false = % dari InpAccountSize (dolar tetap). Batas rugi tetap dari InpAccountSize
 input bool   InpTrade        = true;       // true = pasang order; false = hanya tulis sinyal ke log
 
 input group "Aturan prop firm"
@@ -415,7 +418,7 @@ void OpenTrade(CTrade &t, string sym, int s, double sl, double maxSpread, string
    double dist = s * (price - sl);
    if(dist <= 0) { PrintFormat("%s: lewati, harga sudah melewati SL.", comment); return; }
    double tp = price + s * RR * dist;
-   double base = PropOn() ? InpAccountSize : AccountInfoDouble(ACCOUNT_EQUITY);
+   double base = (PropOn() && !InpRiskFromBalance) ? InpAccountSize : (InpRiskFromBalance ? AccountInfoDouble(ACCOUNT_BALANCE) : AccountInfoDouble(ACCOUNT_EQUITY));
    double risk = base * InpRiskPercent / 100.0;
    double room = PropRoom();
    if(room < risk)
@@ -912,6 +915,7 @@ int OnInit()
    if(StringLen(InpEaKey) < 10) Print("Info: Kunci EA kosong — tidak ada laporan ke website/Telegram.");
    PrintFormat("PROP EA v1.07 aktif: v1 XAU %s, v1 Level %s (%s), v1 NAS %s (%s), risiko %.2f%%, akun %.0f, target %.1f%%, batas harian %.1f%%, total %.1f%%, buffer %.1f%%. Offset server-UTC %.1f jam.",
                InpUseXau ? "ON" : "off", InpUseLvl ? (InpLvlSell ? "ON" : "BUY saja") : "off", XS, gUseNas ? "ON" : "off", NS, InpRiskPercent, InpAccountSize, InpTargetPct, InpDailyLimitPct, InpMaxLossPct, InpBufferPct, UtcOffset() / 3600.0);
+   if(InpRiskFromBalance) PrintFormat("Risiko %.2f%% dari SALDO saat ini (sekarang %.2f = %.2f per trade); batas rugi tetap dari ukuran akun %.0f.", InpRiskPercent, AccountInfoDouble(ACCOUNT_BALANCE), AccountInfoDouble(ACCOUNT_BALANCE) * InpRiskPercent / 100.0, InpAccountSize);
    if(gTargetHit) Print("Target fase ini sudah pernah tercapai di akun ini — EA tidak membuka posisi baru. (Fase berikutnya: ganti InpTargetPct.)");
    EventSetTimer(5);
    return INIT_SUCCEEDED;
