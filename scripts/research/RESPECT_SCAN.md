@@ -259,3 +259,28 @@ Semua tahun 2022-2026 untung. Kekurangannya: frekuensi 6,7 trade/minggu, masih d
 - Variasi breakout langsung (bukan retest): PF ≥ 2022 = 1,12 dengan maks 5 posisi, lebih cepat (median tahan 33 jam).
 - Median tahan ~48 jam. Funding rate Binance **belum** dihitung. Biaya 0,08% per trade sudah dihitung.
 - **Non-kripto:** tidak ada aturan dengan PF ≥ 2022 di atas 1,07 untuk semua instrumen. Dengan filter instrumen PF < 2022 > 1 (5 dari 8), swing D1 tanpa filter tren, SL 5 ATR, 24 jam: PF ≥ 2022 = 1,19 dengan 4,7 trade/minggu.
+
+## Tahap 8: empat ide baru (`new_ideas.py`, `friday_long.py`)
+Metodenya sama dengan tahap 7: RR 1:2 tanpa parsial, aturan diperingkat dari data < 2022, diuji di ≥ 2022. Universe: 38 koin dengan data sejak < 2021, ditambah non-kripto untuk ide D.
+
+| Ide | Hasil |
+|---|---|
+| A momentum lintas koin (rangking return 7/14/28 hari tiap Senin, top/bottom 3-5) | **Gagal.** Bagus di bull 2020-21 (PF s/d 1,69), rugi ≥ 2022 (0,88-0,96). Korelasi peringkat -0,66 (terbalik). |
+| B funding rate Binance (persentil 95/5 atau absolut, fade/follow) | **Gagal.** Tidak ada aturan dengan PF ≥ 2022 > 1,1; terbaik 1,08. |
+| C BTC pemimpin (BTC gerak > 1,5-2,5 ATR, alt belum ikut) | **Gagal.** PF ≥ 2022 0,89-0,99. |
+| D pola waktu (jam UTC × hari × arah) | **Satu pola bertahan:** BUY altcoin Jumat malam. Non-kripto gagal. |
+
+### Pola Jumat malam (altcoin)
+**Aturan:** BUY di close candle M30 yang buka Jumat jam H UTC, SL 3 ATR(14) M30, TP 6 ATR (RR 1:2), tutup paksa setelah 8 jam.
+
+| Jam masuk | PF < 2022 | PF ≥ 2022 | WR ≥ 2022 | Koin untung ≥ 2022 | Minggu untung ≥ 2022 | PF per tahun ≥ 2022 |
+|---|---|---|---|---|---|---|
+| 18:00 UTC | 1,43 | **1,37** | 55,9% | 89% | 63% | 1,45 / 1,96 / 1,77 / 0,66 / 1,36 |
+| 20:00 UTC | 1,70 | **1,31** | 52,2% | 89% | 59% | 1,20 / 1,79 / 1,48 / 0,84 / 1,40 |
+| 22:00 UTC | 1,84 | **1,24** | 52,1% | 82% | 55% | 1,27 / 1,46 / 1,68 / 0,99 / 0,88 |
+
+**Catatan:**
+- Berlaku di **altcoin Binance**, **tidak** di BTC/ETH. BTCUSD/ETHUSD di 2022-2026 punya PF 0,74-0,80.
+- **2025 rugi di semua jam** (PF 0,66-0,99), jadi edge bisa melemah.
+- Semua koin masuk bersamaan, jadi praktis **satu taruhan per minggu**. Risiko per koin harus kecil, misalnya total risiko semua koin sama dengan 1 trade biasa.
+- Sudah diuji 288 pola waktu. Kemungkinan salah satunya terlihat bagus karena kebetulan cukup besar. Bukti pendukungnya: pola ini sudah teratas di data < 2022, dan 3 jam yang berdekatan memberi hasil serupa.
