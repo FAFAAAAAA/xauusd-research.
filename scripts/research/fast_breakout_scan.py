@@ -2,12 +2,27 @@
 # Sinyal: close TF entry menembus swing plain D1/H4, searah filter tren. SL = k x ATR TF entry. Exit rr1/rr2/partial.
 # Batas tahan 2/4/8 jam: posisi ditutup di close bila belum kena SL/TP. Biaya: respect_scan.cost_array.
 # Usage: python3 scripts/research/fast_breakout_scan.py <out.csv> SYM:TF [SYM:TF ...]
-import sys
+import sys, os
 import numpy as np, pandas as pd
 from multiprocessing import Pool
 sys.path.insert(0, 'scripts/research')
 from respect_scan import load, cls, ema, cost_array, OOS_FROM
 import snr_trend_scan as S
+
+WF_SPLIT = int(pd.Timestamp('2022-01-01').value // 60_000_000_000)  # walk-forward: pilih < 2022, uji >= 2022
+EXITS = tuple(os.environ.get('EXITS', 'rr1,rr2,partial').split(','))
+
+
+def wf_stats(r):
+    """Statistik in-sample (< 2022) dan walk-forward (>= 2022) dari array trade (t, R, hold)."""
+    out = {}
+    for nm, m in (('is', r[:, 0] < WF_SPLIT), ('wf', r[:, 0] >= WF_SPLIT)) if len(r) else ():
+        R = r[m, 1]; tt = r[m, 0]
+        wk = (tt.max() - tt.min()) / (1440 * 7) if len(tt) > 1 else np.nan
+        yp = pd.Series(R).groupby(pd.to_datetime(tt, unit='m').year).sum() if len(R) else pd.Series(dtype=float)
+        out.update({f'n_{nm}': len(R), f'wr_{nm}': (R > 0).mean() if len(R) else np.nan, f'pf_{nm}': S.pf(R),
+                    f'pw_{nm}': len(R) / wk if wk and wk > 0 else np.nan, f'yrs_pos_{nm}': (yp > 0).mean() if len(yp) else np.nan})
+    return out
 
 TFMIN = {'M5': 5, 'M15': 15, 'M30': 30}
 
@@ -40,9 +55,9 @@ def run(arg, want=None):
             for k in (1.0, 2.0, 3.0):
                 sl = e - sd * k * atr[i_]
                 cand = [(a, b, x, y, False) for a, b, x, y in zip(i_, sd, e, sl)]
-                for hold_h in (2, 4, 8):
+                for hold_h in tuple(int(x) for x in os.environ.get('HOLDS', '2,4,8').split(',')):
                     S.MAXHOLD = hold_h * 60 // tfm
-                    for ex in ('rr1', 'rr2', 'partial'):
+                    for ex in EXITS:
                         if want is not None and want != (lvl_tf, tn, k, hold_h, ex): continue
                         r = S.sim(cand, h, l, c, cost, ex, t)
                         if want is not None:
@@ -56,12 +71,13 @@ def run(arg, want=None):
                                          avgR=R.mean() if len(R) else np.nan, pf_oos=S.pf(Ro), wr_oos=(Ro > 0).mean() if len(Ro) else np.nan,
                                          per_week_oos=len(Ro) / weeks_oos, yrs_pos=(yp > 0).mean() if len(yp) else np.nan,
                                          hold_med_h=np.median(hold) if len(hold) else np.nan,
-                                         time_exit=(hold >= hold_h - 1e-9).mean() if len(hold) else np.nan))
+                                         time_exit=(hold >= hold_h - 1e-9).mean() if len(hold) else np.nan, **wf_stats(r)))
     print(arg, 'selesai', flush=True)
     return rows
 
 
 if __name__ == '__main__':
     with Pool(4) as p:
-        rows = sum(p.map(run, sys.argv[2:]), [])
+        rows = []
+        for rr in p.imap_unordered(run, sys.argv[2:]): rows += rr
     pd.DataFrame(rows).to_csv(sys.argv[1], index=False)

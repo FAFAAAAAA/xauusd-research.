@@ -10,12 +10,27 @@
 # Filter tren: none, EMA200 H1, EMA20 D1, keduanya. SL: 1.5/2/3 ATR TF itu, atau sisi range seberang (ORB/Asia).
 # Exit: rr1, rr2, partial. Tahan maksimal 1 hari. Biaya: lihat respect_scan.cost_array.
 # Usage: python3 scripts/research/breakout_scan.py <out.csv> <TF> [SYM ...]
-import sys, json
+import sys, json, os
 import numpy as np, pandas as pd
 from multiprocessing import Pool
 sys.path.insert(0, 'scripts/research')
 from respect_scan import load, cls, ema, cost_array, OOS_FROM, D
 import snr_trend_scan as S
+
+WF_SPLIT = int(pd.Timestamp('2022-01-01').value // 60_000_000_000)  # walk-forward: pilih < 2022, uji >= 2022
+EXITS = tuple(os.environ.get('EXITS', 'rr1,rr2,partial').split(','))
+
+
+def wf_stats(r):
+    """Statistik in-sample (< 2022) dan walk-forward (>= 2022) dari array trade (t, R, hold)."""
+    out = {}
+    for nm, m in (('is', r[:, 0] < WF_SPLIT), ('wf', r[:, 0] >= WF_SPLIT)) if len(r) else ():
+        R = r[m, 1]; tt = r[m, 0]
+        wk = (tt.max() - tt.min()) / (1440 * 7) if len(tt) > 1 else np.nan
+        yp = pd.Series(R).groupby(pd.to_datetime(tt, unit='m').year).sum() if len(R) else pd.Series(dtype=float)
+        out.update({f'n_{nm}': len(R), f'wr_{nm}': (R > 0).mean() if len(R) else np.nan, f'pf_{nm}': S.pf(R),
+                    f'pw_{nm}': len(R) / wk if wk and wk > 0 else np.nan, f'yrs_pos_{nm}': (yp > 0).mean() if len(yp) else np.nan})
+    return out
 
 TFMIN = {'M5': 5, 'M15': 15, 'M30': 30}
 
@@ -100,7 +115,7 @@ def run_symbol(args, want=None, max_hold_h=None):
                     sl = e - sd_ * k * atr[i_]
                 ok = np.isfinite(sl) & (abs(e - sl) > 0)
                 cand = [(a, b, x, y, False) for a, b, x, y in zip(i_[ok], sd_[ok], e[ok], sl[ok])]
-                for ex in ('rr1', 'rr2', 'partial'):
+                for ex in EXITS:
                     if want is not None and want != (sn, tn, sln, ex): continue
                     r = S.sim(cand, h, l, c, cost, ex, t)
                     if want is not None:
@@ -108,12 +123,12 @@ def run_symbol(args, want=None, max_hold_h=None):
                     R = r[:, 1] if len(r) else np.zeros(0); oo = r[:, 0] >= OOS_FROM if len(r) else np.zeros(0, bool); Ro = R[oo]
                     yrs = pd.to_datetime(r[:, 0], unit='m').year if len(r) else np.zeros(0)
                     yp = pd.Series(R).groupby(yrs).sum() if len(r) else pd.Series(dtype=float)
-                    rows.append(dict(sym=sym, cls=cls(sym), tf=tf, signal=sn, trend=tn, sl=sln, exit=ex, n=len(R),
+                    rows.append(dict(sym=sym, cls=cls(sym), tf=tf, max_hold_h=S.MAXHOLD * tfm / 60, signal=sn, trend=tn, sl=sln, exit=ex, n=len(R),
                                      per_week=len(R) / weeks, wr=(R > 0).mean() if len(R) else np.nan, pf=S.pf(R),
                                      avgR=R.mean() if len(R) else np.nan, n_oos=len(Ro), per_week_oos=len(Ro) / weeks_oos,
                                      wr_oos=(Ro > 0).mean() if len(Ro) else np.nan, pf_oos=S.pf(Ro),
                                      avgR_oos=Ro.mean() if len(Ro) else np.nan, yrs_pos=(yp > 0).mean() if len(yp) else np.nan,
-                                     first=pd.Timestamp(t[0], unit='m').strftime('%Y-%m')))
+                                     first=pd.Timestamp(t[0], unit='m').strftime('%Y-%m'), **wf_stats(r)))
     return rows
 
 
@@ -123,6 +138,8 @@ if __name__ == '__main__':
     syms = sys.argv[3:] or sorted({v['symbol'] for v in m.values() if v['tf'] == tf})
     with Pool(4) as p:
         allrows = []
-        for k, rows in enumerate(p.imap_unordered(run_symbol, [(s, tf) for s in syms])):
+        mh = int(os.environ['MAXHOLD_H']) if os.environ.get('MAXHOLD_H') else None
+        from functools import partial as _p
+        for k, rows in enumerate(p.imap_unordered(_p(run_symbol, max_hold_h=mh), [(s, tf) for s in syms])):
             allrows += rows; print(k + 1, len(syms), rows[0]['sym'], flush=True)
     pd.DataFrame(allrows).to_csv(out, index=False)
