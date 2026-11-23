@@ -65,9 +65,10 @@ const view = (trades: JournalTrade[]) => ({
 export async function GET() {
   return api(async (db) => {
     // one database round trip for everything the Trade page needs (fast first load)
-    const v = await repo.getAppSettings(db, [KEY, FIX_KEY, 'binance_balance', 'mt5_balance', 'cashflow_binance', 'cashflow_mt5']);
+    const v = await repo.getAppSettings(db, [KEY, FIX_KEY, SLIP_KEY, 'binance_balance', 'mt5_balance', 'cashflow_binance', 'cashflow_mt5']);
     const raw = Array.isArray(v[KEY]) ? (v[KEY] as JournalTrade[]) : [];
-    const trades = v[FIX_KEY] ? raw : await applyFixes(db, raw);
+    const fixed = v[FIX_KEY] ? raw : await applyFixes(db, raw);
+    const trades = v[SLIP_KEY] ? fixed : await fixSlipped(db, fixed);
     return { ...view(trades), binance: v.binance_balance ?? null, mt5: v.mt5_balance ?? null, cashflow: { crypto: v.cashflow_binance ?? [], forex: v.cashflow_mt5 ?? [] } };
   });
 }
