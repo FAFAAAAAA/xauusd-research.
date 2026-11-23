@@ -130,10 +130,17 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   } else {
     const prev = i >= 0 ? list[i] : null;
     if (prev && prev.result !== 'open') return { status: 200, body: { ok: true, duplicate: true } };
-    const reason = b.reason === 'tp' ? 'tp' : b.reason === 'sl' ? 'sl' : 'manual';
+    let reason: 'tp' | 'sl' | 'manual' = b.reason === 'tp' ? 'tp' : b.reason === 'sl' ? 'sl' : 'manual';
     const base = prev ? { ...prev } : { strategy: strat, side: b.side, entry: num(b.entry), sl: num(b.sl), tp: num(b.tp), lot: num(b.lot), openedAt: timeMs, note: src };
     // the Binance bot sends its real average entry price with the close (the open report could carry the signal close price)
     if (prev && bot && num(b.entry) > 0) base.entry = num(b.entry);
+    // a stop that filled PAST its level (slippage in a fast spike, 23 Nov 2026 WLD: SL 0.2469, filled 0.2509) is still a stop:
+    // the bot / EA only calls it SL within 0.25R of the level, so a close at or beyond SL (TP) − 0.25R is booked as SL (TP)
+    if (reason === 'manual') {
+      const d = base.side === 'BUY' ? 1 : -1, x = num(b.price), sl = Number(base.sl), tp = Number(base.tp), r1 = Math.abs(Number(base.entry) - sl);
+      if (x > 0 && r1 > 0 && Number.isFinite(sl) && (x - sl) * d <= 0.25 * r1) reason = 'sl';
+      else if (x > 0 && r1 > 0 && Number.isFinite(tp) && (x - tp) * d >= -0.25 * r1) reason = 'tp';
+    }
     // keep the broker's real exit price and net result (incl. commission & swap)
     // v2 breakeven: a stop that closes at (about) the entry price is the moved SL → record as BE, not SL
     const isBe = strat === 'v2' && reason === 'sl' && Math.abs(num(b.price) - Number(base.entry)) < 0.25 * Math.abs(Number(base.entry) - Number(base.sl));

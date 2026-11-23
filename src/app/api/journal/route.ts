@@ -36,9 +36,25 @@ const applyFixes = async (db: Db, all: JournalTrade[]) => {
   if (found === FIXES.length) await repo.setAppSetting(db, FIX_KEY, true);
   return all;
 };
+/** One-time correction (23 Nov 2026): bot / EA stops that filled past their SL (TP) were booked as "manual" (e.g. WLD 23 Nov). Same rule as new reports. */
+const SLIP_KEY = 'journal_fix_slipped_stops_20261123';
+const fixSlipped = async (db: Db, all: JournalTrade[]) => {
+  if (await repo.getAppSetting<boolean>(db, SLIP_KEY, false)) return all;
+  let changed = false;
+  all.forEach((t, i) => {
+    if (t.result !== 'manual' || !/^(Bot|EA)/.test(t.note ?? '') || !Number.isFinite(Number(t.exit))) return;
+    const d = t.side === 'BUY' ? 1 : -1, x = Number(t.exit), r1 = Math.abs(t.entry - t.sl);
+    if (!(r1 > 0)) return;
+    const res = (x - t.sl) * d <= 0.25 * r1 ? 'sl' : (x - t.tp) * d >= -0.25 * r1 ? 'tp' : null;
+    if (res) { all[i] = { ...t, result: res }; changed = true; }
+  });
+  if (changed) await repo.setAppSetting(db, KEY, all);
+  await repo.setAppSetting(db, SLIP_KEY, true);
+  return all;
+};
 const load = async (db: Db) => {
   const v = await repo.getAppSetting<JournalTrade[]>(db, KEY, []);
-  return applyFixes(db, Array.isArray(v) ? v : []);
+  return fixSlipped(db, await applyFixes(db, Array.isArray(v) ? v : []));
 };
 const view = (trades: JournalTrade[]) => ({
   trades: [...trades].sort((a, b) => b.openedAt - a.openedAt),
