@@ -66,6 +66,15 @@ export const STRATEGY_INFO: Record<string, Info> = {
     facts: [['Win', '43%'], ['Trade/bulan', '±6'], ['Rata-rata', '+0,21R'], ['Per tahun', '±+15R'], ['Turun terdalam', '16R'], ['Tahun rugi', '0 (2018–26)']],
     note: 'Biaya USTEC Exness + swap, 2018–2026. Kuat saat Nasdaq naik maupun turun, lemah saat sideways.',
   },
+  z7: {
+    name: 'Z7', side: 'SELL', coins: 'Semua koin likuid',
+    rules: ['Volume 30 hari rata-rata ≥ $20 jt (semua koin USDT Binance)', 'Pasar sepi: ATR5 / ATR50 H4 candle sebelumnya ≤ 0,65',
+      'Candle H4 tutup di bawah low candle sebelumnya', 'Badan merah ≥ 1,5 × ATR14 H4', 'SL close + 1,5 × ATR14 H4 · TP 2 × risiko', 'Maks 3 posisi Z7'],
+    facts: [['Win', '41%'], ['Trade/bulan', '±7,9'], ['Rata-rata', '+0,19R'], ['Per tahun', '±+18R'], ['Turun terdalam', '20R'], ['Kalah beruntun', '14×'],
+      ['Bulan rugi', '44%'], ['Bulan terburuk', '−10,3R']],
+    years: [['2020', 35.6], ['2021', 13.7], ['2022', 12.2], ['2023', -5.6], ['2024', 42.4], ['2025', 33.3], ['2026', -7.3]],
+    note: 'Uji 448 koin termasuk yang sudah delist, 2020–Nov 2026: PF 1,29 (IS 1,29 / OOS 1,30), biaya ×3 PF 1,18. Bersama ALT + BIG + MACD rasio untung/turun naik dari 2,87 ke 3,33.',
+  },
   bz: {
     name: 'BZ', side: 'SELL', coins: 'Semua koin likuid',
     rules: ['Volume 30 hari rata-rata ≥ $20 jt (semua koin USDT Binance)', 'Squeeze: lebar Bollinger H4 (20, 2) di 20% terendah dari 120 candle',

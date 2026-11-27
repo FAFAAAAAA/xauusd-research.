@@ -96,21 +96,22 @@ export function BotControlCard() {
   const ex = expect(riskPct);
   // BZ (Bollinger squeeze SELL) retired 19 Nov 2026: long floating, win 39%. The safe preset keeps it off.
   // 21-22 Nov 2026: backtest portfolio = 4 ALT + 3 BIG + 3 MACD + 3 LISTING (small balances keep fewer open positions for margin).
-  const tier = bal == null ? null : bal < 200 ? { risk: 1, sell: 3, buy: 1, mb: 1, lst: 1, keep: 0.5 } : bal < 1000 ? { risk: 1, sell: 4, buy: 3, mb: 3, lst: 3, keep: 0.5 }
-    : bal < 5000 ? { risk: 1, sell: 4, buy: 3, mb: 3, lst: 3, keep: 0.6 } : { risk: 0.75, sell: 4, buy: 3, mb: 3, lst: 3, keep: 0.7 };
-  const safe: Partial<Record<BotKey, BotVal>> | null = tier && bal ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy, mb_enabled: true, max_mb_positions: tier.mb, lst_enabled: true, max_lst_positions: tier.lst, bz_enabled: false, max_bz_positions: 0,
+  // 28 Nov 2026: + Z7 (compression breakdown SELL, every liquid coin, max 3; bot 2026.11.28.1+).
+  const tier = bal == null ? null : bal < 200 ? { risk: 1, sell: 3, buy: 1, mb: 1, lst: 1, z7: 1, keep: 0.5 } : bal < 1000 ? { risk: 1, sell: 4, buy: 3, mb: 3, lst: 3, z7: 3, keep: 0.5 }
+    : bal < 5000 ? { risk: 1, sell: 4, buy: 3, mb: 3, lst: 3, z7: 3, keep: 0.6 } : { risk: 0.75, sell: 4, buy: 3, mb: 3, lst: 3, z7: 3, keep: 0.7 };
+  const safe: Partial<Record<BotKey, BotVal>> | null = tier && bal ? { risk_mode: 'percent', risk_percent: tier.risk, max_positions: tier.sell, buy_enabled: true, max_buy_positions: tier.buy, mb_enabled: true, max_mb_positions: tier.mb, lst_enabled: true, max_lst_positions: tier.lst, z7_enabled: true, max_z7_positions: tier.z7, bz_enabled: false, max_bz_positions: 0,
     stop_balance_usdt: Math.max(10, Math.floor((bal * tier.keep) / 10) * 10), max_loss_streak: 7, leverage_auto: true, margin_isolated: true } : null;
   const isSafe = !!safe && Object.entries(safe).every(([k, x]) => same(v(k as BotKey, null as unknown as BotVal), x));
   const zone = riskPct <= 1.5 ? 'Aman' : riskPct <= 3 ? 'Seimbang' : 'Agresif';
   const fmtUsd = (x: number) => `$${Math.round(x).toLocaleString('id-ID')}`;
-  const LABEL: Partial<Record<BotKey, string>> = { risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko', max_positions: 'ALT', max_buy_positions: 'BIG', buy_enabled: 'BIG', mb_enabled: 'MACD', max_mb_positions: 'MACD', lst_enabled: 'LISTING', max_lst_positions: 'LISTING', bz_enabled: 'BZ', max_bz_positions: 'BZ',
+  const LABEL: Partial<Record<BotKey, string>> = { risk_mode: 'Cara risiko', risk_percent: 'Risiko', risk_usdt: 'Risiko', max_positions: 'ALT', max_buy_positions: 'BIG', buy_enabled: 'BIG', mb_enabled: 'MACD', max_mb_positions: 'MACD', lst_enabled: 'LISTING', max_lst_positions: 'LISTING', z7_enabled: 'Z7', max_z7_positions: 'Z7', bz_enabled: 'BZ', max_bz_positions: 'BZ',
     stop_balance_usdt: 'Rem saldo', max_loss_streak: 'Rem beruntun', leverage_auto: 'Leverage', leverage: 'Leverage', margin_isolated: 'Margin', daily_summary: 'Ringkasan', summary_hours_kst: 'Jam ringkasan', exclude: 'Koin' };
   const show = (k: BotKey, x: unknown) => (x == null ? '—' : typeof x === 'boolean' ? (x ? 'nyala' : 'mati') : Array.isArray(x) ? (x.length ? x.join(', ').replace(/USDT/g, '') : '—')
     : k === 'risk_percent' ? `${nf(x as number)}%` : k === 'risk_usdt' || k === 'stop_balance_usdt' ? `$${nf(x as number)}` : k === 'risk_mode' ? (x === 'usdt' ? 'USD' : '%') : String(x));
-  const posTxt = `${v<number>('max_positions', 3)} + ${v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 3) : 0} + ${v<boolean>('mb_enabled', true) ? v<number>('max_mb_positions', 3) : 0} + ${v<boolean>('lst_enabled', true) ? v<number>('max_lst_positions', 3) : 0}`;
+  const posTxt = `${v<number>('max_positions', 3)} + ${v<boolean>('buy_enabled', true) ? v<number>('max_buy_positions', 3) : 0} + ${v<boolean>('mb_enabled', true) ? v<number>('max_mb_positions', 3) : 0} + ${v<boolean>('lst_enabled', true) ? v<number>('max_lst_positions', 3) : 0} + ${v<boolean>('z7_enabled', true) ? v<number>('max_z7_positions', 3) : 0}`;
   const changed = BOT_KEYS.filter((k) => !same(set[k], c.set[k]) && !same(v(k, null as unknown as BotVal), ap?.cfg?.[k]));
   const tiles: Array<[string, string, string, string, string]> = [
-    ['pos', '⇅', 'Posisi', posTxt, 'ALT · BIG · MACD · LISTING'],
+    ['pos', '⇅', 'Posisi', posTxt, 'ALT · BIG · MACD · LISTING · Z7'],
     ['brake', '⛨', 'Rem', stopBal > 0 ? fmtUsd(stopBal) : 'Mati', streak > 0 ? `${streak} SL beruntun` : 'beruntun mati'],
     ['lev', '⚡', 'Leverage', lev ? 'Otomatis' : `${v<number>('leverage', 5)}x`, v<boolean>('margin_isolated', true) ? 'Isolated' : 'Cross'],
     ['sum', '✈', 'Ringkasan', v<boolean>('daily_summary', true) ? hours.map((h) => String(h).padStart(2, '0')).join(' & ') : 'Mati', 'Telegram'],

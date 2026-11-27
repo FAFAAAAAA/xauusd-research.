@@ -2642,7 +2642,7 @@ export default function Office({ data, now, screen = [], full = false, onSwipe, 
     const coin = (t: JournalTrade) => (/Bot Binance ([0-9A-Z]+)/.exec(t.note ?? '')?.[1] ?? '').replace(/USDT$/, '');
     return data.trades.filter((t) => t.result === 'tp' && t.closedAt).map((t) => {
       const pnl = Number(t.pnl ?? 0), name = t.strategy === 'v2' || t.strategy === 'v1' ? 'XAU' : t.strategy === 'nas' ? 'NAS' : coin(t) || 'TP';
-      const pid = ({ snr: 'alt', btc: 'big', mb: 'big', lst: 'alt', bz: 'alt', v2: 'xau', v1: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
+      const pid = ({ snr: 'alt', btc: 'big', mb: 'big', lst: 'alt', z7: 'alt', bz: 'alt', v2: 'xau', v1: 'xau', nas: 'nas' } as Record<string, string>)[t.strategy] ?? 'alt';
       const who = PEOPLE.find((q) => q.id === pid)?.name ?? '';
       return { id: `tp-${t.id}`, at: Number(t.closedAt), text: `TP ${name} ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}`, who, side: String(t.side ?? ''), pid };
     }).sort((a, b) => b.at - a.at);

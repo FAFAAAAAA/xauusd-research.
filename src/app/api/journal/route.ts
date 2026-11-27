@@ -58,7 +58,7 @@ const load = async (db: Db) => {
 };
 const view = (trades: JournalTrade[]) => ({
   trades: [...trades].sort((a, b) => b.openedAt - a.openedAt),
-  stats: { all: journalStats(trades), v1: journalStats(trades, 'v1'), v2: journalStats(trades, 'v2'), v3: journalStats(trades, 'v3'), nas: journalStats(trades, 'nas'), btc: journalStats(trades, 'btc'), alt: journalStats(trades, 'alt'), snr: journalStats(trades, 'snr'), mb: journalStats(trades, 'mb'), lst: journalStats(trades, 'lst'), bz: journalStats(trades, 'bz') },
+  stats: { all: journalStats(trades), v1: journalStats(trades, 'v1'), v2: journalStats(trades, 'v2'), v3: journalStats(trades, 'v3'), nas: journalStats(trades, 'nas'), btc: journalStats(trades, 'btc'), alt: journalStats(trades, 'alt'), snr: journalStats(trades, 'snr'), mb: journalStats(trades, 'mb'), lst: journalStats(trades, 'lst'), z7: journalStats(trades, 'z7'), bz: journalStats(trades, 'bz') },
 });
 
 /** Owner's manual live-trade journal (stored as one JSON value in app_settings). */

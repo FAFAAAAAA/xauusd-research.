@@ -32,8 +32,14 @@ LISTING part (SELL, 22 Nov 2026, every USDT perpetual newly listed on Binance Fu
   SELL at the close of the 25th 1-hour candle of a new coin (24 hours after its first candle closed).
   SL = that close + 10%;  TP = that close - 20% (RR 1:2).  Max 3 LISTING positions.  Checked every hour.
 
+Z7 part (compression breakdown SELL, research 27-28 Nov 2026, on EVERY liquid USDT coin; config z7_enabled / max_z7_positions):
+  Z7 SELL  = on the H4 candle BEFORE the last one ATR5 / ATR50 (Wilder, H4) <= 0.65 (quiet market), and the LAST closed H4 candle
+             closes below the low of the candle before it with a red body (open - close) >= 1.5 x ATR14(H4).
+             Liquidity: 30-day average quote volume >= min_volume_usdt.  SL = close + 1.5 x ATR14(H4);  TP = 2 x risk.  Max 3 Z7 positions.
+             Backtest 448 coins incl. delisted 2020-2026: PF 1.29 (IS 1.29 / OOS 1.30), costs x3 PF 1.18.
+
   BZ is retired (19 Nov 2026): the website always sends it OFF.
-  Each part has its own position cap (ALT, BIG, MACD, BZ) and one position per coin across all parts.
+  Each part has its own position cap (ALT, BIG, MACD, LISTING, Z7, BZ) and one position per coin across all parts.
 
 Remote settings (website Atur -> Kontrol bot, checked every ~60 s): risk %, max SELL / BUY positions and Pause (no new positions).
   The website never sends orders; the bot applies these values itself. Empty on the website = use snr_bot_config.json.
@@ -48,7 +54,7 @@ Background + autostart (Windows):   python snr_bot.py --install    start now and
                                     python snr_bot.py --reset      resume after the loss-streak brake (max_loss_streak)
                                     python snr_bot.py --uninstall  stop and remove the autostart
                                     python snr_bot.py --test       send a test trade + message to the website journal / Telegram
-                                    python snr_bot.py --sync [CAPUSDT PONSUSDT ...] [strat=bz]
+                                    python snr_bot.py --sync [CAPUSDT PONSUSDT ...] [strat=bz|z7|...]
                                         (bot stopped first) adopt open Binance positions the bot does not know (SL/TP from Binance) so their
                                         close is reported, and send the missed close reports of the listed coins (last 14 days) to the website
 """
@@ -68,7 +74,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.22.2'
+BOT_VERSION = '2026.11.28.1'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -87,6 +93,8 @@ DEFAULT_CONFIG = {
     "max_mb_positions": 3,           # maks posisi MACD terbuka (backtest: 3)
     "lst_enabled": True,             # LISTING SELL: SELL koin baru 24 jam setelah listing di Binance Futures
     "max_lst_positions": 3,          # maks posisi LISTING terbuka (backtest: 3)
+    "z7_enabled": True,              # Z7 = compression breakdown SELL di semua koin likuid (riset 28 Nov 2026)
+    "max_z7_positions": 3,           # maks posisi Z7 terbuka (backtest: 3)
     "bz_enabled": True,              # BZ = Bollinger squeeze SELL di semua koin likuid
     "max_bz_positions": 2,           # maks posisi BZ terbuka (backtest: 2)
     "stop_balance_usdt": 0,          # rem: tidak buka posisi baru bila saldo Futures di bawah angka ini (0 = mati)
@@ -112,6 +120,7 @@ ALT_BTC_DROP = 0.04                                         # ALT SELL is skippe
 LST_BAR, LST_SL, LST_MAX_AGE = 24, 0.10, 4 * 86400        # LISTING: entry at the close of 1h candle index 24, SL 10%, look at coins listed in the last 4 days
 BIG_COINS = ('BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT')
 BZ_N, BZ_K, BZ_Q, BZ_W, BZ_SLK, BZ_H4_LIMIT = 20, 2.0, 0.2, 120, 1.5, 200
+Z7_RATIO, Z7_BODY, Z7_SLK, Z7_H4_LIMIT = 0.65, 1.5, 1.5, 300
 NOT_COINS = ('USDCUSDT', 'BTCDOMUSDT', 'FDUSDUSDT', 'USDPUSDT', 'TUSDUSDT', 'DEFIUSDT')
 H4 = 4 * 3600
 
@@ -314,11 +323,34 @@ def bz_signal(h4):
     return (mid - BZ_K * sd, atr) if atr > 0 else None
 
 
+def wilder(h4, n):
+    """Wilder ATR series (same as pandas ewm(alpha=1/n, adjust=False) of the true range, first TR = high - low)"""
+    out = []; a = None
+    for i in range(len(h4)):
+        hi, lo = h4[i][2], h4[i][3]; pc = h4[i - 1][4] if i else h4[0][4]
+        tr = max(hi - lo, abs(hi - pc), abs(lo - pc)); a = tr if a is None else a + (tr - a) / n; out.append(a)
+    return out
+
+
+def z7_signal(h4):
+    """Z7 (identical to the research backtest): ATR5/ATR50 of the candle BEFORE the last one <= 0.65, the LAST closed H4 candle closes
+    below the low of the candle before it and its red body >= 1.5 x ATR14(H4). Returns (previous_low, atr14_h4) or None."""
+    n = len(h4)
+    if n < 120: return None
+    k = n - 1; o, c, pl = h4[k][1], h4[k][4], h4[k - 1][3]
+    if not c < pl: return None
+    a14 = wilder(h4, 14)[k]
+    if not (a14 > 0 and o - c >= Z7_BODY * a14): return None
+    a5, a50 = wilder(h4, 5)[k - 1], wilder(h4, 50)[k - 1]
+    if not (a50 > 0 and a5 / a50 <= Z7_RATIO): return None
+    return pl, a14
+
+
 def strat_of(p):
     return p.get('strat') or ('btc' if p.get('side') == 'BUY' else 'snr')
 
 
-STRAT_NAME = {'snr': 'ALT', 'btc': 'BIG', 'mb': 'MACD', 'lst': 'LISTING', 'bz': 'BZ'}
+STRAT_NAME = {'snr': 'ALT', 'btc': 'BIG', 'mb': 'MACD', 'lst': 'LISTING', 'z7': 'Z7', 'bz': 'BZ'}
 
 
 def closed_klines(api, sym, interval, limit, now_s):
@@ -396,10 +428,11 @@ class Bot:
         self.buy_coins = [x for x in bc if x in self.filters and x not in set(self.cfg['exclude']) and x not in self.coins]
         if bc: log.info('BUY v1 BTC: %s', ', '.join(self.buy_coins) or 'tidak ada koin aktif')
         ex = set(self.cfg['exclude'])
-        self.bz_all = [x for x in self.filters if x not in ex and x not in NOT_COINS] if (self.cfg.get('bz_enabled') or self.cfg.get('mb_enabled')) else []
+        self.bz_all = [x for x in self.filters if x not in ex and x not in NOT_COINS] if (self.cfg.get('bz_enabled') or self.cfg.get('mb_enabled') or self.cfg.get('z7_enabled')) else []
         old = getattr(self, 'bz_liq', None) or {'day': -1, 'syms': []}; keep = set(self.bz_all)
         self.bz_liq = {'day': old['day'] if self.bz_all else -1, 'syms': [x for x in old['syms'] if x in keep]}
         if self.cfg.get('mb_enabled') and old['day'] == -1: log.info('MACD BUY: semua altcoin likuid (bukan koin BIG)')
+        if self.cfg.get('z7_enabled') and old['day'] == -1: log.info('Z7 (compression breakdown SELL): semua koin likuid (%d koin USDT di Binance)', len(self.bz_all))
         if self.cfg.get('bz_enabled') and old['day'] == -1: log.info('BZ (Bollinger squeeze SELL): semua koin likuid (%d koin USDT di Binance)', len(self.bz_all))
         log.info('Memantau %d koin (%s)', len(self.coins), 'TESTNET' if self.cfg['testnet'] else 'AKUN ASLI')
 
@@ -515,6 +548,15 @@ class Bot:
             except Exception as e:
                 log.warning('BZ %s: %s', sym, e)
             time.sleep(0.05)
+        for sym in (self.bz_coins(now_s) if self.cfg.get('z7_enabled') else []):
+            try:
+                h4 = closed_klines(self.api, sym, '4h', Z7_H4_LIMIT, now_s)
+                if not h4 or h4[-1][0] + H4 > now_s + 5 or now_s - (h4[-1][0] + H4) > 900: continue
+                s = z7_signal(h4)
+                if s: sigs.append((sym, 'SELL', h4[-1][4] + Z7_SLK * s[1], h4[-1][4], s[0], 'z7'))
+            except Exception as e:
+                log.warning('Z7 %s: %s', sym, e)
+            time.sleep(0.05)
         return sigs
 
     def open_signals(self, sigs, quiet=False):
@@ -523,11 +565,12 @@ class Bot:
         live = self.positions()
         busy = set(self.st['positions']) | {s for s, a in live.items() if a != 0}
         own = self.st['positions']                              # positions per part; unknown live positions: short = SNR, long = BUY
-        n_side = {g: {k for k, v in own.items() if strat_of(v) == g} for g in ('snr', 'btc', 'mb', 'lst', 'bz')}
+        n_side = {g: {k for k, v in own.items() if strat_of(v) == g} for g in ('snr', 'btc', 'mb', 'lst', 'z7', 'bz')}
         n_side['snr'] |= {k for k, a in live.items() if a < 0 and k not in own}; n_side['btc'] |= {k for k, a in live.items() if a > 0 and k not in own}
         cap = {'snr': int(self.cfg['max_positions']), 'btc': int(self.cfg.get('max_buy_positions') or 0),
                'mb': int(self.cfg.get('max_mb_positions') or 0) if self.cfg.get('mb_enabled') else 0,
                'lst': int(self.cfg.get('max_lst_positions') or 0) if self.cfg.get('lst_enabled') else 0,
+               'z7': int(self.cfg.get('max_z7_positions') or 0) if self.cfg.get('z7_enabled') else 0,
                'bz': int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0}
         stop = float(self.cfg.get('stop_balance_usdt') or 0)
         if sigs and stop > 0 and not self.cfg['dry_run']:
@@ -548,7 +591,7 @@ class Bot:
             nm = STRAT_NAME[strat]
             if not self.cfg['dry_run'] and len(n_side[strat]) >= cap[strat]:
                 log.info('Sinyal %s %s %s dilewati: sudah %d posisi %s', nm, side, sym, len(n_side[strat]), nm); continue
-            log.info('Sinyal %s %s %s: close %s menembus %s %s', nm, side, sym, close, {'btc': 'high 50 H4', 'snr': 'support', 'mb': 'dua lembah MACD, low zona', 'lst': '24 jam setelah listing', 'bz': 'band bawah Bollinger (squeeze)'}[strat], level)
+            log.info('Sinyal %s %s %s: close %s menembus %s %s', nm, side, sym, close, {'btc': 'high 50 H4', 'snr': 'support', 'mb': 'dua lembah MACD, low zona', 'lst': '24 jam setelah listing', 'z7': 'low H4 sebelumnya (pasar sepi lalu jebol)', 'bz': 'band bawah Bollinger (squeeze)'}[strat], level)
             try: self.open_pos(sym, side, sl, close, strat)
             except RuntimeError as e: log.error('%s: order gagal: %s', sym, e)
             busy.add(sym); n_side[strat].add(sym)
@@ -766,11 +809,11 @@ class Bot:
                          f"Sejak ringkasan terakhir: {len(done)} trade selesai (TP {tp}, SL {sl}), hasil {res:+.2f} USDT\nPosisi terbuka: {pos}")
 
     REMOTE = {'risk_mode': ('mode',), 'risk_percent': ('num', 0.1, 5, 1), 'risk_usdt': ('num', 0.5, 500, 2), 'max_positions': ('num', 1, 6, 0),
-              'max_buy_positions': ('num', 0, 4, 0), 'buy_enabled': ('bool',), 'mb_enabled': ('bool',), 'max_mb_positions': ('num', 0, 4, 0), 'lst_enabled': ('bool',), 'max_lst_positions': ('num', 0, 4, 0), 'bz_enabled': ('bool',), 'max_bz_positions': ('num', 0, 4, 0), 'stop_balance_usdt': ('num', 0, 100000, 0), 'max_loss_streak': ('num', 0, 30, 0),
+              'max_buy_positions': ('num', 0, 4, 0), 'buy_enabled': ('bool',), 'mb_enabled': ('bool',), 'max_mb_positions': ('num', 0, 4, 0), 'lst_enabled': ('bool',), 'max_lst_positions': ('num', 0, 4, 0), 'z7_enabled': ('bool',), 'max_z7_positions': ('num', 0, 4, 0), 'bz_enabled': ('bool',), 'max_bz_positions': ('num', 0, 4, 0), 'stop_balance_usdt': ('num', 0, 100000, 0), 'max_loss_streak': ('num', 0, 30, 0),
               'leverage_auto': ('bool',), 'leverage': ('num', 1, 20, 0), 'margin_isolated': ('bool',), 'daily_summary': ('bool',),
               'summary_hours_kst': ('hours',), 'exclude': ('syms',)}
     LABEL = {'risk_mode': 'mode risiko', 'risk_percent': 'risiko %', 'risk_usdt': 'risiko USDT', 'max_positions': 'maks SELL', 'max_buy_positions': 'maks BIG',
-             'buy_enabled': 'BIG aktif', 'mb_enabled': 'MACD aktif', 'max_mb_positions': 'maks MACD', 'lst_enabled': 'LISTING aktif', 'max_lst_positions': 'maks LISTING', 'bz_enabled': 'BZ aktif', 'max_bz_positions': 'maks BZ', 'stop_balance_usdt': 'rem saldo', 'max_loss_streak': 'rem kalah beruntun', 'leverage_auto': 'leverage otomatis',
+             'buy_enabled': 'BIG aktif', 'mb_enabled': 'MACD aktif', 'max_mb_positions': 'maks MACD', 'lst_enabled': 'LISTING aktif', 'max_lst_positions': 'maks LISTING', 'z7_enabled': 'Z7 aktif', 'max_z7_positions': 'maks Z7', 'bz_enabled': 'BZ aktif', 'max_bz_positions': 'maks BZ', 'stop_balance_usdt': 'rem saldo', 'max_loss_streak': 'rem kalah beruntun', 'leverage_auto': 'leverage otomatis',
              'leverage': 'leverage', 'margin_isolated': 'margin isolated', 'daily_summary': 'ringkasan', 'summary_hours_kst': 'jam ringkasan', 'exclude': 'koin dikecualikan'}
 
     @staticmethod
@@ -815,7 +858,7 @@ class Bot:
             if want != self.cfg.get(k):
                 self.cfg[k] = want
                 changes.append(f"{self.LABEL[k]} {(', '.join(map(str, want)) or '-') if isinstance(want, list) else ('ya' if want is True else 'tidak' if want is False else want)}")
-                if k in ('exclude', 'buy_enabled', 'bz_enabled', 'mb_enabled'): reload = True
+                if k in ('exclude', 'buy_enabled', 'bz_enabled', 'mb_enabled', 'z7_enabled'): reload = True
         paused = c.get('paused') is True
         if paused != self.paused:
             self.paused = paused
@@ -878,12 +921,13 @@ class Bot:
         if float(self.cfg.get('stop_balance_usdt') or 0) > 0: log.info('Rem saldo: tidak buka posisi baru bila saldo < %.2f USDT', float(self.cfg['stop_balance_usdt']))
         nbz = int(self.cfg.get('max_bz_positions') or 0) if self.cfg.get('bz_enabled') else 0
         nmb = int(self.cfg.get('max_mb_positions') or 0) if self.cfg.get('mb_enabled') else 0
+        nz7 = int(self.cfg.get('max_z7_positions') or 0) if self.cfg.get('z7_enabled') else 0
         nls = int(self.cfg.get('max_lst_positions') or 0) if self.cfg.get('lst_enabled') else 0
-        log.info('Mode: %s · risiko %s · maks %d ALT + %d BIG + %d MACD + %d LISTING%s · leverage %s', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
+        log.info('Mode: %s · risiko %s · maks %d ALT + %d BIG + %d MACD + %d LISTING + %d Z7%s · leverage %s', 'DRY RUN (tanpa order)' if self.cfg['dry_run'] else 'TRADING',
                  f"{self.cfg['risk_percent']}% saldo" if self.cfg['risk_mode'] == 'percent' else f"{self.cfg['risk_usdt']} USDT", self.cfg['max_positions'],
-                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, nmb, nls, f' + {nbz} BZ' if nbz else '', 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
+                 int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0, nmb, nls, nz7, f' + {nbz} BZ' if nbz else '', 'otomatis (0,5 / jarak SL, maks 20x)' if self.cfg.get('leverage_auto', True) else f"{self.cfg['leverage']}x")
         last_sync = time.time()
-        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin ALT + {len(self.buy_coins)} koin BIG{' + semua altcoin likuid (MACD)' if nmb else ''}{' + koin baru listing' if nls else ''}, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} ALT + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BIG + {nmb} MACD + {nls} LISTING{f' + {nbz} BZ' if nbz else ''}{' · JEDA dari website' if self.paused else ''}.")
+        notify(self.cfg, f"Bot mulai ({'DRY RUN' if self.cfg['dry_run'] else 'TRADING'}, {'testnet' if self.cfg['testnet'] else 'akun asli'}): {len(self.coins)} koin ALT + {len(self.buy_coins)} koin BIG{' + semua altcoin likuid (MACD)' if nmb else ''}{' + koin baru listing' if nls else ''}, risiko {self.cfg['risk_usdt'] if self.cfg['risk_mode'] == 'usdt' else str(self.cfg['risk_percent']) + '%'} per trade, maks {self.cfg['max_positions']} ALT + {int(self.cfg.get('max_buy_positions') or 0) if self.buy_coins else 0} BIG + {nmb} MACD + {nls} LISTING + {nz7} Z7{f' + {nbz} BZ' if nbz else ''}{' · JEDA dari website' if self.paused else ''}.")
         self.push_balance()
         while True:
             if time.time() - self.ctl_at > 60: self.control()
@@ -935,7 +979,7 @@ def sync_command(args):
         sys.exit('Bot masih berjalan. Hentikan dulu: python snr_bot.py --stop  (tunggu ±40 detik), lalu jalankan --sync lagi.')
     setup_log(); cfg = load_config()
     strat = next((a.split('=', 1)[1] for a in args if a.startswith('strat=')), 'bz')
-    if strat not in STRAT_NAME: sys.exit('strat harus snr, btc, mb, lst atau bz')
+    if strat not in STRAT_NAME: sys.exit('strat harus snr, btc, mb, lst, z7 atau bz')
     syms = [a.upper() for a in args if not a.startswith('strat=')]
     api = Binance(cfg); api.sync_time()
     st = load_state(); st.setdefault('positions', {})
