@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="robots" content="noindex" />
+    <title>Nobar · tonton</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/watch.ts"></script>
+  </head>
+  <body>
+    <header class="top" id="topBar">
+      <h1 class="wordmark">Nobar</h1>
+      <span class="role" id="roomLabel"></span>
+    </header>
+
+    <main>
+      <p id="inApp" class="note warn" hidden></p>
+
+      <!-- PIN gate -->
+      <section id="gate" class="panel" aria-labelledby="gateTitle" hidden>
+        <h2 id="gateTitle" class="lead">Masuk ke room</h2>
+        <form id="pinForm" class="field" novalidate>
+          <label for="pin">PIN dari host</label>
+          <p id="pinHint" class="small">6 angka yang dikirim host lewat WhatsApp.</p>
+          <input
+            id="pin"
+            class="pin-input"
+            name="pin"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="6"
+            autocomplete="one-time-code"
+            aria-describedby="pinHint pinError"
+            required
+          />
+          <p id="pinError" class="note err" role="alert" hidden></p>
+          <div class="row">
+            <button id="pinBtn" class="btn primary big" type="submit">Masuk</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Final states: room gone, opened elsewhere -->
+      <section id="gone" class="panel" aria-labelledby="goneTitle" hidden>
+        <h2 id="goneTitle" class="lead"></h2>
+        <p id="goneText" class="quiet"></p>
+      </section>
+
+      <!-- Player -->
+      <!-- Portrait: controls sit under the picture. Full screen: they float over it and hide after 3 s. -->
+      <section id="player" class="player" aria-label="Tontonan" data-idle="false" hidden>
+        <div id="stage" class="stage">
+          <video id="video" width="1280" height="720" muted playsinline autoplay></video>
+
+          <div id="cover" class="overlay-center">
+            <p id="coverText" class="cover-text">Menyambung ke room…</p>
+          </div>
+
+          <div id="startWrap" class="overlay-center" hidden>
+            <button id="startBtn" class="btn primary big" type="button">Mulai nonton</button>
+            <p id="startHint" class="cover-text small" hidden></p>
+          </div>
+
+          <p id="pill" class="pill" role="status">Menyambung…</p>
+        </div>
+
+        <div id="dock" class="dock">
+          <div id="statsFloat" class="stats-box" hidden>
+            <dl id="viewerStats" class="stats"></dl>
+          </div>
+          <div id="controls" class="controls">
+            <button id="statsBtn" class="btn" type="button" aria-pressed="false" aria-controls="statsFloat">Statistik</button>
+            <button id="soundBtn" class="btn" type="button" aria-pressed="false">Tanpa suara film</button>
+            <button id="fsBtn" class="btn" type="button">Layar penuh</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tips" class="panel" aria-labelledby="tipsTitle" hidden>
+        <h2 id="tipsTitle">Sambil telepon WhatsApp</h2>
+        <p class="small">
+          Pakai earphone supaya suara film tidak ikut masuk ke telepon. Kalau suara film hilang saat telepon, ketuk video
+          untuk melanjutkan, atau pilih <strong>Tanpa suara film</strong> dan biarkan host yang mendengar suaranya.
+        </p>
+      </section>
+
+      <details id="logBox" class="panel log" hidden>
+        <summary>Catatan audio dan koneksi</summary>
+        <p class="small">
+          Dipakai untuk menguji perilaku suara saat telepon WhatsApp. Salin catatan ini dan kirim ke pembuat aplikasi bila
+          ada masalah.
+        </p>
+        <div class="field" id="sessionField" hidden>
+          <label for="sessionType">Mode audio Safari (uji coba)</label>
+          <select id="sessionType">
+            <option value="auto">Otomatis (bawaan)</option>
+            <option value="playback">Playback</option>
+            <option value="ambient">Ambient (bercampur dengan audio lain)</option>
+          </select>
+        </div>
+        <ol id="log"></ol>
+        <div class="row">
+          <button id="copyLogBtn" class="btn" type="button">Salin catatan</button>
+        </div>
+      </details>
+    </main>
+  </body>
+</html>

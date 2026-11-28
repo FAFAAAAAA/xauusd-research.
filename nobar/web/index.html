@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0c0e" />
+    <meta name="robots" content="noindex" />
+    <title>Nobar · host</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/host.ts"></script>
+  </head>
+  <body>
+    <header class="top">
+      <h1 class="wordmark">Nobar</h1>
+      <span class="role">untuk host, di Chrome laptop</span>
+    </header>
+
+    <main>
+      <!-- 1. No room yet -->
+      <section id="intro" class="panel" aria-labelledby="introTitle">
+        <h2 id="introTitle" class="lead">Bagikan satu tab Chrome, tonton berdua dari HP.</h2>
+        <p class="quiet">
+          Kamu membuat room, lalu mengirim tautan dan PIN ke penonton lewat WhatsApp. Gambar dan suara tab dikirim langsung
+          dari laptop ini ke HP penonton.
+        </p>
+        <p id="unsupported" class="note err" hidden>
+          Browser ini tidak bisa membagikan tab. Buka halaman ini di Chrome atau Edge di laptop.
+        </p>
+        <p id="previousNote" class="note" hidden></p>
+        <div class="row">
+          <button id="createBtn" class="btn primary big" type="button">Buat room</button>
+        </div>
+        <p id="createError" class="note err" role="alert" hidden></p>
+      </section>
+
+      <!-- 2. Room exists -->
+      <section id="invitePanel" class="panel" aria-labelledby="inviteTitle" hidden>
+        <h2 id="inviteTitle">Undang penonton</h2>
+        <div class="invite">
+          <div>
+            <p class="code-label">Tautan</p>
+            <p id="linkOut" class="link-out"></p>
+          </div>
+          <div>
+            <p class="code-label">PIN</p>
+            <p id="pinOut" class="code" aria-label="PIN"></p>
+          </div>
+        </div>
+        <div class="row">
+          <button id="copyMsgBtn" class="btn" type="button">Salin pesan untuk WhatsApp</button>
+          <button id="copyLinkBtn" class="btn" type="button">Salin tautan saja</button>
+        </div>
+      </section>
+
+      <section id="sharePanel" class="panel" aria-labelledby="shareTitle" hidden>
+        <h2 id="shareTitle">Tab yang dibagikan</h2>
+        <p id="shareState" class="state" data-tone="idle">Belum ada tab yang dibagikan</p>
+        <video id="preview" class="preview" width="320" height="180" muted playsinline autoplay hidden></video>
+        <p id="noAudio" class="note warn" hidden>
+          Suara tab tidak ikut. Klik <strong>Ganti tab</strong>, pilih tabnya lagi, lalu nyalakan
+          <strong>"Bagikan juga audio tab"</strong> di bawah daftar tab.
+        </p>
+        <p id="shareError" class="note err" role="alert" hidden></p>
+        <div class="row">
+          <button id="shareBtn" class="btn primary big" type="button">Pilih tab</button>
+          <button id="stopBtn" class="btn" type="button" hidden>Berhenti berbagi</button>
+        </div>
+        <p class="small">
+          YouTube dan file video yang dibuka di tab Chrome bisa dibagikan. Netflix, Disney+, Prime Video, dan layanan
+          berbayar lain biasanya tampil hitam di HP penonton karena dilindungi DRM.
+        </p>
+      </section>
+
+      <section id="viewerPanel" class="panel" aria-labelledby="viewerTitle" hidden>
+        <h2 id="viewerTitle">Penonton</h2>
+        <p id="viewerState" class="state" data-tone="idle" role="status">Belum masuk</p>
+        <dl id="hostStats" class="stats" hidden></dl>
+        <p id="turnNote" class="small" hidden></p>
+      </section>
+
+      <section id="endPanel" class="row" hidden>
+        <button id="endBtn" class="btn danger" type="button">Akhiri room</button>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Server hanya mempertemukan kedua browser. Video dan suara tidak lewat atau disimpan di server.</p>
+    </footer>
+
+    <dialog id="endDialog" aria-labelledby="endDialogTitle">
+      <h2 id="endDialogTitle">Akhiri room ini?</h2>
+      <p>Penonton langsung terputus dan tautan serta PIN tidak bisa dipakai lagi.</p>
+      <div class="row">
+        <button id="endCancel" class="btn" type="button">Batal</button>
+        <button id="endConfirm" class="btn danger" type="button">Akhiri room</button>
+      </div>
+    </dialog>
+  </body>
+</html>

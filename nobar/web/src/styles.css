@@ -1,0 +1,624 @@
+/* Nobar. Design read: a utility for two people, host on a laptop, viewer on a phone in a dim room.
+   Monochrome dark (DESIGN.md: monochrome, system font; dark because people watch film in low light and
+   the picture should be the brightest thing on screen). Dial ENERGY 1 / RHYTHM 1 / MOTION 1.
+   Accent: near-white, used for the one primary action per screen. Amber only for warnings, rose only for errors.
+   Motif: codes and numbers in large tabular figures (PIN, room code, stats), like the XAUUSD site's prices.
+   Contrast (checked with antislop contrast-check.py): ink on bg 17.5:1, ink-2 on surface 9.3:1,
+   mute on sunk 5.2:1, warn on surface 8.9:1, err on surface 10.3:1, ok on surface 12.4:1. */
+
+:root {
+  --bg: #0c0c0e;
+  --surface: #151518;
+  --sunk: #1c1c20;
+  --hover: #24242a;
+  --line: #2a2a30;
+  --edge: #6e6e78; /* control borders: 3:1+ against bg and surface */
+  --ink: #f2f2f4;
+  --ink-2: #b8b8c0;
+  --mute: #8e8e98;
+  --accent: #f2f2f4;
+  --on-accent: #0c0c0e;
+  --accent-press: #d4d4d8;
+  --warn: #f5a524;
+  --warn-tint: #2a2112;
+  --err: #ffadb5;
+  --err-tint: #2e1517;
+  --ok: #9fe3c4;
+  --video: #000;
+  --scrim: rgba(0, 0, 0, 0.74);
+
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --fs-xs: 0.78rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.5rem;
+  --fs-code: 2.25rem;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --r: 16px;
+  --r-s: 10px;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --d-1: 120ms;
+  --d-2: 200ms;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 var(--fs-md) / 1.5 var(--font);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Every enabled control shows it can be used (R-39). */
+a[href],
+button:not(:disabled),
+summary,
+select:not(:disabled),
+label[for] {
+  cursor: pointer;
+}
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- page frame ---------- */
+
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-4) 0;
+  padding-top: max(var(--s-4), env(safe-area-inset-top));
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+.wordmark {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.top .role {
+  color: var(--mute);
+  font-size: var(--fs-sm);
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--s-4);
+  padding-left: max(var(--s-4), env(safe-area-inset-left));
+  padding-right: max(var(--s-4), env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.foot {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--s-4);
+  padding-bottom: max(var(--s-6), env(safe-area-inset-bottom));
+  color: var(--mute);
+  font-size: var(--fs-sm);
+}
+.foot p {
+  margin: 0;
+}
+
+/* ---------- blocks ---------- */
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.panel > h2 {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.panel p {
+  margin: 0;
+}
+.lead,
+.panel > h2.lead {
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-wrap: balance;
+}
+.quiet {
+  color: var(--ink-2);
+}
+.small {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  appearance: none;
+  font: 600 var(--fs-md) / 1.2 var(--font);
+  min-height: 44px;
+  padding: 0 var(--s-5);
+  border-radius: var(--r-s);
+  border: 1px solid var(--edge);
+  background: transparent;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  transition:
+    background-color var(--d-1) var(--ease),
+    transform var(--d-1) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn:disabled {
+  opacity: 0.45;
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.btn.primary:hover:not(:disabled) {
+  background: var(--accent-press);
+}
+.btn.danger {
+  color: var(--err);
+  border-color: var(--err);
+}
+.btn.danger:hover:not(:disabled) {
+  background: var(--err-tint);
+}
+.btn.big {
+  min-height: 56px;
+  font-size: var(--fs-lg);
+  padding: 0 var(--s-8);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.row > .btn {
+  flex: 1 1 auto;
+}
+
+/* ---------- notes ---------- */
+
+.note {
+  border-radius: var(--r-s);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-sm);
+  background: var(--sunk);
+  color: var(--ink-2);
+}
+.note strong {
+  color: var(--ink);
+}
+.note.warn {
+  background: var(--warn-tint);
+  color: var(--ink);
+}
+.note.warn::before {
+  content: 'Perhatian: ';
+  font-weight: 700;
+  color: var(--warn);
+}
+.note.err {
+  background: var(--err-tint);
+  color: var(--ink);
+}
+.note.err::before {
+  content: 'Gagal: ';
+  font-weight: 700;
+  color: var(--err);
+}
+
+/* ---------- codes (identity motif) ---------- */
+
+.code {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-size: var(--fs-code);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  margin: 0;
+}
+.code-label {
+  font-size: var(--fs-sm);
+  color: var(--mute);
+  margin: 0;
+}
+.invite {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-4);
+  align-items: end;
+}
+.link-out {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  word-break: break-all;
+  margin: 0;
+}
+
+/* ---------- status line ---------- */
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 600;
+  margin: 0;
+}
+/* The mark carries state by shape too: hollow = waiting, filled = connected, bar = problem. */
+.state::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--mute);
+  flex: none;
+}
+.state[data-tone='ok']::before {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.state[data-tone='warn']::before {
+  border-radius: 2px;
+  height: 4px;
+  border: 0;
+  background: var(--warn);
+}
+.state[data-tone='err']::before {
+  border-radius: 2px;
+  height: 4px;
+  border: 0;
+  background: var(--err);
+}
+
+/* ---------- stats ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.stats dt {
+  color: var(--mute);
+}
+.stats dd {
+  margin: 0;
+  color: var(--ink);
+}
+.verdict {
+  font-weight: 700;
+}
+
+/* ---------- forms ---------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.field label {
+  font-weight: 600;
+}
+.pin-input {
+  font: 650 1.75rem / 1 var(--font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3em;
+  min-height: 56px;
+  padding: 0 var(--s-4);
+  width: 100%;
+  max-width: 14ch;
+  border-radius: var(--r-s);
+  border: 1px solid var(--edge);
+  background: var(--sunk);
+  color: var(--ink);
+}
+.pin-input:hover {
+  border-color: var(--ink-2);
+}
+.pin-input[aria-invalid='true'] {
+  border-color: var(--err);
+}
+select {
+  font: 400 var(--fs-md) var(--font);
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-s);
+  border: 1px solid var(--edge);
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+/* ---------- host preview ---------- */
+
+.preview {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  background: var(--video);
+  border-radius: var(--r-s);
+  object-fit: contain;
+}
+
+/* ---------- viewer stage ---------- */
+
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--video);
+  border-radius: var(--r-s);
+  overflow: hidden;
+  touch-action: manipulation;
+}
+.stage video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* never crop: subtitles sit at the edges of the tab */
+  background: var(--video);
+}
+.stage[data-dim='true'] video {
+  opacity: 0.35;
+}
+.overlay-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  text-align: center;
+}
+.cover-text {
+  background: var(--scrim);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-s);
+  margin: 0;
+  max-width: 34ch;
+}
+.pill {
+  position: absolute;
+  top: var(--s-3);
+  left: var(--s-3);
+  background: var(--scrim);
+  padding: var(--s-1) var(--s-3);
+  border-radius: 999px;
+  font-size: var(--fs-sm);
+}
+.pill {
+  transition: opacity var(--d-2) var(--ease);
+}
+
+/* Dock: under the picture in portrait, floating over it in full screen. */
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.dock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.controls {
+  display: flex;
+  gap: var(--s-2);
+}
+.controls .btn {
+  flex: 1 1 0;
+  padding: 0 var(--s-3);
+  font-size: var(--fs-sm);
+}
+.controls .btn[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.stats-box {
+  background: var(--surface);
+  padding: var(--s-4);
+  border-radius: var(--r-s);
+}
+
+/* Full screen: element full screen (Android, desktop) or the CSS version (iPhone has no element full screen). */
+body.cinema {
+  overflow: hidden;
+}
+body.cinema .player,
+.player:fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: var(--video);
+  gap: 0;
+}
+body.cinema .stage,
+.player:fullscreen .stage {
+  flex: 1;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+body.cinema .pill,
+.player:fullscreen .pill {
+  top: max(var(--s-3), env(safe-area-inset-top));
+  left: max(var(--s-3), env(safe-area-inset-left));
+}
+body.cinema .dock,
+.player:fullscreen .dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  align-items: flex-end;
+  padding: var(--s-6) var(--s-3) var(--s-3);
+  padding-bottom: max(var(--s-3), env(safe-area-inset-bottom));
+  padding-right: max(var(--s-3), env(safe-area-inset-right));
+  padding-left: max(var(--s-3), env(safe-area-inset-left));
+  /* scrim so white labels keep 4.5:1 over any picture */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8) 65%, transparent);
+  transition: opacity var(--d-2) var(--ease);
+}
+body.cinema .controls .btn,
+.player:fullscreen .controls .btn {
+  flex: 0 0 auto;
+  background: var(--scrim);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+body.cinema .controls .btn[aria-pressed='true'],
+.player:fullscreen .controls .btn[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+body.cinema .stats-box,
+.player:fullscreen .stats-box {
+  background: var(--scrim);
+  max-width: 100%;
+}
+body.cinema .player[data-idle='true'] .dock,
+.player:fullscreen[data-idle='true'] .dock,
+.player[data-idle='true'] .pill[data-ok='true'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- log ---------- */
+
+details.log > summary {
+  font-weight: 600;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.log ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+.log li {
+  padding: 2px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+dialog {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  border-radius: var(--r);
+  padding: var(--s-5);
+  max-width: min(420px, calc(100vw - 32px));
+}
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+dialog h2 {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-lg);
+}
+dialog p {
+  margin: 0 0 var(--s-4);
+  color: var(--ink-2);
+}
+
+@media (max-width: 480px) {
+  .invite {
+    grid-template-columns: 1fr;
+  }
+  .lead,
+  .panel > h2.lead {
+    font-size: 1.3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
