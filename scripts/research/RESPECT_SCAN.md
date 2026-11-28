@@ -284,3 +284,32 @@ Metodenya sama dengan tahap 7: RR 1:2 tanpa parsial, aturan diperingkat dari dat
 - **2025 rugi di semua jam** (PF 0,66-0,99), jadi edge bisa melemah.
 - Semua koin masuk bersamaan, jadi praktis **satu taruhan per minggu**. Risiko per koin harus kecil, misalnya total risiko semua koin sama dengan 1 trade biasa.
 - Sudah diuji 288 pola waktu. Kemungkinan salah satunya terlihat bagus karena kebetulan cukup besar. Bukti pendukungnya: pola ini sudah teratas di data < 2022, dan 3 jam yang berdekatan memberi hasil serupa.
+
+## Tahap 9: scalping XAU di data M1 (`scalp_xau.py`, `scalp_xau_check.py`)
+- **Data:** XAU M1 2010 - Jan 2026. Uji jujur: pilih dari 2010-2021, uji di 2022-2026.
+- **Variasi:** SL 1/2/3 ATR14 M5 atau struktur (ujung wick sweep). Trade dilewati bila risiko < 10x biaya (SL ≈ $3+ di harga 2000). RR 1:1,5 dan 1:2. Tahan maks 15/30/60 menit. Filter tren: none, EMA200 H1, EMA20 D1. Biaya 1,5 bps. Total 864 kombinasi, korelasi peringkat IS-WF 0,46.
+
+| Ide | PF terbaik 2010-21 | PF 2022-26 dari aturan itu | Hasil |
+|---|---|---|---|
+| Sweep high/low Asia (wick atau gagal breakout 5 menit) | 0,99 | 0,95 | Gagal |
+| Sweep PDH/PDL | 1,44 (n kecil) | 0,28 | Gagal (overfit) |
+| Momentum/fade 5-15 menit pertama London/NY | 1,07-1,16 | 0,78-1,20 | Gagal / tidak konsisten |
+| Pantulan TWAP harian (proxy VWAP) | 0,86 | 0,81 | Gagal |
+| Angka bulat $5/$10, pantul atau tembus | 0,83-0,98 | 0,87-1,00 | Gagal |
+| **Close M1 tembus swing D1** | 1,35-1,39 | **1,29-1,42** | **Lolos** |
+
+### Scalp breakout swing D1 (satu-satunya yang lolos)
+**Aturan:** close M1 menembus swing high/low D1 (fractal 2, level dari M30), SL 2-3 ATR14 M5 (rata-rata ~$4,6 di 2022+), TP 2x SL, tutup paksa setelah 60 menit. Filter tren tidak menambah apa-apa.
+
+| SL | Biaya | PF 2010-21 | PF 2022-26 | WR 2022-26 | Trade 2022-26 |
+|---|---|---|---|---|---|
+| 2 ATR M5 | 1,5 bps (~$0,30) | 1,35 | **1,42** | 50% | 167 |
+| 3 ATR M5 | 1,5 bps | 1,39 | **1,29** | 50% | 231 |
+| 3 ATR M5 | 2,5 bps (~$0,50) | 1,29 | 1,32 | 52% | 141 |
+| 3 ATR M5 | 3,5 bps (~$0,70) | 1,25 | 1,17 | 51% | 73 |
+
+**Catatan:**
+- PF per tahun (SL 3 ATR): 2010-2025 untung kecuali 2014 (0,68), 2017 (0,83) dan 2022 (0,71).
+- Frekuensinya hanya **~1 trade/minggu**, jadi terlalu jarang untuk gaya scalping.
+- Biaya lebih mahal ikut mengurangi jumlah trade, karena aturan risiko ≥ 10x biaya. Uji biaya tidak murni.
+- Ini edge yang sama dengan tahap 3-5 (breakout D1), versi pegang ≤ 60 menit. **Pola scalping khas tidak ada yang lolos.**
