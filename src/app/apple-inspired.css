@@ -1265,7 +1265,7 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .rd-eye { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--sunk); color: var(--ink); }
 .rd-line { display: block; width: 46px; height: 6px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 13%, transparent); overflow: hidden; }
 .rd-line i { display: block; height: 100%; border-radius: 9px; }
-.rd-line.far i { background: #d92d20; }
-.rd-line.near i { background: #e09400; }
-.rd-line.go i { background: #00b85c; }   /* brighter than the BUY / profit green so a break stands out */
+.rd-line.far i { background: var(--down); }
+.rd-line.near i { background: var(--warn); }
+.rd-line.go i { background: var(--up); }   /* the site's own red / amber / green (owner: same colours as the rest) */
 .dt-sheet .trade-review-chart.rd-chart { height: min(66svh, 600px); min-height: 380px; }
