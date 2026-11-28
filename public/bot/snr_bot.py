@@ -14,7 +14,11 @@ v1 SNR bot — Binance USDⓈ-M Futures (support break SELL for altcoins). Same 
 BIG part (BUY on the largest coins: BTC ETH SOL BNB XRP DOGE; config buy_enabled / buy_coins / max_buy_positions; rules of 21 Nov 2026):
   BUY      = an H4 candle CLOSES above the highest high of the 50 H4 candles before it (first close beyond), at least 0.5 x ATR14(H4)
              above that high (strong break), that H4 close is above EMA200 (H4) and BTC's last H4 close is above BTC's EMA200 (H4).
-             SL = H4 close - 1.0 x ATR14(D1);  TP = entry + 2 x (entry - SL).   Max 3 BIG positions.
+             SL = H4 close - 1.0 x ATR14(D1).   Max 3 BIG positions.
+  EXIT (28 Nov 2026, config big_trail_k, 0 = old fixed TP 2R): NO take profit. After every H4 close the SL is raised to
+             (highest H4 close since entry) - 4.0 x ATR14(H4) of that candle, only upward, never down (chandelier "CloseBest" trail).
+             A new SL at or above the current price closes the position at market (gap guard). Backtest 6 coins 2020-Okt 2026,
+             entry next H4 open, costs 0.12% + funding: PF 3.40 (IS 3.46 / OOS 3.31) vs 1.54 with TP 2R; 7/7 years positive.
 
 MACD part (BUY, 21 Nov 2026, on every liquid USDT altcoin except the BIG coins; config mb_enabled / max_mb_positions):
   MACD H4 = EMA12 - EMA26 of the closes, signal = SMA9 of MACD. A negative zone lasts until MACD stays above 0 for 7 candles.
@@ -37,6 +41,7 @@ Z7 part (compression breakdown SELL, research 27-28 Nov 2026, on EVERY liquid US
              closes below the low of the candle before it with a red body (open - close) >= 1.5 x ATR14(H4).
              Liquidity: 30-day average quote volume >= min_volume_usdt.  SL = close + 1.5 x ATR14(H4);  TP = 2 x risk.  Max 3 Z7 positions.
              Backtest 448 coins incl. delisted 2020-2026: PF 1.29 (IS 1.29 / OOS 1.30), costs x3 PF 1.18.
+             OFF by default (28 Nov 2026): on all liquid coins it raises the drawdown of the whole bot (29.5R -> 39.9R).
 
   BZ is retired (19 Nov 2026): the website always sends it OFF.
   Each part has its own position cap (ALT, BIG, MACD, LISTING, Z7, BZ) and one position per coin across all parts.
@@ -74,7 +79,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.28.1'
+BOT_VERSION = '2026.11.28.2'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -93,7 +98,8 @@ DEFAULT_CONFIG = {
     "max_mb_positions": 3,           # maks posisi MACD terbuka (backtest: 3)
     "lst_enabled": True,             # LISTING SELL: SELL koin baru 24 jam setelah listing di Binance Futures
     "max_lst_positions": 3,          # maks posisi LISTING terbuka (backtest: 3)
-    "z7_enabled": True,              # Z7 = compression breakdown SELL di semua koin likuid (riset 28 Nov 2026)
+    "big_trail_k": 4.0,              # BIG tanpa TP: SL ikut naik ke close tertinggi sejak entry - K x ATR14 H4 (0 = TP tetap 2R)
+    "z7_enabled": False,             # Z7 = compression breakdown SELL di semua koin likuid (MATI: menaikkan turun terdalam bot)
     "max_z7_positions": 3,           # maks posisi Z7 terbuka (backtest: 3)
     "bz_enabled": True,              # BZ = Bollinger squeeze SELL di semua koin likuid
     "max_bz_positions": 2,           # maks posisi BZ terbuka (backtest: 2)
@@ -708,13 +714,14 @@ class Bot:
                 log.info('%s: harga isi %.8f (sinyal %.8f) — jumlah dikurangi %s → %s supaya rugi di SL tetap ±%.2f USDT', sym, entry, close, fmt(filled, f['step']), fmt(want, f['step']), risk)
                 filled = want
             except RuntimeError as e: log.warning('%s: gagal mengurangi jumlah: %s', sym, e)
-        tp = entry + s * RR * s * (entry - sl)
+        trail = strat == 'btc' and float(self.cfg.get('big_trail_k') or 0) > 0
+        tp = entry + s * (10 if trail else RR) * s * (entry - sl)            # trailing BIG: no TP order; 10R is only the journal's reference
         if s < 0: sl_r = math.ceil(sl / f['tick'] - 1e-9) * f['tick']; tp_r = math.floor(tp / f['tick'] + 1e-9) * f['tick']
         else: sl_r = math.floor(sl / f['tick'] + 1e-9) * f['tick']; tp_r = math.ceil(tp / f['tick'] - 1e-9) * f['tick']
         try:
             a = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': ex, 'type': 'STOP_MARKET', 'triggerPrice': fmt(sl_r, f['tick']),
                                                      'closePosition': 'true', 'workingType': 'CONTRACT_PRICE'})
-            b = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': ex, 'type': 'TAKE_PROFIT_MARKET', 'triggerPrice': fmt(tp_r, f['tick']),
+            b = {} if trail else self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': ex, 'type': 'TAKE_PROFIT_MARKET', 'triggerPrice': fmt(tp_r, f['tick']),
                                                      'closePosition': 'true', 'workingType': 'CONTRACT_PRICE'})
         except RuntimeError as e:
             log.error('%s: SL/TP gagal dipasang (%s) — posisi ditutup demi keamanan', sym, e)
@@ -724,9 +731,10 @@ class Bot:
         ticket = f"{sym}-{o['orderId']}"
         strat = strat or ('btc' if side == 'BUY' else 'snr')
         self.st['positions'][sym] = {'ticket': ticket, 'side': side, 'strat': strat, 'entry': entry, 'sl': sl_r, 'tp': tp_r, 'qty': filled, 'opened': t, 'trim_id': trim_id, 'sl_id': a.get('algoId'), 'tp_id': b.get('algoId')}
+        if trail: self.st['positions'][sym].update(trail=True, sl0=sl_r)
         save_state(self.st)
-        log.info('%s %s %s qty %s @ %s | SL %s | TP %s', STRAT_NAME.get(strat, strat), side, sym, filled, entry, fmt(sl_r, f['tick']), fmt(tp_r, f['tick']))
-        report(self.cfg, {'event': 'open', 'strategy': strat, 'ticket': ticket, 'symbol': sym, 'side': side, 'price': entry, 'sl': sl_r, 'tp': tp_r, 'lot': filled, 'time': t})
+        log.info('%s %s %s qty %s @ %s | SL %s | %s', STRAT_NAME.get(strat, strat), side, sym, filled, entry, fmt(sl_r, f['tick']), 'tanpa TP (SL ikut naik)' if trail else 'TP ' + fmt(tp_r, f['tick']))
+        report(self.cfg, {'event': 'open', 'strategy': strat, 'ticket': ticket, 'symbol': sym, 'side': side, 'price': entry, 'sl': sl_r, 'tp': tp_r, 'lot': filled, 'time': t, 'trail': trail})
 
     def close_now(self, sym, qty, side='SELL'):
         try: self.api.post('/fapi/v1/order', {'symbol': sym, 'side': 'SELL' if side == 'BUY' else 'BUY', 'type': 'MARKET', 'quantity': fmt(qty, self.filters[sym]['step']), 'reduceOnly': 'true'})
@@ -772,13 +780,15 @@ class Bot:
                 pnl += sum(float(x['income']) for x in inc)
             except RuntimeError as e:
                 log.warning('%s: hasil trade tidak terbaca: %s', sym, e)
-            if exit_px is not None:
+            if p.get('trail'):                                             # trailing BIG: the SL moved, so profit decides TP / SL
+                reason = 'tp' if pnl > 0 else 'sl'
+            elif exit_px is not None:
                 r1 = abs(p['sl'] - p['entry'])                             # 1R in price
                 reason = 'tp' if abs(exit_px - p['tp']) <= 0.25 * r1 else 'sl' if abs(exit_px - p['sl']) <= 0.25 * r1 else 'manual'
             log.info('Posisi %s ditutup (%s) | hasil %.2f USDT', sym, reason.upper(), pnl)
             self.bal_pushed = 0                                   # send the new balance on the next loop
             report(self.cfg, {'event': 'close', 'strategy': strat_of(p), 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': exit_px or p['entry'], 'profit': round(pnl, 2),
-                              'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p['sl'], 'tp': p['tp'],
+                              'reason': reason, 'lot': p['qty'], 'entry': p['entry'], 'sl': p.get('sl0', p['sl']), 'tp': p['tp'], 'trail': bool(p.get('trail')),
                               'time': int(max(float(x['time']) for x in buys) / 1000) if buys else int(time.time())})
             cl = self.st.setdefault('closed', []); cl.append([int(time.time()), round(pnl, 4), reason]); del cl[:-300]
             if reason == 'sl': self.st['loss_streak'] = self.st.get('loss_streak', 0) + 1
@@ -788,6 +798,45 @@ class Bot:
                 log.error('REM KALAH BERUNTUN: %d kali SL berturut-turut — tidak membuka posisi baru. Lanjut lagi: python snr_bot.py --reset', mx)
                 notify(self.cfg, f'REM AKTIF: {mx} kali SL berturut-turut. Bot tidak membuka posisi baru (posisi terbuka tetap jalan).\nLanjut lagi: python snr_bot.py --reset', 'error')
             del self.st['positions'][sym]; save_state(self.st)
+
+    # ----- after every H4 close: raise the SL of trailing BIG positions -----
+    def trail(self, now_s):
+        k_mult = float(self.cfg.get('big_trail_k') or 0)
+        if self.cfg['dry_run'] or k_mult <= 0: return
+        for sym, p in list(self.st['positions'].items()):
+            if not p.get('trail') or p.get('side') != 'BUY': continue
+            try:
+                f = self.filters[sym]; h4 = closed_klines(self.api, sym, '4h', 1000, now_s)
+                if len(h4) < 30: continue
+                a = wilder(h4, 14); start = p['opened'] // H4 * H4; best = -1e300; cand = -1e300
+                for j, r in enumerate(h4):                         # same as the backtest: every closed H4 candle from the entry candle on
+                    if r[0] < start: continue
+                    best = max(best, r[4]); cand = max(cand, best - k_mult * a[j])
+                new = math.floor(cand / f['tick'] + 1e-9) * f['tick']
+                if not new > p['sl'] + 0.5 * f['tick']: continue
+                px = float(self.api.get('/fapi/v1/ticker/price', {'symbol': sym})['price'])
+                if new >= px:                                      # the new SL is already above the price: close now (gap guard)
+                    log.info('%s: SL trailing baru %s di atas harga %s — posisi ditutup sekarang', sym, fmt(new, f['tick']), px)
+                    self.close_now(sym, p['qty'], 'BUY'); continue
+                old = p['sl']
+                try: self.api.delete('/fapi/v1/algoOpenOrders', {'symbol': sym})      # a trailing BIG has only its SL order
+                except RuntimeError as e: log.warning('%s: SL lama tidak bisa dibatalkan (%s) — SL tetap %s', sym, e, fmt(old, f['tick'])); continue
+                for lvl in (new, old):
+                    try:
+                        o = self.api.post('/fapi/v1/algoOrder', {'algoType': 'CONDITIONAL', 'symbol': sym, 'side': 'SELL', 'type': 'STOP_MARKET', 'triggerPrice': fmt(lvl, f['tick']),
+                                                                 'closePosition': 'true', 'workingType': 'CONTRACT_PRICE'})
+                        p['sl'], p['sl_id'] = lvl, o.get('algoId'); break
+                    except RuntimeError as e: log.warning('%s: SL %s gagal dipasang: %s', sym, fmt(lvl, f['tick']), e)
+                else:
+                    log.error('%s: SL tidak bisa dipasang lagi — posisi ditutup demi keamanan', sym)
+                    notify(self.cfg, f'{sym}: SL trailing tidak bisa dipasang. Posisi ditutup demi keamanan — cek Binance.', 'error')
+                    self.close_now(sym, p['qty'], 'BUY'); continue
+                save_state(self.st)
+                if p['sl'] == new:
+                    r1 = p['entry'] - p.get('sl0', old)
+                    log.info('%s: SL BIG naik %s → %s (%+.2fR terkunci)', sym, fmt(old, f['tick']), fmt(new, f['tick']), (new - p['entry']) / r1 if r1 > 0 else 0)
+            except (RuntimeError, KeyError, ValueError) as e:
+                log.warning('%s: trailing SL gagal dicek: %s', sym, e)
 
     def summary(self):
         """status message at the hours in summary_hours_kst (Korea time, UTC+9): balance, result since the last summary, open positions"""
@@ -944,6 +993,8 @@ class Bot:
             if bucket > self.st.get('last_scan', 0) and now_s - bucket >= 20:      # 20 s after every H4 close (UTC 00/04/08/12/16/20)
                 self.st['last_scan'] = bucket; save_state(self.st)
                 log.info('H4 %s UTC tutup — memeriksa %d koin', datetime.fromtimestamp(bucket, timezone.utc).strftime('%Y-%m-%d %H:%M'), len(self.coins))
+                try: self.trail(now_s)
+                except Exception as e: log.warning('Trailing SL gagal: %s', e)
                 sigs = self.scan(now_s)
                 self.open_signals(sigs)
             hb = now_s // 3600 * 3600
@@ -1006,6 +1057,8 @@ def sync_command(args):
         typ = lambda a: str(a.get('orderType') or a.get('type') or '')
         sl = next((float(a['triggerPrice']) for a in mine if 'STOP' in typ(a) and 'PROFIT' not in typ(a)), 0.0)
         tp = next((float(a['triggerPrice']) for a in mine if 'TAKE_PROFIT' in typ(a)), 0.0)
+        trail = strat == 'btc' and side == 'BUY' and tp <= 0 and sl > 0 and float(cfg.get('big_trail_k') or 0) > 0
+        if trail: tp = float(r.get('entryPrice') or 0) + 10 * (float(r.get('entryPrice') or 0) - sl)
         if not (sl > 0 and tp > 0):
             print(f'{sym}: SL/TP tidak ditemukan di Binance — dilewati, cek manual di app Binance.'); continue
         tr = history(sym)
@@ -1016,8 +1069,9 @@ def sync_command(args):
              'qty': abs(amt), 'opened': int(fills[0]['time']) // 1000, 'trim_id': None,
              'sl_id': next((a.get('algoId') for a in mine if 'STOP' in typ(a) and 'PROFIT' not in typ(a)), None),
              'tp_id': next((a.get('algoId') for a in mine if 'TAKE_PROFIT' in typ(a)), None)}
+        if trail: p.update(trail=True, sl0=sl)
         st['positions'][sym] = p
-        report(cfg, {'event': 'open', 'strategy': strat, 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': p['entry'], 'sl': sl, 'tp': tp, 'lot': p['qty'], 'time': p['opened']})
+        report(cfg, {'event': 'open', 'strategy': strat, 'ticket': p['ticket'], 'symbol': sym, 'side': side, 'price': p['entry'], 'sl': sl, 'tp': tp, 'lot': p['qty'], 'time': p['opened'], 'trail': trail})
         print(f'{sym}: diambil alih ({STRAT_NAME[strat]} {side}, entry {p["entry"]}, SL {sl}, TP {tp}) — TP/SL-nya nanti dilaporkan.')
     save_state(st)
     # 2) missed close reports

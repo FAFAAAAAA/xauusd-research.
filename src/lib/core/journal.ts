@@ -41,7 +41,8 @@ export function cleanTrade(b: Record<string, unknown>, id: string): JournalTrade
   if (!(openedAt > 0)) return 'Waktu buka tidak valid';
   const result = (['open', 'tp', 'sl', 'be', 'manual'] as const).includes(b.result as JournalResult) ? (b.result as JournalResult) : 'open';
   let exit = num(b.exit);
-  if (result === 'tp') exit = tp; else if (result === 'sl' && !(exit > 0)) exit = sl; else if (result === 'be' && !(exit > 0)) exit = entry;
+  // a trailing stop (BIG, 28 Nov 2026) can win far from the reference TP: keep the real exit when one is given
+  if (result === 'tp' && !(exit > 0)) exit = tp; else if (result === 'sl' && !(exit > 0)) exit = sl; else if (result === 'be' && !(exit > 0)) exit = entry;
   if (result !== 'open' && !(exit > 0)) return 'Harga keluar wajib diisi';
   const closedAt = result === 'open' ? null : (num(b.closedAt) > 0 ? num(b.closedAt) : Date.now());
   const pnlIn = num(b.pnl);

@@ -21,10 +21,11 @@ export const STRATEGY_INFO: Record<string, Info> = {
   btc: {
     name: 'BIG', side: 'BUY', coins: 'BTC ETH SOL BNB XRP DOGE',
     rules: ['Tren naik: close H4 di atas EMA200 H4, dan BTC juga di atas EMA200 H4', 'Close H4 pertama di atas high 50 candle H4 sebelumnya',
-      'Tembus kuat: close minimal 0,5 × ATR14 H4 di atas high itu', 'SL close − 1 × ATR14 D1 · TP 2 × risiko', 'Maks 3 posisi BIG'],
-    facts: [['Win', '46%'], ['Trade/bulan', '±4,3'], ['Rata-rata', '+0,34R'], ['Per tahun', '±+17,5R'], ['2021–23', '+0,46R'], ['2024–26', '+0,24R']],
-    years: [['2021', 36.8], ['2022', 2.4], ['2023', 32.0], ['2024', 4.4], ['2025', 16.6], ['2026', 10.0]],
-    note: 'Pengimbang saat pasar naik: untung justru saat ALT SELL rugi. Aturan 21 Nov 2026 (tembus kuat + filter BTC) menaikkan rata-rata dari +0,19R ke +0,34R per trade.',
+      'Tembus kuat: close minimal 0,5 × ATR14 H4 di atas high itu', 'SL awal close − 1 × ATR14 D1 · tanpa TP',
+      'Tiap candle H4 tutup: SL naik ke close tertinggi sejak entry − 4 × ATR14 H4 (tidak pernah turun)', 'Maks 3 posisi BIG'],
+    facts: [['Win', '36%'], ['Trade/bulan', '±3,6'], ['Rata-rata', '+1,33R'], ['Per tahun', '±+57R'], ['Turun terdalam', '17R'], ['PF IS / OOS', '3,46 / 3,31']],
+    years: [['2021', 122.7], ['2022', 18.0], ['2023', 58.3], ['2024', 115.9], ['2025', 24.8], ['2026', 12.6]],
+    note: 'Pengimbang saat pasar naik. Sejak 28 Nov 2026 tanpa TP: SL ikut naik mengikuti tren, jadi sering kalah kecil lalu sesekali untung besar. Uji 2020–Okt 2026: PF 3,40 (dulu TP 2R: 1,54), tiap tahun plus, juga di BTC + ETH saja.',
   },
   lst: {
     name: 'LISTING', side: 'SELL', coins: 'Koin baru listing',
@@ -73,7 +74,7 @@ export const STRATEGY_INFO: Record<string, Info> = {
     facts: [['Win', '41%'], ['Trade/bulan', '±7,9'], ['Rata-rata', '+0,19R'], ['Per tahun', '±+18R'], ['Turun terdalam', '20R'], ['Kalah beruntun', '14×'],
       ['Bulan rugi', '44%'], ['Bulan terburuk', '−10,3R']],
     years: [['2020', 35.6], ['2021', 13.7], ['2022', 12.2], ['2023', -5.6], ['2024', 42.4], ['2025', 33.3], ['2026', -7.3]],
-    note: 'Uji 448 koin termasuk yang sudah delist, 2020–Nov 2026: PF 1,29 (IS 1,29 / OOS 1,30), biaya ×3 PF 1,18. Bersama ALT + BIG + MACD rasio untung/turun naik dari 2,87 ke 3,33.',
+    note: 'Uji 448 koin termasuk yang sudah delist, 2020–Nov 2026: PF 1,29 (IS 1,29 / OOS 1,30), biaya ×3 PF 1,18. Dimatikan 28 Nov 2026: di semua koin likuid malah menaikkan turun terdalam bot (29,5R → 39,9R).',
   },
   bz: {
     name: 'BZ', side: 'SELL', coins: 'Semua koin likuid',

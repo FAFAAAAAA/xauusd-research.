@@ -119,7 +119,8 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
   const bot = strat === 'snr' || strat === 'btc' || strat === 'mb' || strat === 'lst' || strat === 'z7' || strat === 'bz';
   const lbl = strat === 'nas' ? 'v1 NAS' : strat === 'v1' ? 'v1 Level' : strat === 'snr' ? 'ALT' : strat === 'btc' ? 'BIG' : strat === 'mb' ? 'MACD' : strat === 'lst' ? 'LISTING' : strat === 'z7' ? 'Z7' : strat === 'bz' ? 'BZ' : 'v1 XAU';
   const symbol = typeof b.symbol === 'string' ? b.symbol.replace(/[^0-9A-Za-z]/g, '').slice(0, 24).toUpperCase() : '';
-  const src = bot ? `Bot Binance${symbol ? ` ${symbol}` : ''}` : 'EA';
+  // BIG trailing (28 Nov 2026): no TP order; the bot sends a 10R reference TP and trail=true
+  const src = bot ? `Bot Binance${symbol ? ` ${symbol}` : ''}${b.trail === true ? ' · SL ikut naik' : ''}` : 'EA';
   const who = bot ? `Bot ${lbl}${symbol ? ` ${symbol}` : ''}` : `EA ${lbl}`;
   // prices of small coins need more than 2 decimals
   const fp = (x: number) => (Math.abs(x) >= 100 ? x.toFixed(2) : Math.abs(x) >= 1 ? x.toFixed(4) : x.toPrecision(5));
@@ -176,14 +177,14 @@ export async function handleEaReport(db: Db, raw: string, opts: { fetchImpl?: Fe
 export function snrMessage(t: JournalTrade, symbol: string, event: 'open' | 'close', tz: string, now: number, label = 'ALT'): string {
   const fp = (x: number) => (Math.abs(x) >= 100 ? x.toFixed(2) : Math.abs(x) >= 1 ? x.toFixed(4) : x.toPrecision(5));
     const pctOf = (x: number) => `${x >= t.entry ? '+' : '−'}${(Math.abs(x / t.entry - 1) * 100).toFixed(2)}%`;
-  const riskUsd = Math.abs(t.entry - t.sl) * t.lot;
+  const riskUsd = Math.abs(t.entry - t.sl) * t.lot, trail = /SL ikut naik/.test(t.note);
   const dur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 1440 ? `${Math.floor(m / 1440)}h ${Math.floor((m % 1440) / 60)}j` : `${Math.floor(m / 60)}j ${m % 60}m`; };
   const coin = escapeHtml(symbol.replace(/USDT$/, '') || 'koin');
   return event === 'open'
     ? [`${t.side === 'SELL' ? '🔴' : '🟢'} <b>${t.side} ${coin}</b> · ${escapeHtml(label)}`, '━━━━━━━━━━━━',
-      `Entry   <code>${fp(t.entry)}</code>`, `SL      <code>${fp(t.sl)}</code>  (${pctOf(t.sl)})`, `TP      <code>${fp(t.tp)}</code>  (${pctOf(t.tp)})`,
+      `Entry   <code>${fp(t.entry)}</code>`, `SL      <code>${fp(t.sl)}</code>  (${pctOf(t.sl)})`, trail ? 'TP      tanpa TP · SL ikut naik' : `TP      <code>${fp(t.tp)}</code>  (${pctOf(t.tp)})`,
       `Risiko  <b>${riskUsd.toFixed(2)} USDT</b> · ${t.lot} ${coin}`, '', `🕐 ${escapeHtml(formatInTz(t.openedAt, tz))}`].join('\n')
-    : [`${t.result === 'tp' ? '✅ <b>TP</b>' : t.result === 'sl' ? '❌ <b>SL</b>' : '⚪ <b>Ditutup manual</b>'} · <b>${coin}</b> · ${escapeHtml(label)}`, '━━━━━━━━━━━━',
+    : [`${t.result === 'tp' ? (trail ? '✅ <b>Untung · SL ikut naik</b>' : '✅ <b>TP</b>') : t.result === 'sl' ? '❌ <b>SL</b>' : '⚪ <b>Ditutup manual</b>'} · <b>${coin}</b> · ${escapeHtml(label)}`, '━━━━━━━━━━━━',
       `Hasil   <b>${(t.pnl ?? 0) >= 0 ? '+' : '−'}${Math.abs(t.pnl ?? 0).toFixed(2)} USDT</b>${riskUsd > 0 ? `  (${(t.pnl ?? 0) >= 0 ? '+' : '−'}${(Math.abs(t.pnl ?? 0) / riskUsd).toFixed(1)}R)` : ''}`,
       `Harga   ${fp(t.entry)} → ${fp(t.exit ?? 0)}`, `Durasi  ${dur((t.closedAt ?? now) - t.openedAt)}`, '', `🕐 ${escapeHtml(formatInTz(t.closedAt ?? now, tz))}`].join('\n');
 }
