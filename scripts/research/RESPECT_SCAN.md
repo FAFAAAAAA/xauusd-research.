@@ -313,3 +313,24 @@ Metodenya sama dengan tahap 7: RR 1:2 tanpa parsial, aturan diperingkat dari dat
 - Frekuensinya hanya **~1 trade/minggu**, jadi terlalu jarang untuk gaya scalping.
 - Biaya lebih mahal ikut mengurangi jumlah trade, karena aturan risiko ≥ 10x biaya. Uji biaya tidak murni.
 - Ini edge yang sama dengan tahap 3-5 (breakout D1), versi pegang ≤ 60 menit. **Pola scalping khas tidak ada yang lolos.**
+
+## Tahap 10: scalping XAU tanpa biaya, apakah polanya punya edge? (`COST_BPS=0 scalp_xau.py`)
+- **Aturan sama dengan tahap 9**, biaya 0, dan tanpa batas risiko minimal (semua SL ikut dihitung). Total 1.044 kombinasi.
+- **Hanya 50% aturan yang PF mentah > 1** (2010-21: 50%, 2022-26: 48%). Seperti lempar koin, jadi kebanyakan pola **tidak punya edge sama sekali**, bahkan tanpa biaya.
+- **Biaya titik impas** = biaya maksimal per trade sebelum aturan rugi. 1 bps = $0,20 di harga 2000, atau $0,40 di harga 4000.
+
+| Ide | PF mentah median 2010-21 / 2022-26 | Aturan terbaik 2010-21: PF mentah 2022-26 | Biaya impas 2022-26 | Kesimpulan |
+|---|---|---|---|---|
+| **D1 break** | **1,39 / 1,32** | 1,39 | **3,2 bps** (~$0,63 @2000) | Edge nyata, tahan biaya ECN |
+| Open NY 15m fade | 1,10 / 1,14 | 1,37 | 2,2 bps | Edge tipis, n kecil (~1/minggu) |
+| Open NY 15m mom | 1,04 / 1,16 | 1,26 | 1,9 bps | Mom dan fade sama-sama > 1, jadi efek volatilitas, bukan arah |
+| Open London 5m mom | 1,07 / 1,14 | 1,37 | 1,0 bps | Habis oleh biaya |
+| Angka bulat $10 tembus | 1,09 / 1,05 | 1,06 | 0,3 bps | Praktis tanpa edge |
+| Sweep Asia / PDH-PDL | 0,96-1,03 / 0,92-1,01 | 0,92-1,17 | ≤ 0,7 bps | Tanpa edge |
+| Angka bulat pantul, $5 tembus | 0,91-1,02 / 0,96-0,99 | 0,98-1,00 | ≈ 0 | Tanpa edge |
+| TWAP pantul | 0,94 / 0,98 | 0,96 | < 0 | Rugi bahkan tanpa biaya |
+
+### Kesimpulan
+- **Biaya bukan satu-satunya masalah.** Sebagian besar pola scalping (sweep, angka bulat, TWAP, fade/momentum London) tidak punya edge **meski tanpa biaya**.
+- **Momentum/fade pembukaan NY** punya edge mentah kecil. Tapi impasnya hanya ~2 bps, dan biaya realistis (spread + komisi + slippage) sudah 1,5-2,5 bps. Sisanya terlalu tipis.
+- **Hanya breakout swing D1** yang punya edge cukup besar (impas ~3-4 bps) untuk bertahan di akun ECN berbiaya rendah.
