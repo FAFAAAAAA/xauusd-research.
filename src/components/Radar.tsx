@@ -30,15 +30,12 @@ const closeness = (it: Item) => {
 };
 const passed = (it: Item) => (it.strat === 'snr' || it.strat === 'btc') && it.dist != null && it.dist <= 0;
 const sayClose = (it: Item) => (passed(it) ? 'sudah lolos level, tunggu candle tutup' : it.strat === 'mb' ? 'lembah MACD 1 dari 2' : it.strat === 'lst' ? 'menunggu 24 jam setelah listing' : `${Math.round(closeness(it) * 100)}% menuju level`);
-/** ring gauge: fills up as the price comes closer; full ring with a check = level passed */
+/** signal bars: more bars light up as the price nears the level; all bars + a pulsing dot = level passed (waiting for the close) */
 function Gauge({ it }: { it: Item }) {
-  const r = 11, C = 2 * Math.PI * r, f = closeness(it), done = passed(it);
-  return <span className="rd-gauge" role="img" aria-label={sayClose(it)} title={sayClose(it)}>
-    <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden>
-      <circle cx="14" cy="14" r={r} fill={done ? 'currentColor' : 'none'} stroke="currentColor" strokeOpacity={done ? 1 : 0.18} strokeWidth="3" />
-      {done ? <path d="M9 14.5l3.2 3.2L19 11" fill="none" stroke="var(--surface)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-        : <circle cx="14" cy="14" r={r} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.max(0.01, f) * C} ${C}`} transform="rotate(-90 14 14)" />}
-    </svg>
+  const done = passed(it), on = done ? 5 : Math.max(1, Math.ceil(closeness(it) * 5));
+  return <span className={`rd-bars${done ? ' done' : ''}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}>
+    {[0, 1, 2, 3, 4].map((k) => <i key={k} className={k < on ? 'on' : ''} style={{ height: 6 + k * 3.5 }} />)}
+    {done ? <b aria-hidden /> : null}
   </span>;
 }
 
@@ -46,6 +43,9 @@ function RadarChart({ it, tz }: { it: Item; tz: string }) {
   const [iv, setIv] = useState<Iv>(it.strat === 'lst' ? '1h' : '4h');
   const [data, setData] = useState<{ iv: Iv; candles: Candle[] } | null>(null);
   const [err, setErr] = useState(false);
+  // the chart is built after the sheet has slid up (building it during the slide made the animation stutter on iPhone)
+  const [ready, setReady] = useState(false);
+  useEffect(() => { const t = window.setTimeout(() => setReady(true), 300); return () => window.clearTimeout(t); }, []);
   useEffect(() => {
     let off = false; setErr(false);
     fetchK(it.sym, iv, 500).then((c) => { if (off) return; if (c && c.length) setData({ iv, candles: c }); else setErr(true); });
@@ -69,14 +69,15 @@ function RadarChart({ it, tz }: { it: Item; tz: string }) {
   return <div className="stack" style={{ gap: 10 }}>
     <Seg scroll label="Timeframe" options={TFS} value={iv} onChange={(v) => setIv(v)} />
     <div className="chartbox trade-review-chart">
-      {data ? <CandleChart candles={data.candles} timezone={tz} fitKey={`radar-${it.sym}-${data.iv}`} drawKey={it.sym} initialBars={90} levels={levels} tf={{ options: TFS, value: iv, onChange: setIv }} />
-        : err ? <div className="empty">Chart tidak bisa dimuat.</div> : <div className="empty"><Spinner /></div>}
-      {data && data.iv !== iv && !err ? <div className="cv-loading"><Spinner /></div> : null}
+      {data && ready ? <CandleChart candles={data.candles} timezone={tz} fitKey={`radar-${it.sym}-${data.iv}`} drawKey={it.sym} initialBars={90} levels={levels} tf={{ options: TFS, value: iv, onChange: setIv }} />
+        : err ? <div className="empty">Chart tidak bisa dimuat.</div> : <div className="empty">{ready ? <Spinner /> : null}</div>}
+      {data && ready && data.iv !== iv && !err ? <div className="cv-loading"><Spinner /></div> : null}
     </div>
   </div>;
 }
 
 export default function Radar({ tz }: { tz: string }) {
+  useEffect(() => { import('./CandleChart').catch(() => undefined); }, []);   // chart code ready before the first tap
   const [v, setV] = useState<View | null>(null);
   const [err, setErr] = useState(false);
   const [open, setOpen] = useState<Item | null>(null);
@@ -91,8 +92,7 @@ export default function Radar({ tz }: { tz: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return <section className="group">
-    <SecHead title="👀 Radar" />
-    <p className="small mute rd-key">Lingkaran makin penuh = makin dekat. Centang = sudah lolos, tunggu candle tutup.</p>
+    <SecHead title={<span className="rd-eye" role="img" aria-label="Radar"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3.2" /><circle cx="13.2" cy="10.8" r="0.9" fill="currentColor" stroke="none" /></svg></span>} />
     {!v ? (err ? <p className="small mute">Radar belum bisa dimuat.</p> : <div style={{ padding: 12 }}><Spinner /></div>)
       : !v.items.length ? <p className="small mute">Belum ada koin yang dekat sinyal.</p>
       : <div className="hcards">
