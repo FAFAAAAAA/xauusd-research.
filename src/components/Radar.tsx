@@ -30,11 +30,18 @@ const closeness = (it: Item) => {
 };
 const passed = (it: Item) => (it.strat === 'snr' || it.strat === 'btc') && it.dist != null && it.dist <= 0;
 const sayClose = (it: Item) => (passed(it) ? 'sudah lolos level, tunggu candle tutup' : it.strat === 'mb' ? 'lembah MACD 1 dari 2' : it.strat === 'lst' ? 'menunggu 24 jam setelah listing' : `${Math.round(closeness(it) * 100)}% menuju level`);
-/** three dots: more dots filled = closer to the level; all three blinking in turn = level passed (waiting for the candle close) */
+/** stage of a coin: 1 = still far (red), 2 = close (yellow), 3 = level passed / signal now (green). Owner's colours, 29 Nov 2026 */
+const stage = (it: Item): 1 | 2 | 3 => {
+  if (it.strat === 'lst') { const left = (it.at ?? 0) - Date.now(); return left <= 0 ? 3 : left <= 12 * 36e5 ? 2 : 1; }
+  if (it.strat === 'mb') return 2;                                     // first MACD valley there, waiting for the second
+  if (passed(it)) return 3;
+  return it.dist != null && it.dist <= 0.5 ? 2 : 1;                   // within half an ATR = close
+};
+/** three dots: lit dots take the stage colour, the rest stay faint */
 function Gauge({ it }: { it: Item }) {
-  const done = passed(it), on = done ? 3 : Math.max(1, Math.ceil(closeness(it) * 3));
-  return <span className={`rd-dots${done ? ' done' : ''}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}>
-    {[0, 1, 2].map((k) => <i key={k} className={k < on ? 'on' : ''} />)}
+  const st = stage(it), tone = st === 3 ? 'go' : st === 2 ? 'near' : 'far';
+  return <span className={`rd-dots ${tone}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}>
+    {[0, 1, 2].map((k) => <i key={k} className={k < st ? 'on' : ''} />)}
   </span>;
 }
 
@@ -58,16 +65,16 @@ function RadarChart({ it, tz }: { it: Item; tz: string }) {
   // lines only, no words: the price label on the right axis carries the colour (grey = level / entry, red = SL, green = TP)
   const levels = useMemo<ChartLevel[]>(() => {
     const L: ChartLevel[] = [];
-    if (it.strat === 'snr') L.push({ price: it.level, title: '', color: '#5f6873', width: 3 });
-    if (it.strat === 'btc') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 2 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 3 }); }
-    if (it.strat === 'mb') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 2 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 2 }); }
+    if (it.strat === 'snr') L.push({ price: it.level, title: '', color: '#5f6873', width: 2 });
+    if (it.strat === 'btc') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 1 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 2 }); }
+    if (it.strat === 'mb') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 1 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 2 }); }
     if (it.strat === 'lst') L.push({ price: it.trigger, title: '', color: '#5f6873', width: 2 });
-    L.push({ price: it.sl, title: '', color: '#cf6674', width: 2 }, { price: it.tp, title: '', color: '#389b78', width: 2 });
+    L.push({ price: it.sl, title: '', color: '#cf6674', width: 1 }, { price: it.tp, title: '', color: '#389b78', width: 1 });
     return L;
   }, [it]);
   return <div className="stack" style={{ gap: 10 }}>
     <Seg scroll label="Timeframe" options={TFS} value={iv} onChange={(v) => setIv(v)} />
-    <div className="chartbox trade-review-chart">
+    <div className="chartbox trade-review-chart rd-chart">
       {data && ready ? <CandleChart candles={data.candles} timezone={tz} fitKey={`radar-${it.sym}-${data.iv}`} drawKey={it.sym} initialBars={90} levels={levels} tf={{ options: TFS, value: iv, onChange: setIv }} />
         : err ? <div className="empty">Chart tidak bisa dimuat.</div> : <div className="empty">{ready ? <Spinner /> : null}</div>}
       {data && ready && data.iv !== iv && !err ? <div className="cv-loading"><Spinner /></div> : null}
