@@ -30,19 +30,18 @@ const closeness = (it: Item) => {
 };
 const passed = (it: Item) => (it.strat === 'snr' || it.strat === 'btc') && it.dist != null && it.dist <= 0;
 const sayClose = (it: Item) => (passed(it) ? 'sudah lolos level, tunggu candle tutup' : it.strat === 'mb' ? 'lembah MACD 1 dari 2' : it.strat === 'lst' ? 'menunggu 24 jam setelah listing' : `${Math.round(closeness(it) * 100)}% menuju level`);
-/** stage of a coin: 1 = still far (red), 2 = close (yellow), 3 = level passed / signal now (green). Owner's colours, 29 Nov 2026 */
-const stage = (it: Item): 1 | 2 | 3 => {
-  if (it.strat === 'lst') { const left = (it.at ?? 0) - Date.now(); return left <= 0 ? 3 : left <= 12 * 36e5 ? 2 : 1; }
-  if (it.strat === 'mb') return 2;                                     // first MACD valley there, waiting for the second
-  if (passed(it)) return 3;
-  return it.dist != null && it.dist <= 0.5 ? 2 : 1;                   // within half an ATR = close
+/** filled share of the line: ¼ / ½ / ¾ as the price comes closer, full (green) when the level is already passed */
+const fill = (it: Item): number => {
+  if (passed(it)) return 1;
+  if (it.strat === 'lst') { const left = (it.at ?? 0) - Date.now(); return left <= 0 ? 1 : left <= 6 * 36e5 ? 0.75 : left <= 12 * 36e5 ? 0.5 : 0.25; }
+  if (it.strat === 'mb') return 0.5;                                   // first of the two MACD valleys is there
+  const d = it.dist ?? 1;
+  return d <= 0.33 ? 0.75 : d <= 0.66 ? 0.5 : 0.25;
 };
-/** three dots: lit dots take the stage colour, the rest stay faint */
+/** a short line: black part = how close, full green line = level passed (owner's design, 29 Nov 2026) */
 function Gauge({ it }: { it: Item }) {
-  const st = stage(it), tone = st === 3 ? 'go' : st === 2 ? 'near' : 'far';
-  return <span className={`rd-dots ${tone}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}>
-    {[0, 1, 2].map((k) => <i key={k} className={k < st ? 'on' : ''} />)}
-  </span>;
+  const f = fill(it), done = f >= 1;
+  return <span className={`rd-line${done ? ' done' : ''}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}><i style={{ width: `${f * 100}%` }} /></span>;
 }
 
 function RadarChart({ it, tz }: { it: Item; tz: string }) {
@@ -65,10 +64,10 @@ function RadarChart({ it, tz }: { it: Item; tz: string }) {
   // lines only, no words: the price label on the right axis carries the colour (grey = level / entry, red = SL, green = TP)
   const levels = useMemo<ChartLevel[]>(() => {
     const L: ChartLevel[] = [];
-    if (it.strat === 'snr') L.push({ price: it.level, title: '', color: '#5f6873', width: 2 });
-    if (it.strat === 'btc') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 1 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 2 }); }
-    if (it.strat === 'mb') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 1 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 2 }); }
-    if (it.strat === 'lst') L.push({ price: it.trigger, title: '', color: '#5f6873', width: 2 });
+    if (it.strat === 'snr') L.push({ price: it.level, title: '', color: '#5f6873', width: 1 });
+    if (it.strat === 'btc') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 1 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 1 }); }
+    if (it.strat === 'mb') { L.push({ price: it.level, title: '', color: '#87909c', dashed: true, width: 1 }); L.push({ price: it.trigger, title: '', color: '#5f6873', width: 1 }); }
+    if (it.strat === 'lst') L.push({ price: it.trigger, title: '', color: '#5f6873', width: 1 });
     L.push({ price: it.sl, title: '', color: '#cf6674', width: 1 }, { price: it.tp, title: '', color: '#389b78', width: 1 });
     return L;
   }, [it]);
@@ -102,7 +101,7 @@ export default function Radar({ tz }: { tz: string }) {
     {!v ? (err ? <p className="small mute">Radar belum bisa dimuat.</p> : <div style={{ padding: 12 }}><Spinner /></div>)
       : !v.items.length ? <p className="small mute">Belum ada koin yang dekat sinyal.</p>
       : <div className="hcards">
-        {v.items.map((it) => (
+        {[...v.items].sort((a, b) => fill(b) - fill(a) || (a.dist ?? 9) - (b.dist ?? 9) || (a.at ?? 0) - (b.at ?? 0)).map((it) => (
           <button key={`${it.strat}-${it.sym}`} className="hcard opencard" onClick={() => setOpen(it)}>
             <span className={`hc-side op-badge ${it.side === 'BUY' ? 'b' : 's'}`}>{it.side === 'BUY' ? 'B' : 'S'}</span>
             <span className="op-left"><strong className="hc-name">{coin(it.sym)}</strong><span className="op-strat">{NAME[it.strat]}{it.strat === 'snr' && v.btcDrop != null && v.btcDrop < -0.04 ? ' · ditahan' : ''}</span></span>

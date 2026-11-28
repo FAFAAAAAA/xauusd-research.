@@ -1261,14 +1261,9 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .si-yr strong { font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .si-yr small { font-size: 10.5px; color: var(--mute); }
 
-/* Radar: three dots in traffic-light colours (owner's choice): red = still far, yellow = close, green = level passed; unlit dots faint */
+/* Radar: a short line (owner's design): black part = how close (¼ ½ ¾), full green line = level passed */
 .rd-eye { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--sunk); color: var(--ink); }
-.rd-dots { display: inline-flex; align-items: center; gap: 5px; padding: 4px 2px; }
-.rd-dots i { display: block; width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 10%, transparent); }
-.rd-dots.far i.on { background: #e5484d; }
-.rd-dots.near i.on { background: #e9a800; }
-.rd-dots.go i.on { background: #2fa36b; animation: rd-blink 1.6s ease-in-out infinite; }   /* opacity only */
-.rd-dots.go i:nth-child(2) { animation-delay: .2s; } .rd-dots.go i:nth-child(3) { animation-delay: .4s; }
-@keyframes rd-blink { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
-@media (prefers-reduced-motion: reduce) { .rd-dots.go i.on { animation: none; } }
+.rd-line { display: block; width: 44px; height: 5px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 12%, transparent); overflow: hidden; }
+.rd-line i { display: block; height: 100%; border-radius: 9px; background: var(--ink); }
+.rd-line.done i { background: #2fa36b; }
 .dt-sheet .trade-review-chart.rd-chart { height: min(66svh, 600px); min-height: 380px; }
