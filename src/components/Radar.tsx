@@ -38,10 +38,11 @@ const fill = (it: Item): number => {
   const d = it.dist ?? 1;
   return d <= 0.33 ? 0.75 : d <= 0.66 ? 0.5 : 0.25;
 };
-/** a short line: black part = how close, full green line = level passed (owner's design, 29 Nov 2026) */
+/** a short line (owner's design, 29 Nov 2026): red under half, yellow from half, full bright green = level broken */
 function Gauge({ it }: { it: Item }) {
   const f = fill(it), done = f >= 1;
-  return <span className={`rd-line${done ? ' done' : ''}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}><i style={{ width: `${f * 100}%` }} /></span>;
+  const tone = done ? 'go' : f >= 0.5 ? 'near' : 'far';   // red under half, yellow from half, green = break
+  return <span className={`rd-line ${tone}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}><i style={{ width: `${f * 100}%` }} /></span>;
 }
 
 function RadarChart({ it, tz }: { it: Item; tz: string }) {
