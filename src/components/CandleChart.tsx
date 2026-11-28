@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import {
-  createChart, ColorType, CrosshairMode, LineStyle,
+  createChart, ColorType, CrosshairMode, LineStyle, TrackingModeExitMode,
   type IChartApi, type ISeriesApi, type UTCTimestamp, type SeriesMarker, type IPriceLine, type Logical,
 } from 'lightweight-charts';
 import { TradePositionOverlay, type TradePosition } from '@/components/TradePositionOverlay';
@@ -40,14 +40,17 @@ const NO_ZONES: ChartZone[] = [], NO_MARKERS: ChartMarker[] = [];   // stable de
  * shifted by the display timezone offset (DST-aware per candle) for the axis only.
  * With drawKey or position: TradingView-like tools (drawings, indicators, full screen).
  */
-export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MARKERS, timezone = 'UTC', fitKey, position, drawKey, initialBars }:
-  { candles: Candle[]; zones?: ChartZone[]; markers?: ChartMarker[]; timezone?: string; fitKey?: string; position?: TradePosition; drawKey?: string; initialBars?: number }) {
+export interface ChartTf { options: ReadonlyArray<readonly [string, string]>; value: string; onChange: (v: any) => void }
+
+export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MARKERS, timezone = 'UTC', fitKey, position, drawKey, initialBars, tf }:
+  { candles: Candle[]; zones?: ChartZone[]; markers?: ChartMarker[]; timezone?: string; fitKey?: string; position?: TradePosition; drawKey?: string; initialBars?: number; tf?: ChartTf }) {
   const box = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
   const series = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const lines = useRef<IPriceLine[]>([]);
   const focus = useRef<() => void>(() => {});
   const lastFit = useRef<string | undefined>(undefined);
+  const lastKey = useRef<string | undefined>(undefined);
   const tools = !!(drawKey || position);
   const candlesRef = useRef(candles); candlesRef.current = candles;
 
@@ -62,6 +65,8 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
       layout: { background: { type: ColorType.Solid, color: v('--surface', '#ffffff') }, textColor: v('--mute', '#8a94a6'), fontFamily: "-apple-system, BlinkMacSystemFont, system-ui, sans-serif" },
       grid: { vertLines: { visible: false }, horzLines: { visible: false } },   // plain background (owner's choice, 9 Nov 2026)
       crosshair: { mode: CrosshairMode.Normal },
+      // touch: the crosshair shows only while a finger holds the chart (long press), like TradingView's app; a tap stays a tap
+      trackingMode: { exitMode: TrackingModeExitMode.OnTouchEnd },
       rightPriceScale: { scaleMargins: { top: 0.14, bottom: 0.14 }, borderColor: v('--line', '#e4e7ec') },
       timeScale: { borderColor: v('--line', '#e4e7ec'), timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 9, minBarSpacing: 0.4 },   // allow zooming far out (years of candles)
       // like TradingView: drag the price or time axis to stretch it, double-tap the axis to reset
@@ -95,6 +100,7 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
       else chart.current?.timeScale().fitContent();
       lastFit.current = fitKey;
     }
+    if (fitKey !== lastKey.current) { lastKey.current = fitKey; try { chart.current?.clearCrosshairPosition(); } catch { /* chart gone */ } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles, markers, timezone, fitKey]);
 
@@ -173,6 +179,14 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ind, candles, timezone, tools]);
 
+  // touch: no crosshair left behind after a tap or a swipe (TradingView's app shows it only while a finger holds the chart)
+  useEffect(() => {
+    const el = box.current, c = chart.current; if (!el || !c || !tools) return;
+    const off = (e: PointerEvent) => { if (e.pointerType !== 'mouse') window.setTimeout(() => { try { c.clearCrosshairPosition(); } catch { /* chart gone */ } }, 0); };
+    el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off);
+    return () => { el.removeEventListener('pointerup', off); el.removeEventListener('pointercancel', off); };
+  }, [tools]);
+
   const autoScale = () => { chart.current?.priceScale('right').applyOptions({ autoScale: true }); };
 
   /* ---- full screen (inside a sheet too: the sheet's transform is switched off while full, see CSS) ---- */
@@ -180,10 +194,12 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
   useEffect(() => {
     const el = box.current?.closest('.chartbox'); if (!el) return;
     el.classList.toggle('chart-full', full);
+    window.setTimeout(() => { try { chart.current?.clearCrosshairPosition(); } catch { /* chart gone */ } }, 60);   // the chart resizes: no stale crosshair
     if (!full) return;
+    const prevOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden';   // the page behind does not scroll
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setFull(false); } };
     window.addEventListener('keydown', esc, true);
-    return () => { window.removeEventListener('keydown', esc, true); el.classList.remove('chart-full'); };
+    return () => { window.removeEventListener('keydown', esc, true); el.classList.remove('chart-full'); document.documentElement.style.overflow = prevOverflow; };
   }, [full]);
 
   /* ---- drawing tools ----
@@ -294,7 +310,7 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
     // right after the chart changes it can answer null for a frame: try again on the next frames
     if (t == null || pr == null) { if (tries < 4) requestAnimationFrame(() => placeAt(x, y, tries + 1)); return; }
     const d = drawRef.current, m = modeRef.current, a = anchorRef.current;
-    const done = (nd: Drawings, kind: Kind, i: number) => { update(nd); setMode(''); setAnchor(null); setSel({ kind, i }); };
+    const done = (nd: Drawings, kind: Kind, i: number) => { update(nd); setMode(''); setAnchor(null); setOpen(false); setSel({ kind, i }); };   // tool column folds away, the new drawing is ready to adjust
     if (m === 'hline') return done({ ...d, h: [...d.h, pr] }, 'h', d.h.length);
     if (m === 'long' || m === 'short') {
       // starts like TradingView's tool: stop 1.5 ATR away, target 2R, 24 bars wide; drag the handles to adjust
@@ -336,9 +352,9 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
       if (modeRef.current) return;
       const h = hitTest(x, y); if (!h) return;
       const cur = selRef.current;
-      // the selected drawing (or any drawing with a mouse) moves at once; on touch an unselected one needs a short hold
-      if ((cur && cur.kind === h.kind && cur.i === h.i) || e.pointerType === 'mouse') { begin(h, x, y, e.pointerId); e.stopPropagation(); return; }
-      timer = window.setTimeout(() => { try { navigator.vibrate?.(12); } catch { /* not supported */ } begin(h, x, y, e.pointerId); }, 280);
+      // the selected drawing (or any drawing with a mouse) moves at once. On touch an unselected drawing is tapped first to select it
+      // (no long-press pick-up: a long press shows the crosshair, like TradingView)
+      if ((cur && cur.kind === h.kind && cur.i === h.i) || e.pointerType === 'mouse') { begin(h, x, y, e.pointerId); e.stopPropagation(); }
     };
     const move = (e: PointerEvent) => {
       if (!drag) {
@@ -394,7 +410,9 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
   ];
 
   return <>
-    <div ref={box} style={{ position: 'absolute', inset: 0 }} />
+    {/* touch-action none: the browser never takes a drag on the chart for page / sheet scrolling (that cancelled drags on iPhone) */}
+    <div ref={box} style={{ position: 'absolute', inset: 0, touchAction: tools ? 'none' : undefined }} />
+    {full && tf ? <div className="cv-tf" role="group" aria-label="Timeframe">{tf.options.map(([v, label]) => <button key={v} type="button" className={tf.value === v ? 'on' : ''} aria-pressed={tf.value === v} onClick={() => tf.onChange(v)}>{label}</button>)}</div> : null}
     {store ? <div className="draw-tools" role="toolbar" aria-label="Alat gambar">
       <button type="button" className={open ? 'on' : ''} aria-label={open ? 'Tutup alat gambar' : 'Buka alat gambar'} aria-expanded={open} title="Alat gambar" onClick={() => { setOpen((o) => !o); setAnchor(null); setMode(''); }}>
         {icon('M4 20l4-1 11-11-3-3L5 16l-1 4zM14 6l3 3')}

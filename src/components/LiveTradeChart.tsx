@@ -10,15 +10,18 @@ const CandleChart = dynamic(() => import('./CandleChart'), { ssr: false });
 /* Chart of a live Binance trade (Trade → Riwayat detail), like the backtest trade review (9 Nov 2026).
  * Candles are read in the browser from Binance's public market data (futures, with the spot data mirror as fallback). */
 const TF: Record<string, number> = { '1m': 60_000, '5m': 300_000, '15m': 900_000, '30m': 1_800_000, '1h': 3_600_000, '4h': 14_400_000, '1d': 86_400_000, '1w': 604_800_000 };
+const TFS = [['1m', 'M1'], ['5m', 'M5'], ['15m', 'M15'], ['30m', 'M30'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1'], ['1w', 'W1']] as const;
 const auto = (ms: number) => (ms < 6 * 3_600_000 ? '5m' : ms < 2 * 86_400_000 ? '15m' : ms < 7 * 86_400_000 ? '1h' : '4h');
 
 export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: JournalTrade; tz: string }) {
-  const [candles, setCandles] = useState<Candle[] | null>(null);   // newest candles refresh while the trade is open
+  // candles with the timeframe they belong to: the chart stays mounted while another timeframe loads (keeps full screen and drawings)
+  const [data, setData] = useState<{ iv: string; candles: Candle[] } | null>(null);   // newest candles refresh while the trade is open
+  const candles = data?.candles ?? null;
   const [err, setErr] = useState(false);
   const [iv, setIv] = useState(() => auto((t.closedAt ?? Date.now()) - t.openedAt));
   useEffect(() => {
     let off = false;
-    setCandles(null); setErr(false);
+    setErr(false);
     const end = t.closedAt ?? Date.now();
     const ms = TF[iv];
     // a long history: up to ~1200 candles before the entry and 300 after the exit (D1 = several years), loaded in pages of 1000
@@ -47,7 +50,7 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
       const all: Candle[] = [];
       for (const rows of res) if (rows) for (const k of rows) all.push(toCandle(k));
       const seen = new Set<number>(), out = all.filter((c) => (seen.has(c.time) ? false : (seen.add(c.time), true))).sort((x, y) => x.time - y.time);
-      if (out.length) setCandles(out); else setErr(true);
+      if (out.length) setData({ iv, candles: out }); else if (!data) setErr(true);
     })();
     return () => { off = true; };
   }, [symbol, t.openedAt, t.closedAt, iv]);
@@ -63,11 +66,11 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
       ]).catch(() => null);
       if (!Array.isArray(rows) || !rows.length) return;
       const fresh = rows.map((k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: k[5] != null ? Number(k[5]) : null } as Candle));
-      setCandles((cur) => {
-        if (!cur || !cur.length) return cur;
-        const m = new Map(cur.map((c) => [c.time, c] as const));
+      setData((cur) => {
+        if (!cur || cur.iv !== iv || !cur.candles.length) return cur;
+        const m = new Map(cur.candles.map((c) => [c.time, c] as const));
         for (const c of fresh) m.set(c.time, c);
-        return [...m.values()].sort((a, b) => a.time - b.time);
+        return { iv, candles: [...m.values()].sort((a, b) => a.time - b.time) };
       });
     };
     const id = window.setInterval(tick, 10_000);
@@ -75,10 +78,11 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
   }, [symbol, iv, t.closedAt]);
   return (
     <div className="stack" style={{ gap: 10 }}>
-    <Seg scroll label="Timeframe" options={[['1m', 'M1'], ['5m', 'M5'], ['15m', 'M15'], ['30m', 'M30'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1'], ['1w', 'W1']] as const} value={iv} onChange={(v) => setIv(v)} />
+    <Seg scroll label="Timeframe" options={TFS} value={iv} onChange={(v) => setIv(v)} />
     <div className="chartbox trade-review-chart">
-      {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`${t.id}-${iv}`} drawKey={symbol} position={{ side: t.side === 'BUY' ? 'long' : 'short', entry: t.openedAt, exit: t.closedAt ?? null, entryPrice: t.entry, stopLoss: t.sl, takeProfit: t.tp, exitPrice: t.exit ?? null } as any} />
+      {candles && data ? <CandleChart candles={candles} timezone={tz} fitKey={`${t.id}-${data.iv}`} drawKey={symbol} tf={{ options: TFS, value: iv, onChange: setIv }} position={{ side: t.side === 'BUY' ? 'long' : 'short', entry: t.openedAt, exit: t.closedAt ?? null, entryPrice: t.entry, stopLoss: t.sl, takeProfit: t.tp, exitPrice: t.exit ?? null } as any} />
         : err ? <div className="empty">Chart tidak bisa dimuat.</div> : <div className="empty"><Spinner /></div>}
+      {data && data.iv !== iv && !err ? <div className="cv-loading" aria-live="polite"><Spinner /></div> : null}
     </div>
     </div>
   );

@@ -18,16 +18,18 @@ const get = (q: string) => Promise.any([
 
 export default function BtcChart({ tz }: { tz: string }) {
   const [iv, setIv] = useState<Iv>('1h');
-  const [candles, setCandles] = useState<Candle[] | null>(null);
+  // candles with their timeframe: the chart stays mounted while another timeframe loads (keeps full screen and drawings)
+  const [data, setData] = useState<{ iv: Iv; candles: Candle[] } | null>(null);
+  const candles = data?.candles ?? null;
   const [err, setErr] = useState(false);
   useEffect(() => {
-    let off = false; setCandles(null); setErr(false);
-    get(`symbol=BTCUSDT&interval=${iv}&limit=1000`).then((c) => { if (off) return; if (c && c.length) setCandles(c); else setErr(true); });
+    let off = false; setErr(false);
+    get(`symbol=BTCUSDT&interval=${iv}&limit=1000`).then((c) => { if (off) return; if (c && c.length) setData({ iv, candles: c }); else setErr(true); });
     const id = window.setInterval(async () => {
       if (document.visibilityState !== 'visible') return;
       const fresh = await get(`symbol=BTCUSDT&interval=${iv}&limit=2`);
       if (off || !fresh) return;
-      setCandles((cur) => { if (!cur) return cur; const m = new Map(cur.map((c) => [c.time, c] as const)); for (const c of fresh) m.set(c.time, c); return [...m.values()].sort((a, b) => a.time - b.time); });
+      setData((cur) => { if (!cur || cur.iv !== iv) return cur; const m = new Map(cur.candles.map((c) => [c.time, c] as const)); for (const c of fresh) m.set(c.time, c); return { iv, candles: [...m.values()].sort((a, b) => a.time - b.time) }; });
     }, 5000);
     return () => { off = true; window.clearInterval(id); };
   }, [iv]);
@@ -35,7 +37,8 @@ export default function BtcChart({ tz }: { tz: string }) {
     <div className="stack" style={{ gap: 10 }}>
       <Seg scroll label="Timeframe" options={IV} value={iv} onChange={(v) => setIv(v)} />
       <div className="chartbox trade-review-chart">
-        {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`btc-${iv}`} drawKey="BTCUSDT" initialBars={80} /> : err ? <div className="mute small" style={{ padding: 20 }}>Chart tidak bisa dimuat.</div> : <div style={{ padding: 20 }}><Spinner /></div>}
+        {candles && data ? <CandleChart candles={candles} timezone={tz} fitKey={`btc-${data.iv}`} drawKey="BTCUSDT" initialBars={80} tf={{ options: IV, value: iv, onChange: setIv }} /> : err ? <div className="mute small" style={{ padding: 20 }}>Chart tidak bisa dimuat.</div> : <div style={{ padding: 20 }}><Spinner /></div>}
+        {data && data.iv !== iv && !err ? <div className="cv-loading" aria-live="polite"><Spinner /></div> : null}
       </div>
     </div>
   );
