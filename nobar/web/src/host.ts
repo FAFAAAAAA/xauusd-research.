@@ -30,6 +30,7 @@ const el = {
   sharePanel: $('sharePanel'),
   shareState: $('shareState'),
   preview: $<HTMLVideoElement>('preview'),
+  shareGrid: $('shareGrid'),
   noAudio: $('noAudio'),
   shareError: $('shareError'),
   shareBtn: $<HTMLButtonElement>('shareBtn'),
@@ -260,6 +261,7 @@ async function startShare(): Promise<void> {
 
   el.preview.srcObject = next;
   show(el.preview, true);
+  el.shareGrid.classList.add('has-preview');
   show(el.noAudio, !at);
   el.shareBtn.textContent = 'Ganti tab';
   el.shareBtn.classList.remove('primary', 'big');
@@ -277,6 +279,7 @@ function stopShare(notify: boolean): void {
   closePc();
   el.preview.srcObject = null;
   show(el.preview, false);
+  el.shareGrid.classList.remove('has-preview');
   show(el.noAudio, false);
   show(el.stopBtn, false);
   el.shareBtn.textContent = 'Pilih tab';

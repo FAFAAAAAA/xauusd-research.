@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#14122a" />
     <meta name="robots" content="noindex" />
     <title>Nobar · tonton</title>
     <link rel="stylesheet" href="/src/styles.css" />
@@ -11,7 +11,7 @@
   </head>
   <body>
     <header class="top" id="topBar">
-      <h1 class="wordmark">Nobar</h1>
+      <h1 class="wordmark"><span class="moon" aria-hidden="true"></span>nobar</h1>
       <span class="role" id="roomLabel"></span>
     </header>
 
@@ -19,11 +19,11 @@
       <p id="inApp" class="note warn" hidden></p>
 
       <!-- PIN gate -->
-      <section id="gate" class="panel" aria-labelledby="gateTitle" hidden>
-        <h2 id="gateTitle" class="lead">Masuk ke room</h2>
+      <section id="gate" class="panel hero lamp" aria-labelledby="gateTitle" hidden>
+        <h2 id="gateTitle" class="lead">Sofanya sudah siap.</h2>
         <form id="pinForm" class="field" novalidate>
-          <label for="pin">PIN dari host</label>
-          <p id="pinHint" class="small">6 angka yang dikirim host lewat WhatsApp.</p>
+          <label for="pin">Masukkan PIN dari host</label>
+          <p id="pinHint" class="small">6 angka yang dia kirim lewat WhatsApp.</p>
           <input
             id="pin"
             class="pin-input"
@@ -44,7 +44,7 @@
       </section>
 
       <!-- Final states: room gone, opened elsewhere -->
-      <section id="gone" class="panel" aria-labelledby="goneTitle" hidden>
+      <section id="gone" class="panel hero" aria-labelledby="goneTitle" hidden>
         <h2 id="goneTitle" class="lead"></h2>
         <p id="goneText" class="quiet"></p>
       </section>
@@ -79,7 +79,7 @@
         </div>
       </section>
 
-      <section id="tips" class="panel" aria-labelledby="tipsTitle" hidden>
+      <section id="tips" class="panel compact" aria-labelledby="tipsTitle" hidden>
         <h2 id="tipsTitle">Sambil telepon WhatsApp</h2>
         <p class="small">
           Pakai earphone supaya suara film tidak ikut masuk ke telepon. Kalau suara film hilang saat telepon, ketuk video
@@ -87,7 +87,7 @@
         </p>
       </section>
 
-      <details id="logBox" class="panel log" hidden>
+      <details id="logBox" class="panel compact log" hidden>
         <summary>Catatan audio dan koneksi</summary>
         <p class="small">
           Dipakai untuk menguji perilaku suara saat telepon WhatsApp. Salin catatan ini dan kirim ke pembuat aplikasi bila

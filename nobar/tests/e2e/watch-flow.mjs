@@ -68,6 +68,7 @@ try {
   const host = await hostCtx.newPage();
   watchConsole(host, 'host');
   await host.goto(BASE);
+  await host.waitForTimeout(400);
   await host.screenshot({ path: `${SHOTS}/1-host-intro.png` });
 
   await host.click('#createBtn');
@@ -99,6 +100,7 @@ try {
   watchConsole(viewer, 'viewer');
   await viewer.goto(link);
   await viewer.waitForSelector('#gate:not([hidden])');
+  await viewer.waitForTimeout(400);
   await viewer.screenshot({ path: `${SHOTS}/2-viewer-pin.png` });
   await viewer.fill('#pin', pin);
   await viewer.waitForSelector('#startBtn', { state: 'visible', timeout: 20000 });

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0c0c0e" />
+    <meta name="theme-color" content="#14122a" />
     <meta name="robots" content="noindex" />
     <title>Nobar · host</title>
     <link rel="stylesheet" href="/src/styles.css" />
@@ -11,17 +11,17 @@
   </head>
   <body>
     <header class="top">
-      <h1 class="wordmark">Nobar</h1>
-      <span class="role">untuk host, di Chrome laptop</span>
+      <h1 class="wordmark"><span class="moon" aria-hidden="true"></span>nobar</h1>
+      <span class="role">kamu host</span>
     </header>
 
     <main>
       <!-- 1. No room yet -->
-      <section id="intro" class="panel" aria-labelledby="introTitle">
-        <h2 id="introTitle" class="lead">Bagikan satu tab Chrome, tonton berdua dari HP.</h2>
+      <section id="intro" class="panel hero lamp" aria-labelledby="introTitle">
+        <h2 id="introTitle" class="lead">Malam ini nonton apa?</h2>
         <p class="quiet">
-          Kamu membuat room, lalu mengirim tautan dan PIN ke penonton lewat WhatsApp. Gambar dan suara tab dikirim langsung
-          dari laptop ini ke HP penonton.
+          Buat room, kirim tautan dan PIN ke dia lewat WhatsApp, lalu bagikan tab Chrome tempat filmnya diputar. Gambar
+          dan suara dikirim langsung dari laptop ini ke HP-nya.
         </p>
         <p id="unsupported" class="note err" hidden>
           Browser ini tidak bisa membagikan tab. Buka halaman ini di Chrome atau Edge di laptop.
@@ -34,16 +34,16 @@
       </section>
 
       <!-- 2. Room exists -->
-      <section id="invitePanel" class="panel" aria-labelledby="inviteTitle" hidden>
-        <h2 id="inviteTitle">Undang penonton</h2>
+      <section id="invitePanel" class="panel lamp" aria-labelledby="inviteTitle" hidden>
+        <h2 id="inviteTitle">Undang dia</h2>
         <div class="invite">
           <div>
+            <p class="code-label">PIN</p>
+            <p id="pinOut" class="pin-big" aria-label="PIN"></p>
+          </div>
+          <div class="invite-split">
             <p class="code-label">Tautan</p>
             <p id="linkOut" class="link-out"></p>
-          </div>
-          <div>
-            <p class="code-label">PIN</p>
-            <p id="pinOut" class="code" aria-label="PIN"></p>
           </div>
         </div>
         <div class="row">
@@ -54,16 +54,20 @@
 
       <section id="sharePanel" class="panel" aria-labelledby="shareTitle" hidden>
         <h2 id="shareTitle">Tab yang dibagikan</h2>
-        <p id="shareState" class="state" data-tone="idle">Belum ada tab yang dibagikan</p>
-        <video id="preview" class="preview" width="320" height="180" muted playsinline autoplay hidden></video>
-        <p id="noAudio" class="note warn" hidden>
-          Suara tab tidak ikut. Klik <strong>Ganti tab</strong>, pilih tabnya lagi, lalu nyalakan
-          <strong>"Bagikan juga audio tab"</strong> di bawah daftar tab.
-        </p>
-        <p id="shareError" class="note err" role="alert" hidden></p>
-        <div class="row">
-          <button id="shareBtn" class="btn primary big" type="button">Pilih tab</button>
-          <button id="stopBtn" class="btn" type="button" hidden>Berhenti berbagi</button>
+        <div id="shareGrid" class="share-grid">
+          <video id="preview" class="preview" width="320" height="180" muted playsinline autoplay hidden></video>
+          <div class="share-body">
+            <p id="shareState" class="state" data-tone="idle">Belum ada tab yang dibagikan</p>
+            <p id="noAudio" class="note warn" hidden>
+              Suara tab tidak ikut. Klik <strong>Ganti tab</strong>, pilih tabnya lagi, lalu nyalakan
+              <strong>"Bagikan juga audio tab"</strong> di bawah daftar tab.
+            </p>
+            <p id="shareError" class="note err" role="alert" hidden></p>
+            <div class="row">
+              <button id="shareBtn" class="btn primary big" type="button">Pilih tab</button>
+              <button id="stopBtn" class="btn ghost" type="button" hidden>Berhenti berbagi</button>
+            </div>
+          </div>
         </div>
         <p class="small">
           YouTube dan file video yang dibuka di tab Chrome bisa dibagikan. Netflix, Disney+, Prime Video, dan layanan
@@ -71,7 +75,7 @@
         </p>
       </section>
 
-      <section id="viewerPanel" class="panel" aria-labelledby="viewerTitle" hidden>
+      <section id="viewerPanel" class="panel compact" aria-labelledby="viewerTitle" hidden>
         <h2 id="viewerTitle">Penonton</h2>
         <p id="viewerState" class="state" data-tone="idle" role="status">Belum masuk</p>
         <dl id="hostStats" class="stats" hidden></dl>
@@ -89,7 +93,7 @@
 
     <dialog id="endDialog" aria-labelledby="endDialogTitle">
       <h2 id="endDialogTitle">Akhiri room ini?</h2>
-      <p>Penonton langsung terputus dan tautan serta PIN tidak bisa dipakai lagi.</p>
+      <p>Penonton langsung terputus, dan tautan serta PIN tidak bisa dipakai lagi.</p>
       <div class="row">
         <button id="endCancel" class="btn" type="button">Batal</button>
         <button id="endConfirm" class="btn danger" type="button">Akhiri room</button>
