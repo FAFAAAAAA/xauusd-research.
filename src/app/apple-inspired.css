@@ -1266,6 +1266,6 @@ input.bx-slider { background: linear-gradient(90deg, #22c26e 0%, #22c26e 22%, #f
 .rd-line { display: block; width: 46px; height: 6px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 13%, transparent); overflow: hidden; }
 .rd-line i { display: block; height: 100%; border-radius: 9px; }
 .rd-line.far i { background: var(--down); }
-.rd-line.near i { background: var(--warn); }
+.rd-line.near i { background: #f5a524; }   /* yellow, not the light theme's brown warning ink (owner); same as the dark theme's --warn */
 .rd-line.go i { background: var(--up); }   /* the site's own red / amber / green (owner: same colours as the rest) */
 .dt-sheet .trade-review-chart.rd-chart { height: min(66svh, 600px); min-height: 380px; }
