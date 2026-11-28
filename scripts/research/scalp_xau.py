@@ -8,7 +8,7 @@
 # Filter tren: none, EMA200 H1, EMA20 D1. SL k x ATR14 M5 (k 1/2/3), dilewati bila risiko < 10x biaya. RR 1.5 / 2.
 # Tahan maks 15/30/60 menit. Biaya 1.5 bps harga per trade. SL & TP di menit yang sama -> SL.
 # Usage: python3 scripts/research/scalp_xau.py <out.csv>
-import sys
+import sys, os
 import numpy as np, pandas as pd
 from multiprocessing import Pool
 sys.path.insert(0, 'scripts/research')
@@ -16,7 +16,7 @@ from respect_scan import load, ema
 import snr_trend_scan as S
 
 SPLIT = int(pd.Timestamp('2022-01-01').value // 60_000_000_000)
-COST_BPS = 1.5e-4
+COST_BPS = float(os.environ.get('COST_BPS', '1.5')) * 1e-4  # COST_BPS=0 -> uji edge mentah tanpa biaya
 _D = {}
 
 
@@ -52,10 +52,11 @@ def sim(cand, rr, hold, d):
     for i, sd, e, sl, touch in cand:
         if i <= busy: continue
         risk = abs(e - sl)
-        if not np.isfinite(risk) or risk < 10 * cost[i]: continue
+        if not np.isfinite(risk) or risk <= 0 or risk < 10 * cost[i]: continue
+        rb = risk / c[i] * 1e4  # risiko dalam bps harga
         cr = cost[i] / risk
         if touch and ((sd == 1 and l[i] <= sl) or (sd == -1 and h[i] >= sl)):
-            out.append((t[i], -1 - cr)); busy = i; continue
+            out.append((t[i], -1 - cr, rb)); busy = i; continue
         j0, j1 = i + 1, min(i + 1 + hold, n)
         if j0 >= n: break
         lo, hi = l[j0:j1], h[j0:j1]; tp = e + sd * rr * risk
@@ -64,8 +65,8 @@ def sim(cand, rr, hold, d):
         if ks == kt == 10 ** 9: k = j1 - j0 - 1; R = sd * (c[j0 + k] - e) / risk
         elif ks <= kt: k = ks; R = -1.0
         else: k = kt; R = rr
-        out.append((t[i], R - cr)); busy = j0 + k
-    return np.array(out) if out else np.zeros((0, 2))
+        out.append((t[i], R - cr, rb)); busy = j0 + k
+    return np.array(out) if out else np.zeros((0, 3))
 
 
 def variants(d):
@@ -160,7 +161,10 @@ def run(name):
                         yr = pd.Series(R).groupby(pd.to_datetime(tt, unit='m').year).sum()
                         row.update({f'n_{pn}': len(R), f'wr_{pn}': (R > 0).mean() if len(R) else np.nan, f'pf_{pn}': S.pf(R),
                                     f'pw_{pn}': len(R) / max(1e-9, (tt.max() - tt.min()) / 10080) if len(R) > 1 else 0,
-                                    f'yrs_pos_{pn}': (yr > 0).mean() if len(yr) else np.nan})
+                                    f'yrs_pos_{pn}': (yr > 0).mean() if len(yr) else np.nan,
+                                    # biaya titik impas (bps harga): rata2 R kotor / rata2 (1 / risiko bps)
+                                    f'be_bps_{pn}': (R + COST_BPS * 1e4 / r[msk, 2]).mean() / (1 / r[msk, 2]).mean() if len(R) else np.nan,
+                                    f'risk_bps_{pn}': np.median(r[msk, 2]) if len(R) else np.nan})
                     rows.append(row)
     print(name, 'selesai', flush=True)
     return rows
