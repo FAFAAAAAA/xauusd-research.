@@ -228,7 +228,10 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
   const store = drawKey;
   const [draw, setDraw] = useState<Drawings>(() => (store && typeof window !== 'undefined' ? loadDraw(store) : { ...EMPTY }));
   useEffect(() => { if (store) { setDraw(loadDraw(store)); setSel(null); } }, [store]);
-  const drawRef = useRef(draw); drawRef.current = draw;
+  // while a drawing is being dragged drawRef holds the moving copy: a re-render (live candles, state) must not reset it,
+  // or the release would save the old position (drawings jumped back / looked lost after reopening the site)
+  const dragging = useRef(false);
+  const drawRef = useRef(draw); if (!dragging.current) drawRef.current = draw;
   const selRef = useRef(sel); selRef.current = sel;
   const modeRef = useRef(mode); modeRef.current = mode;
   const anchorRef = useRef(anchor); anchorRef.current = anchor;
@@ -241,10 +244,11 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
   const logicalOf = (ms: number) => {
     const cs = candlesRef.current, n = cs.length; if (!n) return null;
     const b = barMs();
-    if (ms >= cs[n - 1].time) return n - 1 + Math.round((ms - cs[n - 1].time) / b);
-    if (ms <= cs[0].time) return Math.round((ms - cs[0].time) / b);
+    // fractional: a drawing made on another timeframe sits at its exact time, between candles if needed
+    if (ms >= cs[n - 1].time) return n - 1 + (ms - cs[n - 1].time) / b;
+    if (ms <= cs[0].time) return (ms - cs[0].time) / b;
     let lo = 0, hi = n - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (cs[mid].time <= ms) lo = mid; else hi = mid; }
-    return ms - cs[lo].time < cs[hi].time - ms ? lo : hi;
+    return lo + (ms - cs[lo].time) / Math.max(1, cs[hi].time - cs[lo].time);
   };
   const xOf = (ms: number) => { const lg = logicalOf(ms); return lg == null ? null : chart.current?.timeScale().logicalToCoordinate(lg as Logical) ?? null; };
   const atrNow = () => { const cs = candlesRef.current, n = cs.length; let a = 0, k = 0; for (let i = Math.max(1, n - 14); i < n; i++) { a += Math.max(cs[i].high - cs[i].low, Math.abs(cs[i].high - cs[i - 1].close), Math.abs(cs[i].low - cs[i - 1].close)); k++; } return k ? a / k : 0; };
@@ -357,6 +361,7 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
     const begin = (h: Hit, x: number, y: number, id: number) => {
       const t0 = timeAt(x), p0 = priceAt(y); if (t0 == null || p0 == null) return;
       drag = { ...h, x0: x, y0: y, t0, p0, orig: JSON.parse(JSON.stringify(drawRef.current)), movedPx: 0 };
+      dragging.current = true;
       lock(true); try { el.setPointerCapture(id); } catch { /* pointer gone */ }
       setSel({ kind: h.kind, i: h.i }); setGrab(true);
     };
@@ -386,8 +391,8 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
       window.clearTimeout(timer);
       const s0 = start; start = null;
       if (drag) {
-        e.stopPropagation(); drag = null; lock(false); setGrab(false);
-        update(drawRef.current);
+        e.stopPropagation(); drag = null; lock(false);
+        const fin = drawRef.current; dragging.current = false; update(fin); setGrab(false);
         return;
       }
       if (!s0 || s0.id !== e.pointerId) return;
@@ -402,7 +407,7 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
     el.addEventListener('pointerdown', down, true); el.addEventListener('pointermove', move, true); el.addEventListener('pointerup', up, true); el.addEventListener('pointercancel', up, true);
     for (const k of ['mousedown', 'mousemove', 'touchstart', 'touchmove']) el.addEventListener(k, block, { capture: true, passive: false });
     return () => {
-      window.clearTimeout(timer); if (drag) lock(false);
+      window.clearTimeout(timer); if (drag) { lock(false); dragging.current = false; if (store) saveDraw(store, drawRef.current); }
       el.removeEventListener('pointerdown', down, true); el.removeEventListener('pointermove', move, true); el.removeEventListener('pointerup', up, true); el.removeEventListener('pointercancel', up, true);
       for (const k of ['mousedown', 'mousemove', 'touchstart', 'touchmove']) el.removeEventListener(k, block, { capture: true } as EventListenerOptions);
     };
