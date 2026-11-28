@@ -30,12 +30,11 @@ const closeness = (it: Item) => {
 };
 const passed = (it: Item) => (it.strat === 'snr' || it.strat === 'btc') && it.dist != null && it.dist <= 0;
 const sayClose = (it: Item) => (passed(it) ? 'sudah lolos level, tunggu candle tutup' : it.strat === 'mb' ? 'lembah MACD 1 dari 2' : it.strat === 'lst' ? 'menunggu 24 jam setelah listing' : `${Math.round(closeness(it) * 100)}% menuju level`);
-/** signal bars: more bars light up as the price nears the level; all bars + a pulsing dot = level passed (waiting for the close) */
+/** three dots: more dots filled = closer to the level; all three blinking in turn = level passed (waiting for the candle close) */
 function Gauge({ it }: { it: Item }) {
-  const done = passed(it), on = done ? 5 : Math.max(1, Math.ceil(closeness(it) * 5));
-  return <span className={`rd-bars${done ? ' done' : ''}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}>
-    {[0, 1, 2, 3, 4].map((k) => <i key={k} className={k < on ? 'on' : ''} style={{ height: 6 + k * 3.5 }} />)}
-    {done ? <b aria-hidden /> : null}
+  const done = passed(it), on = done ? 3 : Math.max(1, Math.ceil(closeness(it) * 3));
+  return <span className={`rd-dots${done ? ' done' : ''}`} role="img" aria-label={sayClose(it)} title={sayClose(it)}>
+    {[0, 1, 2].map((k) => <i key={k} className={k < on ? 'on' : ''} />)}
   </span>;
 }
 
