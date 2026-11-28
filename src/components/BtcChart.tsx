@@ -7,9 +7,9 @@ import type { Candle } from '@/lib/core/types';
 const CandleChart = dynamic(() => import('./CandleChart'), { ssr: false });
 
 /* Bitcoin chart only (Trade page → tap "Bitcoin"): Binance BTCUSDT candles, newest candles refreshed every 5 s. */
-const IV = [['15m', 'M15'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1'], ['1w', 'W1']] as const;
+const IV = [['1m', 'M1'], ['5m', 'M5'], ['15m', 'M15'], ['30m', 'M30'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1'], ['1w', 'W1']] as const;
 type Iv = (typeof IV)[number][0];
-const toCandle = (k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]) } as Candle);
+const toCandle = (k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: k[5] != null ? Number(k[5]) : null } as Candle);
 const get = (q: string) => Promise.any([
   fetch(`https://fapi.binance.com/fapi/v1/klines?${q}`).then((r) => (r.ok ? r.json() : Promise.reject())),
   fetch(`/api/klines?${q}`).then((r) => (r.ok ? r.json() : Promise.reject())).then((j) => j?.candles ?? Promise.reject()),
@@ -22,7 +22,7 @@ export default function BtcChart({ tz }: { tz: string }) {
   const [err, setErr] = useState(false);
   useEffect(() => {
     let off = false; setCandles(null); setErr(false);
-    get(`symbol=BTCUSDT&interval=${iv}&limit=500`).then((c) => { if (off) return; if (c && c.length) setCandles(c); else setErr(true); });
+    get(`symbol=BTCUSDT&interval=${iv}&limit=1000`).then((c) => { if (off) return; if (c && c.length) setCandles(c); else setErr(true); });
     const id = window.setInterval(async () => {
       if (document.visibilityState !== 'visible') return;
       const fresh = await get(`symbol=BTCUSDT&interval=${iv}&limit=2`);
@@ -33,7 +33,7 @@ export default function BtcChart({ tz }: { tz: string }) {
   }, [iv]);
   return (
     <div className="stack" style={{ gap: 10 }}>
-      <Seg label="Timeframe" options={IV} value={iv} onChange={(v) => setIv(v)} />
+      <Seg scroll label="Timeframe" options={IV} value={iv} onChange={(v) => setIv(v)} />
       <div className="chartbox trade-review-chart">
         {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`btc-${iv}`} drawKey="BTCUSDT" initialBars={80} /> : err ? <div className="mute small" style={{ padding: 20 }}>Chart tidak bisa dimuat.</div> : <div style={{ padding: 20 }}><Spinner /></div>}
       </div>

@@ -26,7 +26,7 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
     const pages: Array<[number, number]> = [];
     for (let s0 = from; s0 < to; s0 += 1000 * ms) pages.push([s0, Math.min(to, s0 + 1000 * ms - 1)]);
     const qOf = (a: number, b: number) => `symbol=${encodeURIComponent(symbol)}&interval=${iv}&startTime=${a}&endTime=${b}&limit=1000`;
-    const toCandle = (k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]) } as Candle);
+    const toCandle = (k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: k[5] != null ? Number(k[5]) : null } as Candle);
     // every page: the website proxy and Binance directly race each other (first good answer wins); all pages load in parallel
     const tryUrl = async (u: string, proxy: boolean) => {
       const r = await fetch(u);
@@ -62,7 +62,7 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
         fetch(`/api/klines?${q}`).then((r) => (r.ok ? r.json() : Promise.reject())).then((j) => j?.candles ?? Promise.reject()),
       ]).catch(() => null);
       if (!Array.isArray(rows) || !rows.length) return;
-      const fresh = rows.map((k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]) } as Candle));
+      const fresh = rows.map((k: any[]) => ({ time: Number(k[0]), open: Number(k[1]), high: Number(k[2]), low: Number(k[3]), close: Number(k[4]), volume: k[5] != null ? Number(k[5]) : null } as Candle));
       setCandles((cur) => {
         if (!cur || !cur.length) return cur;
         const m = new Map(cur.map((c) => [c.time, c] as const));
@@ -77,7 +77,7 @@ export default function LiveTradeChart({ symbol, t, tz }: { symbol: string; t: J
     <div className="stack" style={{ gap: 10 }}>
     <Seg scroll label="Timeframe" options={[['1m', 'M1'], ['5m', 'M5'], ['15m', 'M15'], ['30m', 'M30'], ['1h', 'H1'], ['4h', 'H4'], ['1d', 'D1'], ['1w', 'W1']] as const} value={iv} onChange={(v) => setIv(v)} />
     <div className="chartbox trade-review-chart">
-      {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`${t.id}-${iv}`} position={{ side: t.side === 'BUY' ? 'long' : 'short', entry: t.openedAt, exit: t.closedAt ?? null, entryPrice: t.entry, stopLoss: t.sl, takeProfit: t.tp, exitPrice: t.exit ?? null } as any} />
+      {candles ? <CandleChart candles={candles} timezone={tz} fitKey={`${t.id}-${iv}`} drawKey={symbol} position={{ side: t.side === 'BUY' ? 'long' : 'short', entry: t.openedAt, exit: t.closedAt ?? null, entryPrice: t.entry, stopLoss: t.sl, takeProfit: t.tp, exitPrice: t.exit ?? null } as any} />
         : err ? <div className="empty">Chart tidak bisa dimuat.</div> : <div className="empty"><Spinner /></div>}
     </div>
     </div>

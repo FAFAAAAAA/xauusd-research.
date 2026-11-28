@@ -738,7 +738,31 @@ body:has(.office-home)::after { display: none; }
 .draw-tools button.on { background: var(--ink); color: var(--surface); }
 .draw-tools button:disabled { opacity: .3; }
 .draw-tools svg { width: 18px; height: 18px; }
-.draw-hint { position: absolute; top: 10px; left: 58px; right: 70px; z-index: 3; padding: 7px 10px; border-radius: 10px; background: var(--ink); color: var(--surface); font-size: 12.5px; font-weight: 600; text-align: center; pointer-events: none; }
+.draw-hint { position: absolute; bottom: 86px; left: 56px; right: 70px; z-index: 4; padding: 7px 10px; border-radius: 10px; background: var(--ink); color: var(--surface); font-size: 12.5px; font-weight: 600; text-align: center; pointer-events: none; }
+.draw-tools { max-height: calc(100% - 96px); overflow-y: auto; scrollbar-width: none; }
+.draw-tools button:focus-visible, .cv-tools button:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* TradingView-like chart tools (29 Nov 2026): OHLC legend, view toolbar, indicator menu, full screen */
+.cv-legend { position: absolute; top: 8px; left: 10px; right: 70px; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; pointer-events: none; font-size: 11.5px; line-height: 1.35; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cv-legend.with-tools { left: 58px; }
+.cv-legend > span { padding: 2px 6px; border-radius: 6px; background: color-mix(in srgb, var(--surface) 84%, transparent); }
+.cv-legend b { font-weight: 600; color: var(--mute); }
+.cv-legend em { font-style: normal; font-weight: 600; } .cv-legend em.pos { color: var(--up); } .cv-legend em.neg { color: var(--down); }
+.cv-tools { position: absolute; left: 10px; bottom: 36px; z-index: 3; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.cv-row, .cv-menu { display: flex; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 2px 10px #0000000f; }
+.cv-row button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; touch-action: manipulation; }
+.cv-row button.on { background: var(--ink); color: var(--surface); }
+.cv-row svg { width: 18px; height: 18px; }
+.cv-txt { font-size: 14px; font-weight: 650; letter-spacing: -.02em; }
+.cv-menu { flex-direction: column; min-width: 190px; }
+.cv-menu button { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.cv-menu button:hover { background: var(--sunk); }
+.cv-box { display: grid; place-items: center; width: 18px; height: 18px; border: 1.5px solid var(--ink); border-radius: 5px; }
+.cv-box svg { width: 14px; height: 14px; }
+.cv-menu button[aria-checked="true"] .cv-box { background: var(--ink); color: var(--surface); }
+.chartbox.chart-full { position: fixed; z-index: 90; top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); left: env(safe-area-inset-left, 0px); right: env(safe-area-inset-right, 0px); height: auto !important; min-height: 0 !important; border: 0; border-radius: 0; box-shadow: 0 0 0 100vmax var(--surface); }
+/* a sheet's panel keeps a transform (animation / will-change) that would trap the fixed chart inside it */
+.panel-s:has(.chart-full) { transform: none !important; will-change: auto !important; animation: none !important; }
 
 /* long press on a drawn line picks it up: no iOS callout / text selection */
 .chartbox { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

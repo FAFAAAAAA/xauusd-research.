@@ -18,7 +18,7 @@ export async function GET(req: Request) {
         const r = await fetch(`${base}?${q}`, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
         if (!r.ok) continue;
         const rows = await r.json();
-        if (Array.isArray(rows) && rows.length) return { candles: rows.map((k: any[]) => [Number(k[0]), Number(k[1]), Number(k[2]), Number(k[3]), Number(k[4])]) };
+        if (Array.isArray(rows) && rows.length) return { candles: rows.map((k: any[]) => [Number(k[0]), Number(k[1]), Number(k[2]), Number(k[3]), Number(k[4]), Number(k[5])]) };
       } catch { /* next source */ }
     }
     throw new HttpError(502, 'Candle Binance tidak tersedia');
