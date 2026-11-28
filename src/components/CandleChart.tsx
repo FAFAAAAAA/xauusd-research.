@@ -40,10 +40,11 @@ const NO_ZONES: ChartZone[] = [], NO_MARKERS: ChartMarker[] = [];   // stable de
  * shifted by the display timezone offset (DST-aware per candle) for the axis only.
  * With drawKey or position: TradingView-like tools (drawings, indicators, full screen).
  */
+export interface ChartLevel { price: number; title: string; color: string; dashed?: boolean }
 export interface ChartTf { options: ReadonlyArray<readonly [string, string]>; value: string; onChange: (v: any) => void }
 
-export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MARKERS, timezone = 'UTC', fitKey, position, drawKey, initialBars, tf }:
-  { candles: Candle[]; zones?: ChartZone[]; markers?: ChartMarker[]; timezone?: string; fitKey?: string; position?: TradePosition; drawKey?: string; initialBars?: number; tf?: ChartTf }) {
+export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MARKERS, timezone = 'UTC', fitKey, position, drawKey, initialBars, tf, levels }:
+  { candles: Candle[]; zones?: ChartZone[]; markers?: ChartMarker[]; timezone?: string; fitKey?: string; position?: TradePosition; drawKey?: string; initialBars?: number; tf?: ChartTf; levels?: ChartLevel[] }) {
   const box = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
   const series = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -113,6 +114,20 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
       s.createPriceLine({ price: z.low, color: z.kind === 'resistance' ? '#c2410c' : '#a87a1f', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: false, title: '' }),
     ]);
   }, [zones]);
+
+  // signal levels (Radar): labelled price lines
+  const lvLines = useRef<IPriceLine[]>([]);
+  useEffect(() => {
+    const s = series.current; if (!s) return;
+    lvLines.current.forEach((l) => { try { s.removePriceLine(l); } catch { /* gone */ } });
+    lvLines.current = (levels ?? []).filter((l) => Number.isFinite(l.price) && l.price > 0).map((l) => s.createPriceLine({ price: l.price, color: l.color, lineWidth: 1, lineStyle: l.dashed ? LineStyle.Dashed : LineStyle.Solid, axisLabelVisible: true, title: l.title }));
+    // keep every signal line in view (the price scale widens to them)
+    const ps = (levels ?? []).map((l) => l.price).filter((v) => Number.isFinite(v) && v > 0);
+    s.applyOptions({ autoscaleInfoProvider: ps.length ? (orig: () => { priceRange: { minValue: number; maxValue: number } } | null) => {
+      const r = orig(); if (!r) return r;
+      return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...ps), maxValue: Math.max(r.priceRange.maxValue, ...ps) } };
+    } : undefined });
+  }, [levels]);
 
   useEffect(() => {
     const c = chart.current, s = series.current;

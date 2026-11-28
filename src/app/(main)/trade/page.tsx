@@ -9,6 +9,7 @@ import { driftReport, liveSignalFrom, lotFor, type JournalTrade, type JournalSta
 import TradeDashboard, { type CashFlow } from '@/components/TradeDashboard';
 import LiveTradeChart from '@/components/LiveTradeChart';
 import BtcChart from '@/components/BtcChart';
+import Radar from '@/components/Radar';
 import { useBtcDay, pctText } from '@/components/btcDay';
 import StrategyInfo, { STRATEGY_INFO } from '@/components/StrategyInfo';
 
@@ -251,6 +252,8 @@ export default function TradePage() {
             </div>
           </section> : null}
           {openSection}
+          {/* coins close to a bot signal (Radar), under the open positions */}
+          {market === 'crypto' ? <Radar tz={tz} /> : null}
         </>}
         openPnl={openTotal}
         fallbackStart={market === 'crypto' ? 199.02 : 209.99}
