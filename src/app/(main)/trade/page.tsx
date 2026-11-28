@@ -5,7 +5,7 @@ import { ErrorBox, Flash, Loading, PageHead, SecHead, Seg, Sheet, Spinner, toast
 import Link from 'next/link';
 import { MarketSwitch, useMarket } from '@/components/MarketSwitch';
 import { JOURNAL_KEYS, marketOfJournal } from '@/lib/core/markets';
-import { liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/lib/core/journal';
+import { driftReport, liveSignalFrom, lotFor, type JournalTrade, type JournalStats } from '@/lib/core/journal';
 import TradeDashboard, { type CashFlow } from '@/components/TradeDashboard';
 import LiveTradeChart from '@/components/LiveTradeChart';
 import BtcChart from '@/components/BtcChart';
@@ -153,6 +153,7 @@ export default function TradePage() {
   const inMarket = (t: JournalTrade) => { const m = marketOfJournal(t.strategy); return m === 'both' || m === market; };
   const openT = j.trades.filter((t) => t.result === 'open' && inMarket(t));
   const closedT = j.trades.filter((t) => t.result !== 'open' && inMarket(t));
+  const drift = market === 'crypto' ? driftReport(j.trades) : [];
   const stratOf = (label: string) => (/^v1 ?snr|snr-sell/i.test(label) ? 'snr' : /^macd\b|macd-db/i.test(label) ? 'mb' : /^listing\b/i.test(label) ? 'lst' : /^z7\b|compression/i.test(label) ? 'z7' : /^bz\b|bollinger/i.test(label) ? 'bz' : /^v[12] ?alt|alt-breakdown/i.test(label) ? 'alt' : /^v1 ?btc|crypto-donchian/i.test(label) ? 'btc' : /^v1 ?nas|nas-donchian/i.test(label) ? 'nas' : /^v1 ?xau|^v2\b|volbreak/i.test(label) ? 'v2' : 'lain');
 
   // history card in the style of Binance "Riwayat Posisi", simplified: coin, side, result, P&L, entry → exit, opened / closed, duration
@@ -327,6 +328,14 @@ export default function TradePage() {
                   <span><span className="k">Trade</span><strong>{s.closed}</strong></span>
                   <span><span className="k">Rata-rata</span><strong className={tone(s.closed ? s.pnl / s.closed : null)}>{s.closed ? money(s.pnl / s.closed) : '—'}</strong></span>
                 </div>
+                {(() => {
+                  const d = drift.find((x) => x.strategy === k);
+                  if (!d || d.sumR == null) return null;
+                  const f = (x: number) => { const v = Math.round(x * 10) / 10; return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}R`; };
+                  return <p className={`perf-drift ${d.status === 'alarm' ? 'neg' : d.status === 'ok' ? 'pos' : ''}`}>
+                    {d.status === 'kurang' ? `${d.n} trade: ${f(d.sumR)} · cek vs backtest mulai 20 trade` : `20 trade terakhir ${f(d.sumR)} · backtest biasa ${f(d.median)}, batas ${f(d.limit)}${d.status === 'alarm' ? ' · di bawah batas' : ''}`}
+                  </p>;
+                })()}
               </div>
             );
           })}

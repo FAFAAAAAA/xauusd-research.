@@ -81,3 +81,29 @@ export function liveSignalFrom(extra: Record<string, unknown> | null | undefined
   const be = Number(extra.be);
   return { side, entry: price, sl, tp, ...(be > 0 ? { be } : {}) };
 }
+
+/** Drift check (research 28 Nov 2026): sum of R of the last 20 closed live trades of a bot part vs the backtest.
+ *  limit = 5th percentile of 20 trades in a row in the backtest (crypto_final, 2021–Oct 2026, the lower of rolling and bootstrap).
+ *  Below the limit = live is worse than 95% of the backtest stretches: look for the cause. Report only, the bot is never paused by this. */
+export const DRIFT_LIMIT: Record<string, { limit: number; median: number }> = {
+  snr: { limit: -11.8, median: 2.8 }, btc: { limit: -8.4, median: 6.5 }, mb: { limit: -5.5, median: 6.2 }, lst: { limit: -5.2, median: 6.8 },
+};
+export interface DriftRow { strategy: string; n: number; sumR: number | null; limit: number; median: number; status: 'ok' | 'waspada' | 'alarm' | 'kurang' }
+export function driftReport(trades: readonly JournalTrade[]): DriftRow[] {
+  return Object.entries(DRIFT_LIMIT).map(([k, d]) => {
+    const rs = trades.filter((x) => x.strategy === k && x.result !== 'open' && x.pnl != null).sort((a, b) => (a.closedAt ?? 0) - (b.closedAt ?? 0))
+      .map((x) => (x.pnl ?? 0) / (Math.abs(x.entry - x.sl) * x.lot)).filter(Number.isFinite).slice(-20);   // crypto: lot = coins, so risk = distance × coins
+    const sumR = rs.length ? rs.reduce((a, x) => a + x, 0) : null;
+    const status = rs.length < 20 ? 'kurang' : (sumR as number) < d.limit ? 'alarm' : (sumR as number) < d.median ? 'waspada' : 'ok';
+    return { strategy: k, n: rs.length, sumR, limit: d.limit, median: d.median, status };
+  });
+}
+const DRIFT_NAME: Record<string, string> = { snr: 'ALT', btc: 'BIG', mb: 'MACD', lst: 'LISTING' };
+export function driftText(rows: readonly DriftRow[]): string {
+  const f = (x: number) => { const v = Math.round(x * 10) / 10; return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}R`; };
+  const icon = { ok: '🟢', waspada: '🟡', alarm: '🔴', kurang: '⚪' } as const;
+  const lines = rows.map((r) => `${icon[r.status]} ${DRIFT_NAME[r.strategy] ?? r.strategy}: ${r.sumR == null ? 'belum ada trade' : `${f(r.sumR)} dari ${r.n} trade`}` +
+    (r.status === 'kurang' ? (r.n ? ' (belum 20)' : '') : ` · backtest biasa ${f(r.median)}, batas ${f(r.limit)}`));
+  const bad = rows.filter((r) => r.status === 'alarm').map((r) => DRIFT_NAME[r.strategy] ?? r.strategy);
+  return [`📐 <b>Live vs backtest</b> (20 trade terakhir)`, ...lines, bad.length ? `⚠️ ${bad.join(', ')} lebih buruk dari 95% masa backtest. Cari penyebabnya; bot tidak dijeda otomatis.` : ''].filter(Boolean).join('\n');
+}

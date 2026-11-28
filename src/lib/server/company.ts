@@ -1,7 +1,7 @@
 import type { Db } from './db';
 import * as repo from './repo';
 import { sendTelegram, type FetchLike } from './telegram';
-import type { JournalTrade } from '../core/journal';
+import { driftReport, driftText, type JournalTrade } from '../core/journal';
 import { DEFAULT_COMPANY, billText, cleanCompany, closableMonths, companyInput, companyReport, moneyMoves, monthBook, monthlyText, weeklyText, ymOf, tzLocalParts,
   type CompanyInput, type CompanySettings, type Fx, type MonthBook } from '../core/company';
 
@@ -74,7 +74,7 @@ export async function runCompanyTick(db: Db, now = Date.now(), fetchImpl?: Fetch
   const r = companyReport(inp);
   const send = async (key: string, text: string) => { const x = await sendTelegram(db, { deliveryKey: key, mode: 'LIVE', text }, { fetchImpl }); if (x.status === 'sent') sent.push(key); };
   const ymd = `${p.y}-${p.m}-${p.d}`;
-  if (s.tg.weekly && p.dow === 0 && p.h >= 22) await send(`company:week:${ymd}`, weeklyText(r, tz));
+  if (s.tg.weekly && p.dow === 0 && p.h >= 22) await send(`company:week:${ymd}`, `${weeklyText(r, tz)}\n\n${driftText(driftReport(inp.trades))}`);
   const last = ymOf(now + 86_400_000, tz) !== ymOf(now, tz);
   if (s.tg.monthly && last && p.h >= 22) await send(`company:month:${r.ym}`, monthlyText(r, s));
   if (s.tg.bills && p.h >= 9) for (const b of r.bills) if (b.daysLeft <= 0 && now - b.due < 86_400_000) await send(`company:bill:${b.cost.id}:${b.ym}`, billText(b));

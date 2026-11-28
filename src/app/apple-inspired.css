@@ -443,6 +443,9 @@ body::before { display: none; }
 .perf-facts > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .perf-facts .k { font-size: 11px; color: var(--mute); }
 .perf-facts strong { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.perf-drift { margin: 0; font-size: 12px; line-height: 1.4; color: var(--mute); font-variant-numeric: tabular-nums; }
+.perf-drift.pos { color: var(--up); font-weight: 600; }
+.perf-drift.neg { color: var(--down); font-weight: 600; }
 /* calendar: trades of the tapped day/week/month */
 .cal-pick { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r); background: var(--sunk); }
 .cal-pick-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 14px; }
