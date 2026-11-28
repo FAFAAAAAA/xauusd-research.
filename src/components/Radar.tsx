@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { createPortal } from 'react-dom';
 import { SecHead, Seg, Sheet, Spinner } from './Status';
 import type { Candle } from '@/lib/core/types';
 import type { ChartLevel } from './CandleChart';
@@ -90,7 +91,7 @@ export default function Radar({ tz }: { tz: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return <section className="group">
-    <SecHead title="Hampir sinyal" />
+    <SecHead title="👀 Radar" />
     <p className="small mute rd-key">Lingkaran makin penuh = makin dekat. Centang = sudah lolos, tunggu candle tutup.</p>
     {!v ? (err ? <p className="small mute">Radar belum bisa dimuat.</p> : <div style={{ padding: 12 }}><Spinner /></div>)
       : !v.items.length ? <p className="small mute">Belum ada koin yang dekat sinyal.</p>
@@ -103,6 +104,7 @@ export default function Radar({ tz }: { tz: string }) {
           </button>
         ))}
       </div>}
-    {open ? <Sheet title={`${coin(open.sym)} · ${NAME[open.strat]} ${open.side === 'BUY' ? 'Buy' : 'Sell'}`} onClose={() => setOpen(null)}><div className="dt-sheet"><RadarChart it={open} tz={tz} /></div></Sheet> : null}
+    {/* the sheet lives outside the card (portal): a chart inside the card switched the card's :has() styles on and off -> a laggy flash on close */}
+    {open ? createPortal(<Sheet title={`${coin(open.sym)} · ${NAME[open.strat]} ${open.side === 'BUY' ? 'Buy' : 'Sell'}`} onClose={() => setOpen(null)}><div className="dt-sheet"><RadarChart it={open} tz={tz} /></div></Sheet>, (document.querySelector('.apple-shell') as HTMLElement | null) ?? document.body) : null}
   </section>;
 }
