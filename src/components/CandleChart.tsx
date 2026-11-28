@@ -179,7 +179,9 @@ export default function CandleChart({ candles, zones = NO_ZONES, markers = NO_MA
       if (!ind[key]) continue;
       const e = emaOf(cl, n);
       const l = c.addLineSeries({ color, lineWidth: width, lineStyle: style, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null });
-      l.setData(e.map((value, i) => ({ time: T[i], value })).slice(Math.min(n, e.length - 1)));
+      // an EMA needs warm-up: drawn only after 2.5 x its length when the history allows it (EMA 200: from candle 500), so the visible part is settled
+      const from = e.length > 3 * n ? Math.round(2.5 * n) : Math.min(n, e.length - 1);
+      l.setData(e.map((value, i) => ({ time: T[i], value })).slice(from));
       indSeries.current.push(l);
     }
     if (rsiOn) {

@@ -54,7 +54,7 @@ function RadarChart({ it, tz }: { it: Item; tz: string }) {
   useEffect(() => { const t = window.setTimeout(() => setReady(true), 300); return () => window.clearTimeout(t); }, []);
   useEffect(() => {
     let off = false; setErr(false);
-    fetchK(it.sym, iv, 500).then((c) => { if (off) return; if (c && c.length) setData({ iv, candles: c }); else setErr(true); });
+    fetchK(it.sym, iv, 1500)   /* long history: EMA 200 settles like the bot's (1000 H4) */.then((c) => { if (off) return; if (c && c.length) setData({ iv, candles: c }); else setErr(true); });
     const id = window.setInterval(async () => {
       if (document.visibilityState !== 'visible') return;
       const fresh = await fetchK(it.sym, iv, 2); if (off || !fresh) return;
