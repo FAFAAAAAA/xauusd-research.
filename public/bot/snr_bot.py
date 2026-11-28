@@ -15,7 +15,7 @@ BIG part (BUY on the largest coins: BTC ETH SOL BNB XRP DOGE; config buy_enabled
   BUY      = an H4 candle CLOSES above the highest high of the 50 H4 candles before it (first close beyond), at least 0.5 x ATR14(H4)
              above that high (strong break), that H4 close is above EMA200 (H4) and BTC's last H4 close is above BTC's EMA200 (H4).
              SL = H4 close - 1.0 x ATR14(D1).   Max 3 BIG positions.
-  EXIT (28 Nov 2026, config big_trail_k, 0 = old fixed TP 2R): NO take profit. After every H4 close the SL is raised to
+  TP = entry + 2 x (entry - SL) (RR 1:2, default). Optional, OFF by default (owner keeps pure TP/SL): config big_trail_k > 0 = NO take profit. After every H4 close the SL is raised to
              (highest H4 close since entry) - 4.0 x ATR14(H4) of that candle, only upward, never down (chandelier "CloseBest" trail).
              A new SL at or above the current price closes the position at market (gap guard). Backtest 6 coins 2020-Okt 2026,
              entry next H4 open, costs 0.12% + funding: PF 3.40 (IS 3.46 / OOS 3.31) vs 1.54 with TP 2R; 7/7 years positive.
@@ -79,7 +79,7 @@ STOP_FILE = os.path.join(HERE, 'stop.flag')
 RESET_FILE = os.path.join(HERE, 'reset.flag')
 BAT_FILE = os.path.join(HERE, 'start_bot.bat')
 TASK = 'SNR Bot'
-BOT_VERSION = '2026.11.28.2'
+BOT_VERSION = '2026.11.28.3'
 LOCK_PORT = 47219
 
 DEFAULT_CONFIG = {
@@ -98,7 +98,7 @@ DEFAULT_CONFIG = {
     "max_mb_positions": 3,           # maks posisi MACD terbuka (backtest: 3)
     "lst_enabled": True,             # LISTING SELL: SELL koin baru 24 jam setelah listing di Binance Futures
     "max_lst_positions": 3,          # maks posisi LISTING terbuka (backtest: 3)
-    "big_trail_k": 4.0,              # BIG tanpa TP: SL ikut naik ke close tertinggi sejak entry - K x ATR14 H4 (0 = TP tetap 2R)
+    "big_trail_k": 0,                # 0 = BIG TP tetap 2R (pemilik: TP/SL murni). >0 = tanpa TP, SL ikut naik K x ATR14 H4 (riset 28 Nov 2026)
     "z7_enabled": False,             # Z7 = compression breakdown SELL di semua koin likuid (MATI: menaikkan turun terdalam bot)
     "max_z7_positions": 3,           # maks posisi Z7 terbuka (backtest: 3)
     "bz_enabled": True,              # BZ = Bollinger squeeze SELL di semua koin likuid

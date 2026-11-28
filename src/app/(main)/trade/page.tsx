@@ -22,7 +22,7 @@ const BT: Record<string, { win: number; perMonth: number; label: string }> = {
   v2: { win: 0.342, perMonth: 5.0, label: 'v1 XAU' },   // + ±15% impas (BE)
   nas: { win: 0.431, perMonth: 5.6, label: 'v1 NAS' },
   v1: { win: 0.466, perMonth: 2.5, label: 'v1 Level' },  // Level BUY only (EA v1.06+, SELL off), Exness costs + swap, 2018–Oct 2026 (research 22 Nov 2026)
-  btc: { win: 0.36, perMonth: 3.6, label: 'BIG' },  // bot BIG part: 6 largest coins, strong break + BTC > EMA200 H4, max 3 open; no TP, SL trails 4 x ATR14 H4 below the best close (research 28 Nov 2026)
+  btc: { win: 0.456, perMonth: 4.3, label: 'BIG' },  // bot BIG part: 6 largest coins, strong break + BTC > EMA200 H4, max 3 open (research 21 Nov 2026), Binance costs
   mb: { win: 0.431, perMonth: 3.1, label: 'MACD' },
   lst: { win: 0.476, perMonth: 5.4, label: 'LISTING' },  // SELL new Binance listings 24 h after listing, SL 10% / TP 20%, max 3 open (research 22 Nov 2026)  // MACD double bottom BUY, liquid altcoins, near EMA200 H4, max 3 open (research 21 Nov 2026)
   alt: { win: 0.386, perMonth: 15.2, label: 'v2 ALT (lama)' },  // research portfolio max 3, corrected slot bug 11 Nov 2026
